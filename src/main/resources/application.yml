@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: grc-api
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
