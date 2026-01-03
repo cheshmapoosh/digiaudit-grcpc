@@ -28,6 +28,9 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <database.username>grcpc</database.username>
+        <database.password>grcpc</database.password>
+
     </properties>
     <dependencies>
         <dependency>
