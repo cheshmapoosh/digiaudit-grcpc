@@ -1,7 +1,8 @@
 // src/features/process/service/process.service.ts
 import type { ProcessNode } from "../model/process.types";
-import { processStorage } from "./process.storage";
+import { processRepo } from "./process.repo.provider";
 import { isDescendant, recomputeDepthAndPath } from "./process.tree";
+import { ensureArray } from "../../../utils/array.utils";
 
 function nowIso() {
     return new Date().toISOString();
@@ -13,7 +14,8 @@ function uuid() {
 }
 
 function nextOrder(nodes: ProcessNode[], parentId: string | null): number {
-    const siblings = nodes.filter((n) => (n.parentId ?? null) === parentId);
+    const safe = Array.isArray(nodes) ? nodes : [];
+    const siblings = safe.filter((n) => (n.parentId ?? null) === parentId);
     const max = siblings.reduce((m, n) => Math.max(m, n.order ?? 0), -1);
     return max + 1;
 }
@@ -40,19 +42,26 @@ export interface ProcessService {
 
 export const processService: ProcessService = {
     async getChildren(parentId) {
-        const nodes = processStorage.load();
+        const nodes = await processRepo.listAll();
+
+        if (!Array.isArray(nodes)) {
+            console.error("processRepo.listAll() returned non-array:", nodes);
+            return [];
+        }
+
         return nodes
             .filter((n) => (n.parentId ?? null) === parentId)
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     },
 
     async getById(id) {
-        const nodes = processStorage.load();
+        const nodes = processRepo.listAll();
         return nodes.find((n) => n.id === id);
     },
 
     async create(input) {
-        const nodes = processStorage.load();
+
+        const nodes = ensureArray<ProcessNode>(await processRepo.listAll());
 
         const node: ProcessNode = {
             id: uuid(),
@@ -67,12 +76,12 @@ export const processService: ProcessService = {
         };
 
         const updated = recomputeDepthAndPath([...nodes, node]);
-        processStorage.save(updated);
+        processRepo.saveAll(updated);
         return updated.find((n) => n.id === node.id)!;
     },
 
     async update(id, patch) {
-        const nodes = processStorage.load();
+        const nodes = processRepo.listAll();
         const idx = nodes.findIndex((n) => n.id === id);
         if (idx < 0) throw new Error("Node not found");
 
@@ -84,12 +93,12 @@ export const processService: ProcessService = {
         };
 
         const updated = recomputeDepthAndPath(nodes.map((n) => (n.id === id ? next : n)));
-        processStorage.save(updated);
+        processRepo.saveAll(updated);
         return updated.find((n) => n.id === id)!;
     },
 
     async move(id, payload) {
-        const nodes = processStorage.load();
+        const nodes = processRepo.listAll();
         const byId: Record<string, ProcessNode> = Object.fromEntries(nodes.map((n) => [n.id, n]));
         const node = byId[id];
         if (!node) throw new Error("Node not found");
@@ -114,7 +123,7 @@ export const processService: ProcessService = {
         };
 
         const updated = recomputeDepthAndPath(nodes.map((n) => (n.id === id ? moved : n)));
-        processStorage.save(updated);
+        processRepo.saveAll(updated);
         return updated.find((n) => n.id === id)!;
     },
 
@@ -125,7 +134,7 @@ export const processService: ProcessService = {
     },
 
     async delete(id, opts) {
-        const nodes = processStorage.load();
+        const nodes = processRepo.listAll();
         const byId: Record<string, ProcessNode> = Object.fromEntries(nodes.map((n) => [n.id, n]));
         if (!byId[id]) return;
 
@@ -134,7 +143,7 @@ export const processService: ProcessService = {
         if (!cascade) {
             const hasChild = nodes.some((n) => n.parentId === id);
             if (hasChild) throw new Error("Node has children. Use cascade delete.");
-            processStorage.save(nodes.filter((n) => n.id !== id));
+            processRepo.saveAll(nodes.filter((n) => n.id !== id));
             return;
         }
 
@@ -154,6 +163,6 @@ export const processService: ProcessService = {
 
         const remaining = nodes.filter((n) => !toDelete.has(n.id));
         const updated = recomputeDepthAndPath(remaining);
-        processStorage.save(updated);
+        processRepo.saveAll(updated);
     },
 };

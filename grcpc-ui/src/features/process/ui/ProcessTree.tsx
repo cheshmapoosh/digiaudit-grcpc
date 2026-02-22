@@ -42,7 +42,7 @@ export function ProcessTree({ height = "calc(100vh - 220px)" }: Props) {
         const showChildren = isExpanded && childrenLoaded;
 
         return (
-            <TreeItemStandard
+            <TreeItem
                 key={id}
                 text={node.title}
                 selected={selectedId === id}
@@ -60,7 +60,7 @@ export function ProcessTree({ height = "calc(100vh - 220px)" }: Props) {
                 }}
             >
                 {showChildren ? childIds.map(renderNode) : null}
-            </TreeItemStandard>
+            </TreeItem>
         );
     };
 

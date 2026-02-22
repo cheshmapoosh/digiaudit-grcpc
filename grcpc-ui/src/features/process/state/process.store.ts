@@ -1,12 +1,7 @@
 import { create } from "zustand";
 import type { ProcessNode } from "../model/process.types";
 import { parentKey, type ParentKey } from "../ui/tree.utils";
-import * as api from "../api/process.api";
-
-interface MovePayload {
-    newParentId: string | null;
-    newOrder?: number;
-}
+import { processService } from "../service/process.service";
 
 interface ProcessState {
     nodesById: Record<string, ProcessNode>;
@@ -19,9 +14,11 @@ interface ProcessState {
     toggleExpand: (id: string) => void;
     select: (id?: string) => void;
 
+    // local state helpers
     upsertNode: (node: ProcessNode) => void;
     removeNode: (id: string) => void;
 
+    // use-cases
     createNode: (payload: {
         parentId: string | null;
         title: string;
@@ -33,6 +30,11 @@ interface ProcessState {
     updateNode: (id: string, payload: Partial<Omit<ProcessNode, "id">>) => Promise<ProcessNode>;
 
     moveNode: (id: string, newParentId: string | null, newOrder?: number) => Promise<void>;
+
+    toggleStatus: (id: string) => Promise<void>;
+
+    // optional for later
+    // deleteNode: (id: string, cascade?: boolean) => Promise<void>;
 }
 
 export const useProcessStore = create<ProcessState>((set, get) => ({
@@ -45,12 +47,15 @@ export const useProcessStore = create<ProcessState>((set, get) => ({
         const key = parentKey(parentId);
         if (get().loadedChildren[key]) return;
 
-        const children = await api.getChildren(parentId);
+        const children = await processService.getChildren(parentId);
+
         set((s) => {
             const nodesById = { ...s.nodesById };
             for (const n of children) nodesById[n.id] = n;
 
-            const sortedIds = [...children].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((x) => x.id);
+            const sortedIds = [...children]
+                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                .map((x) => x.id);
 
             return {
                 nodesById,
@@ -77,7 +82,6 @@ export const useProcessStore = create<ProcessState>((set, get) => ({
             const withId = existing.includes(node.id) ? existing : [...existing, node.id];
 
             const sorted = [...withId].sort((a, b) => (nodesById[a].order ?? 0) - (nodesById[b].order ?? 0));
-
             return { nodesById, childrenByParent: { ...s.childrenByParent, [key]: sorted } };
         });
     },
@@ -106,13 +110,16 @@ export const useProcessStore = create<ProcessState>((set, get) => ({
     },
 
     async createNode(payload) {
-        const created = await api.createNode(payload);
+        // ✅ call service
+        const created = await processService.create(payload);
+
+        // update local tree state
         get().upsertNode(created);
 
-        // parent را expand کن تا بچه دیده شود
+        // expand parent to show new child
         if (created.parentId) set((s) => ({ expanded: { ...s.expanded, [created.parentId!]: true } }));
 
-        // اگر children آن parent قبلاً لود نشده، بهتره invalidate کنیم تا بعداً fetch شود
+        // mark children list as loaded (or keep it loaded)
         const pk = parentKey(created.parentId);
         set((s) => ({ loadedChildren: { ...s.loadedChildren, [pk]: true } }));
 
@@ -120,13 +127,15 @@ export const useProcessStore = create<ProcessState>((set, get) => ({
     },
 
     async updateNode(id, payload) {
-        const updated = await api.updateNode(id, payload);
+        // ✅ call service
+        const updated = await processService.update(id, payload);
         get().upsertNode(updated);
         return updated;
     },
 
     async moveNode(id, newParentId, newOrder) {
-        const updated = await api.moveNode(id, { newParentId, newOrder } satisfies MovePayload);
+        // ✅ call service
+        const updated = await processService.move(id, { newParentId, newOrder });
 
         set((s) => {
             const old = s.nodesById[id];
@@ -140,7 +149,7 @@ export const useProcessStore = create<ProcessState>((set, get) => ({
             const oldChildren = (s.childrenByParent[oldKey] ?? []).filter((x) => x !== id);
             const newChildrenBase = (s.childrenByParent[newKey] ?? []).filter((x) => x !== id);
             const newChildren = [...newChildrenBase, id].sort(
-                (a, b) => (nodesById[a].order ?? 0) - (nodesById[b].order ?? 0),
+                (a, b) => (nodesById[a].order ?? 0) - (nodesById[b].order ?? 0)
             );
 
             return {
@@ -149,5 +158,10 @@ export const useProcessStore = create<ProcessState>((set, get) => ({
                 expanded: newParentId ? { ...s.expanded, [newParentId]: true } : s.expanded,
             };
         });
+    },
+
+    async toggleStatus(id) {
+        const updated = await processService.toggleStatus(id);
+        get().upsertNode(updated);
     },
 }));
