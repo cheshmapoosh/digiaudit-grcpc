@@ -129,6 +129,12 @@ export default function MainLayout() {
                             selected={selectedPath.startsWith("/processes")}
                             data-route="/processes"
                         />
+                        <SideNavigationItem
+                            text={t("nav.processes")}
+                            icon="process"
+                            selected={selectedPath.startsWith("/regulations")}
+                            data-route="/regulations"
+                        />
 
                         <SideNavigationItem
                             slot="fixedItems"

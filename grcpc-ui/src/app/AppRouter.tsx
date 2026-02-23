@@ -7,6 +7,7 @@ import RolesListPage from "../pages/RolesListPage";
 import RoleObjectPage from "../pages/RoleObjectPage";
 import Organizations from "../pages/organizations";
 import Processes from "../pages/processes";
+import Regulation from "../pages/regulations";
 export default function AppRouter() {
     return (
         <Routes>
@@ -25,8 +26,16 @@ export default function AppRouter() {
 
                 {/* ✅ Processes with FCL (SAP-like) */}
                 <Route path="/processes" element={<Processes />} />
-                {/* backward compatible */}
-                <Route path="/org" element={<Navigate to="/organizations" replace />} />
+                <Route path="/processes/new" element={<Processes />} />
+                <Route path="/processes/:processId" element={<Processes />} />
+                <Route path="/processes/:processId/edit" element={<Processes />} />
+
+                {/* ✅ Regulations with FCL (SAP-like) */}
+                <Route path="/regulations" element={<Regulation />} />
+                <Route path="/regulations/new" element={<Regulation />} />
+                <Route path="/regulations/:processId" element={<Regulation />} />
+                <Route path="/regulations/:regulationId/edit" element={<Regulation />} />
+
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

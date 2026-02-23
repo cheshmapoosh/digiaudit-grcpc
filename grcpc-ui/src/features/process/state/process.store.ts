@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ProcessNode } from "../model/process.types";
-import { parentKey, type ParentKey } from "../ui/tree.utils";
+import { parentKey, type ParentKey } from "../components/tree.utils";
 import { processService } from "../service/process.service";
 
 interface ProcessState {

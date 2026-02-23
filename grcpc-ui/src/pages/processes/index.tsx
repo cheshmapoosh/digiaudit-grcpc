@@ -1,5 +1,5 @@
-import ProcessFeaturePage from "../../features/process/pages/ProcessFeaturePage";
+import ProcessesFclShellPage from "../../features/process/pages/ProcessesFclShellPage";
 
 export default function Index() {
-    return <ProcessFeaturePage />;
+    return <ProcessesFclShellPage />;
 }
