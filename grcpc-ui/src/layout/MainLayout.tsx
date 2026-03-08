@@ -130,7 +130,7 @@ export default function MainLayout() {
                             data-route="/processes"
                         />
                         <SideNavigationItem
-                            text={t("nav.processes")}
+                            text={t("nav.regulation", "قوانین و مقررات")}
                             icon="process"
                             selected={selectedPath.startsWith("/regulations")}
                             data-route="/regulations"
