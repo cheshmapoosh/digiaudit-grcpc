@@ -1,177 +1,92 @@
-// src/features/process/service/process.service.ts
-import type {ProcessNode} from "../model/process.types";
-import {processRepo} from "./process.repo.provider";
-import {isDescendant, recomputeDepthAndPath} from "./process.tree";
-import {ensureArray} from "../../../utils/array.utils";
+import { omitKeys } from "@/shared/utils/object.utils";
+import {
+  processCreateSchema,
+  processUpdateSchema,
+} from "@/features/process";
+import type {
+  ProcessNode,
+  ProcessNodeCreate,
+  ProcessNodeUpdate,
+  ProcessReadonlyKeys,
+} from "@/features/process";
+import type { ProcessRepo } from "../infra/process.repo";
+import { createProcessRepo } from "../infra/process.factory";
+import { buildTree, sortProcesses } from "../utils/process.tree";
 
-function nowIso() {
-    return new Date().toISOString();
+const READONLY_KEYS: readonly ProcessReadonlyKeys[] = [
+  "id",
+  "createdAt",
+  "updatedAt",
+  "createdBy",
+  "updatedBy",
+  "deletedAt",
+  "deletedBy",
+] as const;
+
+function removeReadonlyFields<T extends Record<string, unknown>>(payload: T) {
+  return omitKeys(payload, READONLY_KEYS as (keyof T)[]);
 }
 
-function uuid() {
-    // اگر randomUUID نبود fallback
-    if (typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function") {
-        return (crypto as any).randomUUID();
-    }
-    return `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function nextOrder(nodes: ProcessNode[], parentId: string | null): number {
-    const siblings = nodes.filter((n) => (n.parentId ?? null) === parentId);
-    const max = siblings.reduce((m, n) => Math.max(m, n.order ?? 0), -1);
-    return max + 1;
-}
+export type ProcessTreeNode = ReturnType<typeof buildTree>[number];
 
 export interface ProcessService {
-    list(): Promise<ProcessNode[]>;
-
-    getChildren(parentId: string | null): Promise<ProcessNode[]>;
-
-    getById(id: string): Promise<ProcessNode | undefined>;
-
-    create(input: {
-        parentId: string | null;
-        title: string;
-        code?: string;
-        description?: string;
-        status: ProcessNode["status"];
-    }): Promise<ProcessNode>;
-
-    update(id: string, patch: Partial<Omit<ProcessNode, "id">>): Promise<ProcessNode>;
-
-    move(id: string, payload: { newParentId: string | null; newOrder?: number }): Promise<ProcessNode>;
-
-    toggleStatus(id: string): Promise<ProcessNode>;
-
-    delete(id: string, opts?: { cascade?: boolean }): Promise<void>;
+  list(): Promise<ProcessNode[]>;
+  listTree(): Promise<ProcessTreeNode[]>;
+  getById(id: string): Promise<ProcessNode | null>;
+  create(payload: ProcessNodeCreate): Promise<ProcessNode>;
+  update(id: string, payload: ProcessNodeUpdate): Promise<ProcessNode>;
+  remove(id: string): Promise<void>;
+  toggleStatus(id: string): Promise<ProcessNode>;
 }
 
-export const processService: ProcessService = {
-    async list(): Promise<ProcessNode[]> {
-        const nodes = ensureArray<ProcessNode>(await processRepo.listAll());
-        return [...nodes].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+export function createProcessService(repo: ProcessRepo): ProcessService {
+  return {
+    async list() {
+      const items = await repo.list();
+      return sortProcesses(items);
     },
 
-    async getChildren(parentId) {
-        const nodes = ensureArray<ProcessNode>(await processRepo.listAll());
-        return nodes
-            .filter((n) => (n.parentId ?? null) === parentId)
-            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    async listTree() {
+      const items = await repo.list();
+      return buildTree(sortProcesses(items));
     },
 
-    async getById(id) {
-        const nodes = ensureArray<ProcessNode>(await processRepo.listAll());
-        return nodes.find((n) => n.id === id);
+    async getById(id: string) {
+      return repo.getById(id);
     },
 
-    async create(input) {
-        try {
-            const nodes = ensureArray<ProcessNode>(await processRepo.listAll());
-
-            const node: ProcessNode = {
-                id: uuid(),
-                parentId: input.parentId,
-                title: input.title,
-                code: input.code,
-                description: input.description,
-                status: input.status ?? "ACTIVE",
-                order: nextOrder(nodes, input.parentId),
-                createdAt: nowIso(),
-                updatedAt: nowIso(),
-            };
-
-            const updated = recomputeDepthAndPath([...nodes, node]);
-            await processRepo.saveAll(updated);
-
-            return updated.find((n) => n.id === node.id)!;
-        } catch (e) {
-            console.error("[processService.create] failed", {input, error: e});
-            throw e;
-        }
+    async create(payload) {
+      const sanitized = removeReadonlyFields(payload);
+      const parsed = processCreateSchema.parse(sanitized);
+      return repo.create(parsed);
     },
 
-    async update(id, patch) {
-        const nodes = ensureArray<ProcessNode>(await processRepo.listAll());
-        const idx = nodes.findIndex((n) => n.id === id);
-        if (idx < 0) throw new Error("Node not found");
-
-        const next: ProcessNode = {
-            ...nodes[idx],
-            ...patch,
-            id,
-            updatedAt: nowIso(),
-        };
-
-        const updated = recomputeDepthAndPath(nodes.map((n) => (n.id === id ? next : n)));
-        await processRepo.saveAll(updated);
-
-        return updated.find((n) => n.id === id)!;
+    async update(id, payload) {
+      const sanitized = removeReadonlyFields(payload);
+      const parsed = processUpdateSchema.parse(sanitized);
+      return repo.update(id, parsed);
     },
 
-    async move(id, payload) {
-        const nodes = ensureArray<ProcessNode>(await processRepo.listAll());
-        const byId: Record<string, ProcessNode> = Object.fromEntries(nodes.map((n) => [n.id, n]));
-        const node = byId[id];
-        if (!node) throw new Error("Node not found");
-
-        const newParentId = payload.newParentId ?? null;
-        if (newParentId === id) throw new Error("Parent cannot be the node itself");
-
-        if (newParentId && isDescendant(byId, id, newParentId)) {
-            throw new Error("Cannot move a node under its own descendant");
-        }
-
-        const newOrder =
-            payload.newOrder != null ? payload.newOrder : nextOrder(nodes.filter((n) => n.id !== id), newParentId);
-
-        const moved: ProcessNode = {
-            ...node,
-            parentId: newParentId,
-            order: newOrder,
-            updatedAt: nowIso(),
-        };
-
-        const updated = recomputeDepthAndPath(nodes.map((n) => (n.id === id ? moved : n)));
-        await processRepo.saveAll(updated);
-
-        return updated.find((n) => n.id === id)!;
+    async remove(id) {
+      await repo.remove(id);
     },
 
     async toggleStatus(id) {
-        const node = await this.getById(id);
-        if (!node) throw new Error("Node not found");
-        return this.update(id, {status: node.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"});
+      if (typeof repo.toggleStatus === "function") {
+        return repo.toggleStatus(id);
+      }
+
+      const current = await repo.getById(id);
+      if (!current) {
+        throw new Error("NOT_FOUND");
+      }
+
+      return repo.update(id, {
+        status: current.status === "active" ? "inactive" : "active",
+      });
     },
+  };
+}
 
-    async delete(id, opts) {
-        const nodes = ensureArray<ProcessNode>(await processRepo.listAll());
-        const byId: Record<string, ProcessNode> = Object.fromEntries(nodes.map((n) => [n.id, n]));
-        if (!byId[id]) return;
-
-        const cascade = opts?.cascade ?? false;
-
-        if (!cascade) {
-            const hasChild = nodes.some((n) => n.parentId === id);
-            if (hasChild) throw new Error("Node has children. Use cascade delete.");
-            await processRepo.saveAll(nodes.filter((n) => n.id !== id));
-            return;
-        }
-
-        const toDelete = new Set<string>();
-        const stack = [id];
-
-        while (stack.length) {
-            const cur = stack.pop()!;
-            if (toDelete.has(cur)) continue;
-            toDelete.add(cur);
-
-            for (const n of nodes) {
-                if (n.parentId === cur) stack.push(n.id);
-            }
-        }
-
-        const remaining = nodes.filter((n) => !toDelete.has(n.id));
-        const updated = recomputeDepthAndPath(remaining);
-        await processRepo.saveAll(updated);
-    },
-};
+const processRepo = createProcessRepo();
+export const processService = createProcessService(processRepo);

@@ -1,196 +1,318 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
+    Bar,
     Button,
-    Card,
-    FlexBox,
-    FlexBoxDirection,
+    DatePicker,
     Input,
     Label,
     MessageStrip,
-    Select,
     Option,
+    Select,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
 
-import { useRegulationStore } from "../state/regulation.store";
-import type { RegulationStatus } from "../model/regulation.types";
-import { ParentValueHelpDialog } from "../components/ParentValueHelpDialog";
+import type {
+    RegulationNode,
+    RegulationNodeCreate,
+    RegulationNodeUpdate,
+    RegulationStatus,
+    RegulationType,
+} from "@/features/regulation";
+import ParentValueHelpDialog from "../components/ParentValueHelpDialog";
+import ParentPickerField from "@/shared/components/ParentPickerField";
 
-export default function RegulationObjectPage() {
-    const items = useRegulationStore((s) => s.items);
-    const selectedId = useRegulationStore((s) => s.selectedId);
-    const select = useRegulationStore((s) => s.select);
+export type RegulationObjectMode = "create" | "edit" | "view";
 
-    const create = useRegulationStore((s) => s.create);
-    const update = useRegulationStore((s) => s.update);
-    const remove = useRegulationStore((s) => s.remove);
+interface RegulationFormState {
+    code: string;
+    name: string;
+    type: RegulationType;
+    description: string;
+    parentId: string | null;
+    status: RegulationStatus;
+    validFrom: string;
+    validTo: string;
+}
 
-    const selected = useMemo(() => items.find((x) => x.id === selectedId) ?? null, [items, selectedId]);
-    const parent = useMemo(
-        () => (selected?.parentId ? items.find((x) => x.id === selected.parentId) ?? null : null),
-        [items, selected?.parentId]
+export interface RegulationObjectPageProps {
+    mode: RegulationObjectMode;
+    allItems: RegulationNode[];
+    value: RegulationNode | null;
+    busy?: boolean;
+    error?: string | null;
+    onSubmit: (payload: RegulationNodeCreate | RegulationNodeUpdate) => Promise<void> | void;
+    onCancel: () => void;
+    onEdit?: () => void;
+}
+
+function toFormState(
+    value: RegulationNode | null,
+    defaultParentId: string | null,
+): RegulationFormState {
+    return {
+        code: value?.code ?? "",
+        name: value?.name ?? "",
+        type: value?.type ?? "regulation",
+        description: value?.description ?? "",
+        parentId: value?.parentId ?? defaultParentId,
+        status: value?.status ?? "active",
+        validFrom: value?.validFrom ?? "",
+        validTo: value?.validTo ?? "",
+    };
+}
+
+export default function RegulationObjectPage({
+                                                   mode,
+                                                   allItems,
+                                                   value,
+                                                   busy = false,
+                                                   error,
+                                                   onSubmit,
+                                                   onCancel,
+                                                   onEdit,
+                                               }: RegulationObjectPageProps) {
+    const { t } = useTranslation();
+
+    const readOnly = mode === "view";
+    const defaultParentId = value?.parentId ?? null;
+
+    const [form, setForm] = useState<RegulationFormState>(() =>
+        toFormState(value, defaultParentId),
     );
+    const [validationError, setValidationError] = useState<string | null>(null);
+    const [parentDialogOpen, setParentDialogOpen] = useState(false);
 
-    const [form, setForm] = useState({
-        code: "",
-        title: "",
-        description: "",
-        parentId: null as string | null,
-        status: "DRAFT" as RegulationStatus,
-    });
-
-    const [showParentDialog, setShowParentDialog] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    // sync form on selection change
-    useState(() => {
-        if (selected) {
-            setForm({
-                code: selected.code,
-                title: selected.title,
-                description: selected.description ?? "",
-                parentId: selected.parentId ?? null,
-                status: selected.status,
-            });
-        } else {
-            setForm({
-                code: "",
-                title: "",
-                description: "",
-                parentId: null,
-                status: "DRAFT",
-            });
+    const selectedParentName = useMemo(() => {
+        if (!form.parentId) {
+            return "";
         }
-        setError(null);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    });
 
-    const validate = () => {
-        if (!form.code.trim()) return "کد الزامی است.";
-        if (!form.title.trim()) return "عنوان الزامی است.";
-        return null;
+        return allItems.find((item) => item.id === form.parentId)?.name ?? "";
+    }, [allItems, form.parentId]);
+
+    const handleChange = <K extends keyof RegulationFormState>(
+        key: K,
+        nextValue: RegulationFormState[K],
+    ) => {
+        setForm((prev) => ({
+            ...prev,
+            [key]: nextValue,
+        }));
     };
 
-    const onSave = async () => {
-        const v = validate();
-        if (v) return setError(v);
+    const validate = (): boolean => {
+        if (!form.code.trim()) {
+            setValidationError(
+                t("regulation.validation.codeRequired", {
+                    defaultValue: "کد الزامی است",
+                }),
+            );
+            return false;
+        }
 
-        setError(null);
-        if (!selected) {
-            const created = await create({
-                code: form.code.trim(),
-                title: form.title.trim(),
-                description: form.description?.trim() || undefined,
-                parentId: form.parentId,
-                status: form.status,
-            });
-            select(created.id);
+        if (!form.name.trim()) {
+            setValidationError(
+                t("regulation.validation.nameRequired", {
+                    defaultValue: "نام الزامی است",
+                }),
+            );
+            return false;
+        }
+
+        if (form.validFrom && form.validTo && form.validFrom > form.validTo) {
+            setValidationError(
+                t("regulation.validation.validRange", {
+                    defaultValue: "تاریخ شروع باید قبل از تاریخ پایان باشد",
+                }),
+            );
+            return false;
+        }
+
+        setValidationError(null);
+        return true;
+    };
+
+    const handleSubmit = async () => {
+        if (readOnly || !validate()) {
             return;
         }
 
-        await update(selected.id, {
+        const payload: RegulationNodeCreate | RegulationNodeUpdate = {
             code: form.code.trim(),
-            title: form.title.trim(),
-            description: form.description?.trim() || undefined,
+            name: form.name.trim(),
+            type: form.type,
+            description: form.description.trim() || undefined,
             parentId: form.parentId,
             status: form.status,
-        });
-    };
+            validFrom: form.validFrom || undefined,
+            validTo: form.validTo || undefined,
+        };
 
-    const onDelete = async () => {
-        if (!selected) return;
-        await remove(selected.id);
-        select(null);
+        await onSubmit(payload);
     };
 
     return (
-        <div style={{ padding: 12 }}>
-            <Card style={{ padding: 12 }}>
-                <FlexBox direction={FlexBoxDirection.Column} style={{ gap: 10 }}>
-                    <FlexBox direction={FlexBoxDirection.Row} style={{ justifyContent: "space-between", alignItems: "center" }}>
-                        <Title level="H5">{selected ? "جزئیات قانون/مقرره" : "ایجاد قانون/مقرره جدید"}</Title>
-                        {selected ? (
-                            <Button design="Transparent" onClick={() => select(null)}>
-                                جدید
+        <div style={{ display: "grid", gap: "1rem" }}>
+            <Bar
+                startContent={
+                    <Title level="H4">
+                        {mode === "create"
+                            ? t("regulation.object.createTitle", {
+                                defaultValue: "ایجاد قانون / مقرره",
+                            })
+                            : mode === "edit"
+                                ? t("regulation.object.editTitle", {
+                                    defaultValue: "ویرایش قانون / مقرره",
+                                })
+                                : t("regulation.object.viewTitle", {
+                                    defaultValue: "جزئیات قانون / مقرره",
+                                })}
+                    </Title>
+                }
+                endContent={
+                    <>
+                        {mode === "view" ? (
+                            <Button design="Emphasized" disabled={busy} onClick={onEdit}>
+                                {t("common.edit", { defaultValue: "ویرایش" })}
                             </Button>
-                        ) : null}
-                    </FlexBox>
-
-                    {error ? <MessageStrip design="Negative">{error}</MessageStrip> : null}
-
-                    <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: 10, alignItems: "center" }}>
-                        <Label>کد</Label>
-                        <Input value={form.code} onInput={(e: any) => setForm((p) => ({ ...p, code: e.target.value }))} />
-
-                        <Label>عنوان</Label>
-                        <Input value={form.title} onInput={(e: any) => setForm((p) => ({ ...p, title: e.target.value }))} />
-
-                        <Label>وضعیت</Label>
-                        <Select
-                            valueState="None"
-                            onChange={(e: any) => setForm((p) => ({ ...p, status: e.detail.selectedOption.value }))}
-                        >
-                            <Option value="DRAFT" selected={form.status === "DRAFT"}>پیش‌نویس</Option>
-                            <Option value="ACTIVE" selected={form.status === "ACTIVE"}>فعال</Option>
-                            <Option value="INACTIVE" selected={form.status === "INACTIVE"}>غیرفعال</Option>
-                            <Option value="ARCHIVED" selected={form.status === "ARCHIVED"}>بایگانی</Option>
-                        </Select>
-
-                        <Label>والد</Label>
-                        <FlexBox direction={FlexBoxDirection.Row} style={{ gap: 8, alignItems: "center" }}>
-                            <Input
-                                value={
-                                    form.parentId
-                                        ? `${items.find((x) => x.id === form.parentId)?.code ?? ""} - ${
-                                            items.find((x) => x.id === form.parentId)?.title ?? ""
-                                        }`
-                                        : "ریشه"
-                                }
-                                readonly
-                                style={{ width: "100%" }}
-                            />
-                            <Button onClick={() => setShowParentDialog(true)}>انتخاب</Button>
-                            <Button design="Transparent" onClick={() => setForm((p) => ({ ...p, parentId: null }))}>
-                                حذف والد
+                        ) : (
+                            <Button design="Emphasized" disabled={busy} onClick={handleSubmit}>
+                                {t("common.save", { defaultValue: "ذخیره" })}
                             </Button>
-                        </FlexBox>
+                        )}
 
-                        <Label>توضیحات</Label>
-                        <TextArea
-                            rows={4}
-                            value={form.description}
-                            onInput={(e: any) => setForm((p) => ({ ...p, description: e.target.value }))}
+                        <Button design="Transparent" disabled={busy} onClick={onCancel}>
+                            {t("common.cancel", { defaultValue: "انصراف" })}
+                        </Button>
+                    </>
+                }
+            />
+
+            {error ? (
+                <MessageStrip design="Negative" hideCloseButton>
+                    {error}
+                </MessageStrip>
+            ) : null}
+
+            {validationError ? (
+                <MessageStrip design="Negative" hideCloseButton>
+                    {validationError}
+                </MessageStrip>
+            ) : null}
+
+            <div
+                style={{
+                    display: "grid",
+                    gap: "1rem",
+                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                }}
+            >
+                <div style={{ display: "grid", gap: "0.5rem" }}>
+                    <Label>{t("regulation.fields.code", { defaultValue: "کد" })}</Label>
+                    <Input
+                        value={form.code}
+                        disabled={readOnly || busy}
+                        onInput={(event) => handleChange("code", event.target.value)}
+                    />
+                </div>
+
+                <div style={{ display: "grid", gap: "0.5rem" }}>
+                    <Label>{t("regulation.fields.name", { defaultValue: "نام" })}</Label>
+                    <Input
+                        value={form.name}
+                        disabled={readOnly || busy}
+                        onInput={(event) => handleChange("name", event.target.value)}
+                    />
+                </div>
+
+                <div style={{ display: "grid", gap: "0.5rem" }}>
+                    <Label>{t("regulation.fields.type", { defaultValue: "نوع" })}</Label>
+                    <Select
+                        value={form.type}
+                        disabled={readOnly || busy}
+                        onChange={(event) => handleChange("type", event.target.value as RegulationType)}
+                    >
+                        <Option value="law">{t("regulation.type.law", { defaultValue: "قانون" })}</Option>
+                        <Option value="regulation">{t("regulation.type.regulation", { defaultValue: "مقرره" })}</Option>
+                        <Option value="directive">{t("regulation.type.directive", { defaultValue: "دستورالعمل" })}</Option>
+                        <Option value="circular">{t("regulation.type.circular", { defaultValue: "بخشنامه" })}</Option>
+                        <Option value="procedure">{t("regulation.type.procedure", { defaultValue: "رویه" })}</Option>
+                        <Option value="instruction">{t("regulation.type.instruction", { defaultValue: "آیین‌نامه" })}</Option>
+                        <Option value="policy">{t("regulation.type.policy", { defaultValue: "سیاست" })}</Option>
+                        <Option value="other">{t("regulation.type.other", { defaultValue: "سایر" })}</Option>
+                    </Select>
+                </div>
+
+                <div style={{ display: "grid", gap: "0.5rem" }}>
+                    <Label>{t("regulation.fields.status", { defaultValue: "وضعیت" })}</Label>
+                    <Select
+                        value={form.status}
+                        disabled={readOnly || busy}
+                        onChange={(event) => handleChange("status", event.target.value as RegulationStatus)}
+                    >
+                        <Option value="active">{t("common.active", { defaultValue: "فعال" })}</Option>
+                        <Option value="inactive">{t("common.inactive", { defaultValue: "غیرفعال" })}</Option>
+                    </Select>
+                </div>
+
+                <div style={{ gridColumn: "1 / -1" }}>
+                    <ParentPickerField
+                        label={t("regulation.fields.parent", { defaultValue: "والد" })}
+                        value={selectedParentName}
+                        disabled={readOnly || busy}
+                        onOpen={() => setParentDialogOpen(true)}
+                    />
+                </div>
+
+                <div
+                    style={{
+                        display: "grid",
+                        gap: "1rem",
+                        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                        gridColumn: "1 / -1",
+                    }}
+                >
+                    <div style={{ display: "grid", gap: "0.5rem" }}>
+                        <Label>{t("regulation.fields.validFrom", { defaultValue: "از تاریخ" })}</Label>
+                        <DatePicker
+                            value={form.validFrom}
+                            disabled={readOnly || busy}
+                            onInput={(event) => handleChange("validFrom", event.target.value)}
                         />
                     </div>
 
-                    <FlexBox direction={FlexBoxDirection.Row} style={{ gap: 8, justifyContent: "flex-end" }}>
-                        {selected ? (
-                            <Button design="Negative" onClick={onDelete}>
-                                حذف
-                            </Button>
-                        ) : null}
-                        <Button design="Emphasized" onClick={onSave}>
-                            ذخیره
-                        </Button>
-                    </FlexBox>
+                    <div style={{ display: "grid", gap: "0.5rem" }}>
+                        <Label>{t("regulation.fields.validTo", { defaultValue: "تا تاریخ" })}</Label>
+                        <DatePicker
+                            value={form.validTo}
+                            disabled={readOnly || busy}
+                            onInput={(event) => handleChange("validTo", event.target.value)}
+                        />
+                    </div>
+                </div>
 
-                    {selected ? (
-                        <MessageStrip design="Information">
-                            والد فعلی: {parent ? `${parent.code} - ${parent.title}` : "ریشه"}
-                        </MessageStrip>
-                    ) : null}
-                </FlexBox>
-            </Card>
+                <div style={{ display: "grid", gap: "0.5rem", gridColumn: "1 / -1" }}>
+                    <Label>{t("regulation.fields.description", { defaultValue: "توضیحات" })}</Label>
+                    <TextArea
+                        rows={6}
+                        value={form.description}
+                        disabled={readOnly || busy}
+                        onInput={(event) => handleChange("description", event.target.value)}
+                    />
+                </div>
+            </div>
 
             <ParentValueHelpDialog
-                open={showParentDialog}
-                currentId={selected?.id ?? null}
-                currentParentId={form.parentId}
-                onClose={() => setShowParentDialog(false)}
-                onSelectParent={(pid) => {
-                    setForm((p) => ({ ...p, parentId: pid }));
-                    setShowParentDialog(false);
+                open={parentDialogOpen}
+                items={allItems}
+                currentId={value?.id ?? null}
+                selectedParentId={form.parentId}
+                onClose={() => setParentDialogOpen(false)}
+                onSelect={(parentId) => {
+                    handleChange("parentId", parentId);
+                    setParentDialogOpen(false);
                 }}
             />
         </div>

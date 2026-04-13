@@ -1,212 +1,422 @@
-// src/features/regulation/pages/RegulationsFclShellPage.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { BusyIndicator, MessageStrip } from "@ui5/webcomponents-react";
 
-import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
-import { MessageStrip } from "@ui5/webcomponents-react";
-
+import type {
+    RegulationNode,
+    RegulationNodeCreate,
+    RegulationNodeUpdate,
+} from "@/features/regulation";
+import { useRegulationStore, ROOT_PARENT } from "@/features/regulation";
+import { hasChildren, sortRegulations } from "../utils/regulation.tree";
 import RegulationsListReport from "./RegulationsListReport";
 import RegulationObjectPage from "./RegulationObjectPage";
-import { DeleteConfirmDialog } from "../../../shared/components/DeleteConfirmDialog"; // reuse
-import { regulationService } from "../service/regulation.service";
+import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 
-type FclLayout =
-    | "OneColumn"
-    | "TwoColumnsStartExpanded"
-    | "TwoColumnsMidExpanded"
-    | "ThreeColumnsMidExpanded"
-    | "ThreeColumnsEndExpanded";
+type RouteMode = "list" | "create" | "view" | "edit";
 
-type ErrorKey = "HAS_CHILDREN" | "NOT_FOUND" | "UNKNOWN";
-
-function useRegulationRouteMode() {
+function useRegulationRouteMode(): RouteMode {
     const { regulationId } = useParams();
     const location = useLocation();
 
-    const isNew = location.pathname.endsWith("/new");
-    const isEdit = location.pathname.endsWith("/edit");
-    const hasMid = isNew || !!regulationId;
+    if (location.pathname.endsWith("/new")) {
+        return "create";
+    }
 
-    const mode: "create" | "edit" | "view" = isNew ? "create" : isEdit ? "edit" : "view";
-    return { regulationId, hasMid, mode };
+    if (location.pathname.endsWith("/edit")) {
+        return "edit";
+    }
+
+    if (regulationId) {
+        return "view";
+    }
+
+    return "list";
 }
 
-function mapError(e: unknown): ErrorKey {
-    const msg = e instanceof Error ? e.message : "";
-    if (msg === "HAS_CHILDREN") return "HAS_CHILDREN";
-    if (msg === "NOT_FOUND") return "NOT_FOUND";
-    return "UNKNOWN";
+function mapError(error: unknown, fallback: string): string {
+    if (error instanceof Error && error.message) {
+        switch (error.message) {
+            case "NOT_FOUND":
+                return "آیتم موردنظر یافت نشد";
+            case "HAS_CHILDREN":
+                return "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد";
+            default:
+                return error.message;
+        }
+    }
+
+    return fallback;
 }
 
 export default function RegulationsFclShellPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { regulationId, hasMid, mode } = useRegulationRouteMode();
     const location = useLocation();
+    const { regulationId } = useParams();
 
-    // ===== FCL layout =====
-    const computedLayout: FclLayout = useMemo(
-        () => (hasMid ? "TwoColumnsStartExpanded" : "OneColumn"),
-        [hasMid]
-    );
-    const [layout, setLayout] = useState<FclLayout>(computedLayout);
-    useEffect(() => setLayout(computedLayout), [computedLayout]);
+    const routeMode = useRegulationRouteMode();
 
-    const onLayoutChange = (e: any) => {
-        const next = e?.detail?.layout as FclLayout | undefined;
-        if (next) setLayout(next);
-    };
+    const nodesById = useRegulationStore((state) => state.nodesById);
+    const loading = useRegulationStore((state) => state.loading);
+    const loadChildren = useRegulationStore((state) => state.loadChildren);
+    const createNode = useRegulationStore((state) => state.createNode);
+    const updateNode = useRegulationStore((state) => state.updateNode);
+    const removeNode = useRegulationStore((state) => state.removeNode);
+    const toggleStatus = useRegulationStore((state) => state.toggleStatus);
+    const refresh = useRegulationStore((state) => state.refresh);
 
-    // ===== List refresh strategy =====
-    const [listVersion, setListVersion] = useState(0);
-    const bumpList = () => setListVersion((v) => v + 1);
+    const [searchText, setSearchText] = useState("");
+    const [pageError, setPageError] = useState<string | null>(null);
+    const [deleteCandidate, setDeleteCandidate] = useState<RegulationNode | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
-    // ===== Delete management =====
-    const [deleteId, setDeleteId] = useState<string | undefined>(undefined);
-    const [deleteLabel, setDeleteLabel] = useState<string | undefined>(undefined);
-    const [busyDelete, setBusyDelete] = useState(false);
+    const items = useMemo(() => sortRegulations(Object.values(nodesById)), [nodesById]);
+    const selectedItem = regulationId ? nodesById[regulationId] ?? null : null;
 
-    const [globalError, setGlobalError] = useState<string | undefined>(undefined);
-    const [listCache, setListCache] = useState<any[]>([]);
-
-    const [treeFocusId, setTreeFocusId] = useState<string | undefined>(undefined);
-    const [expandOneLevelForId, setExpandOneLevelForId] = useState<string | undefined>(undefined);
-
-    const parentIdFromQuery = useMemo(() => {
-        const v = new URLSearchParams(location.search).get("parentId");
-        return v ? v : undefined;
+    const queryParentId = useMemo(() => {
+        const searchParams = new URLSearchParams(location.search);
+        return searchParams.get("parentId");
     }, [location.search]);
 
     useEffect(() => {
-        if (mode === "create" && parentIdFromQuery) {
-            setTreeFocusId(parentIdFromQuery);
+        void loadChildren(ROOT_PARENT).catch((error: unknown) => {
+            setPageError(
+                mapError(
+                    error,
+                    t("regulation.errors.loadList", {
+                        defaultValue: "خطا در بارگذاری قوانین و مقررات",
+                    }),
+                ),
+            );
+        });
+    }, [loadChildren, t]);
+
+    const handleRefresh = useCallback(() => {
+        setPageError(null);
+
+        void refresh().catch((error: unknown) => {
+            setPageError(
+                mapError(
+                    error,
+                    t("regulation.errors.refresh", {
+                        defaultValue: "خطا در بروزرسانی اطلاعات",
+                    }),
+                ),
+            );
+        });
+    }, [refresh, t]);
+
+    const handleSelect = useCallback(
+        (id: string) => {
+            navigate(`/regulations/${id}`);
+        },
+        [navigate],
+    );
+
+    const handleCreateRoot = useCallback(() => {
+        navigate("/regulations/new");
+    }, [navigate]);
+
+    const handleCreateChild = useCallback(
+        (parentId: string) => {
+            navigate(`/regulations/new?parentId=${encodeURIComponent(parentId)}`);
+        },
+        [navigate],
+    );
+
+    const handleEdit = useCallback(
+        (id?: string) => {
+            const targetId = id ?? regulationId;
+
+            if (!targetId) {
+                return;
+            }
+
+            navigate(`/regulations/${targetId}/edit`);
+        },
+        [navigate, regulationId],
+    );
+
+    const handleCancel = useCallback(() => {
+        navigate("/regulations");
+    }, [navigate]);
+
+    const handleSubmitCreate = useCallback(
+        async (payload: RegulationNodeCreate | RegulationNodeUpdate) => {
+            try {
+                setSubmitting(true);
+                setPageError(null);
+
+                const created = await createNode(queryParentId, {
+                    code: String(payload.code ?? "").trim(),
+                    name: String(payload.name ?? "").trim(),
+                    type: payload.type ?? "regulation",
+                    description:
+                        typeof payload.description === "string"
+                            ? payload.description.trim() || undefined
+                            : undefined,
+                    parentId: queryParentId,
+                    status: payload.status === "inactive" ? "inactive" : "active",
+                    validFrom:
+                        typeof payload.validFrom === "string" ? payload.validFrom || undefined : undefined,
+                    validTo:
+                        typeof payload.validTo === "string" ? payload.validTo || undefined : undefined,
+                });
+
+                navigate(`/regulations/${created.id}`);
+            } catch (error) {
+                setPageError(
+                    mapError(
+                        error,
+                        t("regulation.errors.create", {
+                            defaultValue: "خطا در ایجاد قانون / مقرره",
+                        }),
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [createNode, navigate, queryParentId, t],
+    );
+
+    const handleSubmitUpdate = useCallback(
+        async (payload: RegulationNodeCreate | RegulationNodeUpdate) => {
+            if (!regulationId) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setPageError(null);
+
+                const updatePayload: RegulationNodeUpdate = {
+                    code: typeof payload.code === "string" ? payload.code.trim() : payload.code,
+                    name: typeof payload.name === "string" ? payload.name.trim() : payload.name,
+                    type: payload.type,
+                    description:
+                        typeof payload.description === "string"
+                            ? payload.description.trim() || undefined
+                            : payload.description,
+                    parentId: payload.parentId ?? null,
+                    status: payload.status,
+                    validFrom:
+                        typeof payload.validFrom === "string" ? payload.validFrom || undefined : payload.validFrom,
+                    validTo:
+                        typeof payload.validTo === "string" ? payload.validTo || undefined : payload.validTo,
+                };
+
+                await updateNode(regulationId, updatePayload);
+                navigate(`/regulations/${regulationId}`);
+            } catch (error) {
+                setPageError(
+                    mapError(
+                        error,
+                        t("regulation.errors.update", {
+                            defaultValue: "خطا در بروزرسانی قانون / مقرره",
+                        }),
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [navigate, regulationId, t, updateNode],
+    );
+
+    const requestDelete = useCallback(
+        (id: string) => {
+            const target = nodesById[id];
+
+            if (!target) {
+                setPageError(t("regulation.errors.notFound", { defaultValue: "آیتم یافت نشد" }));
+                return;
+            }
+
+            if (hasChildren(items, id)) {
+                setPageError(
+                    t("regulation.errors.hasChildren", {
+                        defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+                    }),
+                );
+                return;
+            }
+
+            setDeleteCandidate(target);
+        },
+        [items, nodesById, t],
+    );
+
+    const handleConfirmDelete = useCallback(async () => {
+        if (!deleteCandidate) {
             return;
         }
-        if (regulationId) {
-            setTreeFocusId(regulationId);
-            return;
-        }
-        setTreeFocusId(undefined);
-    }, [mode, parentIdFromQuery, regulationId]);
-
-    function openDelete(id: string) {
-        setGlobalError(undefined);
-        setDeleteId(id);
-        const found = listCache.find((x: any) => x.id === id);
-        setDeleteLabel(found ? `${found.code ?? ""} ${found.title ?? ""}`.trim() : undefined);
-    }
-
-    function closeDelete() {
-        setDeleteId(undefined);
-        setDeleteLabel(undefined);
-        setBusyDelete(false);
-    }
-
-    async function confirmDelete() {
-        if (!deleteId) return;
-
-        setBusyDelete(true);
-        setGlobalError(undefined);
 
         try {
-            const deleted = listCache.find((x: any) => x.id === deleteId);
-            const parentId = deleted?.parentId ?? null;
+            setSubmitting(true);
+            setPageError(null);
 
-            await regulationService.delete(deleteId);
+            const parentId = deleteCandidate.parentId ?? null;
+            await removeNode(deleteCandidate.id);
+            setDeleteCandidate(null);
 
-            closeDelete();
-            bumpList();
-
-            if (parentId && listCache.some((x: any) => x.id === parentId)) {
+            if (parentId) {
                 navigate(`/regulations/${parentId}`);
-            } else {
-                navigate("/regulations");
+                return;
             }
-        } catch (e) {
-            const key = mapError(e);
-            if (key === "HAS_CHILDREN")
-                setGlobalError(
-                    t("regulation.errors.hasChildren", "این قانون/مقرره زیرمجموعه دارد و قابل حذف نیست")
-                );
-            else if (key === "NOT_FOUND")
-                setGlobalError(t("regulation.errors.notFound", "رکورد یافت نشد"));
-            else setGlobalError(t("common.error", "خطا"));
-            setBusyDelete(false);
+
+            navigate("/regulations");
+        } catch (error) {
+            setPageError(
+                mapError(
+                    error,
+                    t("regulation.errors.delete", { defaultValue: "خطا در حذف قانون / مقرره" }),
+                ),
+            );
+        } finally {
+            setSubmitting(false);
         }
-    }
+    }, [deleteCandidate, navigate, removeNode, t]);
+
+    const handleToggleStatus = useCallback(
+        async (id: string) => {
+            try {
+                setPageError(null);
+                await toggleStatus(id);
+            } catch (error) {
+                setPageError(
+                    mapError(
+                        error,
+                        t("regulation.errors.toggleStatus", {
+                            defaultValue: "خطا در تغییر وضعیت قانون / مقرره",
+                        }),
+                    ),
+                );
+            }
+        },
+        [t, toggleStatus],
+    );
+
+    const createInitialValue = useMemo<RegulationNode | null>(() => {
+        if (routeMode !== "create") {
+            return null;
+        }
+
+        return {
+            id: "",
+            code: "",
+            name: "",
+            type: "regulation",
+            description: "",
+            parentId: queryParentId,
+            status: "active",
+            validFrom: "",
+            validTo: "",
+        } as RegulationNode;
+    }, [queryParentId, routeMode]);
+
+    const objectMode =
+        routeMode === "create"
+            ? "create"
+            : routeMode === "edit"
+                ? "edit"
+                : "view";
+
+    const objectValue = routeMode === "create" ? createInitialValue : selectedItem;
+    const showObjectPane = routeMode !== "list";
 
     return (
-        <div style={{ height: "100%", minHeight: 0 }}>
-            {globalError && (
-                <div style={{ padding: "8px 12px" }}>
-                    <MessageStrip design="Negative" onClose={() => setGlobalError(undefined)}>
-                        {globalError}
-                    </MessageStrip>
-                </div>
-            )}
-
-            {/* @ts-ignore */}
-            <ui5-flexible-column-layout
-                layout={layout}
-                onLayout-change={onLayoutChange}
-                style={{ height: "100%" }}
+        <>
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: showObjectPane
+                        ? "minmax(24rem, 34rem) minmax(0, 1fr)"
+                        : "1fr",
+                    gap: "1rem",
+                    minHeight: "calc(100vh - 10rem)",
+                }}
             >
-                {/* Start column: List Report */}
-                <div slot="startColumn" style={{ height: "100%", minHeight: 0, overflow: "auto" }}>
+                <section
+                    style={{
+                        minWidth: 0,
+                        overflow: "hidden",
+                        border: "1px solid var(--sapGroup_ContentBorderColor)",
+                        borderRadius: "1rem",
+                        padding: "1rem",
+                    }}
+                >
                     <RegulationsListReport
-                        key={listVersion}
-                        selectedId={regulationId}
-                        treeFocusId={treeFocusId}
-                        expandOneLevelForId={expandOneLevelForId}
-                        onSelect={(id) => navigate(`/regulations/${id}`)}
-                        onCreate={() => navigate("/regulations/new")}
-                        onDataLoaded={(items) => setListCache(items)}
+                        items={items}
+                        selectedId={regulationId ?? null}
+                        searchText={searchText}
+                        busy={loading || submitting}
+                        error={pageError}
+                        onSearchTextChange={setSearchText}
+                        onRefresh={handleRefresh}
+                        onCreateRoot={handleCreateRoot}
+                        onSelect={handleSelect}
+                        onCreateChild={handleCreateChild}
+                        onEdit={handleEdit}
+                        onDelete={requestDelete}
+                        onToggleStatus={(id) => {
+                            void handleToggleStatus(id);
+                        }}
                     />
-                </div>
+                </section>
 
-                {/* Mid column: Object Page */}
-                {hasMid && (
-                    <div slot="midColumn" style={{ height: "100%", minHeight: 0, overflow: "auto" }}>
-                        <RegulationObjectPage
-                            mode={mode}
-                            regulationId={mode === "create" ? undefined : regulationId}
-                            onDone={() => navigate("/regulations")}
-                            onEdit={(id) => navigate(`/regulations/${id}/edit`)}
-                            onView={(id) => {
-                                navigate(`/regulations/${id}`);
-                                bumpList();
-                            }}
-                            onDelete={(id) => openDelete(id)}
-                            onCreateChild={(parentId) => {
-                                setTreeFocusId(parentId);
-                                setExpandOneLevelForId(parentId);
-                                navigate(`/regulations/new?parentId=${encodeURIComponent(parentId)}`);
-                            }}
-                            onTreeFocusChange={(id) => {
-                                setTreeFocusId(id);
-                                if (id) setExpandOneLevelForId(id);
-                            }}
-                        />
-                    </div>
-                )}
-            </ui5-flexible-column-layout>
+                {showObjectPane ? (
+                    <section
+                        style={{
+                            minWidth: 0,
+                            overflow: "auto",
+                            border: "1px solid var(--sapGroup_ContentBorderColor)",
+                            borderRadius: "1rem",
+                            padding: "1rem",
+                        }}
+                    >
+                        {loading && !objectValue && routeMode !== "create" ? (
+                            <BusyIndicator active />
+                        ) : objectValue ? (
+                            <RegulationObjectPage
+                                key={`${objectMode}:${objectValue.id || "new"}:${objectValue.parentId ?? "root"}`}
+                                mode={objectMode}
+                                allItems={items}
+                                value={objectValue}
+                                busy={loading || submitting}
+                                error={pageError}
+                                onSubmit={routeMode === "create" ? handleSubmitCreate : handleSubmitUpdate}
+                                onCancel={handleCancel}
+                                onEdit={() => handleEdit()}
+                            />
+                        ) : (
+                            <MessageStrip design="Information" hideCloseButton>
+                                {t("regulation.object.notFound", {
+                                    defaultValue: "قانون / مقرره انتخاب‌شده یافت نشد",
+                                })}
+                            </MessageStrip>
+                        )}
+                    </section>
+                ) : null}
+            </div>
 
             <DeleteConfirmDialog
-                open={!!deleteId}
-                title={t("regulation.delete.title", "حذف قانون/مقرره")}
-                message={
-                    deleteId
-                        ? `${t(
-                            "regulation.delete.msg",
-                            "آیا از حذف این رکورد مطمئن هستید؟"
-                        )}${deleteLabel ? ` (${deleteLabel})` : ""}`
-                        : t("regulation.delete.msg", "آیا از حذف این رکورد مطمئن هستید؟")
-                }
-                onCancel={closeDelete}
-                onConfirm={confirmDelete}
-                busy={busyDelete}
+                open={Boolean(deleteCandidate)}
+                title={t("regulation.delete.title", { defaultValue: "حذف قانون / مقرره" })}
+                message={t("regulation.delete.confirm", {
+                    defaultValue: 'آیا از حذف "{{title}}" مطمئن هستید؟',
+                    title: deleteCandidate?.name ?? "",
+                })}
+                confirmText={t("common.delete", { defaultValue: "حذف" })}
+                cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+                loading={submitting}
+                onClose={() => setDeleteCandidate(null)}
+                onConfirm={() => {
+                    void handleConfirmDelete();
+                }}
             />
-        </div>
+        </>
     );
 }

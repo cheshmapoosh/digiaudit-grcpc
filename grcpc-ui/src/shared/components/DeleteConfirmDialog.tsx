@@ -1,35 +1,41 @@
-import { Dialog, Button, Text } from "@ui5/webcomponents-react";
+import { Button, Dialog, Text } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
+
+export interface DeleteConfirmDialogProps {
+    open: boolean;
+    title: string;
+    message: string;
+    onClose: () => void;
+    onConfirm: () => void;
+    loading?: boolean;
+    confirmText?: string;
+    cancelText?: string;
+}
 
 export function DeleteConfirmDialog({
                                         open,
                                         title,
                                         message,
-                                        onCancel,
+                                        onClose,
                                         onConfirm,
-                                        busy
-                                    }: {
-    open: boolean;
-    title: string;
-    message: string;
-    onCancel: () => void;
-    onConfirm: () => void;
-    busy?: boolean;
-}) {
+                                        loading = false,
+                                        confirmText,
+                                        cancelText,
+                                    }: DeleteConfirmDialogProps) {
     const { t } = useTranslation();
 
     return (
         <Dialog
             open={open}
             headerText={title}
-            onAfterClose={onCancel}
+            onClose={onClose}
             footer={
                 <>
-                    <Button design="Negative" onClick={onConfirm} disabled={!!busy}>
-                        {t("common.delete", "حذف")}
+                    <Button design="Negative" onClick={onConfirm} disabled={loading}>
+                        {confirmText ?? t("common.delete", { defaultValue: "حذف" })}
                     </Button>
-                    <Button design="Transparent" onClick={onCancel} disabled={!!busy}>
-                        {t("common.cancel", "انصراف")}
+                    <Button design="Transparent" onClick={onClose} disabled={loading}>
+                        {cancelText ?? t("common.cancel", { defaultValue: "انصراف" })}
                     </Button>
                 </>
             }

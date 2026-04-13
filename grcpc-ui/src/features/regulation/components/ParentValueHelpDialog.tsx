@@ -1,106 +1,99 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
     Button,
     Dialog,
-    FlexBox,
-    FlexBoxDirection,
     Input,
     List,
     ListItemStandard,
-    Text,
-    Title,
 } from "@ui5/webcomponents-react";
 
-import type { RegulationId } from "../model/regulation.types";
-import { buildRegulationTree, flattenRegulationTree, isDescendant } from "./tree.utils";
-import { useRegulationStore } from "../state/regulation.store";
+import type { RegulationNode } from "@/features/regulation";
+import {
+    buildTree,
+    collectDescendantIds,
+    flattenTree,
+} from "../utils/regulation.tree";
+import { containsText } from "../utils/tree.utils";
 
-export function ParentValueHelpDialog({
-                                          open,
-                                          currentId,
-                                          currentParentId,
-                                          onClose,
-                                          onSelectParent,
-                                      }: {
+export interface ParentValueHelpDialogProps {
     open: boolean;
-    currentId?: RegulationId | null; // اگر در حال ویرایش هستیم
-    currentParentId?: RegulationId | null;
+    items: RegulationNode[];
+    currentId?: string | null;
+    selectedParentId?: string | null;
     onClose: () => void;
-    onSelectParent: (parentId: RegulationId | null) => void;
-}) {
-    const items = useRegulationStore((s) => s.items);
-    const tree = useMemo(() => buildRegulationTree(items), [items]);
-    const flat = useMemo(() => flattenRegulationTree(tree), [tree]);
+    onSelect: (parentId: string | null) => void;
+}
 
-    const [q, setQ] = useState("");
+export default function ParentValueHelpDialog({
+                                                  open,
+                                                  items,
+                                                  currentId,
+                                                  selectedParentId,
+                                                  onClose,
+                                                  onSelect,
+                                              }: ParentValueHelpDialogProps) {
+    const { t } = useTranslation();
+    const [searchText, setSearchText] = useState("");
 
-    const filtered = useMemo(() => {
-        const qq = q.trim().toLowerCase();
-        if (!qq) return flat;
-        return flat.filter(({ node }) => {
-            const hay = `${node.code} ${node.label}`.toLowerCase();
-            return hay.includes(qq);
-        });
-    }, [flat, q]);
+    const selectableItems = useMemo(() => {
+        const tree = buildTree(items);
+        const excludedIds = new Set<string>([
+            ...(currentId ? [currentId] : []),
+            ...collectDescendantIds(tree, currentId),
+        ]);
 
-    const canChoose = (candidateParentId: RegulationId) => {
-        if (!currentId) return true;
-        if (candidateParentId === currentId) return false;
-        // parent cannot be inside current subtree
-        return !isDescendant(tree, currentId, candidateParentId);
-    };
+        return flattenTree(tree).filter((item) => !excludedIds.has(item.id));
+    }, [currentId, items]);
+
+    const filteredItems = useMemo(() => {
+        if (!searchText.trim()) {
+            return selectableItems;
+        }
+
+        return selectableItems.filter((item) => containsText(item.name, searchText));
+    }, [searchText, selectableItems]);
 
     return (
         <Dialog
             open={open}
-            headerText="انتخاب والد"
-            onAfterClose={onClose}
-            style={{ width: "720px" }}
-            footer={
-                <FlexBox direction={FlexBoxDirection.Row} style={{ width: "100%", justifyContent: "space-between" }}>
-                    <Button design="Transparent" onClick={() => onSelectParent(null)}>
-                        بدون والد (ریشه)
-                    </Button>
-                    <Button design="Emphasized" onClick={onClose}>
-                        بستن
-                    </Button>
-                </FlexBox>
-            }
+            headerText={t("regulation.parent.dialog.title", {
+                defaultValue: "انتخاب والد",
+            })}
+            onClose={onClose}
         >
-            <div style={{ padding: 12, display: "grid", gap: 10 }}>
-                <Title level="H6">جستجو</Title>
+            <div style={{ display: "grid", gap: "1rem", minWidth: "32rem", maxWidth: "90vw" }}>
                 <Input
-                    placeholder="کد یا عنوان..."
-                    value={q}
-                    onInput={(e: any) => setQ(e.target.value)}
+                    value={searchText}
+                    placeholder={t("regulation.parent.dialog.search", {
+                        defaultValue: "جستجو بر اساس نام",
+                    })}
+                    onInput={(event) => setSearchText(event.target.value)}
                 />
 
-                {!items.length ? (
-                    <Text>موردی برای انتخاب وجود ندارد.</Text>
-                ) : (
-                    <List>
-                        {filtered.map(({ node, level }) => {
-                            const disabled = node.id ? !canChoose(node.id) : false;
-                            const isSelected = (node.id ?? null) === (currentParentId ?? null);
+                <List separators="Inner">
+                    <ListItemStandard selected={!selectedParentId} onClick={() => onSelect(null)}>
+                        {t("regulation.parent.none", { defaultValue: "بدون والد" })}
+                    </ListItemStandard>
 
-                            return (
-                                <ListItemStandard
-                                    key={node.id}
-                                    selected={isSelected}
-                                    style={{
-                                        paddingInlineStart: 8 + level * 18,
-                                        opacity: disabled ? 0.45 : 1,
-                                        pointerEvents: disabled ? "none" : "auto",
-                                    }}
-                                    additionalText={node.code}
-                                    onClick={() => onSelectParent(node.id)}
-                                >
-                                    {node.label}
-                                </ListItemStandard>
-                            );
-                        })}
-                    </List>
-                )}
+                    {filteredItems.map((item) => (
+                        <ListItemStandard
+                            key={item.id}
+                            selected={item.id === selectedParentId}
+                            additionalText={item.code}
+                            description={item.description ?? ""}
+                            onClick={() => onSelect(item.id)}
+                        >
+                            {item.name}
+                        </ListItemStandard>
+                    ))}
+                </List>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+                    <Button design="Transparent" onClick={onClose}>
+                        {t("common.close", { defaultValue: "بستن" })}
+                    </Button>
+                </div>
             </div>
         </Dialog>
     );

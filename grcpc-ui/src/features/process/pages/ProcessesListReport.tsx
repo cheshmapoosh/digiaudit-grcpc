@@ -1,112 +1,106 @@
-import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+    Bar,
+    Button,
+    Input,
+    MessageStrip,
+    Title,
+} from "@ui5/webcomponents-react";
 
-import { BusyIndicator, Button, Input, Label, Toolbar, ToolbarSpacer } from "@ui5/webcomponents-react";
-import "@ui5/webcomponents/dist/Title.js";
+import type { ProcessNode } from "@/features/process";
+import ProcessTree from "../components/ProcessTree";
 
-import type { ProcessNode } from "../model/process.types";
-import { processService } from "../service/process.service";
-import { ProcessTree } from "../components/ProcessTree";
-
-function matchesSearch(p: ProcessNode, q: string): boolean {
-    const s = q.trim().toLowerCase();
-    if (!s) return true;
-    return `${p.code ?? ""} ${p.title ?? ""} ${p.status ?? ""}`.toLowerCase().includes(s);
+export interface ProcessesListReportProps {
+    items: ProcessNode[];
+    selectedId?: string | null;
+    searchText: string;
+    busy?: boolean;
+    error?: string | null;
+    onSearchTextChange: (value: string) => void;
+    onRefresh: () => void;
+    onCreateRoot: () => void;
+    onSelect: (id: string) => void;
+    onCreateChild: (parentId: string) => void;
+    onEdit: (id: string) => void;
+    onDelete: (id: string) => void;
+    onToggleStatus: (id: string) => void;
 }
 
 export default function ProcessesListReport({
+                                                items,
                                                 selectedId,
-                                                treeFocusId,
-                                                expandOneLevelForId,
+                                                searchText,
+                                                busy = false,
+                                                error,
+                                                onSearchTextChange,
+                                                onRefresh,
+                                                onCreateRoot,
                                                 onSelect,
-                                                onCreate,
-                                                onDataLoaded,
-                                            }: {
-    selectedId?: string;
-    treeFocusId?: string;
-    expandOneLevelForId?: string;
-    onSelect: (id: string) => void;
-    onCreate: () => void;
-    onDataLoaded?: (items: ProcessNode[]) => void;
-}) {
+                                                onCreateChild,
+                                                onEdit,
+                                                onDelete,
+                                                onToggleStatus,
+                                            }: ProcessesListReportProps) {
     const { t } = useTranslation();
 
-    const [items, setItems] = useState<ProcessNode[]>([]);
-    const [loading, setLoading] = useState(false);
-
-    const [q, setQ] = useState("");
-
-    async function refresh() {
-        setLoading(true);
-        try {
-            const data = await processService.list();
-            const list = Array.isArray(data) ? data : [];
-            setItems(list);
-            onDataLoaded?.(list);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    useEffect(() => {
-        refresh();
-    }, []);
-
-    const filteredItems = useMemo(() => items.filter((p) => matchesSearch(p, q)), [items, q]);
-
     return (
-        <div className="page" style={{ height: "100%", minHeight: 0 }}>
-            <div className="pageHeader">
-                {/* @ts-ignore */}
-                <ui5-title level="H2">{t("process.page.title", "فرآیندها")}</ui5-title>
+        <div style={{ display: "grid", gap: "1rem", minHeight: 0 }}>
+            <Bar
+                startContent={
+                    <Title level="H4">
+                        {t("process.list.title", { defaultValue: "فرآیندها" })}
+                    </Title>
+                }
+                endContent={
+                    <>
+                        <Button
+                            design="Transparent"
+                            icon="refresh"
+                            disabled={busy}
+                            onClick={onRefresh}
+                        >
+                            {t("common.refresh", { defaultValue: "بروزرسانی" })}
+                        </Button>
 
-                <div style={{ display: "flex", gap: 8 }}>
-                    <Button design="Emphasized" icon="add" onClick={onCreate}>
-                        {t("process.actions.new", "ایجاد فرآیند")}
-                    </Button>
-                    <Button design="Transparent" icon="synchronize" onClick={refresh}>
-                        {t("common.refresh", "بازآوری")}
-                    </Button>
-                </div>
-            </div>
+                        <Button
+                            design="Emphasized"
+                            icon="add"
+                            disabled={busy}
+                            onClick={onCreateRoot}
+                        >
+                            {t("process.actions.createRoot", { defaultValue: "ایجاد فرآیند" })}
+                        </Button>
+                    </>
+                }
+            />
 
-            <Toolbar className="filterBar" design="Transparent">
-                <Input
-                    value={q}
-                    onInput={(e: any) => setQ(e.target.value)}
-                    placeholder={t("common.search", "جستجو...")}
-                    style={{ width: "min(360px, 100%)" }}
+            <Input
+                value={searchText}
+                placeholder={t("process.list.search", {
+                    defaultValue: "جستجو بر اساس کد، عنوان یا توضیحات",
+                })}
+                onInput={(event) => onSearchTextChange(event.target.value)}
+            />
+
+            {error ? (
+                <MessageStrip design="Negative" hideCloseButton>
+                    {error}
+                </MessageStrip>
+            ) : null}
+
+            <div style={{ minHeight: 0, overflow: "auto" }}>
+                <ProcessTree
+                    items={items}
+                    selectedId={selectedId}
+                    searchText={searchText}
+                    busy={busy}
+                    onSelect={onSelect}
+                    onCreateChild={onCreateChild}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onToggleStatus={onToggleStatus}
                 />
-
-                <Button
-                    design="Transparent"
-                    icon="clear-filter"
-                    onClick={() => {
-                        setQ("");
-                    }}
-                >
-                    {t("process.filter.clear", "پاک کردن")}
-                </Button>
-
-                <ToolbarSpacer />
-            </Toolbar>
-
-            {loading ? (
-                <BusyIndicator active style={{ width: "100%" }} />
-            ) : (
-                <div style={{ padding: 12 }}>
-                    {/* @ts-ignore */}
-                    <ui5-title level="H4">{t("process.tree.title", "ساختار فرآیند")}</ui5-title>
-                    <div style={{ borderTop: "1px solid var(--sapList_BorderColor)", margin: "8px 0 12px" }} />
-
-                    <ProcessTree
-                        items={filteredItems}
-                        selectedId={treeFocusId ?? selectedId}
-                        expandOneLevelForId={expandOneLevelForId}
-                        onSelect={onSelect}
-                    />
-                </div>
-            )}
+            </div>
         </div>
     );
 }

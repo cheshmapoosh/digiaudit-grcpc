@@ -1,48 +1,108 @@
-import { useEffect, useMemo, useState } from "react";
-import { Button, Input, List, ListItemStandard, Title, Toolbar, ToolbarSpacer } from "@ui5/webcomponents-react";
-import { useRegulationStore } from "../state/regulation.store";
+import { useTranslation } from "react-i18next";
+import {
+    Bar,
+    Button,
+    Input,
+    MessageStrip,
+    Title,
+} from "@ui5/webcomponents-react";
 
-export default function RegulationsListReport() {
-    const load = useRegulationStore((s) => s.load);
-    const items = useRegulationStore((s) => s.items);
-    const select = useRegulationStore((s) => s.select);
+import type { RegulationNode } from "@/features/regulation";
+import RegulationTree from "../components/RegulationTree";
 
-    const [q, setQ] = useState("");
+export interface RegulationsListReportProps {
+    items: RegulationNode[];
+    selectedId?: string | null;
+    searchText: string;
+    busy?: boolean;
+    error?: string | null;
+    onSearchTextChange: (value: string) => void;
+    onRefresh: () => void;
+    onCreateRoot: () => void;
+    onSelect: (id: string) => void;
+    onCreateChild: (parentId: string) => void;
+    onEdit: (id: string) => void;
+    onDelete: (id: string) => void;
+    onToggleStatus: (id: string) => void;
+}
 
-    useEffect(() => {
-        load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const filtered = useMemo(() => {
-        const qq = q.trim().toLowerCase();
-        if (!qq) return items;
-        return items.filter((x) => `${x.code} ${x.title}`.toLowerCase().includes(qq));
-    }, [items, q]);
+export default function RegulationsListReport({
+                                                    items,
+                                                    selectedId,
+                                                    searchText,
+                                                    busy = false,
+                                                    error,
+                                                    onSearchTextChange,
+                                                    onRefresh,
+                                                    onCreateRoot,
+                                                    onSelect,
+                                                    onCreateChild,
+                                                    onEdit,
+                                                    onDelete,
+                                                    onToggleStatus,
+                                                }: RegulationsListReportProps) {
+    const { t } = useTranslation();
 
     return (
-        <div style={{ padding: 12 }}>
-            <Toolbar style={{ paddingInline: 0 }}>
-                <Title level="H5">لیست قوانین و مقررات</Title>
-                <ToolbarSpacer />
-                <Input
-                    placeholder="جستجو..."
-                    value={q}
-                    onInput={(e: any) => setQ(e.target.value)}
-                    style={{ width: 320 }}
-                />
-                <Button design="Transparent" onClick={load}>
-                    Refresh
-                </Button>
-            </Toolbar>
+        <div style={{ display: "grid", gap: "1rem", minHeight: 0 }}>
+            <Bar
+                startContent={
+                    <Title level="H4">
+                        {t("regulation.list.title", { defaultValue: "قوانین و مقررات" })}
+                    </Title>
+                }
+                endContent={
+                    <>
+                        <Button
+                            design="Transparent"
+                            icon="refresh"
+                            disabled={busy}
+                            onClick={onRefresh}
+                        >
+                            {t("common.refresh", { defaultValue: "بروزرسانی" })}
+                        </Button>
 
-            <List>
-                {filtered.map((x) => (
-                    <ListItemStandard key={x.id} additionalText={x.code} onClick={() => select(x.id)}>
-                        {x.title}
-                    </ListItemStandard>
-                ))}
-            </List>
+                        <Button
+                            design="Emphasized"
+                            icon="add"
+                            disabled={busy}
+                            onClick={onCreateRoot}
+                        >
+                            {t("regulation.actions.createRoot", {
+                                defaultValue: "ایجاد قانون / مقرره",
+                            })}
+                        </Button>
+                    </>
+                }
+            />
+
+            <Input
+                value={searchText}
+                placeholder={t("regulation.list.search", {
+                    defaultValue: "جستجو بر اساس کد، نام یا توضیحات",
+                })}
+                onInput={(event) => onSearchTextChange(event.target.value)}
+            />
+
+            {error ? (
+                <MessageStrip design="Negative" hideCloseButton>
+                    {error}
+                </MessageStrip>
+            ) : null}
+
+            <div style={{ minHeight: 0, overflow: "auto" }}>
+                <RegulationTree
+                    items={items}
+                    selectedId={selectedId}
+                    searchText={searchText}
+                    busy={busy}
+                    onSelect={onSelect}
+                    onCreateChild={onCreateChild}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onToggleStatus={onToggleStatus}
+                />
+            </div>
         </div>
     );
 }
