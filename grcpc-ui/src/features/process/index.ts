@@ -21,4 +21,4 @@ export {
 
 export { processService, createProcessService } from "./service/process.service";
 
-export { useProcessStore, ROOT_PARENT } from "./state/process.state.ts";
+export { useProcessState, ROOT_PARENT } from "./state/process.state.ts";

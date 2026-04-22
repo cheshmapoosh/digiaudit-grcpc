@@ -45,7 +45,7 @@ function buildIndexes(nodes: OrganizationNode[]) {
     return { nodesById, childrenByParent };
 }
 
-export const useOrganizationStore = create<OrganizationState>((set) => ({
+export const useOrganizationState = create<OrganizationState>((set) => ({
     nodesById: {},
     childrenByParent: {},
     loadedChildren: {},

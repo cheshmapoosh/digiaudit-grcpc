@@ -1,3 +1,4 @@
+export { setupRoutes } from "./setup";
 export { dashboardRoutes } from "./dashboard";
 export { processRoutes } from "./process";
 export { regulationRoutes } from "./regulation";

@@ -8,7 +8,7 @@ import type {
     RegulationNodeCreate,
     RegulationNodeUpdate,
 } from "@/features/regulation";
-import { useRegulationStore, ROOT_PARENT } from "@/features/regulation";
+import { useRegulationState, ROOT_PARENT } from "@/features/regulation";
 import { hasChildren, sortRegulations } from "../utils/regulation.tree";
 import RegulationsListReport from "./RegulationsListReport";
 import RegulationObjectPage from "./RegulationObjectPage";
@@ -58,14 +58,14 @@ export default function RegulationsFclShellPage() {
 
     const routeMode = useRegulationRouteMode();
 
-    const nodesById = useRegulationStore((state) => state.nodesById);
-    const loading = useRegulationStore((state) => state.loading);
-    const loadChildren = useRegulationStore((state) => state.loadChildren);
-    const createNode = useRegulationStore((state) => state.createNode);
-    const updateNode = useRegulationStore((state) => state.updateNode);
-    const removeNode = useRegulationStore((state) => state.removeNode);
-    const toggleStatus = useRegulationStore((state) => state.toggleStatus);
-    const refresh = useRegulationStore((state) => state.refresh);
+    const nodesById = useRegulationState((state) => state.nodesById);
+    const loading = useRegulationState((state) => state.loading);
+    const loadChildren = useRegulationState((state) => state.loadChildren);
+    const createNode = useRegulationState((state) => state.createNode);
+    const updateNode = useRegulationState((state) => state.updateNode);
+    const removeNode = useRegulationState((state) => state.removeNode);
+    const toggleStatus = useRegulationState((state) => state.toggleStatus);
+    const refresh = useRegulationState((state) => state.refresh);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);

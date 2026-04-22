@@ -45,7 +45,7 @@ function buildIndexes(nodes: RegulationNode[]) {
     return { nodesById, childrenByParent };
 }
 
-export const useRegulationStore = create<RegulationState>((set) => ({
+export const useRegulationState = create<RegulationState>((set) => ({
     nodesById: {},
     childrenByParent: {},
     loadedChildren: {},

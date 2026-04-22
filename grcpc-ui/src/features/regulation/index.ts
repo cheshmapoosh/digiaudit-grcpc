@@ -23,4 +23,4 @@ export {
 
 export { regulationService, createRegulationService } from "./service/regulation.service";
 
-export { useRegulationStore, ROOT_PARENT } from "./state/regulation.state.ts";
+export { useRegulationState, ROOT_PARENT } from "./state/regulation.state.ts";

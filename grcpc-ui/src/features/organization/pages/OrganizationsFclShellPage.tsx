@@ -8,7 +8,7 @@ import type {
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
 } from "@/features/organization";
-import { useOrganizationStore, ROOT_PARENT } from "@/features/organization";
+import { useOrganizationState, ROOT_PARENT } from "@/features/organization";
 import { hasChildren, sortOrganizations } from "../utils/organization.tree";
 import OrganizationsListReport from "./OrganizationsListReport";
 import OrganizationObjectPage from "./OrganizationObjectPage";
@@ -58,14 +58,14 @@ export default function OrganizationsFclShellPage() {
 
     const routeMode = useOrganizationRouteMode();
 
-    const nodesById = useOrganizationStore((state) => state.nodesById);
-    const loading = useOrganizationStore((state) => state.loading);
-    const loadChildren = useOrganizationStore((state) => state.loadChildren);
-    const createNode = useOrganizationStore((state) => state.createNode);
-    const updateNode = useOrganizationStore((state) => state.updateNode);
-    const removeNode = useOrganizationStore((state) => state.removeNode);
-    const toggleStatus = useOrganizationStore((state) => state.toggleStatus);
-    const refresh = useOrganizationStore((state) => state.refresh);
+    const nodesById = useOrganizationState((state) => state.nodesById);
+    const loading = useOrganizationState((state) => state.loading);
+    const loadChildren = useOrganizationState((state) => state.loadChildren);
+    const createNode = useOrganizationState((state) => state.createNode);
+    const updateNode = useOrganizationState((state) => state.updateNode);
+    const removeNode = useOrganizationState((state) => state.removeNode);
+    const toggleStatus = useOrganizationState((state) => state.toggleStatus);
+    const refresh = useOrganizationState((state) => state.refresh);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);

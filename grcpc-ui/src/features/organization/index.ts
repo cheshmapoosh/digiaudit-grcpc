@@ -23,4 +23,4 @@ export {
 
 export { organizationService, createOrganizationService } from "./service/organization.service";
 
-export { useOrganizationStore, ROOT_PARENT } from "./state/organization.state.ts";
+export { useOrganizationState, ROOT_PARENT } from "./state/organization.state.ts";

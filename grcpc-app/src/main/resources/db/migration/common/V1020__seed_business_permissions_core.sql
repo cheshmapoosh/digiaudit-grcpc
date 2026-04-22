@@ -1,0 +1,4 @@
+insert into business_permission (id, code, module_name, created_at, updated_at, created_by, updated_by, version) values ('22000000-0000-0000-0000-000000000001', 'USERMANAGEMENT_VIEW', 'USERMANAGEMENT', current_timestamp, null, null, null, 0);
+insert into business_permission (id, code, module_name, created_at, updated_at, created_by, updated_by, version) values ('22000000-0000-0000-0000-000000000002', 'USERMANAGEMENT_EDIT', 'USERMANAGEMENT', current_timestamp, null, null, null, 0);
+insert into business_permission (id, code, module_name, created_at, updated_at, created_by, updated_by, version) values ('22000000-0000-0000-0000-000000000003', 'ORGANIZATION_VIEW', 'ORGANIZATION', current_timestamp, null, null, null, 0);
+insert into business_permission (id, code, module_name, created_at, updated_at, created_by, updated_by, version) values ('22000000-0000-0000-0000-000000000004', 'ORGANIZATION_EDIT', 'ORGANIZATION', current_timestamp, null, null, null, 0);

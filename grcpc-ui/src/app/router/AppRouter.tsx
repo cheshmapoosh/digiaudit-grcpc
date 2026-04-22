@@ -1,7 +1,13 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import MainLayout from "../../layout/MainLayout";
+import SetupGuard from "../guards/SetupGuard";
+import AuthGuard from "../guards/AuthGuard";
+import LoginPageGuard from "../guards/LoginPageGuard";
+import NotFoundPage from "@/pages/NotFoundPage";
+import LoginPage from "@/pages/LoginPage";
 import {
+    setupRoutes,
     dashboardRoutes,
     organizationRoutes,
     processRoutes,
@@ -11,15 +17,37 @@ import {
 export default function AppRouter() {
     return (
         <Routes>
-            <Route element={<MainLayout />}>
-                <Route index element={<Navigate to="/dashboard" replace />} />
+            {setupRoutes}
+
+            <Route
+                path="/login"
+                element={
+                    <LoginPageGuard>
+                        <LoginPage />
+                    </LoginPageGuard>
+                }
+            />
+
+            <Route
+                path="/"
+                element={<Navigate to="/dashboard" replace />}
+            />
+
+            <Route
+                element={
+                    <SetupGuard>
+                        <AuthGuard>
+                            <MainLayout />
+                        </AuthGuard>
+                    </SetupGuard>
+                }
+            >
                 {dashboardRoutes}
                 {organizationRoutes}
                 {processRoutes}
                 {regulationRoutes}
+                <Route path="*" element={<NotFoundPage />} />
             </Route>
-
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
     );
 }

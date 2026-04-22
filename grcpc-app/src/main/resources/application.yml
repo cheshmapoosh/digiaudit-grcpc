@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: grcpc-api
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/grcpc}
+    username: ${DB_USERNAME:grcpc}
+    password: ${DB_PASSWORD:grcpc}
+    driver-class-name: ${DB_DRIVER_CLASS_NAME:org.postgresql.Driver}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: ${DB_SCHEMA:grc}
+
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    default-schema: ${DB_SCHEMA:grc}
+    schemas: ${DB_SCHEMA:grc}
+    locations: classpath:db/migration/common,classpath:db/migration/{vendor}
+    baseline-on-migrate: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  logging:
+    path: ${APP_LOGGING_PATH:logs}
+
+logging:
+  level:
+    root: ${ROOT_LOG_LEVEL:INFO}
+    com.digiaudit.grcpc: ${APP_LOG_LEVEL:DEBUG}

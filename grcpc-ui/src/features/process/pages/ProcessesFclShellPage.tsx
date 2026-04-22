@@ -8,7 +8,7 @@ import type {
     ProcessNodeCreate,
     ProcessNodeUpdate,
 } from "@/features/process";
-import { useProcessStore, ROOT_PARENT } from "@/features/process";
+import { useProcessState, ROOT_PARENT } from "@/features/process";
 import { hasChildren, sortProcesses } from "../utils/process.tree";
 import ProcessesListReport from "./ProcessesListReport";
 import ProcessObjectPage from "./ProcessObjectPage";
@@ -56,14 +56,14 @@ export default function ProcessesFclShellPage() {
 
     const routeMode = useProcessRouteMode();
 
-    const nodesById = useProcessStore((state) => state.nodesById);
-    const loading = useProcessStore((state) => state.loading);
-    const loadChildren = useProcessStore((state) => state.loadChildren);
-    const createNode = useProcessStore((state) => state.createNode);
-    const updateNode = useProcessStore((state) => state.updateNode);
-    const removeNode = useProcessStore((state) => state.removeNode);
-    const toggleStatus = useProcessStore((state) => state.toggleStatus);
-    const refresh = useProcessStore((state) => state.refresh);
+    const nodesById = useProcessState((state) => state.nodesById);
+    const loading = useProcessState((state) => state.loading);
+    const loadChildren = useProcessState((state) => state.loadChildren);
+    const createNode = useProcessState((state) => state.createNode);
+    const updateNode = useProcessState((state) => state.updateNode);
+    const removeNode = useProcessState((state) => state.removeNode);
+    const toggleStatus = useProcessState((state) => state.toggleStatus);
+    const refresh = useProcessState((state) => state.refresh);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);

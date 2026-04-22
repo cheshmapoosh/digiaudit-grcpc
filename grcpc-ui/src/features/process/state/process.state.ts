@@ -45,7 +45,7 @@ function buildIndexes(nodes: ProcessNode[]) {
   return { nodesById, childrenByParent };
 }
 
-export const useProcessStore = create<ProcessState>((set) => ({
+export const useProcessState = create<ProcessState>((set) => ({
   nodesById: {},
   childrenByParent: {},
   loadedChildren: {},
