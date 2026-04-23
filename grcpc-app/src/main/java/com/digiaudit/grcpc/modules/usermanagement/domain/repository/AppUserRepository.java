@@ -1,13 +1,12 @@
 package com.digiaudit.grcpc.modules.usermanagement.domain.repository;
 
 import com.digiaudit.grcpc.modules.usermanagement.domain.entity.AppUserEntity;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
 
@@ -17,24 +16,43 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
 
     boolean existsByRootUserTrue();
 
-    @Query(value = """
-            select r.code
-            from user_role_assignment ura
-            join role r on r.id = ura.role_id
-            where ura.user_id = :userId
+    @Query("""
+            select distinct r.code
+            from UserRoleAssignmentEntity ura
+            join ura.role r
+            where ura.user.id = :userId
               and ura.active = true
               and r.enabled = true
-            """, nativeQuery = true)
-    List<String> findRoleCodes(@Param("userId") UUID userId);
+              and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
+              and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
+            """)
+    List<String> findActiveRoleCodes(@Param("userId") UUID userId);
 
-    @Query(value = """
+    @Query("""
             select distinct p.code
-            from user_role_assignment ura
-            join role r on r.id = ura.role_id and r.enabled = true
-            join role_permission rp on rp.role_id = r.id
-            join permission p on p.id = rp.permission_id
-            where ura.user_id = :userId
+            from UserRoleAssignmentEntity ura
+            join ura.role r
+            join RolePermissionEntity rp on rp.role = r
+            join rp.permission p
+            where ura.user.id = :userId
               and ura.active = true
-            """, nativeQuery = true)
-    List<String> findPermissionCodes(@Param("userId") UUID userId);
+              and r.enabled = true
+              and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
+              and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
+            """)
+    List<String> findActivePermissionCodes(@Param("userId") UUID userId);
+
+    @Query("""
+            select distinct bp.code
+            from UserRoleAssignmentEntity ura
+            join ura.role r
+            join RoleBusinessPermissionEntity rbp on rbp.role = r
+            join rbp.businessPermission bp
+            where ura.user.id = :userId
+              and ura.active = true
+              and r.enabled = true
+              and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
+              and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
+            """)
+    List<String> findActiveBusinessPermissionCodes(@Param("userId") UUID userId);
 }

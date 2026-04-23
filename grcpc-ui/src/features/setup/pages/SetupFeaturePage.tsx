@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-    Bar,
     Button,
     BusyIndicator,
     Card,
@@ -15,6 +14,7 @@ import {
 } from "@ui5/webcomponents-react";
 
 import { useSetupState } from "@/features/setup";
+import PublicPageHeader from "@/shared/components/PublicPageHeader";
 
 interface SetupFormState {
     username: string;
@@ -78,13 +78,13 @@ export default function SetupFeaturePage() {
     const clearError = useSetupState((state) => state.clearError);
 
     const [form, setForm] = useState<SetupFormState>(INITIAL_FORM);
-    const [pageError, setPageError] = useState<string | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
     const [validationError, setValidationError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     useEffect(() => {
         void loadStatus().catch((loadError: unknown) => {
-            setPageError(
+            setActionError(
                 extractErrorMessage(
                     loadError,
                     t("setup.errors.loadStatus", {
@@ -95,13 +95,9 @@ export default function SetupFeaturePage() {
         });
     }, [loadStatus, t]);
 
-    useEffect(() => {
-        if (error) {
-            setPageError(error);
-        }
-    }, [error]);
-
     const initialized = useMemo(() => Boolean(status?.initialized), [status?.initialized]);
+
+    const effectiveError = actionError ?? error;
 
     const handleChange = useCallback(
         <K extends keyof SetupFormState>(key: K, value: SetupFormState[K]) => {
@@ -184,7 +180,7 @@ export default function SetupFeaturePage() {
         }
 
         clearError();
-        setPageError(null);
+        setActionError(null);
         setSuccessMessage(null);
 
         try {
@@ -207,7 +203,7 @@ export default function SetupFeaturePage() {
                 navigate("/login", { replace: true });
             }, 900);
         } catch (submitError) {
-            setPageError(
+            setActionError(
                 extractErrorMessage(
                     submitError,
                     t("setup.errors.initialize", {
@@ -387,241 +383,240 @@ export default function SetupFeaturePage() {
                     </div>
                 </div>
 
-                <Card
+                <div
                     style={{
-                        width: "100%",
-                        borderRadius: "1.25rem",
+                        display: "grid",
+                        gap: "1rem",
                         alignSelf: "center",
-                        boxShadow: "0 1rem 2.5rem rgba(0, 0, 0, 0.10)",
                     }}
-                    header={
-                        <CardHeader
-                            titleText={t("setup.page.title", {
-                                defaultValue: "راه‌اندازی اولیه سامانه",
-                            })}
-                            subtitleText={t("setup.page.subtitle", {
-                                defaultValue: "ثبت کاربر ریشه و تکمیل اطلاعات اولیه",
-                            })}
-                        />
-                    }
                 >
-                    <div
+                    <PublicPageHeader
+                        titleKey="setup.page.title"
+                        subtitleKey="setup.page.subtitle"
+                        titleDefault="راه‌اندازی اولیه سامانه"
+                        subtitleDefault="ثبت کاربر ریشه و تکمیل اطلاعات اولیه"
+                    />
+
+                    <Card
                         style={{
-                            padding: "1.5rem",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "1rem",
+                            width: "100%",
+                            borderRadius: "1.25rem",
+                            boxShadow: "0 1rem 2.5rem rgba(0, 0, 0, 0.10)",
                         }}
-                    >
-                        <Bar
-                            startContent={
-                                <Title level="H4">
-                                    {t("setup.form.title", {
-                                        defaultValue: "ثبت کاربر ریشه",
-                                    })}
-                                </Title>
-                            }
-                            endContent={loading ? <BusyIndicator active delay={0} size="S" /> : undefined}
-                        />
-
-                        <Text style={{ color: "var(--sapContent_LabelColor)" }}>
-                            {t("setup.form.subtitle", {
-                                defaultValue:
-                                    "اطلاعات زیر برای ایجاد نخستین کاربر سامانه استفاده می‌شود. پس از ثبت موفق، به صفحه ورود منتقل خواهید شد.",
-                            })}
-                        </Text>
-
-                        {initialized ? (
-                            <MessageStrip design="Positive" hideCloseButton>
-                                {t("setup.messages.alreadyInitialized", {
-                                    defaultValue: "سامانه قبلا راه‌اندازی شده است و کاربر ریشه ثبت شده است.",
+                        header={
+                            <CardHeader
+                                titleText={t("setup.form.title", {
+                                    defaultValue: "ثبت کاربر ریشه",
                                 })}
-                            </MessageStrip>
-                        ) : null}
-
-                        {pageError ? (
-                            <MessageStrip design="Negative" hideCloseButton>
-                                {pageError}
-                            </MessageStrip>
-                        ) : null}
-
-                        {validationError ? (
-                            <MessageStrip design="Negative" hideCloseButton>
-                                {validationError}
-                            </MessageStrip>
-                        ) : null}
-
-                        {successMessage ? (
-                            <MessageStrip design="Positive" hideCloseButton>
-                                {successMessage}
-                            </MessageStrip>
-                        ) : null}
+                            />
+                        }
+                    >
 
                         <div
                             style={{
-                                display: "grid",
+                                padding: "1.5rem",
+                                display: "flex",
+                                flexDirection: "column",
                                 gap: "1rem",
-                                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                             }}
                         >
-                            <div style={{ display: "grid", gap: ".5rem" }}>
-                                <Label required for="setup-username">
-                                    {t("setup.fields.username", { defaultValue: "نام کاربری" })}
-                                </Label>
-                                <Input
-                                    id="setup-username"
-                                    value={form.username}
-                                    disabled={submitting || initialized}
-                                    placeholder={t("setup.placeholders.username", {
-                                        defaultValue: "نام کاربری ریشه را وارد کنید",
-                                    })}
-                                    onInput={(event) => handleChange("username", event.target.value)}
-                                />
-                            </div>
+                            {loading ? <BusyIndicator active delay={0} size="S" /> : null}
 
-                            <div style={{ display: "grid", gap: ".5rem" }}>
-                                <Label for="setup-email">
-                                    {t("setup.fields.email", { defaultValue: "ایمیل" })}
-                                </Label>
-                                <Input
-                                    id="setup-email"
-                                    value={form.email}
-                                    disabled={submitting || initialized}
-                                    placeholder={t("setup.placeholders.email", {
-                                        defaultValue: "ایمیل را وارد کنید",
+                            {initialized ? (
+                                <MessageStrip design="Positive" hideCloseButton>
+                                    {t("setup.messages.alreadyInitialized", {
+                                        defaultValue: "سامانه قبلا راه‌اندازی شده است و کاربر ریشه ثبت شده است.",
                                     })}
-                                    onInput={(event) => handleChange("email", event.target.value)}
-                                />
-                            </div>
+                                </MessageStrip>
+                            ) : null}
 
-                            <div style={{ display: "grid", gap: ".5rem" }}>
-                                <Label required for="setup-firstName">
-                                    {t("setup.fields.firstName", { defaultValue: "نام" })}
-                                </Label>
-                                <Input
-                                    id="setup-firstName"
-                                    value={form.firstName}
-                                    disabled={submitting || initialized}
-                                    placeholder={t("setup.placeholders.firstName", {
-                                        defaultValue: "نام را وارد کنید",
-                                    })}
-                                    onInput={(event) => handleChange("firstName", event.target.value)}
-                                />
-                            </div>
+                            {effectiveError ? (
+                                <MessageStrip design="Negative" hideCloseButton>
+                                    {effectiveError}
+                                </MessageStrip>
+                            ) : null}
 
-                            <div style={{ display: "grid", gap: ".5rem" }}>
-                                <Label required for="setup-lastName">
-                                    {t("setup.fields.lastName", { defaultValue: "نام خانوادگی" })}
-                                </Label>
-                                <Input
-                                    id="setup-lastName"
-                                    value={form.lastName}
-                                    disabled={submitting || initialized}
-                                    placeholder={t("setup.placeholders.lastName", {
-                                        defaultValue: "نام خانوادگی را وارد کنید",
-                                    })}
-                                    onInput={(event) => handleChange("lastName", event.target.value)}
-                                />
-                            </div>
+                            {validationError ? (
+                                <MessageStrip design="Negative" hideCloseButton>
+                                    {validationError}
+                                </MessageStrip>
+                            ) : null}
 
-                            <div style={{ display: "grid", gap: ".5rem" }}>
-                                <Label required for="setup-password">
-                                    {t("setup.fields.password", { defaultValue: "رمز عبور" })}
-                                </Label>
-                                <Input
-                                    id="setup-password"
-                                    type="Password"
-                                    value={form.password}
-                                    disabled={submitting || initialized}
-                                    placeholder={t("setup.placeholders.password", {
-                                        defaultValue: "رمز عبور را وارد کنید",
-                                    })}
-                                    onInput={(event) => handleChange("password", event.target.value)}
-                                />
-                            </div>
+                            {successMessage ? (
+                                <MessageStrip design="Positive" hideCloseButton>
+                                    {successMessage}
+                                </MessageStrip>
+                            ) : null}
 
-                            <div style={{ display: "grid", gap: ".5rem" }}>
-                                <Label required for="setup-confirmPassword">
-                                    {t("setup.fields.confirmPassword", {
-                                        defaultValue: "تکرار رمز عبور",
-                                    })}
-                                </Label>
-                                <Input
-                                    id="setup-confirmPassword"
-                                    type="Password"
-                                    value={form.confirmPassword}
-                                    disabled={submitting || initialized}
-                                    placeholder={t("setup.placeholders.confirmPassword", {
-                                        defaultValue: "تکرار رمز عبور را وارد کنید",
-                                    })}
-                                    onInput={(event) => handleChange("confirmPassword", event.target.value)}
-                                />
-                            </div>
+                            <div
+                                style={{
+                                    display: "grid",
+                                    gap: "1rem",
+                                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                                }}
+                            >
+                                <div style={{ display: "grid", gap: ".5rem" }}>
+                                    <Label required for="setup-username">
+                                        {t("setup.fields.username", { defaultValue: "نام کاربری" })}
+                                    </Label>
+                                    <Input
+                                        id="setup-username"
+                                        value={form.username}
+                                        disabled={submitting || initialized}
+                                        placeholder={t("setup.placeholders.username", {
+                                            defaultValue: "نام کاربری ریشه را وارد کنید",
+                                        })}
+                                        onInput={(event) => handleChange("username", event.target.value)}
+                                    />
+                                </div>
 
-                            <div style={{ display: "grid", gap: ".5rem" }}>
-                                <Label for="setup-mobile">
-                                    {t("setup.fields.mobile", { defaultValue: "موبایل" })}
-                                </Label>
-                                <Input
-                                    id="setup-mobile"
-                                    value={form.mobile}
-                                    disabled={submitting || initialized}
-                                    placeholder={t("setup.placeholders.mobile", {
-                                        defaultValue: "شماره موبایل را وارد کنید",
-                                    })}
-                                    onInput={(event) => handleChange("mobile", event.target.value)}
-                                />
+                                <div style={{ display: "grid", gap: ".5rem" }}>
+                                    <Label for="setup-email">
+                                        {t("setup.fields.email", { defaultValue: "ایمیل" })}
+                                    </Label>
+                                    <Input
+                                        id="setup-email"
+                                        value={form.email}
+                                        disabled={submitting || initialized}
+                                        placeholder={t("setup.placeholders.email", {
+                                            defaultValue: "ایمیل را وارد کنید",
+                                        })}
+                                        onInput={(event) => handleChange("email", event.target.value)}
+                                    />
+                                </div>
+
+                                <div style={{ display: "grid", gap: ".5rem" }}>
+                                    <Label required for="setup-firstName">
+                                        {t("setup.fields.firstName", { defaultValue: "نام" })}
+                                    </Label>
+                                    <Input
+                                        id="setup-firstName"
+                                        value={form.firstName}
+                                        disabled={submitting || initialized}
+                                        placeholder={t("setup.placeholders.firstName", {
+                                            defaultValue: "نام را وارد کنید",
+                                        })}
+                                        onInput={(event) => handleChange("firstName", event.target.value)}
+                                    />
+                                </div>
+
+                                <div style={{ display: "grid", gap: ".5rem" }}>
+                                    <Label required for="setup-lastName">
+                                        {t("setup.fields.lastName", { defaultValue: "نام خانوادگی" })}
+                                    </Label>
+                                    <Input
+                                        id="setup-lastName"
+                                        value={form.lastName}
+                                        disabled={submitting || initialized}
+                                        placeholder={t("setup.placeholders.lastName", {
+                                            defaultValue: "نام خانوادگی را وارد کنید",
+                                        })}
+                                        onInput={(event) => handleChange("lastName", event.target.value)}
+                                    />
+                                </div>
+
+                                <div style={{ display: "grid", gap: ".5rem" }}>
+                                    <Label required for="setup-password">
+                                        {t("setup.fields.password", { defaultValue: "رمز عبور" })}
+                                    </Label>
+                                    <Input
+                                        id="setup-password"
+                                        type="Password"
+                                        value={form.password}
+                                        disabled={submitting || initialized}
+                                        placeholder={t("setup.placeholders.password", {
+                                            defaultValue: "رمز عبور را وارد کنید",
+                                        })}
+                                        onInput={(event) => handleChange("password", event.target.value)}
+                                    />
+                                </div>
+
+                                <div style={{ display: "grid", gap: ".5rem" }}>
+                                    <Label required for="setup-confirmPassword">
+                                        {t("setup.fields.confirmPassword", {
+                                            defaultValue: "تکرار رمز عبور",
+                                        })}
+                                    </Label>
+                                    <Input
+                                        id="setup-confirmPassword"
+                                        type="Password"
+                                        value={form.confirmPassword}
+                                        disabled={submitting || initialized}
+                                        placeholder={t("setup.placeholders.confirmPassword", {
+                                            defaultValue: "تکرار رمز عبور را وارد کنید",
+                                        })}
+                                        onInput={(event) => handleChange("confirmPassword", event.target.value)}
+                                    />
+                                </div>
+
+                                <div style={{ display: "grid", gap: ".5rem" }}>
+                                    <Label for="setup-mobile">
+                                        {t("setup.fields.mobile", { defaultValue: "موبایل" })}
+                                    </Label>
+                                    <Input
+                                        id="setup-mobile"
+                                        value={form.mobile}
+                                        disabled={submitting || initialized}
+                                        placeholder={t("setup.placeholders.mobile", {
+                                            defaultValue: "شماره موبایل را وارد کنید",
+                                        })}
+                                        onInput={(event) => handleChange("mobile", event.target.value)}
+                                    />
+                                </div>
+
+                                <div
+                                    style={{
+                                        gridColumn: "1 / -1",
+                                        padding: ".85rem 1rem",
+                                        borderRadius: ".85rem",
+                                        background: "var(--sapList_Background)",
+                                        border: "1px solid var(--sapList_BorderColor)",
+                                    }}
+                                >
+                                    <Text style={{ color: "var(--sapContent_LabelColor)" }}>
+                                        {t("setup.hints.password", {
+                                            defaultValue:
+                                                "پیشنهاد می‌شود رمز عبور حداقل 8 کاراکتر بوده و ترکیبی از حروف و اعداد باشد.",
+                                        })}
+                                    </Text>
+                                </div>
                             </div>
 
                             <div
                                 style={{
-                                    gridColumn: "1 / -1",
-                                    padding: ".85rem 1rem",
-                                    borderRadius: ".85rem",
-                                    background: "var(--sapList_Background)",
-                                    border: "1px solid var(--sapList_BorderColor)",
+                                    display: "flex",
+                                    justifyContent: "flex-end",
+                                    gap: ".75rem",
+                                    marginTop: ".5rem",
                                 }}
                             >
-                                <Text style={{ color: "var(--sapContent_LabelColor)" }}>
-                                    {t("setup.hints.password", {
-                                        defaultValue:
-                                            "پیشنهاد می‌شود رمز عبور حداقل 8 کاراکتر بوده و ترکیبی از حروف و اعداد باشد.",
+                                <Button
+                                    design="Emphasized"
+                                    disabled={submitting || loading || initialized}
+                                    onClick={() => void handleSubmit()}
+                                >
+                                    {submitting
+                                        ? t("setup.actions.initializing", {
+                                            defaultValue: "در حال راه‌اندازی...",
+                                        })
+                                        : t("setup.actions.initialize", {
+                                            defaultValue: "راه‌اندازی اولیه",
+                                        })}
+                                </Button>
+
+                                <Button
+                                    design="Transparent"
+                                    disabled={submitting}
+                                    onClick={handleGoHome}
+                                >
+                                    {t("setup.actions.goHome", {
+                                        defaultValue: "بازگشت",
                                     })}
-                                </Text>
+                                </Button>
                             </div>
                         </div>
-
-                        <Bar
-                            endContent={
-                                <>
-                                    <Button
-                                        design="Emphasized"
-                                        disabled={submitting || loading || initialized}
-                                        onClick={() => void handleSubmit()}
-                                    >
-                                        {submitting
-                                            ? t("setup.actions.initializing", {
-                                                defaultValue: "در حال راه‌اندازی...",
-                                            })
-                                            : t("setup.actions.initialize", {
-                                                defaultValue: "راه‌اندازی اولیه",
-                                            })}
-                                    </Button>
-
-                                    <Button
-                                        design="Transparent"
-                                        disabled={submitting}
-                                        onClick={handleGoHome}
-                                    >
-                                        {t("setup.actions.goHome", {
-                                            defaultValue: "بازگشت",
-                                        })}
-                                    </Button>
-                                </>
-                            }
-                        />
-                    </div>
-                </Card>
+                    </Card>
+                </div>
             </div>
         </div>
     );

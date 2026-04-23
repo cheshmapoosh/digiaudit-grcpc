@@ -8,8 +8,7 @@ import {
     List,
     ListItemCustom,
     Button,
-    Icon,
-    Text
+    Text, type PopoverDomRef
 } from "@ui5/webcomponents-react";
 
 export type NotificationItem = {
@@ -32,7 +31,7 @@ export default function NotificationMenu({ items, onOpenItem, onMarkAllRead }: P
     const [open, setOpen] = useState(false);
 
     const openerId = "notificationOpener";
-    const popoverRef = useRef<any>(null);
+    const popoverRef = useRef<PopoverDomRef | null>(null);
 
     const unreadCount = useMemo(() => items.filter((x) => x.unread).length, [items]);
 
@@ -82,10 +81,9 @@ export default function NotificationMenu({ items, onOpenItem, onMarkAllRead }: P
                     ref={popoverRef}
                     open={open}
                     opener={openerId}
-                    placementType="Bottom"
+                    placement="Bottom"
                     modal={false}
                     headerText={t("notifications.title")}
-                    onAfterClose={() => setOpen(false)}
                     style={{ width: 360, maxWidth: "90vw", maxHeight: "70vh" }}
                 >
                     {/* Header actions (بدون دکمه بستن) */}
@@ -105,7 +103,7 @@ export default function NotificationMenu({ items, onOpenItem, onMarkAllRead }: P
 
                     {/* ✅ Scrollable list area */}
                     <div style={{ maxHeight: "50vh", overflowY: "auto" }}>
-                        <List mode="None">
+                        <List>
                             {items.length === 0 ? (
                                 <ListItemCustom>
                                     <Text style={{ opacity: 0.7 }}>{t("notifications.empty")}</Text>

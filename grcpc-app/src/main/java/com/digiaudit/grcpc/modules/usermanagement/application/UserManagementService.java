@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -161,7 +162,7 @@ public class UserManagementService {
                 .validFrom(request.validFrom())
                 .validTo(request.validTo())
                 .assignedBy(actorUserId)
-                .assignedAt(Instant.now())
+                .assignedAt(LocalDateTime.now())
                 .active(true)
                 .build();
 

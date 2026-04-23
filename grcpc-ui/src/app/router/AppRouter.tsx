@@ -12,6 +12,7 @@ import {
     organizationRoutes,
     processRoutes,
     regulationRoutes,
+    usermanagementRoutes,
 } from "@/features";
 
 export default function AppRouter() {
@@ -28,10 +29,7 @@ export default function AppRouter() {
                 }
             />
 
-            <Route
-                path="/"
-                element={<Navigate to="/dashboard" replace />}
-            />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
             <Route
                 element={
@@ -46,6 +44,7 @@ export default function AppRouter() {
                 {organizationRoutes}
                 {processRoutes}
                 {regulationRoutes}
+                {usermanagementRoutes}
                 <Route path="*" element={<NotFoundPage />} />
             </Route>
         </Routes>

@@ -1,15 +1,14 @@
 package com.digiaudit.grcpc.common.security;
 
+import java.util.Collection;
+import java.util.UUID;
+import lombok.Builder;
 import lombok.Getter;
-import lombok.experimental.SuperBuilder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.UUID;
-
 @Getter
-@SuperBuilder(toBuilder = true)
+@Builder
 public class CurrentUser implements UserDetails {
 
     private final UUID userId;

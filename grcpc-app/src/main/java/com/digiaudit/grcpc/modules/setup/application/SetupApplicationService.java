@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Map;
 
@@ -81,7 +82,7 @@ public class SetupApplicationService {
                         .user(rootUser)
                         .role(rootRole)
                         .scopeType(ScopeType.GLOBAL)
-                        .assignedAt(Instant.now())
+                        .assignedAt(LocalDateTime.now())
                         .active(true)
                         .build()
         );

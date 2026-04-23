@@ -1,3 +1,5 @@
+import i18n from "@/i18n/i18n";
+
 export class HttpError extends Error {
     public readonly status: number;
     public readonly code?: string;
@@ -25,7 +27,7 @@ type RequestOptions = {
     signal?: AbortSignal;
 };
 
-const API_BASE_URL = (import.meta.env.VITE_GRCPC_API_BASE_URL ?? "").trim();
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
 
 function isAbsoluteUrl(url: string): boolean {
     return /^https?:\/\//i.test(url);
@@ -43,7 +45,7 @@ function buildUrl(path: string): string {
 }
 
 function isJsonContentType(contentType: string | null): boolean {
-    return !!contentType && contentType.toLowerCase().includes("application/json");
+    return Boolean(contentType && contentType.toLowerCase().includes("application/json"));
 }
 
 async function parseResponseBody(response: Response): Promise<unknown> {
@@ -91,6 +93,10 @@ function extractErrorMessage(status: number, payload: unknown): string {
     return `HTTP ${status}`;
 }
 
+function getCurrentLanguage(): string {
+    return i18n.resolvedLanguage || i18n.language || "fa";
+}
+
 async function request<T>(
     url: string,
     method: HttpMethod,
@@ -103,13 +109,13 @@ async function request<T>(
         method,
         headers: {
             Accept: "application/json",
+            "Accept-Language": getCurrentLanguage(),
             ...(hasBody ? { "Content-Type": "application/json" } : {}),
             ...options.headers,
         },
         body: hasBody ? JSON.stringify(options.body) : undefined,
         signal: options.signal,
-        // اگر بعدا احراز هویت cookie-based شد، این را فعال کن:
-        // credentials: "include",
+        credentials: "include",
     });
 
     const payload = await parseResponseBody(response);

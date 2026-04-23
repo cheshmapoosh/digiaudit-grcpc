@@ -13,6 +13,7 @@ import {
 } from "@ui5/webcomponents-react";
 
 import { useAuthState } from "@/features/auth";
+import PublicPageHeader from "@/shared/components/PublicPageHeader";
 
 type RouterState = {
     from?: {
@@ -244,121 +245,119 @@ export default function LoginFeaturePage() {
                     </div>
                 </div>
 
-                <Card
+                <div
                     style={{
-                        width: "100%",
-                        borderRadius: "1.25rem",
+                        display: "grid",
+                        gap: "1rem",
                         alignSelf: "center",
-                        boxShadow: "0 1rem 2.5rem rgba(0, 0, 0, 0.10)",
                     }}
-                    header={
-                        <CardHeader
-                            titleText={t("auth.login.pageTitle", {
-                                defaultValue: "ورود به سامانه",
-                            })}
-                            subtitleText={t("auth.login.pageSubtitle", {
-                                defaultValue: "احراز هویت کاربران GRC",
-                            })}
-                        />
-                    }
                 >
-                    <div
+                    <PublicPageHeader
+                        titleKey="auth.login.pageTitle"
+                        subtitleKey="auth.login.pageSubtitle"
+                        titleDefault="ورود به سامانه"
+                        subtitleDefault="احراز هویت کاربران GRC"
+                    />
+
+                    <Card
                         style={{
-                            padding: "1.5rem",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "1rem",
+                            width: "100%",
+                            borderRadius: "1.25rem",
+                            boxShadow: "0 1rem 2.5rem rgba(0, 0, 0, 0.10)",
                         }}
-                    >
-                        <div style={{ display: "grid", gap: ".5rem" }}>
-                            <Title level="H4">
-                                {t("auth.login.title", {
+                        header={
+                            <CardHeader
+                                titleText={t("auth.login.title", {
                                     defaultValue: "ورود کاربر",
                                 })}
-                            </Title>
-                            <Text>
-                                {t("auth.login.description", {
-                                    defaultValue: "برای ادامه، نام کاربری و رمز عبور خود را وارد کنید.",
-                                })}
-                            </Text>
-                        </div>
-
-                        {error ? (
-                            <MessageStrip design="Negative" hideCloseButton>
-                                {error}
-                            </MessageStrip>
-                        ) : null}
-
-                        <div style={{ display: "grid", gap: ".5rem" }}>
-                            <Label for="login-username">
-                                {t("auth.login.fields.username", {
-                                    defaultValue: "نام کاربری",
-                                })}
-                            </Label>
-                            <Input
-                                id="login-username"
-                                value={username}
-                                placeholder={t("auth.login.placeholders.username", {
-                                    defaultValue: "نام کاربری را وارد کنید",
-                                })}
-                                onInput={(event) => setUsername(event.target.value)}
                             />
-                        </div>
-
-                        <div style={{ display: "grid", gap: ".5rem" }}>
-                            <Label for="login-password">
-                                {t("auth.login.fields.password", {
-                                    defaultValue: "رمز عبور",
-                                })}
-                            </Label>
-                            <Input
-                                id="login-password"
-                                type="Password"
-                                value={password}
-                                placeholder={t("auth.login.placeholders.password", {
-                                    defaultValue: "رمز عبور را وارد کنید",
-                                })}
-                                onInput={(event) => setPassword(event.target.value)}
-                                onKeyDown={(event) => {
-                                    if (event.key === "Enter") {
-                                        void handleSubmit();
-                                    }
-                                }}
-                            />
-                        </div>
-
+                        }
+                    >
                         <div
                             style={{
+                                padding: "1.5rem",
                                 display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                marginTop: ".25rem",
+                                flexDirection: "column",
+                                gap: "1rem",
                             }}
                         >
-                            <Text style={{ color: "var(--sapContent_LabelColor)" }}>
-                                {t("auth.login.helpText", {
-                                    defaultValue: "برای ورود، از حساب کاربری تخصیص‌یافته استفاده کنید.",
-                                })}
-                            </Text>
-                        </div>
+                            {error ? (
+                                <MessageStrip design="Negative" hideCloseButton>
+                                    {error}
+                                </MessageStrip>
+                            ) : null}
 
-                        <div style={{ display: "flex", gap: ".75rem", marginTop: ".5rem" }}>
-                            <Button
-                                design="Emphasized"
-                                disabled={isSubmitDisabled}
-                                onClick={() => void handleSubmit()}
-                            >
-                                {submitting
-                                    ? t("auth.login.actions.submitting", {
-                                        defaultValue: "در حال ورود...",
-                                    })
-                                    : t("auth.login.actions.submit", {
-                                        defaultValue: "ورود",
+                            <div style={{ display: "grid", gap: ".5rem" }}>
+                                <Label for="login-username">
+                                    {t("auth.login.fields.username", {
+                                        defaultValue: "نام کاربری",
                                     })}
-                            </Button>
+                                </Label>
+                                <Input
+                                    id="login-username"
+                                    value={username}
+                                    placeholder={t("auth.login.placeholders.username", {
+                                        defaultValue: "نام کاربری را وارد کنید",
+                                    })}
+                                    onInput={(event) => setUsername(event.target.value)}
+                                />
+                            </div>
+
+                            <div style={{ display: "grid", gap: ".5rem" }}>
+                                <Label for="login-password">
+                                    {t("auth.login.fields.password", {
+                                        defaultValue: "رمز عبور",
+                                    })}
+                                </Label>
+                                <Input
+                                    id="login-password"
+                                    type="Password"
+                                    value={password}
+                                    placeholder={t("auth.login.placeholders.password", {
+                                        defaultValue: "رمز عبور را وارد کنید",
+                                    })}
+                                    onInput={(event) => setPassword(event.target.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === "Enter") {
+                                            void handleSubmit();
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    marginTop: ".25rem",
+                                }}
+                            >
+                                <Text style={{ color: "var(--sapContent_LabelColor)" }}>
+                                    {t("auth.login.helpText", {
+                                        defaultValue: "برای ورود، از حساب کاربری تخصیص‌یافته استفاده کنید.",
+                                    })}
+                                </Text>
+                            </div>
+
+                            <div style={{ display: "flex", gap: ".75rem", marginTop: ".5rem" }}>
+                                <Button
+                                    design="Emphasized"
+                                    disabled={isSubmitDisabled}
+                                    onClick={() => void handleSubmit()}
+                                >
+                                    {submitting
+                                        ? t("auth.login.actions.submitting", {
+                                            defaultValue: "در حال ورود...",
+                                        })
+                                        : t("auth.login.actions.submit", {
+                                            defaultValue: "ورود",
+                                        })}
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                </Card>
+                    </Card>
+                </div>
             </div>
         </div>
     );

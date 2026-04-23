@@ -1,16 +1,6 @@
 import { create } from "zustand";
 
-import { authService } from "@/features/auth";
-
-export type AuthMeResponse = {
-    authenticated: boolean;
-    userId: string | null;
-    username: string | null;
-    firstName: string | null;
-    lastName: string | null;
-    rootUser: boolean;
-    authorities: string[];
-};
+import { authService, type AuthMeResponse } from "@/features/auth/service/auth.service";
 
 export interface AuthState {
     me: AuthMeResponse | null;
@@ -33,6 +23,16 @@ function toErrorMessage(error: unknown, fallback: string): string {
 
     return fallback;
 }
+
+const anonymousUser: AuthMeResponse = {
+    authenticated: false,
+    userId: null,
+    username: null,
+    firstName: null,
+    lastName: null,
+    rootUser: false,
+    authorities: [],
+};
 
 export const useAuthState = create<AuthState>((set, get) => ({
     me: null,
@@ -61,26 +61,10 @@ export const useAuthState = create<AuthState>((set, get) => ({
                 return meResponse;
             } catch (error) {
                 set({
+                    me: anonymousUser,
                     error: toErrorMessage(error, "خطا در دریافت وضعیت کاربر"),
-                    me: {
-                        authenticated: false,
-                        userId: null,
-                        username: null,
-                        firstName: null,
-                        lastName: null,
-                        rootUser: false,
-                        authorities: [],
-                    },
                 });
-                return {
-                    authenticated: false,
-                    userId: null,
-                    username: null,
-                    firstName: null,
-                    lastName: null,
-                    rootUser: false,
-                    authorities: [],
-                };
+                return anonymousUser;
             } finally {
                 set({ loading: false, mePromise: null });
             }
@@ -114,15 +98,8 @@ export const useAuthState = create<AuthState>((set, get) => ({
         try {
             await authService.logout();
             set({
-                me: {
-                    authenticated: false,
-                    userId: null,
-                    username: null,
-                    firstName: null,
-                    lastName: null,
-                    rootUser: false,
-                    authorities: [],
-                },
+                me: anonymousUser,
+                mePromise: null,
             });
         } catch (error) {
             set({
@@ -134,14 +111,17 @@ export const useAuthState = create<AuthState>((set, get) => ({
         }
     },
 
-    clearError: () => set({ error: null }),
+    clearError: () => {
+        set({ error: null });
+    },
 
-    reset: () =>
+    reset: () => {
         set({
             me: null,
             loading: false,
             submitting: false,
             error: null,
             mePromise: null,
-        }),
+        });
+    },
 }));

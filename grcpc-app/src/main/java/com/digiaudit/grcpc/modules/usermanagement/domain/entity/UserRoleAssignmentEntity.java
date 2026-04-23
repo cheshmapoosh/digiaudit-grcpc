@@ -4,6 +4,7 @@ import com.digiaudit.grcpc.common.persistence.AuditableEntity;
 import com.digiaudit.grcpc.modules.usermanagement.domain.enums.ScopeType;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -15,9 +16,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder(toBuilder = true)
 public class UserRoleAssignmentEntity extends AuditableEntity {
-
 
     @Id
     @GeneratedValue
@@ -48,9 +48,8 @@ public class UserRoleAssignmentEntity extends AuditableEntity {
     private UUID assignedBy;
 
     @Column(name = "assigned_at")
-    private Instant assignedAt;
+    private LocalDateTime assignedAt;
 
     @Column(name = "active", nullable = false)
     private boolean active;
-
 }

@@ -1,18 +1,19 @@
 package com.digiaudit.grcpc.common.security;
 
-import java.util.Optional;
-import java.util.UUID;
-
 import com.digiaudit.grcpc.common.exception.ForbiddenException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.modules.usermanagement.domain.entity.AppUserEntity;
 import com.digiaudit.grcpc.modules.usermanagement.domain.repository.AppUserRepository;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CurrentUserProvider {
@@ -21,6 +22,7 @@ public class CurrentUserProvider {
 
     public Optional<CurrentUser> getCurrentPrincipalOptional() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
         if (authentication == null
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
@@ -33,6 +35,11 @@ public class CurrentUserProvider {
         }
 
         return Optional.empty();
+    }
+
+    public CurrentUser getCurrentPrincipal() {
+        return getCurrentPrincipalOptional()
+                .orElseThrow(() -> new NotFoundException("Authenticated principal was not found"));
     }
 
     public Optional<UUID> getCurrentUserIdOptional() {
@@ -53,10 +60,10 @@ public class CurrentUserProvider {
     }
 
     public void assertCurrentUserIsRoot() {
-        CurrentUser currentUser = getCurrentPrincipalOptional()
-                .orElseThrow(() -> new NotFoundException("Authenticated principal was not found"));
+        CurrentUser currentUser = getCurrentPrincipal();
 
         if (!currentUser.isRootUser()) {
+            log.warn("Access denied for non-root user. username={}, userId={}", currentUser.getUsername(), currentUser.getUserId());
             throw new ForbiddenException("Only root user can perform this operation in version 1");
         }
     }

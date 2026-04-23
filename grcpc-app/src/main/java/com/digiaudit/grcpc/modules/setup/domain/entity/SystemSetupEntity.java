@@ -3,6 +3,7 @@ package com.digiaudit.grcpc.modules.setup.domain.entity;
 import com.digiaudit.grcpc.common.persistence.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -13,7 +14,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder(toBuilder = true)
 public class SystemSetupEntity extends AuditableEntity {
 
     @Id

@@ -1,6 +1,14 @@
 import { httpClient } from "@/shared/infra/http.client";
 
-import type { AuthMeResponse } from "../state/auth.state";
+export type AuthMeResponse = {
+    authenticated: boolean;
+    userId: string | null;
+    username: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    rootUser: boolean;
+    authorities: string[];
+};
 
 export const authService = {
     login(payload: { username: string; password: string }) {

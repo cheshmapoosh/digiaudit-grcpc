@@ -3,12 +3,13 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import {
-    ShellBarItem,
-    ResponsivePopover,
+    Avatar,
+    Button,
     List,
     ListItemStandard,
-    Avatar,
-    Button
+    ResponsivePopover,
+    ShellBarItem,
+    type ResponsivePopoverDomRef,
 } from "@ui5/webcomponents-react";
 
 type Props = {
@@ -24,52 +25,60 @@ export default function UserProfileMenu({
                                             email,
                                             initials,
                                             onLogout,
-                                            onOpenProfile
+                                            onOpenProfile,
                                         }: Props) {
     const { t } = useTranslation();
 
     const [open, setOpen] = useState(false);
 
-    // ✅ stable opener id
     const openerId = "userProfileOpener";
-
-    // ✅ ref to UI5 popover element (web component)
-    const popoverRef = useRef<any>(null);
+    const popoverRef = useRef<ResponsivePopoverDomRef | null>(null);
 
     const userInitials = useMemo(() => {
-        if (initials) return initials;
+        if (initials) {
+            return initials;
+        }
+
         const parts = fullName.trim().split(/\s+/).filter(Boolean);
-        const a = parts[0]?.[0] ?? "U";
-        const b = parts[1]?.[0] ?? "";
-        return (a + b).toUpperCase();
+        const first = parts[0]?.[0] ?? "U";
+        const second = parts[1]?.[0] ?? "";
+
+        return `${first}${second}`.toUpperCase();
     }, [fullName, initials]);
 
-    const openMenu = () => queueMicrotask(() => setOpen(true));
-    const closeMenu = () => setOpen(false);
+    const openMenu = () => {
+        queueMicrotask(() => setOpen(true));
+    };
 
-    // ✅ Hard guarantee: close on outside click (works even if UI5 doesn't)
+    const closeMenu = () => {
+        setOpen(false);
+    };
+
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            return;
+        }
 
-        const onPointerDown = (ev: PointerEvent) => {
-            const target = ev.target as Node | null;
-            if (!target) return;
+        const onPointerDown = (event: PointerEvent) => {
+            const target = event.target as Node | null;
+            if (!target) {
+                return;
+            }
 
-            const openerEl = document.getElementById(openerId);
-            const popoverDom: HTMLElement | null =
-                popoverRef.current?.getDomRef?.() ?? null;
+            const openerElement = document.getElementById(openerId);
+            const popoverElement = popoverRef.current;
 
-            // click on opener => ignore (it will be handled by button itself)
-            if (openerEl && openerEl.contains(target)) return;
+            if (openerElement?.contains(target)) {
+                return;
+            }
 
-            // click inside popover => ignore
-            if (popoverDom && popoverDom.contains(target)) return;
+            if (popoverElement?.contains(target)) {
+                return;
+            }
 
-            // otherwise => close
             setOpen(false);
         };
 
-        // capture=true to catch events even when UI5 uses shadow DOM
         document.addEventListener("pointerdown", onPointerDown, true);
 
         return () => {
@@ -84,22 +93,29 @@ export default function UserProfileMenu({
                     ref={popoverRef}
                     open={open}
                     opener={openerId}
-                    placementType="Bottom"
+                    placement="Bottom"
                     modal={false}
                     headerText={t("user.menu")}
-                    onAfterClose={() => setOpen(false)}
                     style={{ minWidth: 280 }}
                 >
-                    <div style={{ padding: 12, display: "flex", gap: 12, alignItems: "center" }}>
+                    <div
+                        style={{
+                            padding: 12,
+                            display: "flex",
+                            gap: 12,
+                            alignItems: "center",
+                        }}
+                    >
                         <Avatar initials={userInitials} />
                         <div style={{ display: "flex", flexDirection: "column" }}>
                             <div style={{ fontWeight: 700 }}>{fullName}</div>
-                            {email ? <div style={{ fontSize: 12, opacity: 0.7 }}>{email}</div> : null}
+                            {email ? (
+                                <div style={{ fontSize: 12, opacity: 0.7 }}>{email}</div>
+                            ) : null}
                         </div>
                     </div>
 
-                    {/* mode=None => focus outline روی اولین آیتم نیاید */}
-                    <List mode="None">
+                    <List>
                         <ListItemStandard
                             onClick={() => {
                                 closeMenu();
@@ -123,13 +139,19 @@ export default function UserProfileMenu({
                         </ListItemStandard>
                     </List>
 
-                    <div style={{ padding: 12, display: "flex", justifyContent: "flex-end" }}>
+                    <div
+                        style={{
+                            padding: 12,
+                            display: "flex",
+                            justifyContent: "flex-end",
+                        }}
+                    >
                         <Button design="Transparent" onClick={closeMenu}>
                             {t("common.close")}
                         </Button>
                     </div>
                 </ResponsivePopover>,
-                document.body
+                document.body,
             )
             : null;
 

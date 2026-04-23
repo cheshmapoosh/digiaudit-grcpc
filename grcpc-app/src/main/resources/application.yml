@@ -3,7 +3,7 @@ spring:
     name: grcpc-api
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/grcpc}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/grcpc?currentSchema=grc}
     username: ${DB_USERNAME:grcpc}
     password: ${DB_PASSWORD:grcpc}
     driver-class-name: ${DB_DRIVER_CLASS_NAME:org.postgresql.Driver}
