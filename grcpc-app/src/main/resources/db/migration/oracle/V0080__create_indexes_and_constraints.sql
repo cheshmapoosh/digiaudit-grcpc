@@ -11,7 +11,7 @@ alter table role_permission add constraint uq_role_permission unique (role_id, p
 alter table role_business_permission add constraint uq_role_business_permission unique (role_id, business_permission_id);
 alter table delegation_assignable_role add constraint uq_delegation_assignable_role unique (delegation_policy_id, assignable_role_id);
 
-create unique index uq_app_user_single_root on app_user (case when root_user = 1 then 1 else null end);
+create unique index uq_app_user_single_root on app_user (case when root_user = 1 then 1 end);
 create index ix_app_user_default_org_unit_id on app_user(default_org_unit_id);
 create index ix_user_role_assignment_user_id on user_role_assignment(user_id);
 create index ix_user_role_assignment_role_id on user_role_assignment(role_id);
