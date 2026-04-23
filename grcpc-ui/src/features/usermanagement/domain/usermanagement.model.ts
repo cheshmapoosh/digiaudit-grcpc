@@ -57,7 +57,12 @@ export interface RoleSummary {
     createdAt: string | null;
 }
 
-export interface RoleDetail extends RoleSummary {
+export interface RoleDetail {
+    id: string;
+    code: string;
+    systemDefined: boolean;
+    enabled: boolean;
+    createdAt: string | null;
     updatedAt: string | null;
     translations: LocalizedText[];
     systemPermissions: PermissionItem[];

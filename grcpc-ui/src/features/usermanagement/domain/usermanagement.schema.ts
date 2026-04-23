@@ -59,7 +59,12 @@ export const roleSummarySchema = z.object({
     createdAt: z.string().nullable(),
 });
 
-export const roleDetailSchema = roleSummarySchema.extend({
+export const roleDetailSchema = z.object({
+    id: z.string(),
+    code: z.string(),
+    systemDefined: z.boolean(),
+    enabled: z.boolean(),
+    createdAt: z.string().nullable(),
     updatedAt: z.string().nullable(),
     translations: z.array(localizedTextSchema),
     systemPermissions: z.array(permissionItemSchema),

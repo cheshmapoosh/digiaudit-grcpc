@@ -7,14 +7,6 @@ import { useUserManagementState } from "@/features/usermanagement";
 import RolesListReport from "./RolesListReport";
 import RoleObjectPage from "./RoleObjectPage";
 
-function mapError(error: unknown, fallback: string): string {
-    if (error instanceof Error && error.message.trim()) {
-        return error.message;
-    }
-
-    return fallback;
-}
-
 export default function RolesFclShellPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -24,13 +16,14 @@ export default function RolesFclShellPage() {
     const roleOrderedIds = useUserManagementState((state) => state.roleOrderedIds ?? []);
     const selectedRole = useUserManagementState((state) => state.selectedRole);
     const loading = useUserManagementState((state) => state.loading);
+    const error = useUserManagementState((state) => state.error);
     const loadRoles = useUserManagementState((state) => state.loadRoles);
     const loadRole = useUserManagementState((state) => state.loadRole);
     const refreshRoles = useUserManagementState((state) => state.refreshRoles);
+    const clearError = useUserManagementState((state) => state.clearError);
     const reset = useUserManagementState((state) => state.reset);
 
     const [searchText, setSearchText] = useState("");
-    const [pageError, setPageError] = useState<string | null>(null);
 
     const items = useMemo(
         () =>
@@ -43,64 +36,38 @@ export default function RolesFclShellPage() {
     const showDetailPane = Boolean(roleId);
 
     useEffect(() => {
-        void loadRoles().catch((error: unknown) => {
-            setPageError(
-                mapError(
-                    error,
-                    t("usermanagement.errors.loadRoles", {
-                        defaultValue: "خطا در بارگذاری نقش‌ها",
-                    }),
-                ),
-            );
-        });
+        void loadRoles();
 
         return () => {
             reset();
         };
-    }, [loadRoles, reset, t]);
+    }, [loadRoles, reset]);
 
     useEffect(() => {
         if (!roleId) {
             return;
         }
 
-        void loadRole(roleId).catch((error: unknown) => {
-            setPageError(
-                mapError(
-                    error,
-                    t("usermanagement.errors.loadRoleDetail", {
-                        defaultValue: "خطا در بارگذاری اطلاعات نقش",
-                    }),
-                ),
-            );
-        });
-    }, [loadRole, roleId, t]);
+        void loadRole(roleId);
+    }, [loadRole, roleId]);
 
     const handleRefresh = useCallback(() => {
-        setPageError(null);
-
-        void refreshRoles().catch((error: unknown) => {
-            setPageError(
-                mapError(
-                    error,
-                    t("usermanagement.errors.refreshRoles", {
-                        defaultValue: "خطا در بروزرسانی نقش‌ها",
-                    }),
-                ),
-            );
-        });
-    }, [refreshRoles, t]);
+        clearError();
+        void refreshRoles();
+    }, [clearError, refreshRoles]);
 
     const handleSelect = useCallback(
         (id: string) => {
+            clearError();
             navigate(`/access-control/roles/${id}`);
         },
-        [navigate],
+        [clearError, navigate],
     );
 
     const handleClose = useCallback(() => {
+        clearError();
         navigate("/access-control/roles");
-    }, [navigate]);
+    }, [clearError, navigate]);
 
     return (
         <div
@@ -130,7 +97,7 @@ export default function RolesFclShellPage() {
                     selectedId={roleId ?? null}
                     searchText={searchText}
                     busy={loading}
-                    error={pageError}
+                    error={error}
                     onSearchTextChange={setSearchText}
                     onRefresh={handleRefresh}
                     onSelect={handleSelect}
@@ -156,9 +123,13 @@ export default function RolesFclShellPage() {
                             key={selectedRole.id}
                             value={selectedRole}
                             busy={loading}
-                            error={pageError}
+                            error={error}
                             onCancel={handleClose}
                         />
+                    ) : error ? (
+                        <MessageStrip design="Negative" hideCloseButton>
+                            {error}
+                        </MessageStrip>
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
                             {t("usermanagement.roles.notFound", {

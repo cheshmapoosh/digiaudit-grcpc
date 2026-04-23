@@ -1,7 +1,8 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Bar, Button, Label, Text, Title } from "@ui5/webcomponents-react";
 
-import type { RoleDetail } from "../domain/usermanagement.model";
+import type { RoleDetail } from "@/features/usermanagement";
 import PermissionCatalogList from "../components/PermissionCatalogList";
 
 type RoleObjectPageProps = {
@@ -25,7 +26,22 @@ function formatDateTime(value?: string | null): string {
 }
 
 export default function RoleObjectPage({ value, onCancel }: RoleObjectPageProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+
+    const resolvedText = useMemo(() => {
+        const currentLocale = (i18n.resolvedLanguage || i18n.language || "fa").toLowerCase();
+
+        const exact =
+            value.translations.find((item) => item.locale.toLowerCase() === currentLocale) ??
+            value.translations.find((item) => item.locale.toLowerCase().startsWith(currentLocale)) ??
+            value.translations[0] ??
+            null;
+
+        return {
+            title: exact?.title ?? value.code,
+            description: exact?.description ?? null,
+        };
+    }, [i18n.language, i18n.resolvedLanguage, value.code, value.translations]);
 
     return (
         <div style={{ display: "grid", gap: "1rem", minWidth: 0 }}>
@@ -55,10 +71,17 @@ export default function RoleObjectPage({ value, onCancel }: RoleObjectPageProps)
                     <Label>{t("usermanagement.roles.fields.code", { defaultValue: "کد نقش" })}</Label>
                     <Text>{value.code}</Text>
                 </div>
+
                 <div style={{ display: "grid", gap: ".35rem" }}>
                     <Label>{t("usermanagement.roles.fields.title", { defaultValue: "عنوان نقش" })}</Label>
-                    <Text>{value.title}</Text>
+                    <Text>{resolvedText.title}</Text>
                 </div>
+
+                <div style={{ display: "grid", gap: ".35rem", gridColumn: "1 / -1" }}>
+                    <Label>{t("usermanagement.roles.fields.description", { defaultValue: "توضیحات" })}</Label>
+                    <Text>{resolvedText.description || "-"}</Text>
+                </div>
+
                 <div style={{ display: "grid", gap: ".35rem" }}>
                     <Label>{t("usermanagement.roles.fields.systemDefined", { defaultValue: "سیستمی" })}</Label>
                     <Text>
@@ -67,6 +90,7 @@ export default function RoleObjectPage({ value, onCancel }: RoleObjectPageProps)
                             : t("common.no", { defaultValue: "خیر" })}
                     </Text>
                 </div>
+
                 <div style={{ display: "grid", gap: ".35rem" }}>
                     <Label>{t("usermanagement.roles.fields.status", { defaultValue: "وضعیت" })}</Label>
                     <Text>
@@ -75,10 +99,12 @@ export default function RoleObjectPage({ value, onCancel }: RoleObjectPageProps)
                             : t("usermanagement.roles.status.disabled", { defaultValue: "غیرفعال" })}
                     </Text>
                 </div>
+
                 <div style={{ display: "grid", gap: ".35rem" }}>
                     <Label>{t("usermanagement.roles.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}</Label>
                     <Text>{formatDateTime(value.createdAt)}</Text>
                 </div>
+
                 <div style={{ display: "grid", gap: ".35rem" }}>
                     <Label>{t("usermanagement.roles.fields.updatedAt", { defaultValue: "آخرین بروزرسانی" })}</Label>
                     <Text>{formatDateTime(value.updatedAt)}</Text>

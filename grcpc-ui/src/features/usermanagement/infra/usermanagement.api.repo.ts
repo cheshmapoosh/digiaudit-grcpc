@@ -6,7 +6,7 @@ import {
     roleSummaryListSchema,
     userDetailSchema,
     userSummaryListSchema,
-} from "../domain/usermanagement.schema";
+} from "@/features/usermanagement";
 import type {
     RoleDetail,
     RoleSummary,
@@ -21,38 +21,50 @@ function resolveLocale(): string {
     return i18n.resolvedLanguage || i18n.language || "fa";
 }
 
+function buildLocalizedUrl(baseUrl: string, id?: string): string {
+    const resourcePath = id ? `${baseUrl}/${id}` : baseUrl;
+    const locale = encodeURIComponent(resolveLocale());
+    return `${resourcePath}?locale=${locale}`;
+}
+
+function toErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof Error && error.message.trim().length > 0) {
+        return error.message;
+    }
+
+    return fallback;
+}
+
 export class UserManagementApiRepo implements UserManagementRepo {
     async listUsers(): Promise<UserSummary[]> {
         const response = await httpClient.get<unknown>(USERS_BASE_URL);
         return userSummaryListSchema.parse(response);
     }
 
-    async getUserById(id: string): Promise<UserDetail | null> {
+    async getUserById(id: string): Promise<UserDetail> {
         try {
-            const response = await httpClient.get<unknown>(
-                `${USERS_BASE_URL}/${id}?locale=${encodeURIComponent(resolveLocale())}`,
-            );
+            const response = await httpClient.get<unknown>(buildLocalizedUrl(USERS_BASE_URL, id));
             return userDetailSchema.parse(response);
-        } catch {
-            return null;
+        } catch (error) {
+            throw new Error(
+                toErrorMessage(error, "خطا در دریافت یا اعتبارسنجی اطلاعات کاربر"),
+            );
         }
     }
 
     async listRoles(): Promise<RoleSummary[]> {
-        const response = await httpClient.get<unknown>(
-            `${ROLES_BASE_URL}?locale=${encodeURIComponent(resolveLocale())}`,
-        );
+        const response = await httpClient.get<unknown>(buildLocalizedUrl(ROLES_BASE_URL));
         return roleSummaryListSchema.parse(response);
     }
 
-    async getRoleById(id: string): Promise<RoleDetail | null> {
+    async getRoleById(id: string): Promise<RoleDetail> {
         try {
-            const response = await httpClient.get<unknown>(
-                `${ROLES_BASE_URL}/${id}?locale=${encodeURIComponent(resolveLocale())}`,
-            );
+            const response = await httpClient.get<unknown>(buildLocalizedUrl(ROLES_BASE_URL, id));
             return roleDetailSchema.parse(response);
-        } catch {
-            return null;
+        } catch (error) {
+            throw new Error(
+                toErrorMessage(error, "خطا در دریافت یا اعتبارسنجی اطلاعات نقش"),
+            );
         }
     }
 }
