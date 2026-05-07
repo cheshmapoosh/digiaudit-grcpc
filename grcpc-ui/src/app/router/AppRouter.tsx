@@ -15,6 +15,7 @@ import {
     policyRoutes,
     usermanagementRoutes,
 } from "@/features";
+import { riskRoutes } from "@/features/risk";
 
 export default function AppRouter() {
     return (
@@ -46,6 +47,7 @@ export default function AppRouter() {
                 {processRoutes}
                 {regulationRoutes}
                 {policyRoutes}
+                {riskRoutes}
                 {usermanagementRoutes}
                 <Route path="*" element={<NotFoundPage />} />
             </Route>

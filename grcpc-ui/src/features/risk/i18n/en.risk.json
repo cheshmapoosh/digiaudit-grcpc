@@ -1,0 +1,103 @@
+{
+  "risk": {
+    "list": {
+      "title": "Risk categorization structure",
+      "search": "Search by name, code, description, or analysis profile",
+      "empty": "No risk items have been registered."
+    },
+    "nodeType": {
+      "riskCategory": "Risk category",
+      "riskTemplate": "Risk template"
+    },
+    "riskType": {
+      "operational": "Operational",
+      "financial": "Financial",
+      "strategic": "Strategic",
+      "compliance": "Compliance",
+      "technology": "Technology",
+      "reputation": "Reputation",
+      "safety": "Safety",
+      "other": "Other"
+    },
+    "tabs": {
+      "general": "General information",
+      "riskSummary": "Risk summary",
+      "kriTemplate": "KRI template",
+      "documents": "Documents",
+      "impacts": "Causes and effects",
+      "existingRisks": "Existing risks",
+      "responsePattern": "Response pattern",
+      "controlCenter": "Control center"
+    },
+    "fields": {
+      "code": "Code",
+      "identifier": "Identifier",
+      "name": "Name",
+      "title": "Title",
+      "description": "Description",
+      "parent": "Parent",
+      "parentRiskCategory": "Parent category",
+      "type": "Type",
+      "nodeType": "Item type",
+      "status": "Status",
+      "sortOrder": "Sort order",
+      "createdAt": "Created at",
+      "validFrom": "Created date",
+      "validTo": "Valid to",
+      "allowReference": "Reference permission",
+      "allowLink": "Link permission",
+      "analysisProfile": "Analysis profile",
+      "owner": "Owner",
+      "documents": "Documents",
+      "companyOperation": "Company / operation",
+      "riskType": "Risk type",
+      "causes": "Causes",
+      "effect": "Effect",
+      "effectCategory": "Effect category",
+      "effectCategoryDescription": "Effect category description",
+      "orgUnit": "Organization unit",
+      "activity": "Activity",
+      "publishMethod": "Publish method",
+      "objective": "Objective"
+    },
+    "object": {
+      "summaryTitle": "Risk details",
+      "selectPrompt": "Select a risk item to view details.",
+      "modalTitle": "Risk center",
+      "createModalTitle": "Create",
+      "notFound": "Selected risk item was not found."
+    },
+    "create": {
+      "title": "Create risk item"
+    },
+    "edit": {
+      "title": "Edit risk item"
+    },
+    "view": {
+      "title": "View risk item"
+    },
+    "delete": {
+      "title": "Delete risk item",
+      "confirm": "Are you sure you want to delete \"{{title}}\"?"
+    },
+    "errors": {
+      "notFound": "The requested item was not found",
+      "parentNotFound": "Selected parent was not found",
+      "hasChildren": "Items with children cannot be deleted",
+      "invalidHierarchy": "The selected risk hierarchy is invalid",
+      "selectCategoryParent": "To create a risk template, first select a risk category.",
+      "loadList": "Failed to load risk structure",
+      "delete": "Failed to delete risk item",
+      "save": "Failed to save risk item"
+    },
+    "validation": {
+      "textMaxLength": "Text cannot exceed 2000 characters",
+      "codeRequired": "Code is required",
+      "codeMaxLength": "Code cannot exceed 50 characters",
+      "titleRequired": "Name is required",
+      "titleMaxLength": "Name cannot exceed 255 characters",
+      "sortOrderInvalid": "Sort order must be a non-negative integer",
+      "updateAtLeastOneField": "At least one field is required for update"
+    }
+  }
+}

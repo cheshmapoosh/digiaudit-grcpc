@@ -169,6 +169,15 @@ export default function MainLayout() {
             route: "/policies",
             selected: selectedPath.startsWith("/policies"),
         },
+        {
+            key: "risks",
+            text: t("nav.risks", {
+                defaultValue: t("risk.list.title", { defaultValue: "ریسک‌ها" }),
+            }),
+            icon: "quality-issue",
+            route: "/risks",
+            selected: selectedPath.startsWith("/risks"),
+        },
     ];
 
     return (

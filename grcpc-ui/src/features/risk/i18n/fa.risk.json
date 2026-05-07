@@ -1,0 +1,103 @@
+{
+  "risk": {
+    "list": {
+      "title": "ساختار دسته‌بندی ریسک",
+      "search": "جستجو بر اساس نام، کد، شرح یا پروفایل تحلیل",
+      "empty": "هیچ دسته‌بندی ریسکی ثبت نشده است."
+    },
+    "nodeType": {
+      "riskCategory": "طبقه ریسک",
+      "riskTemplate": "الگوی ریسک"
+    },
+    "riskType": {
+      "operational": "عملیاتی",
+      "financial": "مالی",
+      "strategic": "استراتژیک",
+      "compliance": "انطباق",
+      "technology": "فناوری",
+      "reputation": "شهرت",
+      "safety": "ایمنی",
+      "other": "سایر"
+    },
+    "tabs": {
+      "general": "اطلاعات کلی",
+      "riskSummary": "خلاصه ریسک",
+      "kriTemplate": "قالب KRI",
+      "documents": "مستندات",
+      "impacts": "محرک‌ها و اثرات",
+      "existingRisks": "ریسک موجود",
+      "responsePattern": "الگوی پاسخ",
+      "controlCenter": "مرکز کنترل"
+    },
+    "fields": {
+      "code": "کد",
+      "identifier": "شناسه",
+      "name": "نام",
+      "title": "عنوان",
+      "description": "شرح",
+      "parent": "والد",
+      "parentRiskCategory": "والد طبقه",
+      "type": "نوع",
+      "nodeType": "نوع آیتم",
+      "status": "وضعیت",
+      "sortOrder": "ترتیب نمایش",
+      "createdAt": "تاریخ ایجاد",
+      "validFrom": "تاریخ ایجاد",
+      "validTo": "تاریخ اعتبار",
+      "allowReference": "مجوز ارجاع",
+      "allowLink": "مجوز ارتباط دادن",
+      "analysisProfile": "پروفایل تحلیل",
+      "owner": "مالک",
+      "documents": "مستندات",
+      "companyOperation": "شرکت / عملیات",
+      "riskType": "نوع ریسک",
+      "causes": "محرک‌ها",
+      "effect": "اثر",
+      "effectCategory": "طبقه اثر",
+      "effectCategoryDescription": "شرح طبقه اثر",
+      "orgUnit": "واحد سازمانی",
+      "activity": "فعالیت",
+      "publishMethod": "روش انتشار",
+      "objective": "هدف"
+    },
+    "object": {
+      "summaryTitle": "جزئیات ریسک",
+      "selectPrompt": "برای مشاهده جزئیات، یک آیتم ریسک را انتخاب کنید.",
+      "modalTitle": "مرکز ریسک",
+      "createModalTitle": "ایجاد",
+      "notFound": "آیتم ریسک انتخاب‌شده یافت نشد."
+    },
+    "create": {
+      "title": "ایجاد آیتم ریسک"
+    },
+    "edit": {
+      "title": "ویرایش آیتم ریسک"
+    },
+    "view": {
+      "title": "نمایش آیتم ریسک"
+    },
+    "delete": {
+      "title": "حذف آیتم ریسک",
+      "confirm": "آیا از حذف \"{{title}}\" مطمئن هستید؟"
+    },
+    "errors": {
+      "notFound": "آیتم موردنظر یافت نشد",
+      "parentNotFound": "والد انتخاب‌شده یافت نشد",
+      "hasChildren": "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+      "invalidHierarchy": "ساختار انتخاب‌شده برای ریسک معتبر نیست",
+      "selectCategoryParent": "برای ایجاد الگوی ریسک، ابتدا یک طبقه ریسک را انتخاب کنید.",
+      "loadList": "خطا در بارگذاری ساختار ریسک",
+      "delete": "خطا در حذف آیتم ریسک",
+      "save": "خطا در ذخیره آیتم ریسک"
+    },
+    "validation": {
+      "textMaxLength": "متن نمی‌تواند بیشتر از 2000 کاراکتر باشد",
+      "codeRequired": "کد الزامی است",
+      "codeMaxLength": "کد نمی‌تواند بیشتر از 50 کاراکتر باشد",
+      "titleRequired": "نام الزامی است",
+      "titleMaxLength": "نام نمی‌تواند بیشتر از 255 کاراکتر باشد",
+      "sortOrderInvalid": "ترتیب نمایش باید عدد صحیح نامنفی باشد",
+      "updateAtLeastOneField": "حداقل یک فیلد برای بروزرسانی لازم است"
+    }
+  }
+}
