@@ -47,8 +47,23 @@ function getPathFromSelectionEvent(event: SelectionChangeEvent): string | null {
 const SIDENAV_WIDTH = 280;
 const SIDENAV_COLLAPSED_WIDTH = 56;
 
+const MASTER_DATA_PATH_PREFIXES = [
+    "/master-data",
+    "/organizations",
+    "/processes",
+    "/objectives",
+    "/regulations",
+    "/risks",
+    "/account-groups",
+    "/policies",
+];
+
 function hasAnyAuthority(authorities: Set<string>, required: string[]): boolean {
     return required.some((authority) => authorities.has(authority));
+}
+
+function isPathInPrefixes(path: string, prefixes: string[]): boolean {
+    return prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
 export default function MainLayout() {
@@ -91,10 +106,16 @@ export default function MainLayout() {
         }
     }
 
+    function navigateToPath(path: string) {
+        if (path !== location.pathname) {
+            navigate(path);
+        }
+    }
+
     function onSelectionChange(event: SelectionChangeEvent) {
         const path = getPathFromSelectionEvent(event);
-        if (path && path !== location.pathname) {
-            navigate(path);
+        if (path) {
+            navigateToPath(path);
         }
     }
 
@@ -103,7 +124,10 @@ export default function MainLayout() {
             ? `${me.firstName} ${me.lastName}`
             : me?.username ?? t("user.unknown", { defaultValue: "کاربر" });
 
-    const authoritySet = useMemo(() => new Set(me?.authorities ?? []), [me?.authorities]);
+    const authoritySet = useMemo(
+        () => new Set(me?.authorities ?? []),
+        [me?.authorities],
+    );
 
     const isRootAdmin =
         Boolean(me?.rootUser) ||
@@ -142,61 +166,11 @@ export default function MainLayout() {
             selected: selectedPath.startsWith("/dashboard"),
         },
         {
-            key: "organizations",
-            text: t("nav.organizations"),
-            icon: "org-chart",
-            route: "/organizations",
-            selected: selectedPath.startsWith("/organizations"),
-        },
-        {
-            key: "processes",
-            text: t("nav.processes"),
-            icon: "process",
-            route: "/processes",
-            selected: selectedPath.startsWith("/processes"),
-        },
-        {
-            key: "regulations",
-            text: t("nav.regulation"),
-            icon: "official-service",
-            route: "/regulations",
-            selected: selectedPath.startsWith("/regulations"),
-        },
-        {
-            key: "policies",
-            text: t("nav.policies", { defaultValue: "سیاست‌ها" }),
-            icon: "document-text",
-            route: "/policies",
-            selected: selectedPath.startsWith("/policies"),
-        },
-        {
-            key: "risks",
-            text: t("nav.risks", {
-                defaultValue: t("risk.list.title", { defaultValue: "ریسک‌ها" }),
-            }),
-            icon: "quality-issue",
-            route: "/risks",
-            selected: selectedPath.startsWith("/risks"),
-        },
-        {
-            key: "objectives",
-            text: t("nav.objectives", {
-                defaultValue: t("objective.list.title", { defaultValue: "اهداف" }),
-            }),
-            icon: "activity-assigned-to-goal",
-            route: "/objectives",
-            selected: selectedPath.startsWith("/objectives"),
-        },
-        {
-            key: "accountGroups",
-            text: t("nav.accountGroups", {
-                defaultValue: t("accountGroup.menu.title", {
-                    defaultValue: "گروه حساب‌ها",
-                }),
-            }),
-            icon: "accounting-document-verification",
-            route: "/account-groups",
-            selected: selectedPath.startsWith("/account-groups"),
+            key: "masterData",
+            text: t("nav.masterData", { defaultValue: "اطلاعات پایه" }),
+            icon: "database",
+            route: "/master-data",
+            selected: isPathInPrefixes(selectedPath, MASTER_DATA_PATH_PREFIXES),
         },
     ];
 
@@ -246,6 +220,7 @@ export default function MainLayout() {
                                 icon={item.icon}
                                 selected={item.selected}
                                 data-route={item.route}
+                                onClick={() => navigateToPath(item.route)}
                             />
                         ))}
 

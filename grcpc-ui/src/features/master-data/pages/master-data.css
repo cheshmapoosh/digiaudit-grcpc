@@ -1,0 +1,97 @@
+.masterDataPage {
+    min-height: 100%;
+    background: var(--sapBackgroundColor);
+}
+
+.masterDataHeader {
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    direction: rtl;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    background: var(--sapList_HeaderBackground);
+    border-bottom: 1px solid var(--sapList_BorderColor);
+}
+
+.masterDataGrid {
+    width: min(56rem, 100%);
+    margin: 1.5rem auto 0;
+    padding: 0 1.5rem 2rem;
+    direction: ltr;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(14rem, 1fr));
+    column-gap: clamp(3rem, 10vw, 10rem);
+    row-gap: 1.25rem;
+}
+
+.masterDataTile {
+    min-height: 4rem;
+    padding: 0.5rem 0.75rem;
+    grid-column: var(--master-data-column);
+    grid-row: var(--master-data-row);
+    direction: ltr;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    cursor: pointer;
+    color: var(--sapTextColor);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    font: inherit;
+    text-align: start;
+}
+
+.masterDataTile:hover {
+    background: var(--sapList_Hover_Background);
+    border-color: var(--sapList_BorderColor);
+}
+
+.masterDataTile:active {
+    background: var(--sapList_SelectionBackgroundColor);
+}
+
+.masterDataTile:focus-visible {
+    outline: 0.125rem solid var(--sapContent_FocusColor);
+    outline-offset: 0.125rem;
+}
+
+.masterDataTileLabel {
+    flex: 1;
+    direction: rtl;
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.masterDataTileIconShell {
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: 0 0 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sapTile_Background);
+    border: 1px solid var(--sapList_BorderColor);
+    border-radius: 0.25rem;
+    box-shadow: var(--sapContent_Shadow0);
+}
+
+.masterDataTileIcon {
+    color: var(--sapContent_IconColor);
+}
+
+@media (max-width: 48rem) {
+    .masterDataGrid {
+        width: 100%;
+        grid-template-columns: 1fr;
+        row-gap: 0.5rem;
+    }
+
+    .masterDataTile {
+        grid-column: auto;
+        grid-row: auto;
+    }
+}

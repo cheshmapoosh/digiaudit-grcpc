@@ -9,6 +9,7 @@ import LoginPage from "@/pages/LoginPage";
 import {
     setupRoutes,
     dashboardRoutes,
+    masterDataRoutes,
     organizationRoutes,
     processRoutes,
     regulationRoutes,
@@ -45,6 +46,7 @@ export default function AppRouter() {
                 }
             >
                 {dashboardRoutes}
+                {masterDataRoutes}
                 {organizationRoutes}
                 {processRoutes}
                 {regulationRoutes}

@@ -1,5 +1,6 @@
 export { setupRoutes } from "./setup";
 export { dashboardRoutes } from "./dashboard";
+export { masterDataRoutes } from "./master-data";
 export { processRoutes } from "./process";
 export { regulationRoutes } from "./regulation";
 export { organizationRoutes } from "./organization";
