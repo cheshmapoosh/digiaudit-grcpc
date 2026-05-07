@@ -1,0 +1,143 @@
+{
+  "policy": {
+    "list": {
+      "title": "ساختار سیاست",
+      "empty": "هیچ سیاستی ثبت نشده است.",
+      "search": "جستجو بر اساس نام، کد یا توضیحات"
+    },
+    "nodeType": {
+      "policyGroup": "گروه سیاست",
+      "policy": "سیاست"
+    },
+    "status": {
+      "draft": "پیش‌نویس",
+      "underReview": "در حال بررسی",
+      "pendingApproval": "در انتظار تأیید",
+      "approved": "تأیید شده"
+    },
+    "category": {
+      "hr": "منابع انسانی",
+      "accounting": "حسابداری",
+      "purchase": "خرید",
+      "it": "فناوری اطلاعات",
+      "finance": "مالی",
+      "compliance": "انطباق",
+      "other": "سایر"
+    },
+    "kind": {
+      "policy": "سیاست",
+      "procedure": "دستورالعمل",
+      "announcement": "اطلاعیه",
+      "workInstruction": "روش اجرایی"
+    },
+    "communication": {
+      "announcement": "اطلاعیه",
+      "questionnaire": "پرسشنامه",
+      "survey": "نظرسنجی"
+    },
+    "actions": {
+      "sendForReview": "ارسال برای بررسی",
+      "submitForApproval": "ثبت برای تأیید",
+      "assign": "تخصیص",
+      "select": "انتخاب",
+      "addSources": "اضافه نمودن منابع"
+    },
+    "fields": {
+      "name": "نام",
+      "title": "عنوان",
+      "code": "کد",
+      "type": "نوع",
+      "parent": "والد",
+      "status": "وضعیت",
+      "description": "شرح",
+      "createdAt": "تاریخ ایجاد",
+      "policyCategory": "دسته‌بندی سیاست",
+      "policyKind": "نوع سیاست",
+      "policyGroup": "گروه سیاست",
+      "owner": "مالک",
+      "ownerOrganization": "سازمان مسئول",
+      "creatorName": "ایجاد کننده",
+      "documents": "مستندات",
+      "identifier": "شناسه",
+      "nodeType": "نوع آیتم",
+      "sortOrder": "ترتیب نمایش",
+      "validFrom": "تاریخ شروع اعتبار",
+      "validTo": "تاریخ پایان اعتبار",
+      "nextReviewDate": "تاریخ بازنگری بعدی",
+      "communicationMethod": "روش اطلاع‌رسانی",
+      "communicationLanguage": "زبان اطلاع‌رسانی",
+      "objective": "هدف",
+      "note": "یادداشت",
+      "version": "نسخه",
+      "evaluationConfirmed": "تأیید ارزیابی",
+      "documentType": "نوع مستند",
+      "fileSize": "اندازه فایل",
+      "fileType": "نوع فایل",
+      "process": "فرآیندها",
+      "organization": "سازمان",
+      "risk": "ریسک",
+      "classification": "طبقه‌بندی",
+      "subProcess": "زیر فرآیند",
+      "effectivenessTest": "آزمون اثربخشی",
+      "controlDesignAssessment": "ارزیابی طراحی کنترل",
+      "policySource": "منابع سیاست",
+      "roles": "نقش‌ها",
+      "reviewerApprover": "بازنگری کنندگان / تصویب کنندگان"
+    },
+    "tabs": {
+      "general": "اطلاعات کلی",
+      "documents": "مستند سیاست",
+      "scope": "دامنه سیاست",
+      "risks": "ریسک‌ها",
+      "controls": "کنترل‌ها",
+      "sources": "منابع سیاست",
+      "roles": "نقش‌ها",
+      "reviewApproval": "بازنگری و تصویب"
+    },
+    "tree": {
+      "expand": "باز کردن شاخه",
+      "collapse": "بستن شاخه"
+    },
+    "object": {
+      "summaryTitle": "جزئیات سیاست",
+      "selectPrompt": "برای مشاهده جزئیات، یک آیتم سیاست را انتخاب کنید.",
+      "notFound": "آیتم سیاست انتخاب‌شده یافت نشد.",
+      "modalTitle": "مرکز سیاست",
+      "createModalTitle": "ایجاد"
+    },
+    "create": {
+      "title": "ایجاد آیتم سیاست"
+    },
+    "edit": {
+      "title": "ویرایش آیتم سیاست"
+    },
+    "view": {
+      "title": "نمایش آیتم سیاست"
+    },
+    "delete": {
+      "title": "حذف آیتم سیاست",
+      "confirm": "آیا از حذف \"{{title}}\" مطمئن هستید؟"
+    },
+    "errors": {
+      "loadList": "خطا در بارگذاری ساختار سیاست",
+      "notFound": "آیتم موردنظر یافت نشد",
+      "parentNotFound": "والد انتخاب‌شده یافت نشد",
+      "hasChildren": "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+      "invalidHierarchy": "ساختار انتخاب‌شده برای سیاست معتبر نیست",
+      "policyCannotHaveChildren": "سیاست زیرشاخه ندارد و امکان ایجاد آیتم زیر سیاست وجود ندارد",
+      "delete": "خطا در حذف آیتم سیاست",
+      "save": "خطا در ذخیره آیتم سیاست",
+      "selectPolicyGroupParent": "برای ایجاد سیاست، ابتدا یک گروه سیاست را انتخاب کنید."
+    },
+    "validation": {
+      "codeRequired": "کد الزامی است",
+      "codeMaxLength": "کد نمی‌تواند بیشتر از 50 کاراکتر باشد",
+      "titleRequired": "نام الزامی است",
+      "titleMaxLength": "نام نمی‌تواند بیشتر از 255 کاراکتر باشد",
+      "textMaxLength": "متن نمی‌تواند بیشتر از 2000 کاراکتر باشد",
+      "updateAtLeastOneField": "حداقل یک فیلد برای بروزرسانی لازم است",
+      "sortOrderInvalid": "ترتیب نمایش باید عدد صحیح نامنفی باشد",
+      "documentsCountInvalid": "تعداد مستندات باید عدد صحیح نامنفی باشد"
+    }
+  }
+}

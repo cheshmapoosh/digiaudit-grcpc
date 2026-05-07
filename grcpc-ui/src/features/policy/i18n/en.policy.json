@@ -1,0 +1,143 @@
+{
+  "policy": {
+    "list": {
+      "title": "Policy Structure",
+      "empty": "No policy item has been registered.",
+      "search": "Search by name, code, or description"
+    },
+    "nodeType": {
+      "policyGroup": "Policy Group",
+      "policy": "Policy"
+    },
+    "status": {
+      "draft": "Draft",
+      "underReview": "Under Review",
+      "pendingApproval": "Pending Approval",
+      "approved": "Approved"
+    },
+    "category": {
+      "hr": "Human Resources",
+      "accounting": "Accounting",
+      "purchase": "Purchase",
+      "it": "Information Technology",
+      "finance": "Finance",
+      "compliance": "Compliance",
+      "other": "Other"
+    },
+    "kind": {
+      "policy": "Policy",
+      "procedure": "Procedure",
+      "announcement": "Announcement",
+      "workInstruction": "Work Instruction"
+    },
+    "communication": {
+      "announcement": "Announcement",
+      "questionnaire": "Questionnaire",
+      "survey": "Survey"
+    },
+    "actions": {
+      "sendForReview": "Send for Review",
+      "submitForApproval": "Submit for Approval",
+      "assign": "Assign",
+      "select": "Select",
+      "addSources": "Add Sources"
+    },
+    "fields": {
+      "name": "Name",
+      "title": "Title",
+      "code": "Code",
+      "type": "Type",
+      "parent": "Parent",
+      "status": "Status",
+      "description": "Description",
+      "createdAt": "Created At",
+      "policyCategory": "Policy Category",
+      "policyKind": "Policy Type",
+      "policyGroup": "Policy Group",
+      "owner": "Owner",
+      "ownerOrganization": "Responsible Organization",
+      "creatorName": "Creator",
+      "documents": "Documents",
+      "identifier": "Identifier",
+      "nodeType": "Item Type",
+      "sortOrder": "Sort Order",
+      "validFrom": "Valid From",
+      "validTo": "Valid To",
+      "nextReviewDate": "Next Review Date",
+      "communicationMethod": "Communication Method",
+      "communicationLanguage": "Communication Language",
+      "objective": "Objective",
+      "note": "Note",
+      "version": "Version",
+      "evaluationConfirmed": "Evaluation Confirmed",
+      "documentType": "Document Type",
+      "fileSize": "File Size",
+      "fileType": "File Type",
+      "process": "Processes",
+      "organization": "Organization",
+      "risk": "Risk",
+      "classification": "Classification",
+      "subProcess": "Sub-process",
+      "effectivenessTest": "Effectiveness Test",
+      "controlDesignAssessment": "Control Design Assessment",
+      "policySource": "Policy Source",
+      "roles": "Roles",
+      "reviewerApprover": "Reviewers / Approvers"
+    },
+    "tabs": {
+      "general": "General Information",
+      "documents": "Policy Document",
+      "scope": "Policy Scope",
+      "risks": "Risks",
+      "controls": "Controls",
+      "sources": "Policy Sources",
+      "roles": "Roles",
+      "reviewApproval": "Review and Approval"
+    },
+    "tree": {
+      "expand": "Expand branch",
+      "collapse": "Collapse branch"
+    },
+    "object": {
+      "summaryTitle": "Policy Details",
+      "selectPrompt": "Select a policy item to view details.",
+      "notFound": "The selected policy item was not found.",
+      "modalTitle": "Policy Center",
+      "createModalTitle": "Create"
+    },
+    "create": {
+      "title": "Create Policy Item"
+    },
+    "edit": {
+      "title": "Edit Policy Item"
+    },
+    "view": {
+      "title": "View Policy Item"
+    },
+    "delete": {
+      "title": "Delete Policy Item",
+      "confirm": "Are you sure you want to delete \"{{title}}\"?"
+    },
+    "errors": {
+      "loadList": "Failed to load policy structure",
+      "notFound": "The requested item was not found",
+      "parentNotFound": "The selected parent was not found",
+      "hasChildren": "You cannot delete an item that has children",
+      "invalidHierarchy": "The selected policy structure is not valid",
+      "policyCannotHaveChildren": "A policy cannot have child items",
+      "delete": "Failed to delete policy item",
+      "save": "Failed to save policy item",
+      "selectPolicyGroupParent": "To create a policy, select a policy group first."
+    },
+    "validation": {
+      "codeRequired": "Code is required",
+      "codeMaxLength": "Code cannot be longer than 50 characters",
+      "titleRequired": "Name is required",
+      "titleMaxLength": "Name cannot be longer than 255 characters",
+      "textMaxLength": "Text cannot be longer than 2000 characters",
+      "updateAtLeastOneField": "At least one field is required for update",
+      "sortOrderInvalid": "Sort order must be a non-negative integer",
+      "documentsCountInvalid": "Documents count must be a non-negative integer"
+    }
+  }
+}

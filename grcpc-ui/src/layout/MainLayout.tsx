@@ -158,9 +158,16 @@ export default function MainLayout() {
         {
             key: "regulations",
             text: t("nav.regulation"),
-            icon: "document-text",
+            icon: "official-service",
             route: "/regulations",
             selected: selectedPath.startsWith("/regulations"),
+        },
+        {
+            key: "policies",
+            text: t("nav.policies", { defaultValue: "سیاست‌ها" }),
+            icon: "document-text",
+            route: "/policies",
+            selected: selectedPath.startsWith("/policies"),
         },
     ];
 
