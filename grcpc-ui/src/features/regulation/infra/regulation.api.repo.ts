@@ -3,7 +3,7 @@ import type {
     RegulationNode,
     RegulationNodeCreate,
     RegulationNodeUpdate,
-} from "@/features/regulation";
+} from "../domain/regulation.model";
 import type { RegulationRepo } from "./regulation.repo";
 
 const BASE_URL = "/api/regulations";
@@ -25,10 +25,7 @@ export class RegulationApiRepo implements RegulationRepo {
         return httpClient.post<RegulationNode>(BASE_URL, payload);
     }
 
-    async update(
-        id: string,
-        payload: RegulationNodeUpdate,
-    ): Promise<RegulationNode> {
+    async update(id: string, payload: RegulationNodeUpdate): Promise<RegulationNode> {
         return httpClient.put<RegulationNode>(`${BASE_URL}/${id}`, payload);
     }
 
@@ -37,17 +34,11 @@ export class RegulationApiRepo implements RegulationRepo {
     }
 
     async getChildren(parentId: string | null): Promise<RegulationNode[]> {
-        const url = parentId
-            ? `${BASE_URL}/children/${parentId}`
-            : `${BASE_URL}/roots`;
-
+        const url = parentId ? `${BASE_URL}/children/${parentId}` : `${BASE_URL}/roots`;
         return httpClient.get<RegulationNode[]>(url);
     }
 
     async toggleStatus(id: string): Promise<RegulationNode> {
-        return httpClient.patch<RegulationNode>(
-            `${BASE_URL}/${id}/toggle-status`,
-            {},
-        );
+        return httpClient.patch<RegulationNode>(`${BASE_URL}/${id}/toggle-status`, {});
     }
 }

@@ -2,16 +2,16 @@ import { omitKeys } from "@/shared/utils/object.utils";
 import {
     regulationCreateSchema,
     regulationUpdateSchema,
-} from "@/features/regulation";
+} from "../domain/regulation.schema";
 import type {
     RegulationNode,
     RegulationNodeCreate,
     RegulationNodeUpdate,
     RegulationReadonlyKeys,
-} from "@/features/regulation";
+} from "../domain/regulation.model";
 import type { RegulationRepo } from "../infra/regulation.repo";
 import { createRegulationRepo } from "../infra/regulation.factory";
-import { sortRegulations } from "../utils/regulation.tree";
+import { canCreateChild, sortRegulations } from "../utils/regulation.tree";
 
 const READONLY_KEYS: readonly RegulationReadonlyKeys[] = [
     "id",
@@ -27,6 +27,85 @@ function removeReadonlyFields<T extends Record<string, unknown>>(payload: T) {
     return omitKeys(payload, READONLY_KEYS as (keyof T)[]);
 }
 
+function assertCreateHierarchy(
+    items: RegulationNode[],
+    payload: RegulationNodeCreate,
+): void {
+    const parent = payload.parentId
+        ? items.find((item) => item.id === payload.parentId) ?? null
+        : null;
+
+    if (payload.parentId && !parent) {
+        throw new Error("PARENT_NOT_FOUND");
+    }
+
+    if (!canCreateChild(parent?.nodeType ?? null, payload.nodeType)) {
+        throw new Error("INVALID_HIERARCHY");
+    }
+}
+
+function assertNoCycle(
+    items: RegulationNode[],
+    id: string,
+    parentId: string | null,
+): void {
+    if (!parentId) {
+        return;
+    }
+
+    if (id === parentId) {
+        throw new Error("INVALID_HIERARCHY");
+    }
+
+    const byId = new Map(items.map((item) => [item.id, item]));
+    const visited = new Set<string>();
+    let currentParentId: string | null | undefined = parentId;
+
+    while (currentParentId) {
+        if (currentParentId === id || visited.has(currentParentId)) {
+            throw new Error("INVALID_HIERARCHY");
+        }
+
+        visited.add(currentParentId);
+        currentParentId = byId.get(currentParentId)?.parentId;
+    }
+}
+
+function assertUpdateHierarchy(
+    items: RegulationNode[],
+    current: RegulationNode,
+    payload: RegulationNodeUpdate,
+): void {
+    const candidate: RegulationNode = {
+        ...current,
+        ...payload,
+        parentId: payload.parentId === undefined ? current.parentId : payload.parentId,
+    };
+
+    assertNoCycle(items, current.id, candidate.parentId ?? null);
+
+    const parent = candidate.parentId
+        ? items.find((item) => item.id === candidate.parentId) ?? null
+        : null;
+
+    if (candidate.parentId && !parent) {
+        throw new Error("PARENT_NOT_FOUND");
+    }
+
+    if (!canCreateChild(parent?.nodeType ?? null, candidate.nodeType)) {
+        throw new Error("INVALID_HIERARCHY");
+    }
+
+    const directChildren = items.filter((item) => item.parentId === current.id);
+    const hasInvalidChild = directChildren.some(
+        (child) => !canCreateChild(candidate.nodeType, child.nodeType),
+    );
+
+    if (hasInvalidChild) {
+        throw new Error("INVALID_HIERARCHY");
+    }
+}
+
 export interface RegulationService {
     list(): Promise<RegulationNode[]>;
     getById(id: string): Promise<RegulationNode | null>;
@@ -36,9 +115,7 @@ export interface RegulationService {
     toggleStatus(id: string): Promise<RegulationNode>;
 }
 
-export function createRegulationService(
-    repo: RegulationRepo,
-): RegulationService {
+export function createRegulationService(repo: RegulationRepo): RegulationService {
     return {
         async list() {
             const items = await repo.list();
@@ -52,12 +129,25 @@ export function createRegulationService(
         async create(payload) {
             const sanitized = removeReadonlyFields(payload);
             const parsed = regulationCreateSchema.parse(sanitized);
+            const items = await repo.list();
+
+            assertCreateHierarchy(items, parsed);
+
             return repo.create(parsed);
         },
 
         async update(id, payload) {
             const sanitized = removeReadonlyFields(payload);
             const parsed = regulationUpdateSchema.parse(sanitized);
+            const items = await repo.list();
+            const current = items.find((item) => item.id === id);
+
+            if (!current) {
+                throw new Error("NOT_FOUND");
+            }
+
+            assertUpdateHierarchy(items, current, parsed);
+
             return repo.update(id, parsed);
         },
 

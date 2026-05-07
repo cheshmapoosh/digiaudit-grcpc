@@ -1,0 +1,86 @@
+{
+  "regulation": {
+    "list": {
+      "title": "ساختار قانون",
+      "empty": "هیچ قانون یا الزامی ثبت نشده است.",
+      "search": "جستجو بر اساس نام، کد یا توضیحات"
+    },
+    "nodeType": {
+      "lawGroup": "گروه قانون",
+      "law": "قانون",
+      "lawRequirement": "الزامات قانون"
+    },
+    "fields": {
+      "name": "نام",
+      "code": "کد",
+      "type": "نوع",
+      "parent": "والد",
+      "parentLawGroup": "والد گروه قانون",
+      "parentLaw": "والد قانون",
+      "parentRequirement": "والد قانون",
+      "status": "وضعیت",
+      "description": "شرح",
+      "createdAt": "تاریخ ثبت سیستم",
+      "effectiveDate": "تاریخ ایجاد",
+      "validTo": "تاریخ اعتبار",
+      "issuer": "مرجع صادرکننده",
+      "owner": "مالک",
+      "documents": "مستندات",
+      "identifier": "شناسه",
+      "nodeType": "نوع آیتم",
+      "sortOrder": "ترتیب نمایش",
+      "requirement": "الزامات",
+      "lawName": "نام قانون"
+    },
+    "tabs": {
+      "general": "اطلاعات کلی",
+      "requirements": "الزامات",
+      "documents": "مستندات"
+    },
+    "tree": {
+      "expand": "باز کردن شاخه",
+      "collapse": "بستن شاخه"
+    },
+    "object": {
+      "summaryTitle": "جزئیات قانون",
+      "selectPrompt": "برای مشاهده جزئیات، یک آیتم قانون را انتخاب کنید.",
+      "notFound": "آیتم قانون انتخاب‌شده یافت نشد.",
+      "modalTitle": "مرکز قوانین",
+      "createModalTitle": "ایجاد"
+    },
+    "create": {
+      "title": "ایجاد آیتم قانون"
+    },
+    "edit": {
+      "title": "ویرایش آیتم قانون"
+    },
+    "view": {
+      "title": "نمایش آیتم قانون"
+    },
+    "delete": {
+      "title": "حذف آیتم قانون",
+      "confirm": "آیا از حذف \"{{title}}\" مطمئن هستید؟"
+    },
+    "errors": {
+      "loadList": "خطا در بارگذاری ساختار قانون",
+      "notFound": "آیتم موردنظر یافت نشد",
+      "parentNotFound": "والد انتخاب‌شده یافت نشد",
+      "hasChildren": "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+      "invalidHierarchy": "ساختار انتخاب‌شده برای قوانین معتبر نیست",
+      "lawRequirementCannotHaveChildren": "الزام قانون زیرشاخه ندارد",
+      "delete": "خطا در حذف آیتم قانون",
+      "save": "خطا در ذخیره آیتم قانون",
+      "selectLawGroupParent": "برای ایجاد قانون، ابتدا یک گروه قانون یا قانون همان والد را انتخاب کنید.",
+      "selectLawParent": "برای ایجاد الزام قانون، ابتدا یک قانون یا الزام همان قانون را انتخاب کنید."
+    },
+    "validation": {
+      "codeRequired": "کد الزامی است",
+      "codeMaxLength": "کد نمی‌تواند بیشتر از 50 کاراکتر باشد",
+      "titleRequired": "نام الزامی است",
+      "titleMaxLength": "نام نمی‌تواند بیشتر از 255 کاراکتر باشد",
+      "textMaxLength": "متن نمی‌تواند بیشتر از 2000 کاراکتر باشد",
+      "updateAtLeastOneField": "حداقل یک فیلد برای بروزرسانی لازم است",
+      "sortOrderInvalid": "ترتیب نمایش باید عدد صحیح نامنفی باشد"
+    }
+  }
+}

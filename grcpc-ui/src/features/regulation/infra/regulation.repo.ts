@@ -2,7 +2,7 @@ import type {
     RegulationNode,
     RegulationNodeCreate,
     RegulationNodeUpdate,
-} from "@/features/regulation";
+} from "../domain/regulation.model";
 
 export interface RegulationRepo {
     list(): Promise<RegulationNode[]>;

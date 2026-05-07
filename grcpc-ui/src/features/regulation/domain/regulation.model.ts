@@ -2,26 +2,23 @@ import type { AuditFields } from "@/shared/domain/audit.model";
 
 export type RegulationStatus = "active" | "inactive";
 
-export type RegulationType =
-    | "law"
-    | "regulation"
-    | "directive"
-    | "circular"
-    | "procedure"
-    | "instruction"
-    | "policy"
-    | "other";
+export type RegulationNodeType = "lawGroup" | "law" | "lawRequirement";
 
 export interface RegulationNode extends AuditFields {
     id: string;
     code: string;
-    name: string;
-    type: RegulationType;
+    title: string;
+    nodeType: RegulationNodeType;
     parentId: string | null;
     status: RegulationStatus;
-    validFrom?: string;
-    validTo?: string;
+    sortOrder?: number;
     description?: string;
+
+    effectiveDate?: string;
+    validTo?: string;
+    issuer?: string;
+    ownerName?: string;
+    documentsCount?: number;
 }
 
 export type RegulationReadonlyKeys =
@@ -33,11 +30,6 @@ export type RegulationReadonlyKeys =
     | "deletedAt"
     | "deletedBy";
 
-export type RegulationNodeCreate = Omit<
-    RegulationNode,
-    RegulationReadonlyKeys
->;
+export type RegulationNodeCreate = Omit<RegulationNode, RegulationReadonlyKeys>;
 
-export type RegulationNodeUpdate = Partial<
-    Omit<RegulationNode, RegulationReadonlyKeys>
->;
+export type RegulationNodeUpdate = Partial<Omit<RegulationNode, RegulationReadonlyKeys>>;

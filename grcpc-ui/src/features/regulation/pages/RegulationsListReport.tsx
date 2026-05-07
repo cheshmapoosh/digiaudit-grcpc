@@ -1,87 +1,125 @@
+import { useMemo, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Bar,
+    BusyIndicator,
     Button,
     Input,
     MessageStrip,
     Title,
 } from "@ui5/webcomponents-react";
 
-import type { RegulationNode } from "@/features/regulation";
+import type { RegulationNode, RegulationNodeType } from "../domain/regulation.model";
+import CreateRegulationSplitButton from "../components/CreateRegulationSplitButton";
 import RegulationTree from "../components/RegulationTree";
 
 export interface RegulationsListReportProps {
     items: RegulationNode[];
     selectedId?: string | null;
+    expansionAnchorId?: string | null;
     searchText: string;
     busy?: boolean;
     error?: string | null;
+    createOptions: RegulationNodeType[];
     onSearchTextChange: (value: string) => void;
-    onRefresh: () => void;
-    onCreateRoot: () => void;
-    onSelect: (id: string) => void;
-    onCreateChild: (parentId: string) => void;
-    onEdit: (id: string) => void;
+    onCreate: (nodeType: RegulationNodeType) => void;
+    onShow: (id: string) => void;
     onDelete: (id: string) => void;
-    onToggleStatus: (id: string) => void;
+    onSelect: (id: string) => void;
+}
+
+function readInputValue(event: unknown): string {
+    return (event as { target?: { value?: string } }).target?.value ?? "";
 }
 
 export default function RegulationsListReport({
-                                                    items,
-                                                    selectedId,
-                                                    searchText,
-                                                    busy = false,
-                                                    error,
-                                                    onSearchTextChange,
-                                                    onRefresh,
-                                                    onCreateRoot,
-                                                    onSelect,
-                                                    onCreateChild,
-                                                    onEdit,
-                                                    onDelete,
-                                                    onToggleStatus,
-                                                }: RegulationsListReportProps) {
+    items,
+    selectedId,
+    expansionAnchorId,
+    searchText,
+    busy = false,
+    error,
+    createOptions,
+    onSearchTextChange,
+    onCreate,
+    onShow,
+    onDelete,
+    onSelect,
+}: RegulationsListReportProps) {
     const { t } = useTranslation();
 
+    const actionButtonStyle = useMemo<CSSProperties>(
+        () => ({
+            minWidth: "6rem",
+        }),
+        [],
+    );
+
+    const actionGroupStyle = useMemo<CSSProperties>(
+        () => ({
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            flexWrap: "nowrap",
+            whiteSpace: "nowrap",
+        }),
+        [],
+    );
+
+    const canCreate = !busy && createOptions.length > 0;
+
     return (
-        <div style={{ display: "grid", gap: "1rem", minHeight: 0 }}>
+        <div
+            style={{
+                display: "grid",
+                gridTemplateRows: "auto auto auto minmax(0, 1fr)",
+                gap: "1rem",
+                height: "100%",
+                minHeight: 0,
+            }}
+        >
             <Bar
                 startContent={
                     <Title level="H4">
-                        {t("regulation.list.title", { defaultValue: "قوانین و مقررات" })}
+                        {t("regulation.list.title", { defaultValue: "ساختار قانون" })}
                     </Title>
                 }
                 endContent={
-                    <>
-                        <Button
-                            design="Transparent"
-                            icon="refresh"
-                            disabled={busy}
-                            onClick={onRefresh}
-                        >
-                            {t("common.refresh", { defaultValue: "بروزرسانی" })}
-                        </Button>
+                    <div style={actionGroupStyle}>
+                        <CreateRegulationSplitButton
+                            disabled={!canCreate}
+                            nodeTypes={createOptions}
+                            onCreate={onCreate}
+                        />
 
                         <Button
                             design="Emphasized"
-                            icon="add"
-                            disabled={busy}
-                            onClick={onCreateRoot}
+                            disabled={!selectedId || busy}
+                            style={actionButtonStyle}
+                            onClick={() => selectedId && onShow(selectedId)}
                         >
-                            {t("regulation.actions.createRoot", {
-                                defaultValue: "ایجاد قانون / مقرره",
-                            })}
+                            {t("common.view", { defaultValue: "نمایش" })}
                         </Button>
-                    </>
+
+                        <Button
+                            design="Negative"
+                            disabled={!selectedId || busy}
+                            style={actionButtonStyle}
+                            onClick={() => selectedId && onDelete(selectedId)}
+                        >
+                            {t("common.delete", { defaultValue: "حذف" })}
+                        </Button>
+                    </div>
                 }
             />
 
             <Input
                 value={searchText}
+                disabled={busy}
                 placeholder={t("regulation.list.search", {
-                    defaultValue: "جستجو بر اساس کد، نام یا توضیحات",
+                    defaultValue: "جستجو بر اساس نام، کد یا توضیحات",
                 })}
-                onInput={(event) => onSearchTextChange(event.target.value)}
+                onInput={(event) => onSearchTextChange(readInputValue(event))}
             />
 
             {error ? (
@@ -90,17 +128,27 @@ export default function RegulationsListReport({
                 </MessageStrip>
             ) : null}
 
-            <div style={{ minHeight: 0, overflow: "auto" }}>
+            <div
+                style={{
+                    minHeight: 0,
+                    overflowY: "auto",
+                    overflowX: "auto",
+                    border: "1px solid var(--sapGroup_ContentBorderColor)",
+                    borderRadius: "0",
+                    padding: "0.75rem",
+                    background: "var(--sapList_Background)",
+                    boxSizing: "border-box",
+                }}
+            >
+                {busy ? <BusyIndicator active /> : null}
+
                 <RegulationTree
                     items={items}
                     selectedId={selectedId}
+                    expansionAnchorId={expansionAnchorId}
                     searchText={searchText}
                     busy={busy}
                     onSelect={onSelect}
-                    onCreateChild={onCreateChild}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onToggleStatus={onToggleStatus}
                 />
             </div>
         </div>

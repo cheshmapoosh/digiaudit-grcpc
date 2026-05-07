@@ -6,10 +6,6 @@ export function parentKey(parentId: string | null | undefined): ParentKey {
     return parentId ?? ROOT_PARENT_KEY;
 }
 
-export function isRootParent(parentId: string | null | undefined): boolean {
-    return parentKey(parentId) === ROOT_PARENT_KEY;
-}
-
 export function normalizeText(value: string | null | undefined): string {
     return (value ?? "").trim().toLocaleLowerCase("fa");
 }

@@ -3,16 +3,25 @@ import { t } from "@/shared/utils/i18n.util";
 
 export const regulationStatusSchema = z.enum(["active", "inactive"]);
 
-export const regulationTypeSchema = z.enum([
+export const regulationNodeTypeSchema = z.enum([
+    "lawGroup",
     "law",
-    "regulation",
-    "directive",
-    "circular",
-    "procedure",
-    "instruction",
-    "policy",
-    "other",
+    "lawRequirement",
 ]);
+
+const optionalTextSchema = z
+    .string()
+    .trim()
+    .max(
+        2000,
+        t(
+            "regulation.validation.textMaxLength",
+            "متن نمی‌تواند بیشتر از 2000 کاراکتر باشد",
+        ),
+    )
+    .optional();
+
+const optionalShortTextSchema = z.string().trim().max(255).optional();
 
 const baseRegulationPayloadSchema = z.object({
     code: z
@@ -27,39 +36,28 @@ const baseRegulationPayloadSchema = z.object({
             ),
         ),
 
-    name: z
+    title: z
         .string()
         .trim()
-        .min(1, t("regulation.validation.nameRequired", "نام الزامی است"))
+        .min(1, t("regulation.validation.titleRequired", "نام الزامی است"))
         .max(
             255,
             t(
-                "regulation.validation.nameMaxLength",
+                "regulation.validation.titleMaxLength",
                 "نام نمی‌تواند بیشتر از 255 کاراکتر باشد",
             ),
         ),
 
-    type: regulationTypeSchema,
-
+    nodeType: regulationNodeTypeSchema,
     parentId: z.string().trim().min(1).nullable(),
-
     status: regulationStatusSchema,
-
-    validFrom: z.string().trim().optional(),
-
-    validTo: z.string().trim().optional(),
-
-    description: z
-        .string()
-        .trim()
-        .max(
-            2000,
-            t(
-                "regulation.validation.descriptionMaxLength",
-                "توضیحات نمی‌تواند بیشتر از 2000 کاراکتر باشد",
-            ),
-        )
-        .optional(),
+    sortOrder: z.number().int().min(0).optional(),
+    description: optionalTextSchema,
+    effectiveDate: optionalShortTextSchema,
+    validTo: optionalShortTextSchema,
+    issuer: optionalShortTextSchema,
+    ownerName: optionalShortTextSchema,
+    documentsCount: z.number().int().min(0).optional(),
 });
 
 const forbiddenReadonlyFields = {

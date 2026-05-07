@@ -3,10 +3,10 @@ export { regulationRoutes } from "./routes";
 export type {
     RegulationNode,
     RegulationNodeCreate,
+    RegulationNodeType,
     RegulationNodeUpdate,
-    RegulationStatus,
-    RegulationType,
     RegulationReadonlyKeys,
+    RegulationStatus,
 } from "./domain/regulation.model";
 
 export type {
@@ -16,11 +16,11 @@ export type {
 
 export {
     regulationCreateSchema,
-    regulationUpdateSchema,
+    regulationNodeTypeSchema,
     regulationStatusSchema,
-    regulationTypeSchema,
+    regulationUpdateSchema,
 } from "./domain/regulation.schema";
 
-export { regulationService, createRegulationService } from "./service/regulation.service";
+export { createRegulationService, regulationService } from "./service/regulation.service";
 
-export { useRegulationState, ROOT_PARENT } from "./state/regulation.state.ts";
+export { ROOT_PARENT, useRegulationState } from "./state/regulation.state";

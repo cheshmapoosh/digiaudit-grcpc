@@ -3,8 +3,8 @@ import type {
     RegulationNode,
     RegulationNodeCreate,
     RegulationNodeUpdate,
-} from "@/features/regulation";
-import { regulationService } from "@/features/regulation";
+} from "../domain/regulation.model";
+import { regulationService } from "../service/regulation.service";
 
 export const ROOT_PARENT = "ROOT_PARENT";
 
@@ -45,6 +45,11 @@ function buildIndexes(nodes: RegulationNode[]) {
     return { nodesById, childrenByParent };
 }
 
+async function reloadIndexes() {
+    const allNodes = await regulationService.list();
+    return buildIndexes(allNodes);
+}
+
 export const useRegulationState = create<RegulationState>((set) => ({
     nodesById: {},
     childrenByParent: {},
@@ -55,8 +60,7 @@ export const useRegulationState = create<RegulationState>((set) => ({
         set({ loading: true });
 
         try {
-            const allNodes = await regulationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
+            const { nodesById, childrenByParent } = await reloadIndexes();
 
             set((state) => ({
                 nodesById,
@@ -75,8 +79,7 @@ export const useRegulationState = create<RegulationState>((set) => ({
         set({ loading: true });
 
         try {
-            const allNodes = await regulationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
+            const { nodesById, childrenByParent } = await reloadIndexes();
 
             set((state) => ({
                 nodesById,
@@ -100,8 +103,7 @@ export const useRegulationState = create<RegulationState>((set) => ({
                 parentId: parentId === ROOT_PARENT ? null : parentId,
             });
 
-            const allNodes = await regulationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
+            const { nodesById, childrenByParent } = await reloadIndexes();
 
             set((state) => ({
                 nodesById,
@@ -124,8 +126,7 @@ export const useRegulationState = create<RegulationState>((set) => ({
         try {
             await regulationService.update(id, payload);
 
-            const allNodes = await regulationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
+            const { nodesById, childrenByParent } = await reloadIndexes();
 
             set((state) => ({
                 nodesById,
@@ -146,8 +147,7 @@ export const useRegulationState = create<RegulationState>((set) => ({
         try {
             await regulationService.remove(id);
 
-            const allNodes = await regulationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
+            const { nodesById, childrenByParent } = await reloadIndexes();
 
             set((state) => ({
                 nodesById,
@@ -168,8 +168,7 @@ export const useRegulationState = create<RegulationState>((set) => ({
         try {
             await regulationService.toggleStatus(id);
 
-            const allNodes = await regulationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
+            const { nodesById, childrenByParent } = await reloadIndexes();
 
             set((state) => ({
                 nodesById,

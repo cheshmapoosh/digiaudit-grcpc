@@ -1,4 +1,4 @@
-import type { RegulationNode } from "@/features/regulation";
+import type { RegulationNode, RegulationNodeType } from "../domain/regulation.model";
 import { containsText, parentKey } from "./tree.utils";
 
 export interface RegulationTreeNode extends RegulationNode {
@@ -6,19 +6,57 @@ export interface RegulationTreeNode extends RegulationNode {
     level: number;
 }
 
+const NODE_TYPE_ORDER: Record<RegulationNodeType, number> = {
+    lawGroup: 1,
+    law: 2,
+    lawRequirement: 3,
+};
+
 export function sortRegulations(items: RegulationNode[]): RegulationNode[] {
     return [...items].sort((a, b) => {
-        if (a.code !== b.code) {
-            return a.code.localeCompare(b.code, "fa");
+        const orderCompare = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        if (orderCompare !== 0) {
+            return orderCompare;
         }
 
-        return a.name.localeCompare(b.name, "fa");
+        const typeCompare = NODE_TYPE_ORDER[a.nodeType] - NODE_TYPE_ORDER[b.nodeType];
+        if (typeCompare !== 0) {
+            return typeCompare;
+        }
+
+        const codeCompare = a.code.localeCompare(b.code, "fa");
+        if (codeCompare !== 0) {
+            return codeCompare;
+        }
+
+        return a.title.localeCompare(b.title, "fa");
     });
+}
+
+function createsCycle(
+    itemId: string,
+    parentId: string,
+    parentById: Map<string, string | null>,
+): boolean {
+    let currentParentId: string | null | undefined = parentId;
+    const visited = new Set<string>();
+
+    while (currentParentId) {
+        if (currentParentId === itemId || visited.has(currentParentId)) {
+            return true;
+        }
+
+        visited.add(currentParentId);
+        currentParentId = parentById.get(currentParentId);
+    }
+
+    return false;
 }
 
 export function buildTree(items: RegulationNode[]): RegulationTreeNode[] {
     const sorted = sortRegulations(items);
     const byId = new Map<string, RegulationTreeNode>();
+    const parentById = new Map<string, string | null>();
 
     for (const item of sorted) {
         byId.set(item.id, {
@@ -26,6 +64,8 @@ export function buildTree(items: RegulationNode[]): RegulationTreeNode[] {
             children: [],
             level: 0,
         });
+
+        parentById.set(item.id, item.parentId ?? null);
     }
 
     const roots: RegulationTreeNode[] = [];
@@ -37,12 +77,19 @@ export function buildTree(items: RegulationNode[]): RegulationTreeNode[] {
             continue;
         }
 
-        if (!item.parentId) {
+        const parentId = item.parentId;
+
+        if (!parentId || parentId === item.id || !byId.has(parentId)) {
             roots.push(current);
             continue;
         }
 
-        const parent = byId.get(item.parentId);
+        if (createsCycle(item.id, parentId, parentById)) {
+            roots.push(current);
+            continue;
+        }
+
+        const parent = byId.get(parentId);
 
         if (!parent) {
             roots.push(current);
@@ -65,7 +112,6 @@ export function flattenTree(nodes: RegulationTreeNode[]): RegulationTreeNode[] {
     };
 
     nodes.forEach(visit);
-
     return result;
 }
 
@@ -92,6 +138,32 @@ export function findNodeById(
     return null;
 }
 
+export function collectAncestorIds(
+    items: RegulationNode[],
+    nodeId: string | null | undefined,
+): string[] {
+    if (!nodeId) {
+        return [];
+    }
+
+    const byId = new Map(items.map((item) => [item.id, item]));
+    const result: string[] = [];
+    const visited = new Set<string>();
+    let current = byId.get(nodeId);
+
+    while (current?.parentId) {
+        if (visited.has(current.parentId)) {
+            break;
+        }
+
+        visited.add(current.parentId);
+        result.push(current.parentId);
+        current = byId.get(current.parentId);
+    }
+
+    return result;
+}
+
 export function collectDescendantIds(
     nodes: RegulationTreeNode[],
     rootId: string | null | undefined,
@@ -112,28 +184,6 @@ export function collectDescendantIds(
     };
 
     walk(root);
-
-    return result;
-}
-
-export function collectAncestorIds(
-    items: RegulationNode[],
-    nodeId: string | null | undefined,
-): string[] {
-    if (!nodeId) {
-        return [];
-    }
-
-    const byId = new Map(items.map((item) => [item.id, item]));
-    const result: string[] = [];
-
-    let current = byId.get(nodeId);
-
-    while (current?.parentId) {
-        result.push(current.parentId);
-        current = byId.get(current.parentId);
-    }
-
     return result;
 }
 
@@ -151,7 +201,7 @@ export function filterTree(
             .filter((item): item is RegulationTreeNode => item !== null);
 
         const matched =
-            containsText(node.name, searchText) ||
+            containsText(node.title, searchText) ||
             containsText(node.code, searchText) ||
             containsText(node.description, searchText);
 
@@ -172,4 +222,47 @@ export function filterTree(
 
 export function hasChildren(items: RegulationNode[], id: string): boolean {
     return items.some((item) => parentKey(item.parentId) === id);
+}
+
+export function canHaveChildren(nodeType: RegulationNodeType): boolean {
+    return nodeType !== "lawRequirement";
+}
+
+export function allowedChildTypes(
+    parentType: RegulationNodeType | null,
+): RegulationNodeType[] {
+    if (!parentType) {
+        return ["lawGroup"];
+    }
+
+    if (parentType === "lawGroup") {
+        return ["lawGroup", "law"];
+    }
+
+    if (parentType === "law") {
+        return ["lawRequirement"];
+    }
+
+    return [];
+}
+
+export function canCreateChild(
+    parentType: RegulationNodeType | null,
+    childType: RegulationNodeType,
+): boolean {
+    return allowedChildTypes(parentType).includes(childType);
+}
+
+export function defaultChildType(
+    parentType: RegulationNodeType | null,
+): RegulationNodeType {
+    if (parentType === "law") {
+        return "lawRequirement";
+    }
+
+    if (parentType === "lawGroup") {
+        return "law";
+    }
+
+    return "lawGroup";
 }

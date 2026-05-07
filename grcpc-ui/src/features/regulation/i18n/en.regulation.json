@@ -1,0 +1,86 @@
+{
+  "regulation": {
+    "list": {
+      "title": "Regulation Structure",
+      "empty": "No regulation item has been registered.",
+      "search": "Search by name, code, or description"
+    },
+    "nodeType": {
+      "lawGroup": "Law Group",
+      "law": "Law",
+      "lawRequirement": "Law Requirement"
+    },
+    "fields": {
+      "name": "Name",
+      "code": "Code",
+      "type": "Type",
+      "parent": "Parent",
+      "parentLawGroup": "Parent Law Group",
+      "parentLaw": "Parent Law",
+      "parentRequirement": "Parent Law",
+      "status": "Status",
+      "description": "Description",
+      "createdAt": "System Created At",
+      "effectiveDate": "Effective Date",
+      "validTo": "Valid To",
+      "issuer": "Issuer",
+      "owner": "Owner",
+      "documents": "Documents",
+      "identifier": "Identifier",
+      "nodeType": "Item Type",
+      "sortOrder": "Sort Order",
+      "requirement": "Requirement",
+      "lawName": "Law Name"
+    },
+    "tabs": {
+      "general": "General Information",
+      "requirements": "Requirements",
+      "documents": "Documents"
+    },
+    "tree": {
+      "expand": "Expand branch",
+      "collapse": "Collapse branch"
+    },
+    "object": {
+      "summaryTitle": "Regulation Details",
+      "selectPrompt": "Select a regulation item to view details.",
+      "notFound": "The selected regulation item was not found.",
+      "modalTitle": "Regulation Center",
+      "createModalTitle": "Create"
+    },
+    "create": {
+      "title": "Create Regulation Item"
+    },
+    "edit": {
+      "title": "Edit Regulation Item"
+    },
+    "view": {
+      "title": "View Regulation Item"
+    },
+    "delete": {
+      "title": "Delete Regulation Item",
+      "confirm": "Are you sure you want to delete \"{{title}}\"?"
+    },
+    "errors": {
+      "loadList": "Failed to load regulation structure",
+      "notFound": "The requested item was not found",
+      "parentNotFound": "The selected parent was not found",
+      "hasChildren": "You cannot delete an item that has children",
+      "invalidHierarchy": "The selected regulation structure is not valid",
+      "lawRequirementCannotHaveChildren": "A law requirement cannot have child items",
+      "delete": "Failed to delete regulation item",
+      "save": "Failed to save regulation item",
+      "selectLawGroupParent": "To create a law, select a law group or a law with the same parent first.",
+      "selectLawParent": "To create a law requirement, select a law or a requirement under the same law first."
+    },
+    "validation": {
+      "codeRequired": "Code is required",
+      "codeMaxLength": "Code cannot be longer than 50 characters",
+      "titleRequired": "Name is required",
+      "titleMaxLength": "Name cannot be longer than 255 characters",
+      "textMaxLength": "Text cannot be longer than 2000 characters",
+      "updateAtLeastOneField": "At least one field is required for update",
+      "sortOrderInvalid": "Sort order must be a non-negative integer"
+    }
+  }
+}
