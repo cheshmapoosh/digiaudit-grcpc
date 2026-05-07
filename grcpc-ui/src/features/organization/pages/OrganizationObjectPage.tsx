@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
-    Bar,
     Button,
     DatePicker,
     Input,
@@ -9,6 +9,9 @@ import {
     MessageStrip,
     Option,
     Select,
+    Tab,
+    TabContainer,
+    TabSeparator,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
@@ -19,11 +22,24 @@ import type {
     OrganizationNodeUpdate,
     OrganizationStatus,
     OrganizationType,
-} from "@/features/organization";
+} from "../domain/organization.model";
 import ParentValueHelpDialog from "../components/ParentValueHelpDialog";
-import ParentPickerField from "@/shared/components/ParentPickerField";
 
 export type OrganizationObjectMode = "create" | "edit" | "view";
+
+type OrganizationTabKey =
+    | "general"
+    | "process"
+    | "risk"
+    | "control"
+    | "rules"
+    | "policies"
+    | "goals"
+    | "kpi"
+    | "kri"
+    | "exceptions"
+    | "owner"
+    | "documents";
 
 interface OrganizationFormState {
     code: string;
@@ -47,6 +63,108 @@ export interface OrganizationObjectPageProps {
     onEdit?: () => void;
 }
 
+const ROOT_STYLE: CSSProperties = {
+    display: "grid",
+    gap: "0.75rem",
+    background: "var(--sapBackgroundColor)",
+};
+
+const HEADER_STYLE: CSSProperties = {
+    border: "1px solid var(--sapGroup_ContentBorderColor)",
+    borderBottom: "none",
+    background: "var(--sapGroup_ContentBackground)",
+};
+
+const HEADER_TITLE_STYLE: CSSProperties = {
+    padding: "0.5rem 1rem",
+    borderBottom: "1px solid var(--sapGroup_ContentBorderColor)",
+    background: "var(--sapList_HeaderBackground)",
+    fontWeight: 700,
+};
+
+const HEADER_GRID_STYLE: CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "0.25rem 2rem",
+    padding: "0.75rem 1rem",
+    minHeight: "4.5rem",
+};
+
+const HEADER_ROW_STYLE: CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "7rem minmax(0, 1fr)",
+    gap: "0.5rem",
+    alignItems: "center",
+};
+
+const ORGANIZATION_TAB_CONTAINER_CLASS = "organizationObjectTabs";
+
+addCustomCSS(
+    "ui5-tabcontainer",
+    `
+:host(.${ORGANIZATION_TAB_CONTAINER_CLASS}) .ui5-tab-strip-item--textOnly:focus:not([data-moving]) .ui5-tab-strip-itemText::before,
+:host(.${ORGANIZATION_TAB_CONTAINER_CLASS}) .ui5-tab-strip-item--textOnly:focus-visible:not([data-moving]) .ui5-tab-strip-itemText::before,
+:host(.${ORGANIZATION_TAB_CONTAINER_CLASS}) .ui5-tab-strip-item--inline.ui5-tab-strip-item--textOnly:focus:not([data-moving]) .ui5-tab-strip-itemText::before,
+:host(.${ORGANIZATION_TAB_CONTAINER_CLASS}) .ui5-tab-strip-item--inline.ui5-tab-strip-item--textOnly:focus-visible:not([data-moving]) .ui5-tab-strip-itemText::before {
+    content: none;
+    display: none;
+    border: 0;
+}`,
+);
+
+const TAB_CONTAINER_STYLE: CSSProperties = {
+    borderInline: "1px solid var(--sapGroup_ContentBorderColor)",
+    borderTop: "1px solid var(--sapGroup_ContentBorderColor)",
+    background: "var(--sapBackgroundColor)",
+};
+
+const BODY_STYLE: CSSProperties = {
+    borderInline: "1px solid var(--sapGroup_ContentBorderColor)",
+    borderBottom: "1px solid var(--sapGroup_ContentBorderColor)",
+    background: "var(--sapBackgroundColor)",
+    minHeight: "22rem",
+    padding: "1rem",
+};
+
+const FORM_GRID_STYLE: CSSProperties = {
+    display: "grid",
+    gap: "1rem",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+};
+
+const FIELD_STYLE: CSSProperties = {
+    display: "grid",
+    gap: "0.35rem",
+};
+
+const FULL_WIDTH_STYLE: CSSProperties = {
+    gridColumn: "1 / -1",
+};
+
+const PARENT_PICKER_STYLE: CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto auto",
+    gap: "0.75rem",
+    alignItems: "end",
+};
+
+const FOOTER_STYLE: CSSProperties = {
+    display: "flex",
+    justifyContent: "center",
+    gap: "2rem",
+    padding: "1rem 0 0",
+};
+
+const ACTION_BUTTON_STYLE: CSSProperties = {
+    minWidth: "6rem",
+};
+
+const EMPTY_TAB_STYLE: CSSProperties = {
+    minHeight: "16rem",
+    background: "var(--sapGroup_ContentBackground)",
+    border: "1px solid var(--sapList_BorderColor)",
+};
+
 function toFormState(
     value: OrganizationNode | null,
     defaultParentId: string | null,
@@ -61,6 +179,179 @@ function toFormState(
         validFrom: value?.validFrom ?? "",
         validTo: value?.validTo ?? "",
     };
+}
+
+function readInputValue(event: unknown): string {
+    return (event as { target?: { value?: string } }).target?.value ?? "";
+}
+
+function readSelectedDataValue(event: unknown, fallback: string): string {
+    const selectedOption = (event as {
+        detail?: {
+            selectedOption?: {
+                getAttribute?: (name: string) => string | null;
+            };
+        };
+    }).detail?.selectedOption;
+
+    return selectedOption?.getAttribute?.("data-value") ?? fallback;
+}
+
+function HeaderItem({
+                        label,
+                        value,
+                    }: {
+    label: string;
+    value?: string | null;
+}) {
+    return (
+        <div style={HEADER_ROW_STYLE}>
+            <strong>{label}:</strong>
+            <span>{value?.trim() ? value : "-"}</span>
+        </div>
+    );
+}
+
+function FormField({
+                       label,
+                       required = false,
+                       fullWidth = false,
+                       children,
+                   }: {
+    label: string;
+    required?: boolean;
+    fullWidth?: boolean;
+    children: ReactNode;
+}) {
+    return (
+        <div style={{ ...FIELD_STYLE, ...(fullWidth ? FULL_WIDTH_STYLE : undefined) }}>
+            <Label showColon required={required}>
+                {label}
+            </Label>
+            {children}
+        </div>
+    );
+}
+
+function resolveTypeLabel(
+    type: OrganizationType,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    const map: Record<OrganizationType, string> = {
+        company: t("organization.type.company", { defaultValue: "شرکت" }),
+        holding: t("organization.type.holding", { defaultValue: "هلدینگ" }),
+        department: t("organization.type.department", { defaultValue: "دپارتمان" }),
+        management: t("organization.type.management", { defaultValue: "مدیریت" }),
+        branch: t("organization.type.branch", { defaultValue: "شعبه" }),
+        unit: t("organization.type.unit", { defaultValue: "واحد" }),
+        other: t("organization.type.other", { defaultValue: "سایر" }),
+    };
+
+    return map[type] ?? type;
+}
+
+function resolveStatusLabel(
+    status: OrganizationStatus,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    if (status === "inactive") {
+        return t("common.inactive", { defaultValue: "غیرفعال" });
+    }
+
+    return t("common.active", { defaultValue: "فعال" });
+}
+
+function OrganizationTabs({
+                              activeTab,
+                              onChange,
+                          }: {
+    activeTab: OrganizationTabKey;
+    onChange: (tab: OrganizationTabKey) => void;
+}) {
+    const { t } = useTranslation();
+
+    const handleTabSelect = (event: any) => {
+        const selectedTab = event.detail?.tab as HTMLElement | undefined;
+        const key = selectedTab?.getAttribute("data-tab-key") as OrganizationTabKey | null;
+
+        if (key) {
+            onChange(key);
+        }
+    };
+
+    return (
+        <TabContainer
+            className={ORGANIZATION_TAB_CONTAINER_CLASS}
+            onTabSelect={handleTabSelect}
+            style={TAB_CONTAINER_STYLE}
+        >
+            <Tab
+                text={t("organization.tabs.general", { defaultValue: "اطلاعات کلی" })}
+                selected={activeTab === "general"}
+                data-tab-key="general"
+            />
+
+            <TabSeparator />
+
+            <Tab
+                text={t("organization.tabs.process", { defaultValue: "فرآیند" })}
+                selected={activeTab === "process"}
+                data-tab-key="process"
+            />
+
+            <Tab
+                text={t("organization.tabs.risk", { defaultValue: "ریسک" })}
+                selected={activeTab === "risk"}
+                data-tab-key="risk"
+            />
+
+            <Tab
+                text={t("organization.tabs.control", { defaultValue: "کنترل" })}
+                selected={activeTab === "control"}
+                data-tab-key="control"
+            />
+
+            <Tab
+                text={t("organization.tabs.rules", { defaultValue: "قوانین" })}
+                selected={activeTab === "rules"}
+                data-tab-key="rules"
+            />
+
+            <Tab
+                text={t("organization.tabs.policies", { defaultValue: "سیاست‌ها" })}
+                selected={activeTab === "policies"}
+                data-tab-key="policies"
+            />
+
+            <Tab
+                text={t("organization.tabs.goals", { defaultValue: "اهداف" })}
+                selected={activeTab === "goals"}
+                data-tab-key="goals"
+            />
+
+            <Tab text="KPI" selected={activeTab === "kpi"} data-tab-key="kpi" />
+
+            <Tab text="KRI" selected={activeTab === "kri"} data-tab-key="kri" />
+
+            <Tab
+                text={t("organization.tabs.exceptions", { defaultValue: "استثناها" })}
+                selected={activeTab === "exceptions"}
+                data-tab-key="exceptions"
+            />
+
+            <Tab
+                text={t("organization.tabs.owner", { defaultValue: "مالک" })}
+                selected={activeTab === "owner"}
+                data-tab-key="owner"
+            />
+
+            <Tab
+                text={t("organization.tabs.documents", { defaultValue: "مستندات" })}
+                selected={activeTab === "documents"}
+                data-tab-key="documents"
+            />
+        </TabContainer>
+    );
 }
 
 export default function OrganizationObjectPage({
@@ -78,19 +369,32 @@ export default function OrganizationObjectPage({
     const readOnly = mode === "view";
     const defaultParentId = value?.parentId ?? null;
 
+    /*
+     * این state با key در OrganizationsFclShellPage ریست می‌شود.
+     * برای جلوگیری از خطای react-hooks/set-state-in-effect اینجا useEffect sync نگذار.
+     */
     const [form, setForm] = useState<OrganizationFormState>(() =>
         toFormState(value, defaultParentId),
     );
+
     const [validationError, setValidationError] = useState<string | null>(null);
     const [parentDialogOpen, setParentDialogOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<OrganizationTabKey>("general");
 
-    const selectedParentName = useMemo(() => {
-        if (!form.parentId) {
-            return "";
-        }
+    const selectedParent = form.parentId
+        ? allItems.find((item) => item.id === form.parentId) ?? null
+        : null;
 
-        return allItems.find((item) => item.id === form.parentId)?.name ?? "";
-    }, [allItems, form.parentId]);
+    const selectedParentTitle = selectedParent
+        ? `${selectedParent.code} — ${selectedParent.name}`
+        : t("common.none", { defaultValue: "ندارد" });
+
+    const headerName = form.name || value?.name || "";
+    const headerParent = selectedParent
+        ? selectedParent.name
+        : t("common.none", { defaultValue: "ندارد" });
+    const headerStatus = resolveStatusLabel(form.status, t);
+    const headerType = resolveTypeLabel(form.type, t);
 
     const handleChange = <K extends keyof OrganizationFormState>(
         key: K,
@@ -154,41 +458,58 @@ export default function OrganizationObjectPage({
     };
 
     return (
-        <div style={{ display: "grid", gap: "1rem" }}>
-            <Bar
-                startContent={
+        <div style={ROOT_STYLE}>
+            <div style={HEADER_STYLE}>
+                <div style={HEADER_TITLE_STYLE}>
                     <Title level="H4">
-                        {mode === "create"
-                            ? t("organization.object.createTitle", {
-                                defaultValue: "ایجاد واحد سازمانی",
-                            })
-                            : mode === "edit"
-                                ? t("organization.object.editTitle", {
-                                    defaultValue: "ویرایش واحد سازمانی",
-                                })
-                                : t("organization.object.viewTitle", {
-                                    defaultValue: "جزئیات واحد سازمانی",
-                                })}
+                        {t("organization.object.modalTitle", { defaultValue: "سازمان" })}
                     </Title>
-                }
-                endContent={
-                    <>
-                        {mode === "view" ? (
-                            <Button design="Emphasized" disabled={busy} onClick={onEdit}>
-                                {t("common.edit", { defaultValue: "ویرایش" })}
-                            </Button>
-                        ) : (
-                            <Button design="Emphasized" disabled={busy} onClick={handleSubmit}>
-                                {t("common.save", { defaultValue: "ذخیره" })}
-                            </Button>
-                        )}
+                </div>
 
-                        <Button design="Transparent" disabled={busy} onClick={onCancel}>
-                            {t("common.cancel", { defaultValue: "انصراف" })}
-                        </Button>
-                    </>
-                }
-            />
+                <div style={HEADER_GRID_STYLE}>
+                    <HeaderItem
+                        label={t("organization.fields.name", { defaultValue: "نام سازمان" })}
+                        value={headerName}
+                    />
+
+                    <HeaderItem
+                        label={t("organization.fields.parent", { defaultValue: "والد سازمان" })}
+                        value={headerParent}
+                    />
+
+                    <HeaderItem
+                        label={t("organization.fields.identifier", { defaultValue: "شناسه" })}
+                        value={value?.id}
+                    />
+
+                    <HeaderItem
+                        label={t("organization.fields.validFrom", { defaultValue: "تاریخ ایجاد" })}
+                        value={form.validFrom}
+                    />
+
+                    <HeaderItem
+                        label={t("organization.fields.status", { defaultValue: "وضعیت" })}
+                        value={headerStatus}
+                    />
+
+                    <HeaderItem
+                        label={t("organization.fields.location", { defaultValue: "موقعیت" })}
+                        value=""
+                    />
+
+                    <HeaderItem
+                        label={t("organization.fields.type", { defaultValue: "نوع سازمان" })}
+                        value={headerType}
+                    />
+
+                    <HeaderItem
+                        label={t("organization.fields.documents", { defaultValue: "مستندات" })}
+                        value="0"
+                    />
+                </div>
+            </div>
+
+            <OrganizationTabs activeTab={activeTab} onChange={setActiveTab} />
 
             {error ? (
                 <MessageStrip design="Negative" hideCloseButton>
@@ -202,105 +523,215 @@ export default function OrganizationObjectPage({
                 </MessageStrip>
             ) : null}
 
-            <div
-                style={{
-                    display: "grid",
-                    gap: "1rem",
-                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                }}
-            >
-                <div style={{ display: "grid", gap: "0.5rem" }}>
-                    <Label>{t("organization.fields.code", { defaultValue: "کد" })}</Label>
-                    <Input
-                        value={form.code}
-                        disabled={readOnly || busy}
-                        onInput={(event) => handleChange("code", event.target.value)}
-                    />
-                </div>
+            <div style={BODY_STYLE}>
+                {activeTab === "general" ? (
+                    <>
+                        <div style={FORM_GRID_STYLE}>
+                            <FormField
+                                label={t("organization.fields.code", { defaultValue: "کد" })}
+                                required
+                            >
+                                <Input
+                                    value={form.code}
+                                    disabled={readOnly || busy}
+                                    onInput={(event) =>
+                                        handleChange("code", readInputValue(event))
+                                    }
+                                />
+                            </FormField>
 
-                <div style={{ display: "grid", gap: "0.5rem" }}>
-                    <Label>{t("organization.fields.name", { defaultValue: "نام" })}</Label>
-                    <Input
-                        value={form.name}
-                        disabled={readOnly || busy}
-                        onInput={(event) => handleChange("name", event.target.value)}
-                    />
-                </div>
+                            <FormField
+                                label={t("organization.fields.name", { defaultValue: "نام" })}
+                                required
+                            >
+                                <Input
+                                    value={form.name}
+                                    disabled={readOnly || busy}
+                                    onInput={(event) =>
+                                        handleChange("name", readInputValue(event))
+                                    }
+                                />
+                            </FormField>
 
-                <div style={{ display: "grid", gap: "0.5rem" }}>
-                    <Label>{t("organization.fields.type", { defaultValue: "نوع" })}</Label>
-                    <Select
-                        value={form.type}
-                        disabled={readOnly || busy}
-                        onChange={(event) => handleChange("type", event.target.value as OrganizationType)}
-                    >
-                        <Option value="company">{t("organization.type.company", { defaultValue: "شرکت" })}</Option>
-                        <Option value="holding">{t("organization.type.holding", { defaultValue: "هلدینگ" })}</Option>
-                        <Option value="department">{t("organization.type.department", { defaultValue: "دپارتمان" })}</Option>
-                        <Option value="management">{t("organization.type.management", { defaultValue: "مدیریت" })}</Option>
-                        <Option value="branch">{t("organization.type.branch", { defaultValue: "شعبه" })}</Option>
-                        <Option value="unit">{t("organization.type.unit", { defaultValue: "واحد" })}</Option>
-                        <Option value="other">{t("organization.type.other", { defaultValue: "سایر" })}</Option>
-                    </Select>
-                </div>
+                            <FormField
+                                label={t("organization.fields.type", { defaultValue: "نوع" })}
+                            >
+                                <Select
+                                    disabled={readOnly || busy}
+                                    onChange={(event) => {
+                                        const nextValue = readSelectedDataValue(event, form.type);
+                                        handleChange("type", nextValue as OrganizationType);
+                                    }}
+                                >
+                                    <Option data-value="company" selected={form.type === "company"}>
+                                        {t("organization.type.company", { defaultValue: "شرکت" })}
+                                    </Option>
 
-                <div style={{ display: "grid", gap: "0.5rem" }}>
-                    <Label>{t("organization.fields.status", { defaultValue: "وضعیت" })}</Label>
-                    <Select
-                        value={form.status}
-                        disabled={readOnly || busy}
-                        onChange={(event) => handleChange("status", event.target.value as OrganizationStatus)}
-                    >
-                        <Option value="active">{t("common.active", { defaultValue: "فعال" })}</Option>
-                        <Option value="inactive">{t("common.inactive", { defaultValue: "غیرفعال" })}</Option>
-                    </Select>
-                </div>
+                                    <Option data-value="holding" selected={form.type === "holding"}>
+                                        {t("organization.type.holding", { defaultValue: "هلدینگ" })}
+                                    </Option>
 
-                <div style={{ gridColumn: "1 / -1" }}>
-                    <ParentPickerField
-                        label={t("organization.fields.parent", { defaultValue: "والد" })}
-                        value={selectedParentName}
-                        disabled={readOnly || busy}
-                        onOpen={() => setParentDialogOpen(true)}
-                    />
-                </div>
+                                    <Option
+                                        data-value="department"
+                                        selected={form.type === "department"}
+                                    >
+                                        {t("organization.type.department", {
+                                            defaultValue: "دپارتمان",
+                                        })}
+                                    </Option>
 
-                <div
-                    style={{
-                        display: "grid",
-                        gap: "1rem",
-                        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                        gridColumn: "1 / -1",
-                    }}
-                >
-                    <div style={{ display: "grid", gap: "0.5rem" }}>
-                        <Label>{t("organization.fields.validFrom", { defaultValue: "از تاریخ" })}</Label>
-                        <DatePicker
-                            value={form.validFrom}
-                            disabled={readOnly || busy}
-                            onInput={(event) => handleChange("validFrom", event.target.value)}
-                        />
-                    </div>
+                                    <Option
+                                        data-value="management"
+                                        selected={form.type === "management"}
+                                    >
+                                        {t("organization.type.management", {
+                                            defaultValue: "مدیریت",
+                                        })}
+                                    </Option>
 
-                    <div style={{ display: "grid", gap: "0.5rem" }}>
-                        <Label>{t("organization.fields.validTo", { defaultValue: "تا تاریخ" })}</Label>
-                        <DatePicker
-                            value={form.validTo}
-                            disabled={readOnly || busy}
-                            onInput={(event) => handleChange("validTo", event.target.value)}
-                        />
-                    </div>
-                </div>
+                                    <Option data-value="branch" selected={form.type === "branch"}>
+                                        {t("organization.type.branch", { defaultValue: "شعبه" })}
+                                    </Option>
 
-                <div style={{ display: "grid", gap: "0.5rem", gridColumn: "1 / -1" }}>
-                    <Label>{t("organization.fields.description", { defaultValue: "توضیحات" })}</Label>
-                    <TextArea
-                        rows={6}
-                        value={form.description}
-                        disabled={readOnly || busy}
-                        onInput={(event) => handleChange("description", event.target.value)}
-                    />
-                </div>
+                                    <Option data-value="unit" selected={form.type === "unit"}>
+                                        {t("organization.type.unit", { defaultValue: "واحد" })}
+                                    </Option>
+
+                                    <Option data-value="other" selected={form.type === "other"}>
+                                        {t("organization.type.other", { defaultValue: "سایر" })}
+                                    </Option>
+                                </Select>
+                            </FormField>
+
+                            <FormField
+                                label={t("organization.fields.status", { defaultValue: "وضعیت" })}
+                            >
+                                <Select
+                                    disabled={readOnly || busy}
+                                    onChange={(event) => {
+                                        const nextValue = readSelectedDataValue(event, form.status);
+                                        handleChange("status", nextValue as OrganizationStatus);
+                                    }}
+                                >
+                                    <Option data-value="active" selected={form.status === "active"}>
+                                        {t("common.active", { defaultValue: "فعال" })}
+                                    </Option>
+
+                                    <Option
+                                        data-value="inactive"
+                                        selected={form.status === "inactive"}
+                                    >
+                                        {t("common.inactive", { defaultValue: "غیرفعال" })}
+                                    </Option>
+                                </Select>
+                            </FormField>
+
+                            <FormField
+                                label={t("organization.fields.parent", { defaultValue: "والد" })}
+                                fullWidth
+                            >
+                                <div style={PARENT_PICKER_STYLE}>
+                                    <Input value={selectedParentTitle} readonly />
+
+                                    <Button
+                                        design="Emphasized"
+                                        disabled={readOnly || busy}
+                                        onClick={() => setParentDialogOpen(true)}
+                                    >
+                                        {t("common.select", { defaultValue: "انتخاب" })}
+                                    </Button>
+
+                                    <Button
+                                        design="Transparent"
+                                        disabled={readOnly || busy || !form.parentId}
+                                        onClick={() => handleChange("parentId", null)}
+                                    >
+                                        {t("common.clear", { defaultValue: "پاک کردن" })}
+                                    </Button>
+                                </div>
+                            </FormField>
+
+                            <FormField
+                                label={t("organization.fields.validFrom", {
+                                    defaultValue: "از تاریخ",
+                                })}
+                            >
+                                <DatePicker
+                                    value={form.validFrom}
+                                    disabled={readOnly || busy}
+                                    onChange={(event) =>
+                                        handleChange("validFrom", readInputValue(event))
+                                    }
+                                />
+                            </FormField>
+
+                            <FormField
+                                label={t("organization.fields.validTo", {
+                                    defaultValue: "تا تاریخ",
+                                })}
+                            >
+                                <DatePicker
+                                    value={form.validTo}
+                                    disabled={readOnly || busy}
+                                    onChange={(event) =>
+                                        handleChange("validTo", readInputValue(event))
+                                    }
+                                />
+                            </FormField>
+
+                            <FormField
+                                label={t("organization.fields.description", {
+                                    defaultValue: "توضیحات",
+                                })}
+                                fullWidth
+                            >
+                                <TextArea
+                                    rows={5}
+                                    value={form.description}
+                                    disabled={readOnly || busy}
+                                    onInput={(event) =>
+                                        handleChange("description", readInputValue(event))
+                                    }
+                                />
+                            </FormField>
+                        </div>
+
+                        <div style={FOOTER_STYLE}>
+                            {mode === "view" ? (
+                                <Button
+                                    design="Emphasized"
+                                    disabled={busy || !onEdit}
+                                    style={ACTION_BUTTON_STYLE}
+                                    onClick={onEdit}
+                                >
+                                    {t("common.edit", { defaultValue: "ویرایش" })}
+                                </Button>
+                            ) : (
+                                <Button
+                                    design="Emphasized"
+                                    disabled={busy}
+                                    style={ACTION_BUTTON_STYLE}
+                                    onClick={handleSubmit}
+                                >
+                                    {t("common.save", { defaultValue: "ثبت" })}
+                                </Button>
+                            )}
+
+                            <Button
+                                design="Transparent"
+                                disabled={busy}
+                                style={ACTION_BUTTON_STYLE}
+                                onClick={onCancel}
+                            >
+                                {mode === "view"
+                                    ? t("common.close", { defaultValue: "بستن" })
+                                    : t("common.cancel", { defaultValue: "انصراف" })}
+                            </Button>
+                        </div>
+                    </>
+                ) : (
+                    <div style={EMPTY_TAB_STYLE} />
+                )}
             </div>
 
             <ParentValueHelpDialog

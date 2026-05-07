@@ -8,7 +8,7 @@ import {
     ListItemStandard,
 } from "@ui5/webcomponents-react";
 
-import type { OrganizationNode } from "@/features/organization";
+import type { OrganizationNode } from "../domain/organization.model";
 import {
     buildTree,
     collectDescendantIds,

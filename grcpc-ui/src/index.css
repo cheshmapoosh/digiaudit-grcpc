@@ -55,3 +55,103 @@ html[lang="fa"] {
   --sapShell_FontFamily: "Vazirmatn", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   --sapShell_FontHeaderFamily: "Vazirmatn", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
 }
+
+
+.grc-horizon-light {
+  /* ---------- Color palette ---------- */
+  --sapBrandColor: #6f8397;
+  --sapBackgroundColor: #f4f6f8;
+  --sapShellColor: #e7ebf0;
+  --sapTextColor: #22313f;
+
+  --sapGroup_ContentBackground: #ffffff;
+  --sapTile_Background: #ffffff;
+  --sapField_Background: #ffffff;
+
+  --sapList_Background: #ffffff;
+  --sapList_BorderColor: #c8d1db;
+  --sapList_SelectionBackgroundColor: #dbe6f1;
+  --sapList_Hover_Background: #eef3f8;
+
+  --sapGroup_ContentBorderColor: #c8d1db;
+  --sapField_BorderColor: #b8c3cf;
+  --sapField_TextColor: #22313f;
+  --sapField_PlaceholderTextColor: #768594;
+
+  --sapToolbar_Background: #e3e8ee;
+  --sapPageHeader_Background: #dde4ea;
+  --sapPageFooter_Background: #dde4ea;
+
+  --sapButton_Background: #edf1f4;
+  --sapButton_BorderColor: #b8c3cf;
+  --sapButton_TextColor: #22313f;
+
+  --sapButton_Emphasized_Background: #6f8397;
+  --sapButton_Emphasized_BorderColor: #6f8397;
+  --sapButton_Emphasized_TextColor: #ffffff;
+
+  --sapInformationColor: #4f6b88;
+  --sapSuccessColor: #3f7b59;
+  --sapWarningColor: #a56a00;
+  --sapErrorColor: #b94a48;
+
+  /* ---------- Radius tuning ---------- */
+  --sapButton_BorderCornerRadius: 0;
+  --sapField_BorderCornerRadius: 0;
+
+  background: var(--sapBackgroundColor);
+  color: var(--sapTextColor);
+}
+
+/* سطح‌های برنامه که خودت می‌سازی */
+.grc-surface {
+  background: var(--sapGroup_ContentBackground);
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  border-radius: 0.25rem;
+  box-sizing: border-box;
+}
+
+.grc-surface-flat {
+  background: var(--sapGroup_ContentBackground);
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.grc-toolbar-surface {
+  background: var(--sapToolbar_Background);
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+/* اگر بعضی صفحات div سفارشی دارند */
+.grc-panel-frame {
+  background: var(--sapGroup_ContentBackground);
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  border-radius: 0;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* کمک به یکدست شدن ظاهر فرم‌های سفارشی */
+.grc-form-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grc-section-title {
+  color: var(--sapTextColor);
+}
+
+/* ناحیه‌های انتخابی یا selected row سفارشی */
+.grc-selected-row {
+  background: var(--sapList_SelectionBackgroundColor);
+}
+
+/* اگر wrapper های داخلی خودت rounded هستند، اینها را از بین می‌برد */
+.grc-horizon-light .app-shell,
+.grc-horizon-light .page-shell,
+.grc-horizon-light .feature-shell {
+  border-radius: 0;
+}

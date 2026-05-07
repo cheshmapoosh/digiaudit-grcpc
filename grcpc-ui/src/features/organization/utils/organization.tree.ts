@@ -1,4 +1,5 @@
-import type { OrganizationNode } from "@/features/organization";
+// src/features/organization/utils/organization.tree.ts
+import type { OrganizationNode } from "../domain/organization.model";
 import { containsText, parentKey } from "./tree.utils";
 
 export interface OrganizationTreeNode extends OrganizationNode {
@@ -8,17 +9,43 @@ export interface OrganizationTreeNode extends OrganizationNode {
 
 export function sortOrganizations(items: OrganizationNode[]): OrganizationNode[] {
     return [...items].sort((a, b) => {
-        if (a.code !== b.code) {
-            return a.code.localeCompare(b.code, "fa");
+        const codeCompare = a.code.localeCompare(b.code, "fa");
+        if (codeCompare !== 0) {
+            return codeCompare;
         }
 
         return a.name.localeCompare(b.name, "fa");
     });
 }
 
+function createsCycle(
+    itemId: string,
+    parentId: string,
+    parentById: Map<string, string | null>,
+): boolean {
+    let currentParentId: string | null | undefined = parentId;
+    const visited = new Set<string>();
+
+    while (currentParentId) {
+        if (currentParentId === itemId) {
+            return true;
+        }
+
+        if (visited.has(currentParentId)) {
+            return true;
+        }
+
+        visited.add(currentParentId);
+        currentParentId = parentById.get(currentParentId);
+    }
+
+    return false;
+}
+
 export function buildTree(items: OrganizationNode[]): OrganizationTreeNode[] {
     const sorted = sortOrganizations(items);
     const byId = new Map<string, OrganizationTreeNode>();
+    const parentById = new Map<string, string | null>();
 
     for (const item of sorted) {
         byId.set(item.id, {
@@ -26,6 +53,8 @@ export function buildTree(items: OrganizationNode[]): OrganizationTreeNode[] {
             children: [],
             level: 0,
         });
+
+        parentById.set(item.id, item.parentId ?? null);
     }
 
     const roots: OrganizationTreeNode[] = [];
@@ -37,12 +66,19 @@ export function buildTree(items: OrganizationNode[]): OrganizationTreeNode[] {
             continue;
         }
 
-        if (!item.parentId) {
+        const parentId = item.parentId;
+
+        if (!parentId || parentId === item.id || !byId.has(parentId)) {
             roots.push(current);
             continue;
         }
 
-        const parent = byId.get(item.parentId);
+        if (createsCycle(item.id, parentId, parentById)) {
+            roots.push(current);
+            continue;
+        }
+
+        const parent = byId.get(parentId);
 
         if (!parent) {
             roots.push(current);
@@ -126,10 +162,16 @@ export function collectAncestorIds(
 
     const byId = new Map(items.map((item) => [item.id, item]));
     const result: string[] = [];
+    const visited = new Set<string>();
 
     let current = byId.get(nodeId);
 
     while (current?.parentId) {
+        if (visited.has(current.parentId)) {
+            break;
+        }
+
+        visited.add(current.parentId);
         result.push(current.parentId);
         current = byId.get(current.parentId);
     }

@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Bar,
     Button,
+    BusyIndicator,
     Input,
     MessageStrip,
     Title,
@@ -13,64 +15,82 @@ import OrganizationTree from "../components/OrganizationTree";
 export interface OrganizationsListReportProps {
     items: OrganizationNode[];
     selectedId?: string | null;
+    expansionAnchorId?: string | null;
     searchText: string;
     busy?: boolean;
     error?: string | null;
     onSearchTextChange: (value: string) => void;
-    onRefresh: () => void;
-    onCreateRoot: () => void;
-    onSelect: (id: string) => void;
-    onCreateChild: (parentId: string) => void;
-    onEdit: (id: string) => void;
+    onCreate: () => void;
+    onShow: (id: string) => void;
     onDelete: (id: string) => void;
-    onToggleStatus: (id: string) => void;
+    onSelect: (id: string) => void;
 }
 
 export default function OrganizationsListReport({
                                                     items,
                                                     selectedId,
+                                                    expansionAnchorId,
                                                     searchText,
                                                     busy = false,
                                                     error,
                                                     onSearchTextChange,
-                                                    onRefresh,
-                                                    onCreateRoot,
-                                                    onSelect,
-                                                    onCreateChild,
-                                                    onEdit,
+                                                    onCreate,
+                                                    onShow,
                                                     onDelete,
-                                                    onToggleStatus,
+                                                    onSelect,
                                                 }: OrganizationsListReportProps) {
     const { t } = useTranslation();
 
+    const actionButtonStyle = useMemo(
+        () => ({
+            minWidth: "8rem",
+        }),
+        [],
+    );
+
     return (
-        <div style={{ display: "grid", gap: "1rem", minHeight: 0 }}>
+        <div
+            style={{
+                display: "grid",
+                gridTemplateRows: "auto auto auto minmax(0, 1fr)",
+                gap: "1rem",
+                height: "100%",
+                minHeight: 0,
+            }}
+        >
             <Bar
                 startContent={
                     <Title level="H4">
-                        {t("organization.list.title", { defaultValue: "واحدهای سازمانی" })}
+                        {t("organization.list.title", { defaultValue: "ساختار سازمانی" })}
                     </Title>
                 }
                 endContent={
                     <>
                         <Button
-                            design="Transparent"
-                            icon="refresh"
+                            design="Emphasized"
                             disabled={busy}
-                            onClick={onRefresh}
+                            style={actionButtonStyle}
+                            onClick={onCreate}
                         >
-                            {t("common.refresh", { defaultValue: "بروزرسانی" })}
+                            {t("common.create", { defaultValue: "ایجاد" })}
                         </Button>
 
                         <Button
                             design="Emphasized"
-                            icon="add"
-                            disabled={busy}
-                            onClick={onCreateRoot}
+                            disabled={!selectedId || busy}
+                            style={actionButtonStyle}
+                            onClick={() => selectedId && onShow(selectedId)}
                         >
-                            {t("organization.actions.createRoot", {
-                                defaultValue: "ایجاد واحد سازمانی",
-                            })}
+                            {t("common.view", { defaultValue: "نمایش" })}
+                        </Button>
+
+                        <Button
+                            design="Negative"
+                            disabled={!selectedId || busy}
+                            style={actionButtonStyle}
+                            onClick={() => selectedId && onDelete(selectedId)}
+                        >
+                            {t("common.delete", { defaultValue: "حذف" })}
                         </Button>
                     </>
                 }
@@ -78,8 +98,9 @@ export default function OrganizationsListReport({
 
             <Input
                 value={searchText}
+                disabled={busy}
                 placeholder={t("organization.list.search", {
-                    defaultValue: "جستجو بر اساس کد، نام یا توضیحات",
+                    defaultValue: "جستجو بر اساس نام، کد یا توضیحات",
                 })}
                 onInput={(event) => onSearchTextChange(event.target.value)}
             />
@@ -90,17 +111,27 @@ export default function OrganizationsListReport({
                 </MessageStrip>
             ) : null}
 
-            <div style={{ minHeight: 0, overflow: "auto" }}>
+            <div
+                style={{
+                    minHeight: 0,
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    border: "1px solid var(--sapGroup_ContentBorderColor)",
+                    borderRadius: "0",
+                    padding: "0.75rem",
+                    background: "var(--sapList_Background)",
+                    boxSizing: "border-box",
+                }}
+            >
+                {busy ? <BusyIndicator active /> : null}
+
                 <OrganizationTree
                     items={items}
                     selectedId={selectedId}
+                    expansionAnchorId={expansionAnchorId}
                     searchText={searchText}
                     busy={busy}
                     onSelect={onSelect}
-                    onCreateChild={onCreateChild}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onToggleStatus={onToggleStatus}
                 />
             </div>
         </div>

@@ -3,8 +3,8 @@ import type {
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
-} from "@/features/organization";
-import { organizationService } from "@/features/organization";
+} from "../domain/organization.model";
+import { organizationService } from "../service/organization.service";
 
 export const ROOT_PARENT = "ROOT_PARENT";
 

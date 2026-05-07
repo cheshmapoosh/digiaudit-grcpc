@@ -1,4 +1,4 @@
-import { BrowserRouter } from "react-router-dom";
+import {BrowserRouter} from "react-router-dom";
 import AppRouter from "./router/AppRouter.tsx";
 
 export default function App() {
@@ -9,7 +9,9 @@ export default function App() {
                 v7_relativeSplatPath: true,
             }}
         >
-            <AppRouter />
+            <div className="grc-horizon-light">
+                <AppRouter/>
+            </div>
         </BrowserRouter>
     );
 }
