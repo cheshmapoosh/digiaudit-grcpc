@@ -2,16 +2,16 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 
-import type { RiskNode, RiskNodeType } from "../domain/risk.model";
+import type { AccountGroupNode } from "../domain/accountGroup.model";
 import {
     buildTree,
     collectAncestorIds,
     filterTree,
-    type RiskTreeNode,
-} from "../utils/risk.tree";
+    type AccountGroupTreeNode,
+} from "../utils/accountGroup.tree";
 
-export interface RiskTreeProps {
-    items: RiskNode[];
+export interface AccountGroupTreeProps {
+    items: AccountGroupNode[];
     selectedId?: string | null;
     expansionAnchorId?: string | null;
     searchText?: string;
@@ -20,45 +20,24 @@ export interface RiskTreeProps {
 }
 
 type TreeEventWithItem = {
-    target?: EventTarget | null;
     detail?: {
         item?: HTMLElement & {
             dataset?: {
                 id?: string;
-                riskNodeId?: string;
             };
-            getAttribute?: (name: string) => string | null;
         };
     };
     preventDefault?: () => void;
 };
 
 function readTreeItemId(event: TreeEventWithItem): string | null {
-    const item = event.detail?.item;
-
-    const itemId =
-        item?.dataset?.riskNodeId ??
-        item?.dataset?.id ??
-        item?.getAttribute?.("data-risk-node-id") ??
-        item?.getAttribute?.("data-id");
-
-    if (itemId) {
-        return itemId;
-    }
-
-    if (event.target instanceof HTMLElement) {
-        return event.target
-            .closest<HTMLElement>("[data-risk-node-id]")
-            ?.dataset.riskNodeId ?? null;
-    }
-
-    return null;
+    return event.detail?.item?.dataset?.id ?? null;
 }
 
-function collectExpandableIds(nodes: RiskTreeNode[]): Set<string> {
+function collectExpandableIds(nodes: AccountGroupTreeNode[]): Set<string> {
     const result = new Set<string>();
 
-    const visit = (node: RiskTreeNode) => {
+    const visit = (node: AccountGroupTreeNode) => {
         if (node.children.length > 0) {
             result.add(node.id);
             node.children.forEach(visit);
@@ -81,46 +60,31 @@ function removeFromSet(previous: Set<string>, id: string): Set<string> {
     return next;
 }
 
-function resolveNodeTypeLabel(
-    nodeType: RiskNodeType,
-    t: ReturnType<typeof useTranslation>["t"],
-): string {
-    const labels: Record<RiskNodeType, string> = {
-        riskCategory: t("risk.nodeType.riskCategory", { defaultValue: "طبقه ریسک" }),
-        riskTemplate: t("risk.nodeType.riskTemplate", { defaultValue: "الگوی ریسک" }),
-    };
-
-    return labels[nodeType];
-}
-
-interface RiskTreeItemProps {
-    node: RiskTreeNode;
+interface AccountGroupTreeItemProps {
+    node: AccountGroupTreeNode;
     selectedId?: string | null;
     expandedIds: Set<string>;
 }
 
-function RiskTreeItem({
-                          node,
-                          selectedId,
-                          expandedIds,
-                      }: RiskTreeItemProps) {
-    const { t } = useTranslation();
+function AccountGroupTreeItem({
+    node,
+    selectedId,
+    expandedIds,
+}: AccountGroupTreeItemProps) {
     const isSelected = node.id === selectedId;
-    const displayName = `${node.title}`;
+    const displayName = node.title;
 
     return (
         <TreeItemCustom
             data-id={node.id}
-            data-risk-node-id={node.id}
             expanded={expandedIds.has(node.id)}
             selected={isSelected}
             content={
                 <div
-                    data-risk-node-id={node.id}
                     title={displayName}
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "minmax(16rem, 1fr) 9rem",
+                        gridTemplateColumns: "minmax(16rem, 1fr) 8rem",
                         alignItems: "center",
                         minWidth: 0,
                         width: "100%",
@@ -151,13 +115,13 @@ function RiskTreeItem({
                             textAlign: "center",
                         }}
                     >
-                        {resolveNodeTypeLabel(node.nodeType, t)}
+                        {node.code}
                     </span>
                 </div>
             }
         >
             {node.children.map((child) => (
-                <RiskTreeItem
+                <AccountGroupTreeItem
                     key={child.id}
                     node={child}
                     selectedId={selectedId}
@@ -168,14 +132,14 @@ function RiskTreeItem({
     );
 }
 
-export default function RiskTree({
-                                     items,
-                                     selectedId,
-                                     expansionAnchorId,
-                                     searchText = "",
-                                     busy = false,
-                                     onSelect,
-                                 }: RiskTreeProps) {
+export default function AccountGroupTree({
+    items,
+    selectedId,
+    expansionAnchorId,
+    searchText = "",
+    busy = false,
+    onSelect,
+}: AccountGroupTreeProps) {
     const { t } = useTranslation();
     const normalizedSearchText = searchText.trim();
 
@@ -261,23 +225,16 @@ export default function RiskTree({
                 return;
             }
 
-            const shouldCollapse = expandedIds.has(id);
+            const isExpanded = expandedIds.has(id);
 
-            setManualExpandedIds((prevExpanded) => {
-                if (shouldCollapse) {
-                    return removeFromSet(prevExpanded, id);
-                }
+            if (isExpanded) {
+                setManualExpandedIds((prev) => removeFromSet(prev, id));
+                setManualCollapsedIds((prev) => addToSet(prev, id));
+                return;
+            }
 
-                return addToSet(prevExpanded, id);
-            });
-
-            setManualCollapsedIds((prevCollapsed) => {
-                if (shouldCollapse) {
-                    return addToSet(prevCollapsed, id);
-                }
-
-                return removeFromSet(prevCollapsed, id);
-            });
+            setManualCollapsedIds((prev) => removeFromSet(prev, id));
+            setManualExpandedIds((prev) => addToSet(prev, id));
         },
         [expandedIds, normalizedSearchText],
     );
@@ -285,8 +242,8 @@ export default function RiskTree({
     if (!items.length && !busy) {
         return (
             <MessageStrip design="Information" hideCloseButton>
-                {t("risk.list.empty", {
-                    defaultValue: "هیچ دسته‌بندی ریسکی ثبت نشده است.",
+                {t("accountGroup.list.empty", {
+                    defaultValue: "هیچ گروه حسابی ثبت نشده است.",
                 })}
             </MessageStrip>
         );
@@ -304,7 +261,7 @@ export default function RiskTree({
                 role="row"
                 style={{
                     display: "grid",
-                    gridTemplateColumns: "minmax(16rem, 1fr) 9rem",
+                    gridTemplateColumns: "minmax(16rem, 1fr) 8rem",
                     columnGap: "1rem",
                     padding: "0.35rem 0.75rem",
                     borderBlockEnd: "1px solid var(--sapList_BorderColor)",
@@ -314,15 +271,15 @@ export default function RiskTree({
                     boxSizing: "border-box",
                 }}
             >
-                <span>{t("risk.fields.name", { defaultValue: "نام" })}</span>
+                <span>{t("accountGroup.fields.name", { defaultValue: "نام" })}</span>
                 <span style={{ textAlign: "center" }}>
-                    {t("risk.fields.type", { defaultValue: "نوع" })}
+                    {t("accountGroup.fields.code", { defaultValue: "کد" })}
                 </span>
             </div>
 
             <Tree
-                accessibleName={t("risk.list.title", {
-                    defaultValue: "ساختار دسته‌بندی ریسک",
+                accessibleName={t("accountGroup.list.title", {
+                    defaultValue: "ساختار گروه حساب‌ها",
                 })}
                 onItemClick={handleItemClick}
                 onItemToggle={handleItemToggle}
@@ -332,7 +289,7 @@ export default function RiskTree({
                 }}
             >
                 {filteredTree.map((node) => (
-                    <RiskTreeItem
+                    <AccountGroupTreeItem
                         key={node.id}
                         node={node}
                         selectedId={selectedId}

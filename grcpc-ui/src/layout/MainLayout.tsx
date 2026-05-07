@@ -178,6 +178,26 @@ export default function MainLayout() {
             route: "/risks",
             selected: selectedPath.startsWith("/risks"),
         },
+        {
+            key: "objectives",
+            text: t("nav.objectives", {
+                defaultValue: t("objective.list.title", { defaultValue: "اهداف" }),
+            }),
+            icon: "activity-assigned-to-goal",
+            route: "/objectives",
+            selected: selectedPath.startsWith("/objectives"),
+        },
+        {
+            key: "accountGroups",
+            text: t("nav.accountGroups", {
+                defaultValue: t("accountGroup.menu.title", {
+                    defaultValue: "گروه حساب‌ها",
+                }),
+            }),
+            icon: "accounting-document-verification",
+            route: "/account-groups",
+            selected: selectedPath.startsWith("/account-groups"),
+        },
     ];
 
     return (

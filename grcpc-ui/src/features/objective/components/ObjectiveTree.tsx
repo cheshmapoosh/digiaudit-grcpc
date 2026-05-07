@@ -1,64 +1,47 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 
-import type { RiskNode, RiskNodeType } from "../domain/risk.model";
+import type { ObjectiveNode, ObjectiveType } from "../domain/objective.model";
 import {
     buildTree,
     collectAncestorIds,
     filterTree,
-    type RiskTreeNode,
-} from "../utils/risk.tree";
+    type ObjectiveTreeNode,
+} from "../utils/objective.tree";
 
-export interface RiskTreeProps {
-    items: RiskNode[];
+export interface ObjectiveTreeProps {
+    items: ObjectiveNode[];
     selectedId?: string | null;
     expansionAnchorId?: string | null;
     searchText?: string;
     busy?: boolean;
+    manualExpandedIds: Set<string>;
+    manualCollapsedIds: Set<string>;
+    onManualExpandedIdsChange: Dispatch<SetStateAction<Set<string>>>;
+    onManualCollapsedIdsChange: Dispatch<SetStateAction<Set<string>>>;
     onSelect?: (id: string) => void;
 }
 
 type TreeEventWithItem = {
-    target?: EventTarget | null;
     detail?: {
         item?: HTMLElement & {
             dataset?: {
                 id?: string;
-                riskNodeId?: string;
             };
-            getAttribute?: (name: string) => string | null;
         };
     };
     preventDefault?: () => void;
 };
 
 function readTreeItemId(event: TreeEventWithItem): string | null {
-    const item = event.detail?.item;
-
-    const itemId =
-        item?.dataset?.riskNodeId ??
-        item?.dataset?.id ??
-        item?.getAttribute?.("data-risk-node-id") ??
-        item?.getAttribute?.("data-id");
-
-    if (itemId) {
-        return itemId;
-    }
-
-    if (event.target instanceof HTMLElement) {
-        return event.target
-            .closest<HTMLElement>("[data-risk-node-id]")
-            ?.dataset.riskNodeId ?? null;
-    }
-
-    return null;
+    return event.detail?.item?.dataset?.id ?? null;
 }
 
-function collectExpandableIds(nodes: RiskTreeNode[]): Set<string> {
+function collectExpandableIds(nodes: ObjectiveTreeNode[]): Set<string> {
     const result = new Set<string>();
 
-    const visit = (node: RiskTreeNode) => {
+    const visit = (node: ObjectiveTreeNode) => {
         if (node.children.length > 0) {
             result.add(node.id);
             node.children.forEach(visit);
@@ -81,46 +64,52 @@ function removeFromSet(previous: Set<string>, id: string): Set<string> {
     return next;
 }
 
-function resolveNodeTypeLabel(
-    nodeType: RiskNodeType,
+function resolveObjectiveTypeLabel(
+    objectiveType: ObjectiveType | undefined,
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
-    const labels: Record<RiskNodeType, string> = {
-        riskCategory: t("risk.nodeType.riskCategory", { defaultValue: "طبقه ریسک" }),
-        riskTemplate: t("risk.nodeType.riskTemplate", { defaultValue: "الگوی ریسک" }),
+    if (!objectiveType) {
+        return "-";
+    }
+
+    const labels: Record<ObjectiveType, string> = {
+        operational: t("objective.type.operational", { defaultValue: "اهداف عملیاتی" }),
+        compliance: t("objective.type.compliance", { defaultValue: "اهداف رعایتی" }),
+        strategic: t("objective.type.strategic", { defaultValue: "اهداف استراتژیک" }),
+        financial: t("objective.type.financial", { defaultValue: "اهداف مالی" }),
+        reporting: t("objective.type.reporting", { defaultValue: "اهداف گزارشگری" }),
+        market: t("objective.type.market", { defaultValue: "اهداف بازار" }),
     };
 
-    return labels[nodeType];
+    return labels[objectiveType];
 }
 
-interface RiskTreeItemProps {
-    node: RiskTreeNode;
+interface ObjectiveTreeItemProps {
+    node: ObjectiveTreeNode;
     selectedId?: string | null;
     expandedIds: Set<string>;
 }
 
-function RiskTreeItem({
-                          node,
-                          selectedId,
-                          expandedIds,
-                      }: RiskTreeItemProps) {
+function ObjectiveTreeItem({
+    node,
+    selectedId,
+    expandedIds,
+}: ObjectiveTreeItemProps) {
     const { t } = useTranslation();
     const isSelected = node.id === selectedId;
-    const displayName = `${node.title}`;
+    const displayName = node.title;
 
     return (
         <TreeItemCustom
             data-id={node.id}
-            data-risk-node-id={node.id}
             expanded={expandedIds.has(node.id)}
             selected={isSelected}
             content={
                 <div
-                    data-risk-node-id={node.id}
                     title={displayName}
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "minmax(16rem, 1fr) 9rem",
+                        gridTemplateColumns: "minmax(18rem, 1fr) 10rem 10rem",
                         alignItems: "center",
                         minWidth: 0,
                         width: "100%",
@@ -151,13 +140,26 @@ function RiskTreeItem({
                             textAlign: "center",
                         }}
                     >
-                        {resolveNodeTypeLabel(node.nodeType, t)}
+                        {resolveObjectiveTypeLabel(node.objectiveType, t)}
+                    </span>
+
+                    <span
+                        style={{
+                            display: "block",
+                            minWidth: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            textAlign: "center",
+                        }}
+                    >
+                        {node.objectiveClass?.trim() ? node.objectiveClass : "-"}
                     </span>
                 </div>
             }
         >
             {node.children.map((child) => (
-                <RiskTreeItem
+                <ObjectiveTreeItem
                     key={child.id}
                     node={child}
                     selectedId={selectedId}
@@ -168,14 +170,18 @@ function RiskTreeItem({
     );
 }
 
-export default function RiskTree({
-                                     items,
-                                     selectedId,
-                                     expansionAnchorId,
-                                     searchText = "",
-                                     busy = false,
-                                     onSelect,
-                                 }: RiskTreeProps) {
+export default function ObjectiveTree({
+    items,
+    selectedId,
+    expansionAnchorId,
+    searchText = "",
+    busy = false,
+    manualExpandedIds,
+    manualCollapsedIds,
+    onManualExpandedIdsChange,
+    onManualCollapsedIdsChange,
+    onSelect,
+}: ObjectiveTreeProps) {
     const { t } = useTranslation();
     const normalizedSearchText = searchText.trim();
 
@@ -192,9 +198,6 @@ export default function RiskTree({
         () => collectExpandableIds(filteredTree),
         [filteredTree],
     );
-
-    const [manualExpandedIds, setManualExpandedIds] = useState<Set<string>>(new Set());
-    const [manualCollapsedIds, setManualCollapsedIds] = useState<Set<string>>(new Set());
 
     const autoExpandedIds = useMemo(() => {
         const anchorId = expansionAnchorId ?? selectedId ?? null;
@@ -261,32 +264,30 @@ export default function RiskTree({
                 return;
             }
 
-            const shouldCollapse = expandedIds.has(id);
+            const isExpanded = expandedIds.has(id);
 
-            setManualExpandedIds((prevExpanded) => {
-                if (shouldCollapse) {
-                    return removeFromSet(prevExpanded, id);
-                }
+            if (isExpanded) {
+                onManualExpandedIdsChange((prev) => removeFromSet(prev, id));
+                onManualCollapsedIdsChange((prev) => addToSet(prev, id));
+                return;
+            }
 
-                return addToSet(prevExpanded, id);
-            });
-
-            setManualCollapsedIds((prevCollapsed) => {
-                if (shouldCollapse) {
-                    return addToSet(prevCollapsed, id);
-                }
-
-                return removeFromSet(prevCollapsed, id);
-            });
+            onManualCollapsedIdsChange((prev) => removeFromSet(prev, id));
+            onManualExpandedIdsChange((prev) => addToSet(prev, id));
         },
-        [expandedIds, normalizedSearchText],
+        [
+            expandedIds,
+            normalizedSearchText,
+            onManualCollapsedIdsChange,
+            onManualExpandedIdsChange,
+        ],
     );
 
     if (!items.length && !busy) {
         return (
             <MessageStrip design="Information" hideCloseButton>
-                {t("risk.list.empty", {
-                    defaultValue: "هیچ دسته‌بندی ریسکی ثبت نشده است.",
+                {t("objective.list.empty", {
+                    defaultValue: "هیچ هدفی ثبت نشده است.",
                 })}
             </MessageStrip>
         );
@@ -295,7 +296,7 @@ export default function RiskTree({
     return (
         <div
             style={{
-                minWidth: "34rem",
+                minWidth: "42rem",
                 border: "1px solid var(--sapList_BorderColor)",
                 background: "var(--sapList_Background)",
             }}
@@ -304,7 +305,7 @@ export default function RiskTree({
                 role="row"
                 style={{
                     display: "grid",
-                    gridTemplateColumns: "minmax(16rem, 1fr) 9rem",
+                    gridTemplateColumns: "minmax(18rem, 1fr) 10rem 10rem",
                     columnGap: "1rem",
                     padding: "0.35rem 0.75rem",
                     borderBlockEnd: "1px solid var(--sapList_BorderColor)",
@@ -314,15 +315,18 @@ export default function RiskTree({
                     boxSizing: "border-box",
                 }}
             >
-                <span>{t("risk.fields.name", { defaultValue: "نام" })}</span>
+                <span>{t("objective.fields.name", { defaultValue: "نام" })}</span>
                 <span style={{ textAlign: "center" }}>
-                    {t("risk.fields.type", { defaultValue: "نوع" })}
+                    {t("objective.fields.objectiveType", { defaultValue: "نوع هدف" })}
+                </span>
+                <span style={{ textAlign: "center" }}>
+                    {t("objective.fields.objectiveClass", { defaultValue: "طبقه هدف" })}
                 </span>
             </div>
 
             <Tree
-                accessibleName={t("risk.list.title", {
-                    defaultValue: "ساختار دسته‌بندی ریسک",
+                accessibleName={t("objective.list.title", {
+                    defaultValue: "ساختار اهداف",
                 })}
                 onItemClick={handleItemClick}
                 onItemToggle={handleItemToggle}
@@ -332,7 +336,7 @@ export default function RiskTree({
                 }}
             >
                 {filteredTree.map((node) => (
-                    <RiskTreeItem
+                    <ObjectiveTreeItem
                         key={node.id}
                         node={node}
                         selectedId={selectedId}

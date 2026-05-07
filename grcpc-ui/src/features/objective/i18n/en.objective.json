@@ -1,0 +1,89 @@
+{
+  "objective": {
+    "list": {
+      "title": "Objectives Structure",
+      "empty": "No objective has been registered.",
+      "search": "Search by name, code, description, or strategy"
+    },
+    "nodeType": {
+      "objective": "Objective"
+    },
+    "type": {
+      "operational": "Operational Objectives",
+      "compliance": "Compliance Objectives",
+      "strategic": "Strategic Objectives",
+      "financial": "Financial Objectives",
+      "reporting": "Reporting Objectives",
+      "market": "Market Objectives"
+    },
+    "fields": {
+      "name": "Name",
+      "code": "Code",
+      "type": "Type",
+      "parent": "Parent Objective",
+      "status": "Status",
+      "description": "Description",
+      "createdAt": "Created At",
+      "effectiveFrom": "Created Date",
+      "validUntil": "Valid Until",
+      "strategy": "Strategy",
+      "objectiveType": "Objective Type",
+      "objectiveClass": "Objective Class",
+      "organizationUnit": "Organization Unit",
+      "organizationUnits": "Organization Units",
+      "documents": "Documents",
+      "identifier": "Identifier",
+      "parentObjective": "Parent Objective",
+      "nodeType": "Node Type",
+      "sortOrder": "Sort Order"
+    },
+    "tabs": {
+      "general": "General Information",
+      "organizationUnits": "Organization Unit",
+      "documents": "Documents"
+    },
+    "tree": {
+      "expand": "Expand branch",
+      "collapse": "Collapse branch"
+    },
+    "object": {
+      "summaryTitle": "Objective Details",
+      "selectPrompt": "Select an objective to view details.",
+      "notFound": "The selected objective was not found.",
+      "modalTitle": "Objective Center",
+      "createModalTitle": "Create Objective",
+      "organizationUnitPlaceholder": "Integration with the Organization feature will be completed later."
+    },
+    "create": {
+      "title": "Create Objective"
+    },
+    "edit": {
+      "title": "Edit Objective"
+    },
+    "view": {
+      "title": "View Objective"
+    },
+    "delete": {
+      "title": "Delete Objective",
+      "confirm": "Are you sure you want to delete \"{{title}}\"?"
+    },
+    "errors": {
+      "loadList": "Failed to load objectives structure",
+      "notFound": "Objective was not found",
+      "parentNotFound": "Selected parent objective was not found",
+      "hasChildren": "An objective that has children cannot be deleted",
+      "invalidHierarchy": "The selected objective structure is not valid",
+      "delete": "Failed to delete objective",
+      "save": "Failed to save objective"
+    },
+    "validation": {
+      "codeRequired": "Code is required",
+      "codeMaxLength": "Code cannot be longer than 50 characters",
+      "titleRequired": "Name is required",
+      "titleMaxLength": "Name cannot be longer than 255 characters",
+      "textMaxLength": "Text cannot be longer than 2000 characters",
+      "updateAtLeastOneField": "At least one field is required for update",
+      "sortOrderInvalid": "Sort order must be a non-negative integer"
+    }
+  }
+}

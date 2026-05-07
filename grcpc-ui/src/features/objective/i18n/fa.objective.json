@@ -1,0 +1,89 @@
+{
+  "objective": {
+    "list": {
+      "title": "ساختار اهداف",
+      "empty": "هیچ هدفی ثبت نشده است.",
+      "search": "جستجو بر اساس نام، کد، شرح یا استراتژی"
+    },
+    "nodeType": {
+      "objective": "هدف"
+    },
+    "type": {
+      "operational": "اهداف عملیاتی",
+      "compliance": "اهداف رعایتی",
+      "strategic": "اهداف استراتژیک",
+      "financial": "اهداف مالی",
+      "reporting": "اهداف گزارشگری",
+      "market": "اهداف بازار"
+    },
+    "fields": {
+      "name": "نام",
+      "code": "کد",
+      "type": "نوع",
+      "parent": "هدف والد",
+      "status": "وضعیت",
+      "description": "شرح",
+      "createdAt": "تاریخ ایجاد",
+      "effectiveFrom": "تاریخ ایجاد",
+      "validUntil": "تاریخ اعتبار",
+      "strategy": "استراتژی",
+      "objectiveType": "نوع هدف",
+      "objectiveClass": "طبقه هدف",
+      "organizationUnit": "واحد سازمانی",
+      "organizationUnits": "واحدهای سازمانی",
+      "documents": "مستندات",
+      "identifier": "شناسه",
+      "parentObjective": "هدف والد",
+      "nodeType": "نوع آیتم",
+      "sortOrder": "ترتیب نمایش"
+    },
+    "tabs": {
+      "general": "اطلاعات کلی",
+      "organizationUnits": "واحد سازمانی",
+      "documents": "مستندات"
+    },
+    "tree": {
+      "expand": "باز کردن شاخه",
+      "collapse": "بستن شاخه"
+    },
+    "object": {
+      "summaryTitle": "جزئیات هدف",
+      "selectPrompt": "برای مشاهده جزئیات، یک هدف را انتخاب کنید.",
+      "notFound": "هدف انتخاب‌شده یافت نشد.",
+      "modalTitle": "مرکز اهداف",
+      "createModalTitle": "ایجاد هدف",
+      "organizationUnitPlaceholder": "اتصال به فیچر سازمان در قدم بعدی تکمیل می‌شود."
+    },
+    "create": {
+      "title": "ایجاد هدف"
+    },
+    "edit": {
+      "title": "ویرایش هدف"
+    },
+    "view": {
+      "title": "نمایش هدف"
+    },
+    "delete": {
+      "title": "حذف هدف",
+      "confirm": "آیا از حذف \"{{title}}\" مطمئن هستید؟"
+    },
+    "errors": {
+      "loadList": "خطا در بارگذاری ساختار اهداف",
+      "notFound": "هدف موردنظر یافت نشد",
+      "parentNotFound": "هدف والد انتخاب‌شده یافت نشد",
+      "hasChildren": "امکان حذف هدفی که زیرمجموعه دارد وجود ندارد",
+      "invalidHierarchy": "ساختار انتخاب‌شده برای اهداف معتبر نیست",
+      "delete": "خطا در حذف هدف",
+      "save": "خطا در ذخیره هدف"
+    },
+    "validation": {
+      "codeRequired": "کد الزامی است",
+      "codeMaxLength": "کد نمی‌تواند بیشتر از 50 کاراکتر باشد",
+      "titleRequired": "نام الزامی است",
+      "titleMaxLength": "نام نمی‌تواند بیشتر از 255 کاراکتر باشد",
+      "textMaxLength": "متن نمی‌تواند بیشتر از 2000 کاراکتر باشد",
+      "updateAtLeastOneField": "حداقل یک فیلد برای بروزرسانی لازم است",
+      "sortOrderInvalid": "ترتیب نمایش باید عدد صحیح نامنفی باشد"
+    }
+  }
+}

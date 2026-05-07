@@ -6,3 +6,5 @@ export { organizationRoutes } from "./organization";
 export { usermanagementRoutes } from "./usermanagement";
 export { policyRoutes } from "./policy";
 export { riskRoutes } from "./risk";
+export { objectiveRoutes } from "./objective";
+export { accountGroupRoutes } from "./account-group";

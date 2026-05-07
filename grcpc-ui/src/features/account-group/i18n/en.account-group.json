@@ -1,0 +1,100 @@
+{
+  "accountGroup": {
+    "menu": {
+      "title": "Account Groups"
+    },
+    "list": {
+      "title": "Account Group Structure",
+      "search": "Search by name, code, or description",
+      "empty": "No account group has been registered."
+    },
+    "object": {
+      "title": "Account Groups",
+      "summaryTitle": "Account Group Details",
+      "selectPrompt": "Select an account group to view details.",
+      "notFound": "The selected account group was not found."
+    },
+    "create": {
+      "title": "Create Account Group"
+    },
+    "edit": {
+      "title": "Edit Account Group"
+    },
+    "view": {
+      "title": "View Account Group"
+    },
+    "delete": {
+      "title": "Delete Account Group",
+      "confirm": "Are you sure you want to delete \"{{title}}\"?"
+    },
+    "tabs": {
+      "general": "General Information",
+      "objectives": "Objectives",
+      "accounts": "Detail Accounts",
+      "risks": "Risks"
+    },
+    "sections": {
+      "assertions": "Assertions"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Name",
+      "parent": "Parent",
+      "status": "Status",
+      "sortOrder": "Sort Order",
+      "description": "Description",
+      "importance": "Importance",
+      "reasonableAssurance": "Reasonable Assurance",
+      "createdAt": "Created At",
+      "effectiveDate": "Effective Date",
+      "documents": "Documents",
+      "fromAccount": "From",
+      "toAccount": "To",
+      "source": "Source"
+    },
+    "assertions": {
+      "existence": "Existence",
+      "completeness": "Completeness",
+      "valuation": "Valuation",
+      "disclosure": "Disclosure"
+    },
+    "importance": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "validation": {
+      "codeRequired": "Code is required",
+      "codeMaxLength": "Code cannot be longer than 50 characters",
+      "titleRequired": "Name is required",
+      "titleMaxLength": "Name cannot be longer than 255 characters",
+      "textMaxLength": "Text cannot be longer than 2000 characters",
+      "sortOrderInvalid": "Sort order must be a non-negative integer",
+      "documentsCountInvalid": "Documents count must be a non-negative integer",
+      "updateAtLeastOneField": "At least one field is required for update"
+    },
+    "errors": {
+      "notFound": "Account group was not found",
+      "parentNotFound": "Selected parent was not found",
+      "hasChildren": "Cannot delete an account group that has children",
+      "invalidHierarchy": "The selected account group structure is invalid",
+      "loadList": "Failed to load account group structure",
+      "delete": "Failed to delete account group",
+      "save": "Failed to save account group"
+    }
+  },
+  "common": {
+    "create": "Create",
+    "view": "View",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "active": "Active",
+    "inactive": "Inactive",
+    "none": "None",
+    "yes": "Yes",
+    "no": "No"
+  }
+}

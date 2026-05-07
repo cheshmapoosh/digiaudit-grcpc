@@ -1,0 +1,100 @@
+{
+  "accountGroup": {
+    "menu": {
+      "title": "گروه حساب‌ها"
+    },
+    "list": {
+      "title": "ساختار گروه حساب‌ها",
+      "search": "جستجو بر اساس نام، کد یا توضیحات",
+      "empty": "هیچ گروه حسابی ثبت نشده است."
+    },
+    "object": {
+      "title": "گروه حساب‌ها",
+      "summaryTitle": "جزئیات گروه حساب‌ها",
+      "selectPrompt": "برای مشاهده جزئیات، یک گروه حساب را انتخاب کنید.",
+      "notFound": "گروه حساب انتخاب‌شده یافت نشد."
+    },
+    "create": {
+      "title": "ایجاد گروه حساب"
+    },
+    "edit": {
+      "title": "ویرایش گروه حساب"
+    },
+    "view": {
+      "title": "نمایش گروه حساب"
+    },
+    "delete": {
+      "title": "حذف گروه حساب",
+      "confirm": "آیا از حذف \"{{title}}\" مطمئن هستید؟"
+    },
+    "tabs": {
+      "general": "اطلاعات کلی",
+      "objectives": "اهداف",
+      "accounts": "حساب‌های معین",
+      "risks": "ریسک‌ها"
+    },
+    "sections": {
+      "assertions": "ادعاها"
+    },
+    "fields": {
+      "code": "کد",
+      "name": "نام",
+      "parent": "والد",
+      "status": "وضعیت",
+      "sortOrder": "ترتیب نمایش",
+      "description": "شرح",
+      "importance": "اهمیت",
+      "reasonableAssurance": "اطمینان معقول",
+      "createdAt": "تاریخ ایجاد",
+      "effectiveDate": "تاریخ اعتبار",
+      "documents": "مستندات",
+      "fromAccount": "از",
+      "toAccount": "تا",
+      "source": "منبع"
+    },
+    "assertions": {
+      "existence": "وجود داشتن",
+      "completeness": "کامل بودن",
+      "valuation": "ارزشگذاری",
+      "disclosure": "افشا"
+    },
+    "importance": {
+      "low": "کم",
+      "medium": "متوسط",
+      "high": "زیاد",
+      "critical": "بحرانی"
+    },
+    "validation": {
+      "codeRequired": "کد الزامی است",
+      "codeMaxLength": "کد نمی‌تواند بیشتر از 50 کاراکتر باشد",
+      "titleRequired": "نام الزامی است",
+      "titleMaxLength": "نام نمی‌تواند بیشتر از 255 کاراکتر باشد",
+      "textMaxLength": "متن نمی‌تواند بیشتر از 2000 کاراکتر باشد",
+      "sortOrderInvalid": "ترتیب نمایش باید عدد صحیح نامنفی باشد",
+      "documentsCountInvalid": "تعداد مستندات باید عدد صحیح نامنفی باشد",
+      "updateAtLeastOneField": "حداقل یک فیلد برای بروزرسانی لازم است"
+    },
+    "errors": {
+      "notFound": "گروه حساب موردنظر یافت نشد",
+      "parentNotFound": "والد انتخاب‌شده یافت نشد",
+      "hasChildren": "امکان حذف گروه حسابی که زیرمجموعه دارد وجود ندارد",
+      "invalidHierarchy": "ساختار انتخاب‌شده برای گروه حساب معتبر نیست",
+      "loadList": "خطا در بارگذاری ساختار گروه حساب‌ها",
+      "delete": "خطا در حذف گروه حساب",
+      "save": "خطا در ذخیره گروه حساب"
+    }
+  },
+  "common": {
+    "create": "ایجاد",
+    "view": "نمایش",
+    "edit": "ویرایش",
+    "delete": "حذف",
+    "save": "ذخیره",
+    "cancel": "انصراف",
+    "active": "فعال",
+    "inactive": "غیرفعال",
+    "none": "ندارد",
+    "yes": "بله",
+    "no": "خیر"
+  }
+}
