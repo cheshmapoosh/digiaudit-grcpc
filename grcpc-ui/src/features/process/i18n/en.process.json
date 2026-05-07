@@ -1,0 +1,124 @@
+{
+  "process": {
+    "list": {
+      "title": "Process Structure",
+      "empty": "No process item has been registered.",
+      "search": "Search by name, code, or description"
+    },
+    "nodeType": {
+      "process": "Process",
+      "subProcess": "Sub-process",
+      "control": "Control"
+    },
+    "category": {
+      "operational": "Operational",
+      "financial": "Financial",
+      "compliance": "Compliance",
+      "it": "Information Technology",
+      "other": "Other",
+      "support": "Support",
+      "strategic": "Strategic"
+    },
+    "controlAutomation": {
+      "manual": "Manual",
+      "automated": "Automated",
+      "semiAutomated": "Semi-automated"
+    },
+    "importance": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "fields": {
+      "name": "Name",
+      "code": "Code",
+      "type": "Type",
+      "parent": "Parent",
+      "status": "Status",
+      "description": "Description",
+      "createdAt": "Created At",
+      "processCategory": "Process Type",
+      "owner": "Owner",
+      "documents": "Documents",
+      "controlAutomation": "Automated Control",
+      "operationCycle": "Operation Cycle",
+      "objective": "Objective",
+      "importance": "Importance",
+      "controlClassification": "Control Classification",
+      "controlOwner": "Owner",
+      "testDirection": "Test Direction",
+      "testType": "Test Type",
+      "testProgram": "Test Program",
+      "requirement": "Requirement",
+      "regulationName": "Regulation Name",
+      "effectiveDate": "Effective Date",
+      "source": "Source",
+      "identifier": "Identifier",
+      "parentProcess": "Parent Process",
+      "nodeType": "Item Type",
+      "sortOrder": "Sort Order",
+      "controlFrequency": "Control Frequency",
+      "validTo": "Valid To",
+      "lawName": "Law Name"
+    },
+    "tabs": {
+      "general": "General Information",
+      "controlObjectives": "Control Objectives",
+      "accountGroups": "Account Group",
+      "regulations": "Regulations",
+      "risks": "Risk",
+      "controls": "Controls",
+      "rules": "Rules",
+      "requirements": "Requirements",
+      "objectives": "Objectives",
+      "documents": "Documents"
+    },
+    "tree": {
+      "expand": "Expand branch",
+      "collapse": "Collapse branch"
+    },
+    "object": {
+      "summaryTitle": "Process Details",
+      "selectPrompt": "Select a process item to view details.",
+      "notFound": "The selected process item was not found.",
+      "modalPlaceholder": "The process modal details will be completed in the next step. This step implements the tree structure, selection, and details panel.",
+      "modalTitle": "Process Center",
+      "createModalTitle": "Create"
+    },
+    "create": {
+      "title": "Create Process Item"
+    },
+    "edit": {
+      "title": "Edit Process Item"
+    },
+    "view": {
+      "title": "View Process Item"
+    },
+    "delete": {
+      "title": "Delete Process Item",
+      "confirm": "Are you sure you want to delete \"{{title}}\"?"
+    },
+    "errors": {
+      "loadList": "Failed to load process structure",
+      "notFound": "The requested item was not found",
+      "parentNotFound": "The selected parent was not found",
+      "hasChildren": "You cannot delete an item that has children",
+      "invalidHierarchy": "The selected process structure is not valid",
+      "controlCannotHaveChildren": "A control cannot have child items",
+      "delete": "Failed to delete process item",
+      "save": "Failed to save process item",
+      "selectProcessParent": "To create a subprocess, select a process or a subprocess with the same parent first.",
+      "selectSubProcessParent": "To create a control, select a subprocess or a control with the same parent first."
+    },
+    "validation": {
+      "codeRequired": "Code is required",
+      "codeMaxLength": "Code cannot be longer than 50 characters",
+      "titleRequired": "Name is required",
+      "titleMaxLength": "Name cannot be longer than 255 characters",
+      "textMaxLength": "Text cannot be longer than 2000 characters",
+      "updateAtLeastOneField": "At least one field is required for update",
+      "sortOrderInvalid": "Sort order must be a non-negative integer"
+    }
+  }
+}

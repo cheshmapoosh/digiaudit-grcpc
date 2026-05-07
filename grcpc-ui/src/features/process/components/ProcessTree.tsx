@@ -1,14 +1,8 @@
-import { Fragment, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-    Button,
-    Icon,
-    List,
-    ListItemCustom,
-    MessageStrip,
-} from "@ui5/webcomponents-react";
+import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 
-import type { ProcessNode } from "@/features/process";
+import type { ProcessNode, ProcessNodeType } from "../domain/process.model";
 import {
     buildTree,
     collectAncestorIds,
@@ -19,262 +13,304 @@ import {
 export interface ProcessTreeProps {
     items: ProcessNode[];
     selectedId?: string | null;
+    expansionAnchorId?: string | null;
     searchText?: string;
     busy?: boolean;
     onSelect?: (id: string) => void;
-    onCreateChild?: (parentId: string) => void;
-    onEdit?: (id: string) => void;
-    onDelete?: (id: string) => void;
-    onToggleStatus?: (id: string) => void;
 }
 
-interface TreeRowProps {
+type TreeEventWithItem = {
+    detail?: {
+        item?: HTMLElement & {
+            dataset?: {
+                id?: string;
+            };
+        };
+    };
+    preventDefault?: () => void;
+};
+
+function readTreeItemId(event: TreeEventWithItem): string | null {
+    return event.detail?.item?.dataset?.id ?? null;
+}
+
+function collectExpandableIds(nodes: ProcessTreeNode[]): Set<string> {
+    const result = new Set<string>();
+
+    const visit = (node: ProcessTreeNode) => {
+        if (node.children.length > 0) {
+            result.add(node.id);
+            node.children.forEach(visit);
+        }
+    };
+
+    nodes.forEach(visit);
+    return result;
+}
+
+function addToSet(previous: Set<string>, id: string): Set<string> {
+    const next = new Set(previous);
+    next.add(id);
+    return next;
+}
+
+function removeFromSet(previous: Set<string>, id: string): Set<string> {
+    const next = new Set(previous);
+    next.delete(id);
+    return next;
+}
+
+function resolveNodeTypeLabel(
+    nodeType: ProcessNodeType,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    const labels: Record<ProcessNodeType, string> = {
+        process: t("process.nodeType.process", { defaultValue: "فرآیند" }),
+        subProcess: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
+        control: t("process.nodeType.control", { defaultValue: "کنترل" }),
+    };
+
+    return labels[nodeType];
+}
+
+interface ProcessTreeItemProps {
     node: ProcessTreeNode;
     selectedId?: string | null;
     expandedIds: Set<string>;
-    busy?: boolean;
-    onToggleExpand: (id: string) => void;
-    onSelect?: (id: string) => void;
-    onCreateChild?: (parentId: string) => void;
-    onEdit?: (id: string) => void;
-    onDelete?: (id: string) => void;
-    onToggleStatus?: (id: string) => void;
 }
 
-function TreeRow({
-                     node,
-                     selectedId,
-                     expandedIds,
-                     busy,
-                     onToggleExpand,
-                     onSelect,
-                     onCreateChild,
-                     onEdit,
-                     onDelete,
-                     onToggleStatus,
-                 }: TreeRowProps) {
+function ProcessTreeItem({
+                             node,
+                             selectedId,
+                             expandedIds,
+                         }: ProcessTreeItemProps) {
     const { t } = useTranslation();
-
-    const isSelected = selectedId === node.id;
-    const isExpanded = expandedIds.has(node.id);
-    const hasChildren = node.children.length > 0;
+    const isSelected = node.id === selectedId;
+    const displayName = `${node.title}`;
 
     return (
-        <Fragment>
-            <ListItemCustom>
+        <TreeItemCustom
+            data-id={node.id}
+            expanded={expandedIds.has(node.id)}
+            selected={isSelected}
+            content={
                 <div
+                    title={displayName}
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "auto 1fr auto",
-                        gap: "0.5rem",
+                        gridTemplateColumns: "minmax(16rem, 1fr) 9rem",
                         alignItems: "center",
+                        minWidth: 0,
                         width: "100%",
-                        paddingInlineStart: `${node.level * 1.25}rem`,
-                        background: isSelected
-                            ? "var(--sapList_SelectionBackgroundColor)"
-                            : "transparent",
-                        borderRadius: "0.75rem",
-                        minHeight: "3rem",
+                        columnGap: "1rem",
+                        color: "var(--sapTextColor)",
+                        fontWeight: isSelected ? 700 : 400,
                     }}
                 >
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                        {hasChildren ? (
-                            <Button
-                                design="Transparent"
-                                icon={isExpanded ? "navigation-down-arrow" : "navigation-right-arrow"}
-                                disabled={busy}
-                                onClick={() => onToggleExpand(node.id)}
-                            />
-                        ) : (
-                            <span style={{ width: "2.5rem" }} />
-                        )}
-                    </div>
-
-                    <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => onSelect?.(node.id)}
-                        onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                onSelect?.(node.id);
-                            }
-                        }}
+                    <span
                         style={{
-                            cursor: "pointer",
+                            display: "block",
                             minWidth: 0,
-                            display: "grid",
-                            gap: "0.125rem",
-                            paddingBlock: "0.5rem",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                         }}
                     >
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <Icon name="workflow-tasks" />
-                            <span
-                                style={{
-                                    fontWeight: 600,
-                                    whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                }}
-                            >
-                {node.title}
-              </span>
-                        </div>
+                        {displayName}
+                    </span>
 
-                        <div
-                            style={{
-                                color: "var(--sapContent_LabelColor)",
-                                fontSize: "0.875rem",
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                            }}
-                        >
-                            {[
-                                node.code,
-                                node.status === "active"
-                                    ? t("common.active", { defaultValue: "فعال" })
-                                    : t("common.inactive", { defaultValue: "غیرفعال" }),
-                            ]
-                                .filter(Boolean)
-                                .join(" • ")}
-                        </div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "0.25rem", alignItems: "center" }}>
-                        <Button
-                            design="Transparent"
-                            icon="add"
-                            disabled={busy}
-                            tooltip={t("process.actions.addChild", { defaultValue: "افزودن زیرمجموعه" })}
-                            onClick={() => onCreateChild?.(node.id)}
-                        />
-                        <Button
-                            design="Transparent"
-                            icon="edit"
-                            disabled={busy}
-                            tooltip={t("common.edit", { defaultValue: "ویرایش" })}
-                            onClick={() => onEdit?.(node.id)}
-                        />
-                        <Button
-                            design="Transparent"
-                            icon={node.status === "active" ? "decline" : "accept"}
-                            disabled={busy}
-                            tooltip={
-                                node.status === "active"
-                                    ? t("process.actions.deactivate", { defaultValue: "غیرفعال‌سازی" })
-                                    : t("process.actions.activate", { defaultValue: "فعال‌سازی" })
-                            }
-                            onClick={() => onToggleStatus?.(node.id)}
-                        />
-                        <Button
-                            design="Transparent"
-                            icon="delete"
-                            disabled={busy}
-                            tooltip={t("common.delete", { defaultValue: "حذف" })}
-                            onClick={() => onDelete?.(node.id)}
-                        />
-                    </div>
+                    <span
+                        style={{
+                            display: "block",
+                            minWidth: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            textAlign: "center",
+                        }}
+                    >
+                        {resolveNodeTypeLabel(node.nodeType, t)}
+                    </span>
                 </div>
-            </ListItemCustom>
-
-            {hasChildren && isExpanded
-                ? node.children.map((child) => (
-                    <TreeRow
-                        key={child.id}
-                        node={child}
-                        selectedId={selectedId}
-                        expandedIds={expandedIds}
-                        busy={busy}
-                        onToggleExpand={onToggleExpand}
-                        onSelect={onSelect}
-                        onCreateChild={onCreateChild}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        onToggleStatus={onToggleStatus}
-                    />
-                ))
-                : null}
-        </Fragment>
+            }
+        >
+            {node.children.map((child) => (
+                <ProcessTreeItem
+                    key={child.id}
+                    node={child}
+                    selectedId={selectedId}
+                    expandedIds={expandedIds}
+                />
+            ))}
+        </TreeItemCustom>
     );
 }
 
 export default function ProcessTree({
                                         items,
                                         selectedId,
+                                        expansionAnchorId,
                                         searchText = "",
                                         busy = false,
                                         onSelect,
-                                        onCreateChild,
-                                        onEdit,
-                                        onDelete,
-                                        onToggleStatus,
                                     }: ProcessTreeProps) {
     const { t } = useTranslation();
+    const normalizedSearchText = searchText.trim();
 
     const tree = useMemo(() => buildTree(items), [items]);
-    const filteredTree = useMemo(() => filterTree(tree, searchText), [tree, searchText]);
+
+    const filteredTree = useMemo(
+        () => filterTree(tree, normalizedSearchText),
+        [tree, normalizedSearchText],
+    );
+
+    const expandableIds = useMemo(() => collectExpandableIds(tree), [tree]);
+
+    const filteredExpandableIds = useMemo(
+        () => collectExpandableIds(filteredTree),
+        [filteredTree],
+    );
 
     const [manualExpandedIds, setManualExpandedIds] = useState<Set<string>>(new Set());
+    const [manualCollapsedIds, setManualCollapsedIds] = useState<Set<string>>(new Set());
 
     const autoExpandedIds = useMemo(() => {
-        const result = new Set<string>(collectAncestorIds(items, selectedId));
+        const anchorId = expansionAnchorId ?? selectedId ?? null;
+        const result = new Set<string>(collectAncestorIds(items, anchorId));
 
-        if (selectedId) {
-            result.add(selectedId);
+        if (expansionAnchorId && expandableIds.has(expansionAnchorId)) {
+            result.add(expansionAnchorId);
+        }
+
+        if (normalizedSearchText) {
+            filteredExpandableIds.forEach((id) => result.add(id));
         }
 
         return result;
-    }, [items, selectedId]);
+    }, [
+        expansionAnchorId,
+        expandableIds,
+        filteredExpandableIds,
+        items,
+        normalizedSearchText,
+        selectedId,
+    ]);
 
     const expandedIds = useMemo(() => {
-        const result = new Set<string>(manualExpandedIds);
-        autoExpandedIds.forEach((id) => result.add(id));
+        if (normalizedSearchText) {
+            return autoExpandedIds;
+        }
+
+        const result = new Set<string>();
+
+        autoExpandedIds.forEach((id) => {
+            if (!manualCollapsedIds.has(id)) {
+                result.add(id);
+            }
+        });
+
+        manualExpandedIds.forEach((id) => {
+            if (!manualCollapsedIds.has(id)) {
+                result.add(id);
+            }
+        });
+
         return result;
-    }, [manualExpandedIds, autoExpandedIds]);
+    }, [autoExpandedIds, manualCollapsedIds, manualExpandedIds, normalizedSearchText]);
 
-    const handleToggleExpand = (id: string) => {
-        setManualExpandedIds((prev) => {
-            const next = new Set(prev);
+    const handleItemClick = useCallback(
+        (event: TreeEventWithItem) => {
+            const id = readTreeItemId(event);
 
-            if (next.has(id)) {
-                next.delete(id);
-            } else {
-                next.add(id);
+            if (id) {
+                onSelect?.(id);
+            }
+        },
+        [onSelect],
+    );
+
+    const handleItemToggle = useCallback(
+        (event: TreeEventWithItem) => {
+            event.preventDefault?.();
+
+            const id = readTreeItemId(event);
+
+            if (!id || normalizedSearchText) {
+                return;
             }
 
-            return next;
-        });
-    };
+            const isExpanded = expandedIds.has(id);
+
+            if (isExpanded) {
+                setManualExpandedIds((prev) => removeFromSet(prev, id));
+                setManualCollapsedIds((prev) => addToSet(prev, id));
+                return;
+            }
+
+            setManualCollapsedIds((prev) => removeFromSet(prev, id));
+            setManualExpandedIds((prev) => addToSet(prev, id));
+        },
+        [expandedIds, normalizedSearchText],
+    );
 
     if (!items.length && !busy) {
         return (
             <MessageStrip design="Information" hideCloseButton>
-                {t("process.list.empty", { defaultValue: "هیچ فرآیندی ثبت نشده است." })}
+                {t("process.list.empty", {
+                    defaultValue: "هیچ فرآیندی ثبت نشده است.",
+                })}
             </MessageStrip>
         );
     }
 
     return (
-        <div style={{ display: "grid", gap: "0.75rem" }}>
-            <List separators="Inner">
+        <div
+            style={{
+                minWidth: "34rem",
+                border: "1px solid var(--sapList_BorderColor)",
+                background: "var(--sapList_Background)",
+            }}
+        >
+            <div
+                role="row"
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: "minmax(16rem, 1fr) 9rem",
+                    columnGap: "1rem",
+                    padding: "0.35rem 0.75rem",
+                    borderBlockEnd: "1px solid var(--sapList_BorderColor)",
+                    background: "var(--sapList_HeaderBackground)",
+                    color: "var(--sapTextColor)",
+                    fontWeight: 700,
+                    boxSizing: "border-box",
+                }}
+            >
+                <span>{t("process.fields.name", { defaultValue: "نام" })}</span>
+                <span style={{ textAlign: "center" }}>
+                    {t("process.fields.type", { defaultValue: "نوع" })}
+                </span>
+            </div>
+
+            <Tree
+                accessibleName={t("process.list.title", {
+                    defaultValue: "ساختار فرآیند",
+                })}
+                onItemClick={handleItemClick}
+                onItemToggle={handleItemToggle}
+                style={{
+                    minHeight: "100%",
+                    width: "100%",
+                }}
+            >
                 {filteredTree.map((node) => (
-                    <TreeRow
+                    <ProcessTreeItem
                         key={node.id}
                         node={node}
                         selectedId={selectedId}
                         expandedIds={expandedIds}
-                        busy={busy}
-                        onToggleExpand={handleToggleExpand}
-                        onSelect={onSelect}
-                        onCreateChild={onCreateChild}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        onToggleStatus={onToggleStatus}
                     />
                 ))}
-            </List>
+            </Tree>
         </div>
     );
 }

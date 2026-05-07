@@ -87,7 +87,10 @@ export default function OrganizationsListReport({
                         <Button
                             design="Negative"
                             disabled={!selectedId || busy}
-                            style={actionButtonStyle}
+                            style={{
+                                ...actionButtonStyle,
+                                marginInlineStart: "0.75rem",
+                            }}
                             onClick={() => selectedId && onDelete(selectedId)}
                         >
                             {t("common.delete", { defaultValue: "حذف" })}

@@ -3,14 +3,48 @@ import { t } from "@/shared/utils/i18n.util";
 
 export const processStatusSchema = z.enum(["active", "inactive"]);
 
+export const processNodeTypeSchema = z.enum(["process", "subProcess", "control"]);
+
+export const processCategorySchema = z.enum([
+    "operational",
+    "support",
+    "strategic",
+    "financial",
+    "compliance",
+    "it",
+    "other",
+]);
+
+export const controlImportanceSchema = z.enum([
+    "low",
+    "medium",
+    "high",
+    "critical",
+]);
+
+export const controlAutomationSchema = z.enum([
+    "manual",
+    "automated",
+    "semiAutomated",
+]);
+
+const optionalTextSchema = z
+    .string()
+    .trim()
+    .max(
+        2000,
+        t(
+            "process.validation.textMaxLength",
+            "متن نمی‌تواند بیشتر از 2000 کاراکتر باشد",
+        ),
+    )
+    .optional();
+
 const baseProcessPayloadSchema = z.object({
     code: z
         .string()
         .trim()
-        .min(
-            1,
-            t("process.validation.codeRequired", "کد الزامی است"),
-        )
+        .min(1, t("process.validation.codeRequired", "کد الزامی است"))
         .max(
             50,
             t(
@@ -22,46 +56,41 @@ const baseProcessPayloadSchema = z.object({
     title: z
         .string()
         .trim()
-        .min(
-            1,
-            t("process.validation.titleRequired", "عنوان الزامی است"),
-        )
+        .min(1, t("process.validation.titleRequired", "نام الزامی است"))
         .max(
             255,
             t(
                 "process.validation.titleMaxLength",
-                "عنوان نمی‌تواند بیشتر از 255 کاراکتر باشد",
+                "نام نمی‌تواند بیشتر از 255 کاراکتر باشد",
             ),
         ),
 
-    description: z
-        .string()
-        .trim()
-        .max(
-            2000,
-            t(
-                "process.validation.descriptionMaxLength",
-                "توضیحات نمی‌تواند بیشتر از 2000 کاراکتر باشد",
-            ),
-        )
-        .optional(),
+    nodeType: processNodeTypeSchema,
 
     parentId: z.string().trim().min(1).nullable(),
 
-    ownerId: z.string().trim().min(1).nullable().optional(),
-
-    sortOrder: z
-        .number()
-        .int()
-        .min(
-            0,
-            t(
-                "process.validation.sortOrderMin",
-                "ترتیب باید بزرگتر یا مساوی صفر باشد",
-            ),
-        ),
-
     status: processStatusSchema,
+
+    sortOrder: z.number().int().min(0).optional(),
+
+    description: optionalTextSchema,
+
+    processCategory: processCategorySchema.optional(),
+    ownerId: z.string().trim().min(1).nullable().optional(),
+    ownerName: z.string().trim().max(255).optional(),
+    documentsCount: z.number().int().min(0).optional(),
+
+    objective: optionalTextSchema,
+    operationCycle: z.string().trim().max(255).optional(),
+
+    controlAutomation: controlAutomationSchema.optional(),
+    controlFrequency: z.string().trim().max(255).optional(),
+    controlClassification: z.string().trim().max(255).optional(),
+    controlOwner: z.string().trim().max(255).optional(),
+    testDirection: z.string().trim().max(255).optional(),
+    testType: z.string().trim().max(255).optional(),
+    testProgram: optionalTextSchema,
+    importance: controlImportanceSchema.optional(),
 });
 
 const forbiddenReadonlyFields = {

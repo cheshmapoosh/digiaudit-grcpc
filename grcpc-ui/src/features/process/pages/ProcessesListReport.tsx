@@ -1,85 +1,125 @@
+import { useMemo, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Bar,
+    BusyIndicator,
     Button,
     Input,
     MessageStrip,
     Title,
 } from "@ui5/webcomponents-react";
 
-import type { ProcessNode } from "@/features/process";
+import type { ProcessNode, ProcessNodeType } from "../domain/process.model";
+import CreateProcessSplitButton from "../components/CreateProcessSplitButton";
 import ProcessTree from "../components/ProcessTree";
 
 export interface ProcessesListReportProps {
     items: ProcessNode[];
     selectedId?: string | null;
+    expansionAnchorId?: string | null;
     searchText: string;
     busy?: boolean;
     error?: string | null;
+    createOptions: ProcessNodeType[];
     onSearchTextChange: (value: string) => void;
-    onRefresh: () => void;
-    onCreateRoot: () => void;
-    onSelect: (id: string) => void;
-    onCreateChild: (parentId: string) => void;
-    onEdit: (id: string) => void;
+    onCreate: (nodeType: ProcessNodeType) => void;
+    onShow: (id: string) => void;
     onDelete: (id: string) => void;
-    onToggleStatus: (id: string) => void;
+    onSelect: (id: string) => void;
+}
+
+function readInputValue(event: unknown): string {
+    return (event as { target?: { value?: string } }).target?.value ?? "";
 }
 
 export default function ProcessesListReport({
                                                 items,
                                                 selectedId,
+                                                expansionAnchorId,
                                                 searchText,
                                                 busy = false,
                                                 error,
+                                                createOptions,
                                                 onSearchTextChange,
-                                                onRefresh,
-                                                onCreateRoot,
-                                                onSelect,
-                                                onCreateChild,
-                                                onEdit,
+                                                onCreate,
+                                                onShow,
                                                 onDelete,
-                                                onToggleStatus,
+                                                onSelect,
                                             }: ProcessesListReportProps) {
     const { t } = useTranslation();
 
+    const actionButtonStyle = useMemo<CSSProperties>(
+        () => ({
+            minWidth: "6rem",
+        }),
+        [],
+    );
+
+    const actionGroupStyle = useMemo<CSSProperties>(
+        () => ({
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            flexWrap: "nowrap",
+            whiteSpace: "nowrap",
+        }),
+        [],
+    );
+
+    const canCreate = !busy && createOptions.length > 0;
+
     return (
-        <div style={{ display: "grid", gap: "1rem", minHeight: 0 }}>
+        <div
+            style={{
+                display: "grid",
+                gridTemplateRows: "auto auto auto minmax(0, 1fr)",
+                gap: "1rem",
+                height: "100%",
+                minHeight: 0,
+            }}
+        >
             <Bar
                 startContent={
                     <Title level="H4">
-                        {t("process.list.title", { defaultValue: "فرآیندها" })}
+                        {t("process.list.title", { defaultValue: "ساختار فرآیند" })}
                     </Title>
                 }
                 endContent={
-                    <>
-                        <Button
-                            design="Transparent"
-                            icon="refresh"
-                            disabled={busy}
-                            onClick={onRefresh}
-                        >
-                            {t("common.refresh", { defaultValue: "بروزرسانی" })}
-                        </Button>
+                    <div style={actionGroupStyle}>
+                        <CreateProcessSplitButton
+                            disabled={!canCreate}
+                            nodeTypes={["process", "subProcess", "control"]}
+                            onCreate={onCreate}
+                        />
 
                         <Button
                             design="Emphasized"
-                            icon="add"
-                            disabled={busy}
-                            onClick={onCreateRoot}
+                            disabled={!selectedId || busy}
+                            style={actionButtonStyle}
+                            onClick={() => selectedId && onShow(selectedId)}
                         >
-                            {t("process.actions.createRoot", { defaultValue: "ایجاد فرآیند" })}
+                            {t("common.view", { defaultValue: "نمایش" })}
                         </Button>
-                    </>
+
+                        <Button
+                            design="Negative"
+                            disabled={!selectedId || busy}
+                            style={actionButtonStyle}
+                            onClick={() => selectedId && onDelete(selectedId)}
+                        >
+                            {t("common.delete", { defaultValue: "حذف" })}
+                        </Button>
+                    </div>
                 }
             />
 
             <Input
                 value={searchText}
+                disabled={busy}
                 placeholder={t("process.list.search", {
-                    defaultValue: "جستجو بر اساس کد، عنوان یا توضیحات",
+                    defaultValue: "جستجو بر اساس نام، کد یا توضیحات",
                 })}
-                onInput={(event) => onSearchTextChange(event.target.value)}
+                onInput={(event) => onSearchTextChange(readInputValue(event))}
             />
 
             {error ? (
@@ -88,17 +128,27 @@ export default function ProcessesListReport({
                 </MessageStrip>
             ) : null}
 
-            <div style={{ minHeight: 0, overflow: "auto" }}>
+            <div
+                style={{
+                    minHeight: 0,
+                    overflowY: "auto",
+                    overflowX: "auto",
+                    border: "1px solid var(--sapGroup_ContentBorderColor)",
+                    borderRadius: "0",
+                    padding: "0.75rem",
+                    background: "var(--sapList_Background)",
+                    boxSizing: "border-box",
+                }}
+            >
+                {busy ? <BusyIndicator active /> : null}
+
                 <ProcessTree
                     items={items}
                     selectedId={selectedId}
+                    expansionAnchorId={expansionAnchorId}
                     searchText={searchText}
                     busy={busy}
                     onSelect={onSelect}
-                    onCreateChild={onCreateChild}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onToggleStatus={onToggleStatus}
                 />
             </div>
         </div>

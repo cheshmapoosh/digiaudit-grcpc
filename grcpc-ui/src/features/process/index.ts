@@ -1,11 +1,15 @@
 export { processRoutes } from "./routes";
 
 export type {
+    ControlAutomation,
+    ControlImportance,
+    ProcessCategory,
     ProcessNode,
     ProcessNodeCreate,
+    ProcessNodeType,
     ProcessNodeUpdate,
-    ProcessStatus,
     ProcessReadonlyKeys,
+    ProcessStatus,
 } from "./domain/process.model";
 
 export type {
@@ -14,11 +18,15 @@ export type {
 } from "./domain/process.schema";
 
 export {
+    controlAutomationSchema,
+    controlImportanceSchema,
+    processCategorySchema,
     processCreateSchema,
-    processUpdateSchema,
+    processNodeTypeSchema,
     processStatusSchema,
+    processUpdateSchema,
 } from "./domain/process.schema";
 
-export { processService, createProcessService } from "./service/process.service";
+export { createProcessService, processService } from "./service/process.service";
 
-export { useProcessState, ROOT_PARENT } from "./state/process.state.ts";
+export { ROOT_PARENT, useProcessState } from "./state/process.state";
