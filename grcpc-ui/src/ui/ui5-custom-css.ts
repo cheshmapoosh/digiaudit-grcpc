@@ -58,6 +58,8 @@ const UI5_TAGS = [
     "ui5-list",
     "ui5-li",
     "ui5-table",
+    "ui5-table-header-row",
+    "ui5-table-header-cell",
     "ui5-table-row",
     "ui5-table-cell",
 

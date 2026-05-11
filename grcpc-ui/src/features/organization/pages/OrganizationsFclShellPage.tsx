@@ -21,13 +21,24 @@ import type {
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
 } from "../domain/organization.model";
+import type {
+    OrganizationProcessAssignment,
+    OrganizationSubProcessOption,
+    OrganizationSubProcessView,
+} from "../domain/organization-process-assignment.model";
+import type { ProcessNode } from "@/features/process";
+import {
+    ROOT_PARENT as PROCESS_ROOT_PARENT,
+    useProcessState,
+} from "@/features/process";
 
 import { useOrganizationState, ROOT_PARENT } from "../state/organization.state";
+import { useOrganizationProcessAssignmentState } from "../state/organization-process-assignment.state";
 import { hasChildren, sortOrganizations } from "../utils/organization.tree";
 
 import OrganizationSummaryPanel from "../components/OrganizationSummaryPanel";
 import OrganizationsListReport from "./OrganizationsListReport";
-import OrganizationObjectPage from "./OrganizationObjectPage";
+import OrganizationObjectPage, { type OrganizationTabKey } from "./OrganizationObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 
 type RouteMode = "list" | "create" | "view" | "edit";
@@ -35,8 +46,9 @@ type UiDir = "rtl" | "ltr";
 type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 
 const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
-const DIALOG_NORMAL_WIDTH = "90vw";
-const DIALOG_LARGE_WIDTH = "60vw";
+const DIALOG_NORMAL_WIDTH = "96vw";
+const DIALOG_LARGE_WIDTH = "92vw";
+const EMPTY_ASSIGNMENTS: OrganizationProcessAssignment[] = [];
 
 function useOrganizationRouteMode(): RouteMode {
     const { organizationId } = useParams();
@@ -189,6 +201,88 @@ function resolveDialogTitle(
     return "";
 }
 
+function sortProcessNodes(items: ProcessNode[]): ProcessNode[] {
+    return [...items].sort((a, b) => {
+        const orderCompare = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        if (orderCompare !== 0) {
+            return orderCompare;
+        }
+
+        const codeCompare = a.code.localeCompare(b.code, "fa");
+        if (codeCompare !== 0) {
+            return codeCompare;
+        }
+
+        return a.title.localeCompare(b.title, "fa");
+    });
+}
+
+function toSubProcessOption(
+    subProcess: ProcessNode,
+    nodesById: Record<string, ProcessNode>,
+): OrganizationSubProcessOption {
+    const parent = subProcess.parentId ? nodesById[subProcess.parentId] : null;
+
+    return {
+        processNodeId: subProcess.id,
+        code: subProcess.code,
+        title: subProcess.title,
+        parentProcessCode: parent?.code,
+        parentProcessTitle: parent?.title,
+        status: subProcess.status,
+    };
+}
+
+function countControlsBySubProcess(nodes: ProcessNode[]): Map<string, number> {
+    const counts = new Map<string, number>();
+
+    nodes.forEach((node) => {
+        if (node.nodeType !== "control" || !node.parentId) {
+            return;
+        }
+
+        counts.set(node.parentId, (counts.get(node.parentId) ?? 0) + 1);
+    });
+
+    return counts;
+}
+
+function buildOrganizationSubProcessViews(
+    assignments: OrganizationProcessAssignment[],
+    nodesById: Record<string, ProcessNode>,
+): OrganizationSubProcessView[] {
+    const processNodes = Object.values(nodesById);
+    const controlCounts = countControlsBySubProcess(processNodes);
+
+    return assignments
+        .map((assignment): OrganizationSubProcessView | null => {
+            const subProcess = nodesById[assignment.processNodeId];
+
+            if (!subProcess || subProcess.nodeType !== "subProcess") {
+                return null;
+            }
+
+            const view: OrganizationSubProcessView = {
+                ...toSubProcessOption(subProcess, nodesById),
+                assignmentId: assignment.id,
+                organizationId: assignment.organizationId,
+                assignmentType: assignment.assignmentType,
+                validFrom: assignment.validFrom,
+                validTo: assignment.validTo,
+                isActive: assignment.isActive,
+                description: subProcess.description,
+                controlsCount: controlCounts.get(subProcess.id) ?? 0,
+            };
+
+            return view;
+        })
+        .filter((item): item is OrganizationSubProcessView => item !== null)
+        .sort((a, b) => {
+            const codeCompare = a.code.localeCompare(b.code, "fa");
+            return codeCompare !== 0 ? codeCompare : a.title.localeCompare(b.title, "fa");
+        });
+}
+
 export default function OrganizationsFclShellPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -205,11 +299,31 @@ export default function OrganizationsFclShellPage() {
     const createNode = useOrganizationState((state) => state.createNode);
     const updateNode = useOrganizationState((state) => state.updateNode);
     const removeNode = useOrganizationState((state) => state.removeNode);
+    const processNodesById = useProcessState((state) => state.nodesById);
+    const processLoading = useProcessState((state) => state.loading);
+    const loadProcessChildren = useProcessState((state) => state.loadChildren);
+    const assignmentsByOrganizationId = useOrganizationProcessAssignmentState(
+        (state) => state.assignmentsByOrganizationId,
+    );
+    const assignmentsLoading = useOrganizationProcessAssignmentState(
+        (state) => state.loading,
+    );
+    const loadAssignmentsForOrganization = useOrganizationProcessAssignmentState(
+        (state) => state.loadForOrganization,
+    );
+    const assignSubProcessToOrganization = useOrganizationProcessAssignmentState(
+        (state) => state.assignSubProcess,
+    );
+    const removeSubProcessFromOrganization = useOrganizationProcessAssignmentState(
+        (state) => state.removeAssignment,
+    );
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
     const [deleteCandidate, setDeleteCandidate] = useState<OrganizationNode | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [objectActiveTab, setObjectActiveTab] =
+        useState<OrganizationTabKey>("general");
 
     /**
      * selectedTreeId:
@@ -222,6 +336,17 @@ export default function OrganizationsFclShellPage() {
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
 
     const items = useMemo(() => sortOrganizations(Object.values(nodesById)), [nodesById]);
+    const processItems = useMemo(
+        () => sortProcessNodes(Object.values(processNodesById)),
+        [processNodesById],
+    );
+    const availableSubProcesses = useMemo(
+        () =>
+            processItems
+                .filter((item) => item.nodeType === "subProcess")
+                .map((item) => toSubProcessOption(item, processNodesById)),
+        [processItems, processNodesById],
+    );
 
     const selectedRouteItem = organizationId ? nodesById[organizationId] ?? null : null;
     const selectedTreeItem = selectedTreeId ? nodesById[selectedTreeId] ?? null : null;
@@ -230,6 +355,14 @@ export default function OrganizationsFclShellPage() {
         const searchParams = new URLSearchParams(location.search);
         return searchParams.get("parentId");
     }, [location.search]);
+
+    const objectTabScopeKey = useMemo(() => {
+        if (routeMode === "create") {
+            return `create:${queryParentId ?? "root"}`;
+        }
+
+        return `org:${organizationId ?? "none"}`;
+    }, [organizationId, queryParentId, routeMode]);
 
     useEffect(() => {
         void loadChildren(ROOT_PARENT).catch((error: unknown) => {
@@ -243,6 +376,23 @@ export default function OrganizationsFclShellPage() {
             );
         });
     }, [loadChildren, t]);
+
+    useEffect(() => {
+        setObjectActiveTab("general");
+    }, [objectTabScopeKey]);
+
+    useEffect(() => {
+        void loadProcessChildren(PROCESS_ROOT_PARENT).catch((error: unknown) => {
+            setPageError(
+                mapError(
+                    error,
+                    t("process.errors.loadList", {
+                        defaultValue: "خطا در بارگذاری فرآیندها",
+                    }),
+                ),
+            );
+        });
+    }, [loadProcessChildren, t]);
 
     /**
      * در حالت create child، درخت باید parent را انتخاب/باز کند.
@@ -569,6 +719,91 @@ export default function OrganizationsFclShellPage() {
 
     const objectValue = routeMode === "create" ? createInitialValue : selectedRouteItem;
 
+    useEffect(() => {
+        if (!showModal || !objectValue?.id) {
+            return;
+        }
+
+        void loadAssignmentsForOrganization(objectValue.id).catch((error: unknown) => {
+            setPageError(
+                mapError(
+                    error,
+                    t("organization.subProcesses.errors.load", {
+                        defaultValue: "خطا در بارگذاری زیر فرآیندهای سازمان",
+                    }),
+                ),
+            );
+        });
+    }, [loadAssignmentsForOrganization, objectValue?.id, showModal, t]);
+
+    const currentAssignments = objectValue?.id
+        ? assignmentsByOrganizationId[objectValue.id] ?? EMPTY_ASSIGNMENTS
+        : EMPTY_ASSIGNMENTS;
+
+    const organizationSubProcesses = useMemo(
+        () => buildOrganizationSubProcessViews(currentAssignments, processNodesById),
+        [currentAssignments, processNodesById],
+    );
+
+    const handleAssignSubProcessToOrganization = useCallback(
+        async (processNodeId: string) => {
+            if (!objectValue?.id) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setPageError(null);
+
+                await assignSubProcessToOrganization({
+                    organizationId: objectValue.id,
+                    processNodeId,
+                    assignmentType: "scope",
+                    isActive: true,
+                });
+            } catch (error) {
+                setPageError(
+                    mapError(
+                        error,
+                        t("organization.subProcesses.errors.assign", {
+                            defaultValue: "خطا در تخصیص زیر فرآیند به سازمان",
+                        }),
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [assignSubProcessToOrganization, objectValue?.id, t],
+    );
+
+    const handleRemoveSubProcessAssignment = useCallback(
+        async (assignmentId: string) => {
+            if (!objectValue?.id) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setPageError(null);
+
+                await removeSubProcessFromOrganization(objectValue.id, assignmentId);
+            } catch (error) {
+                setPageError(
+                    mapError(
+                        error,
+                        t("organization.subProcesses.errors.remove", {
+                            defaultValue: "خطا در حذف زیر فرآیند از سازمان",
+                        }),
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [objectValue?.id, removeSubProcessFromOrganization, t],
+    );
+
     const showInlineSummaryPane = Boolean(selectedTreeItem);
     const fclLayout: FclLayout = showInlineSummaryPane ? "TwoColumnsStartExpanded" : "OneColumn";
 
@@ -598,11 +833,9 @@ export default function OrganizationsFclShellPage() {
     const dialogContentStyle = useMemo<CSSProperties>(
         () => ({
             width: "100%",
-            maxHeight: "calc(92vh - 8rem)",
-            overflow: "auto",
             direction: appDir,
             boxSizing: "border-box",
-            padding: "0.25rem",
+            padding: 0,
         }),
         [appDir],
     );
@@ -613,6 +846,7 @@ export default function OrganizationsFclShellPage() {
         return {
             width,
             maxWidth: width,
+            maxHeight: "calc(100vh - 2rem)",
         };
     }, [isLargeDialogViewport]);
 
@@ -695,11 +929,18 @@ export default function OrganizationsFclShellPage() {
                             mode={objectMode}
                             allItems={items}
                             value={objectValue}
+                            activeTab={objectActiveTab}
+                            subProcesses={organizationSubProcesses}
+                            availableSubProcesses={availableSubProcesses}
+                            subProcessesBusy={processLoading || assignmentsLoading}
                             busy={loading || submitting}
                             error={pageError}
                             onSubmit={routeMode === "create" ? handleSubmitCreate : handleSubmitUpdate}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
+                            onAssignSubProcess={handleAssignSubProcessToOrganization}
+                            onRemoveSubProcessAssignment={handleRemoveSubProcessAssignment}
+                            onActiveTabChange={setObjectActiveTab}
                         />
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>

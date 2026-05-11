@@ -10,6 +10,14 @@ export type {
 } from "./domain/organization.model";
 
 export type {
+    OrganizationProcessAssignment,
+    OrganizationProcessAssignmentCreate,
+    OrganizationProcessAssignmentType,
+    OrganizationSubProcessOption,
+    OrganizationSubProcessView,
+} from "./domain/organization-process-assignment.model";
+
+export type {
     OrganizationCreateInput,
     OrganizationUpdateInput,
 } from "./domain/organization.schema";

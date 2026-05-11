@@ -3,6 +3,8 @@ import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
     Button,
+    ComboBox,
+    ComboBoxItem,
     DatePicker,
     Input,
     Label,
@@ -28,11 +30,16 @@ import type {
     OrganizationStatus,
     OrganizationType,
 } from "../domain/organization.model";
+import type {
+    OrganizationProcessAssignmentType,
+    OrganizationSubProcessOption,
+    OrganizationSubProcessView,
+} from "../domain/organization-process-assignment.model";
 import ParentValueHelpDialog from "../components/ParentValueHelpDialog";
 
 export type OrganizationObjectMode = "create" | "edit" | "view";
 
-type OrganizationTabKey =
+export type OrganizationTabKey =
     | "general"
     | "subProcesses"
     | "risks"
@@ -63,11 +70,18 @@ export interface OrganizationObjectPageProps {
     mode: OrganizationObjectMode;
     allItems: OrganizationNode[];
     value: OrganizationNode | null;
+    activeTab?: OrganizationTabKey;
+    subProcesses?: OrganizationSubProcessView[];
+    availableSubProcesses?: OrganizationSubProcessOption[];
+    subProcessesBusy?: boolean;
     busy?: boolean;
     error?: string | null;
     onSubmit: (payload: OrganizationNodeCreate | OrganizationNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
     onEdit?: () => void;
+    onAssignSubProcess?: (processNodeId: string) => Promise<void> | void;
+    onRemoveSubProcessAssignment?: (assignmentId: string) => Promise<void> | void;
+    onActiveTabChange?: (tab: OrganizationTabKey) => void;
 }
 
 const ROOT_STYLE: CSSProperties = {
@@ -129,13 +143,13 @@ const BODY_STYLE: CSSProperties = {
     borderInline: "1px solid var(--sapGroup_ContentBorderColor)",
     borderBottom: "1px solid var(--sapGroup_ContentBorderColor)",
     background: "var(--sapBackgroundColor)",
-    minHeight: "22rem",
-    padding: "1rem",
+    minHeight: "18rem",
+    padding: "0.75rem",
 };
 
 const FORM_GRID_STYLE: CSSProperties = {
     display: "grid",
-    gap: "1rem",
+    gap: "0.75rem",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 };
 
@@ -174,6 +188,7 @@ const TABLE_PANEL_STYLE: CSSProperties = {
     background: "var(--sapGroup_ContentBackground)",
     border: "1px solid var(--sapList_BorderColor)",
     padding: "1rem",
+    fontFamily: "var(--sapFontFamily)",
 };
 
 const TABLE_ACTIONS_STYLE: CSSProperties = {
@@ -191,6 +206,55 @@ const TABLE_HINT_STYLE: CSSProperties = {
 const TABLE_STYLE: CSSProperties = {
     width: "100%",
     minHeight: "11rem",
+    fontFamily: "var(--sapFontFamily)",
+};
+
+const TABLE_TEXT_CELL_STYLE: CSSProperties = {
+    fontFamily: "var(--sapFontFamily)",
+    fontFeatureSettings: '"ss01"',
+};
+
+const SUB_PROCESS_PICKER_STYLE: CSSProperties = {
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    justifyContent: "flex-start",
+    gap: "0.5rem",
+    alignItems: "center",
+    width: "100%",
+};
+
+const SUB_PROCESS_COMBOBOX_STYLE: CSSProperties = {
+    flex: "0 1 28rem",
+    width: "min(100%, 28rem)",
+    maxWidth: "28rem",
+};
+
+const SUB_PROCESS_ADD_BUTTON_STYLE: CSSProperties = {
+    flex: "0 0 auto",
+    minWidth: "8rem",
+    whiteSpace: "nowrap",
+};
+
+const TABLE_CELL_CONTENT_STYLE: CSSProperties = {
+    display: "grid",
+    gap: "0.15rem",
+    minWidth: 0,
+    fontFamily: "var(--sapFontFamily)",
+};
+
+const TABLE_SECONDARY_TEXT_STYLE: CSSProperties = {
+    color: "var(--sapContent_LabelColor)",
+    fontSize: "0.8125rem",
+    overflowWrap: "anywhere",
+};
+
+const TABLE_INLINE_META_STYLE: CSSProperties = {
+    display: "flex",
+    gap: "0.25rem",
+    flexWrap: "wrap",
+    color: "var(--sapContent_LabelColor)",
+    fontSize: "0.8125rem",
 };
 
 const TAB_SEQUENCE: readonly OrganizationTabKey[] = [
@@ -240,6 +304,18 @@ function readSelectedDataValue(event: unknown, fallback: string): string {
     }).detail?.selectedOption;
 
     return selectedOption?.getAttribute?.("data-value") ?? fallback;
+}
+
+function readSelectedComboBoxDataValue(event: unknown, fallback: string): string {
+    const selectedItem = (event as {
+        detail?: {
+            item?: {
+                getAttribute?: (name: string) => string | null;
+            };
+        };
+    }).detail?.item;
+
+    return selectedItem?.getAttribute?.("data-value") ?? fallback;
 }
 
 function readSelectedTabKey(event: unknown): OrganizationTabKey | null {
@@ -325,6 +401,41 @@ function resolveStatusLabel(
     }
 
     return t("common.active", { defaultValue: "فعال" });
+}
+
+function resolveAssignmentTypeLabel(
+    assignmentType: OrganizationProcessAssignmentType,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    const map: Record<OrganizationProcessAssignmentType, string> = {
+        scope: t("organization.assignmentType.scope", { defaultValue: "محدوده" }),
+        owner: t("organization.assignmentType.owner", { defaultValue: "مالک" }),
+        participant: t("organization.assignmentType.participant", {
+            defaultValue: "مشارکت کننده",
+        }),
+    };
+
+    return map[assignmentType];
+}
+
+function formatSubProcessOption(option: OrganizationSubProcessOption): string {
+    const parentTitle = option.parentProcessTitle
+        ? ` (${option.parentProcessCode ? `${option.parentProcessCode} - ` : ""}${option.parentProcessTitle})`
+        : "";
+
+    return `${option.code} - ${option.title}${parentTitle}`;
+}
+
+function formatOptionalValue(value?: string): string {
+    return value?.trim() ? value : "-";
+}
+
+function formatValidityRange(validFrom?: string, validTo?: string): string {
+    if (!validFrom && !validTo) {
+        return "-";
+    }
+
+    return `${formatOptionalValue(validFrom)} - ${formatOptionalValue(validTo)}`;
 }
 
 function resolveTabLabel(
@@ -421,7 +532,9 @@ function TablePlaceholder({
                 headerRow={
                     <TableHeaderRow>
                         {columns.map((column) => (
-                            <TableHeaderCell key={column}>{column}</TableHeaderCell>
+                            <TableHeaderCell key={column} style={TABLE_TEXT_CELL_STYLE}>
+                                {column}
+                            </TableHeaderCell>
                         ))}
                     </TableHeaderRow>
                 }
@@ -429,7 +542,10 @@ function TablePlaceholder({
                 {Array.from({ length: rowCount }, (_, rowIndex) => rowIndex).map((rowIndex) => (
                     <TableRow key={`placeholder-row-${rowIndex}`}>
                         {columns.map((column, columnIndex) => (
-                            <TableCell key={`${column}-${rowIndex}-${columnIndex}`}>
+                            <TableCell
+                                key={`${column}-${rowIndex}-${columnIndex}`}
+                                style={TABLE_TEXT_CELL_STYLE}
+                            >
                                 {"\u00A0"}
                             </TableCell>
                         ))}
@@ -444,11 +560,18 @@ export default function OrganizationObjectPage({
     mode,
     allItems,
     value,
+    activeTab: controlledActiveTab,
+    subProcesses = [],
+    availableSubProcesses = [],
+    subProcessesBusy = false,
     busy = false,
     error,
     onSubmit,
     onCancel,
     onEdit,
+    onAssignSubProcess,
+    onRemoveSubProcessAssignment,
+    onActiveTabChange,
 }: OrganizationObjectPageProps) {
     const { t } = useTranslation();
 
@@ -465,7 +588,18 @@ export default function OrganizationObjectPage({
 
     const [validationError, setValidationError] = useState<string | null>(null);
     const [parentDialogOpen, setParentDialogOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<OrganizationTabKey>("general");
+    const [internalActiveTab, setInternalActiveTab] = useState<OrganizationTabKey>("general");
+    const [selectedSubProcessId, setSelectedSubProcessId] = useState("");
+    const [selectedSubProcessSearchValue, setSelectedSubProcessSearchValue] = useState("");
+    const activeTab = controlledActiveTab ?? internalActiveTab;
+
+    const handleActiveTabChange = (tab: OrganizationTabKey) => {
+        if (controlledActiveTab === undefined) {
+            setInternalActiveTab(tab);
+        }
+
+        onActiveTabChange?.(tab);
+    };
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? null
@@ -615,6 +749,43 @@ export default function OrganizationObjectPage({
             ))}
         </>
     );
+
+    const assignedSubProcessIds = new Set(
+        subProcesses.map((subProcess) => subProcess.processNodeId),
+    );
+    const unassignedSubProcesses = availableSubProcesses.filter(
+        (subProcess) => !assignedSubProcessIds.has(subProcess.processNodeId),
+    );
+
+    const selectedAssignableSubProcess = unassignedSubProcesses.some(
+        (subProcess) => subProcess.processNodeId === selectedSubProcessId,
+    )
+        ? selectedSubProcessId
+        : "";
+    const selectedSubProcessOption = unassignedSubProcesses.find(
+        (subProcess) => subProcess.processNodeId === selectedAssignableSubProcess,
+    );
+    const subProcessComboBoxValue =
+        selectedSubProcessOption
+            ? formatSubProcessOption(selectedSubProcessOption)
+            : selectedSubProcessSearchValue;
+
+    const handleAssignSubProcess = async () => {
+        const typedMatch = unassignedSubProcesses.find(
+            (subProcess) =>
+                formatSubProcessOption(subProcess) === selectedSubProcessSearchValue,
+        );
+        const targetId =
+            selectedAssignableSubProcess || typedMatch?.processNodeId;
+
+        if (!targetId || !onAssignSubProcess || !value?.id) {
+            return;
+        }
+
+        await onAssignSubProcess(targetId);
+        setSelectedSubProcessId("");
+        setSelectedSubProcessSearchValue("");
+    };
 
     const renderGeneralTab = () => (
         <div style={FORM_GRID_STYLE}>
@@ -782,33 +953,207 @@ export default function OrganizationObjectPage({
         </div>
     );
 
+    const renderSubProcessesTab = () => {
+        const canSelectSubProcess =
+            !readOnly &&
+            !busy &&
+            !subProcessesBusy &&
+            Boolean(value?.id) &&
+            Boolean(onAssignSubProcess) &&
+            unassignedSubProcesses.length > 0;
+        const canAssign = canSelectSubProcess && Boolean(selectedAssignableSubProcess);
+
+        return (
+            <div style={TABLE_PANEL_STYLE}>
+                <Title level="H5">
+                    {t("organization.tabs.subProcesses.title", {
+                        defaultValue: "زیر فرآیندهای مرتبط با سازمان",
+                    })}
+                </Title>
+
+                <div style={TABLE_HINT_STYLE}>
+                    {value?.id
+                        ? t("organization.tabs.subProcesses.hint", {
+                              defaultValue:
+                                  "زیر فرآیندها از فیچر فرآیند خوانده می شوند و رابطه آن ها با سازمان جداگانه ذخیره می شود.",
+                          })
+                        : t("organization.tabs.subProcesses.saveFirstHint", {
+                              defaultValue:
+                                  "برای تخصیص زیر فرآیند، ابتدا سازمان را ذخیره کنید.",
+                          })}
+                </div>
+
+                {!readOnly ? (
+                    <div style={SUB_PROCESS_PICKER_STYLE}>
+                        <ComboBox
+                            style={SUB_PROCESS_COMBOBOX_STYLE}
+                            filter="Contains"
+                            showClearIcon
+                            value={subProcessComboBoxValue}
+                            placeholder={t("organization.subProcesses.selectPlaceholder", {
+                                defaultValue: "انتخاب زیر فرآیند",
+                            })}
+                            disabled={!canSelectSubProcess}
+                            onInput={(event) => {
+                                const nextValue = readInputValue(event);
+                                setSelectedSubProcessSearchValue(nextValue);
+
+                                const matchedOption = unassignedSubProcesses.find(
+                                    (subProcess) =>
+                                        formatSubProcessOption(subProcess) === nextValue,
+                                );
+                                setSelectedSubProcessId(matchedOption?.processNodeId ?? "");
+                            }}
+                            onSelectionChange={(event) => {
+                                const nextValue = readSelectedComboBoxDataValue(
+                                    event,
+                                    selectedAssignableSubProcess,
+                                );
+                                const selectedOption = unassignedSubProcesses.find(
+                                    (subProcess) => subProcess.processNodeId === nextValue,
+                                );
+
+                                setSelectedSubProcessId(nextValue);
+                                setSelectedSubProcessSearchValue(
+                                    selectedOption ? formatSubProcessOption(selectedOption) : "",
+                                );
+                            }}
+                        >
+                            {unassignedSubProcesses.map((subProcess) => (
+                                <ComboBoxItem
+                                    key={subProcess.processNodeId}
+                                    data-value={subProcess.processNodeId}
+                                    text={formatSubProcessOption(subProcess)}
+                                    additionalText={subProcess.parentProcessTitle}
+                                />
+                            ))}
+                        </ComboBox>
+
+                        <Button
+                            style={SUB_PROCESS_ADD_BUTTON_STYLE}
+                            design="Emphasized"
+                            disabled={!canAssign}
+                            onClick={() => {
+                                void handleAssignSubProcess();
+                            }}
+                        >
+                            {t("organization.actions.add", { defaultValue: "اضافه نمودن" })}
+                        </Button>
+                    </div>
+                ) : null}
+
+                <Table
+                    style={TABLE_STYLE}
+                    noDataText={t("organization.subProcesses.noData", {
+                        defaultValue: "برای این سازمان زیر فرآیندی تخصیص داده نشده است.",
+                    })}
+                    headerRow={
+                        <TableHeaderRow>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.subProcess", {
+                                    defaultValue: "زیر فرآیند",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.parentProcess", {
+                                    defaultValue: "فرآیند والد",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.controlsCount", {
+                                    defaultValue: "تعداد کنترل",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.assignmentAndStatus", {
+                                    defaultValue: "رابطه / وضعیت",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.validity", {
+                                    defaultValue: "اعتبار",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.actions", { defaultValue: "عملیات" })}
+                            </TableHeaderCell>
+                        </TableHeaderRow>
+                    }
+                >
+                    {subProcesses.map((subProcess) => (
+                        <TableRow key={subProcess.assignmentId}>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <strong>{subProcess.title}</strong>
+                                    <span style={TABLE_SECONDARY_TEXT_STYLE}>
+                                        {subProcess.code}
+                                    </span>
+                                    {subProcess.description ? (
+                                        <span style={TABLE_SECONDARY_TEXT_STYLE}>
+                                            {subProcess.description}
+                                        </span>
+                                    ) : null}
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                {formatOptionalValue(
+                                    subProcess.parentProcessTitle
+                                        ? `${subProcess.parentProcessCode ? `${subProcess.parentProcessCode} - ` : ""}${subProcess.parentProcessTitle}`
+                                        : undefined,
+                                )}
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                {subProcess.controlsCount}
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <span>
+                                        {resolveAssignmentTypeLabel(subProcess.assignmentType, t)}
+                                    </span>
+                                    <span style={TABLE_INLINE_META_STYLE}>
+                                        {subProcess.isActive
+                                            ? t("common.active", { defaultValue: "فعال" })
+                                            : t("common.inactive", {
+                                                  defaultValue: "غیرفعال",
+                                              })}
+                                    </span>
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                {formatValidityRange(subProcess.validFrom, subProcess.validTo)}
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <Button
+                                    design="Transparent"
+                                    disabled={
+                                        readOnly ||
+                                        busy ||
+                                        subProcessesBusy ||
+                                        !onRemoveSubProcessAssignment
+                                    }
+                                    onClick={() => {
+                                        void onRemoveSubProcessAssignment?.(
+                                            subProcess.assignmentId,
+                                        );
+                                    }}
+                                >
+                                    {t("organization.actions.delete", { defaultValue: "حذف" })}
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </Table>
+            </div>
+        );
+    };
+
     const renderTabContent = () => {
         if (activeTab === "general") {
             return renderGeneralTab();
         }
 
         if (activeTab === "subProcesses") {
-            return (
-                <TablePlaceholder
-                    title={t("organization.tabs.subProcesses.title", {
-                        defaultValue: "اضافه نمودن زیر فرآیند به سازمان",
-                    })}
-                    hint={t("organization.tabs.subProcesses.hint", {
-                        defaultValue: "1) انتخاب زیر فرآیند  2) انتخاب ریسک  3) انتخاب کنترل  4) تایید",
-                    })}
-                    actions={tabActionButtons([
-                        t("organization.actions.add", { defaultValue: "اضافه نمودن" }),
-                        t("organization.actions.delete", { defaultValue: "حذف" }),
-                        t("organization.actions.open", { defaultValue: "باز نمودن" }),
-                    ])}
-                    columns={[
-                        t("organization.fields.subProcess", { defaultValue: "زیر فرایند" }),
-                        t("organization.fields.description", { defaultValue: "شرح" }),
-                        t("organization.fields.sharing", { defaultValue: "اشتراک گذاری" }),
-                        t("organization.fields.addedAt", { defaultValue: "تاریخ اضافه نمودن" }),
-                    ]}
-                />
-            );
+            return renderSubProcessesTab();
         }
 
         if (activeTab === "risks") {
@@ -1053,7 +1398,7 @@ export default function OrganizationObjectPage({
                 </div>
             </div>
 
-            <OrganizationTabs activeTab={activeTab} onChange={setActiveTab} />
+            <OrganizationTabs activeTab={activeTab} onChange={handleActiveTabChange} />
 
             {error ? (
                 <MessageStrip design="Negative" hideCloseButton>
