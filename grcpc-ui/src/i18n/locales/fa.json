@@ -102,5 +102,14 @@
 
   "common.back": "بازگشت",
   "common.refresh": "بازآوری",
-  "common.new": "جدید"
+  "common.new": "جدید",
+
+  "app": {
+    "companyName": "Digiaudit",
+    "productName": "GRCPC",
+    "version": "Version {{version}}",
+    "footer": {
+      "copyright": "© {{year}} {{company}} — {{product}} v{{version}}"
+    }
+  }
 }

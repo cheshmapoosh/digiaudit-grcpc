@@ -1,4 +1,6 @@
-export { usermanagementRoutes } from "./routes";
+export { usermanagementRoutes, loginRoutes } from "./routes";
+
+export type { UserManagementRepo } from "./infra/usermanagement.repo";
 
 export type {
     LocalizedText,

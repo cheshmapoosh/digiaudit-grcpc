@@ -44,6 +44,7 @@ function buildCreatedEntity(payload: OrganizationNodeCreate): OrganizationNode {
         status: payload.status,
         validFrom: payload.validFrom,
         validTo: payload.validTo,
+        location: payload.location,
         description: payload.description,
         createdAt: now,
         updatedAt: now,

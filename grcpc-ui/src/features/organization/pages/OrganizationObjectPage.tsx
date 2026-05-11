@@ -10,6 +10,11 @@ import {
     Option,
     Select,
     Tab,
+    Table,
+    TableCell,
+    TableHeaderCell,
+    TableHeaderRow,
+    TableRow,
     TabContainer,
     TabSeparator,
     TextArea,
@@ -29,17 +34,18 @@ export type OrganizationObjectMode = "create" | "edit" | "view";
 
 type OrganizationTabKey =
     | "general"
-    | "process"
-    | "risk"
-    | "control"
+    | "subProcesses"
+    | "risks"
+    | "controls"
     | "rules"
     | "policies"
     | "goals"
     | "kpi"
     | "kri"
-    | "exceptions"
+    | "riskAppetite"
     | "owner"
-    | "documents";
+    | "documents"
+    | "performance";
 
 interface OrganizationFormState {
     code: string;
@@ -50,6 +56,7 @@ interface OrganizationFormState {
     status: OrganizationStatus;
     validFrom: string;
     validTo: string;
+    location: string;
 }
 
 export interface OrganizationObjectPageProps {
@@ -84,15 +91,15 @@ const HEADER_TITLE_STYLE: CSSProperties = {
 
 const HEADER_GRID_STYLE: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "0.25rem 2rem",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "0.35rem 2rem",
     padding: "0.75rem 1rem",
     minHeight: "4.5rem",
 };
 
 const HEADER_ROW_STYLE: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "7rem minmax(0, 1fr)",
+    gridTemplateColumns: "8rem minmax(0, 1fr)",
     gap: "0.5rem",
     alignItems: "center",
 };
@@ -151,19 +158,56 @@ const PARENT_PICKER_STYLE: CSSProperties = {
 const FOOTER_STYLE: CSSProperties = {
     display: "flex",
     justifyContent: "center",
-    gap: "2rem",
-    padding: "1rem 0 0",
+    gap: "1rem",
+    flexWrap: "wrap",
+    padding: "0.25rem 0 0",
 };
 
 const ACTION_BUTTON_STYLE: CSSProperties = {
-    minWidth: "6rem",
+    minWidth: "8rem",
 };
 
-const EMPTY_TAB_STYLE: CSSProperties = {
-    minHeight: "16rem",
+const TABLE_PANEL_STYLE: CSSProperties = {
+    display: "grid",
+    gap: "0.75rem",
+    minHeight: "15rem",
     background: "var(--sapGroup_ContentBackground)",
     border: "1px solid var(--sapList_BorderColor)",
+    padding: "1rem",
 };
+
+const TABLE_ACTIONS_STYLE: CSSProperties = {
+    display: "flex",
+    gap: "0.5rem",
+    justifyContent: "flex-start",
+    flexWrap: "wrap",
+};
+
+const TABLE_HINT_STYLE: CSSProperties = {
+    fontSize: "0.875rem",
+    color: "var(--sapContent_LabelColor)",
+};
+
+const TABLE_STYLE: CSSProperties = {
+    width: "100%",
+    minHeight: "11rem",
+};
+
+const TAB_SEQUENCE: readonly OrganizationTabKey[] = [
+    "general",
+    "subProcesses",
+    "risks",
+    "controls",
+    "rules",
+    "policies",
+    "goals",
+    "kpi",
+    "kri",
+    "riskAppetite",
+    "owner",
+    "documents",
+    "performance",
+];
 
 function toFormState(
     value: OrganizationNode | null,
@@ -178,6 +222,7 @@ function toFormState(
         status: value?.status ?? "active",
         validFrom: value?.validFrom ?? "",
         validTo: value?.validTo ?? "",
+        location: value?.location ?? "",
     };
 }
 
@@ -197,27 +242,44 @@ function readSelectedDataValue(event: unknown, fallback: string): string {
     return selectedOption?.getAttribute?.("data-value") ?? fallback;
 }
 
+function readSelectedTabKey(event: unknown): OrganizationTabKey | null {
+    const selectedTab = (event as {
+        detail?: {
+            tab?: HTMLElement;
+        };
+    }).detail?.tab;
+
+    return (selectedTab?.getAttribute("data-tab-key") as OrganizationTabKey | null) ?? null;
+}
+
+function normalizeOptionalText(value: string): string | undefined {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : undefined;
+}
+
 function HeaderItem({
-                        label,
-                        value,
-                    }: {
+    label,
+    value,
+}: {
     label: string;
     value?: string | null;
 }) {
     return (
         <div style={HEADER_ROW_STYLE}>
             <strong>{label}:</strong>
-            <span>{value?.trim() ? value : "-"}</span>
+            <span style={{ minWidth: 0, wordBreak: "break-word" }}>
+                {value?.trim() ? value : "-"}
+            </span>
         </div>
     );
 }
 
 function FormField({
-                       label,
-                       required = false,
-                       fullWidth = false,
-                       children,
-                   }: {
+    label,
+    required = false,
+    fullWidth = false,
+    children,
+}: {
     label: string;
     required?: boolean;
     fullWidth?: boolean;
@@ -238,12 +300,16 @@ function resolveTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<OrganizationType, string> = {
-        company: t("organization.type.company", { defaultValue: "شرکت" }),
         holding: t("organization.type.holding", { defaultValue: "هلدینگ" }),
+        company: t("organization.type.company", { defaultValue: "شرکت" }),
+        deputy: t("organization.type.deputy", { defaultValue: "معاونت" }),
+        office: t("organization.type.office", { defaultValue: "اداره" }),
+        unit: t("organization.type.unit", { defaultValue: "واحد" }),
+        committee: t("organization.type.committee", { defaultValue: "کمیته" }),
+        group: t("organization.type.group", { defaultValue: "گروه" }),
         department: t("organization.type.department", { defaultValue: "دپارتمان" }),
         management: t("organization.type.management", { defaultValue: "مدیریت" }),
         branch: t("organization.type.branch", { defaultValue: "شعبه" }),
-        unit: t("organization.type.unit", { defaultValue: "واحد" }),
         other: t("organization.type.other", { defaultValue: "سایر" }),
     };
 
@@ -261,117 +327,137 @@ function resolveStatusLabel(
     return t("common.active", { defaultValue: "فعال" });
 }
 
+function resolveTabLabel(
+    tab: OrganizationTabKey,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    const labels: Record<OrganizationTabKey, string> = {
+        general: t("organization.tabs.general", { defaultValue: "اطلاعات کلی" }),
+        subProcesses: t("organization.tabs.subProcesses", { defaultValue: "زیر فرآیند" }),
+        risks: t("organization.tabs.risks", { defaultValue: "ریسک ها" }),
+        controls: t("organization.tabs.controls", { defaultValue: "کنترل ها" }),
+        rules: t("organization.tabs.rules", { defaultValue: "قوانین" }),
+        policies: t("organization.tabs.policies", { defaultValue: "سیاست ها" }),
+        goals: t("organization.tabs.goals", { defaultValue: "اهداف" }),
+        kpi: "KPI",
+        kri: "KRI",
+        riskAppetite: t("organization.tabs.riskAppetite", { defaultValue: "اشتهای ریسک" }),
+        owner: t("organization.tabs.owner", { defaultValue: "مالک" }),
+        documents: t("organization.tabs.documents", { defaultValue: "مستندات" }),
+        performance: t("organization.tabs.performance", { defaultValue: "ارزیابی عملکرد" }),
+    };
+
+    return labels[tab];
+}
+
 function OrganizationTabs({
-                              activeTab,
-                              onChange,
-                          }: {
+    activeTab,
+    onChange,
+}: {
     activeTab: OrganizationTabKey;
     onChange: (tab: OrganizationTabKey) => void;
 }) {
     const { t } = useTranslation();
 
-    const handleTabSelect = (event: any) => {
-        const selectedTab = event.detail?.tab as HTMLElement | undefined;
-        const key = selectedTab?.getAttribute("data-tab-key") as OrganizationTabKey | null;
-
-        if (key) {
-            onChange(key);
-        }
-    };
-
     return (
         <TabContainer
             className={ORGANIZATION_TAB_CONTAINER_CLASS}
-            onTabSelect={handleTabSelect}
+            onTabSelect={(event) => {
+                const nextTab = readSelectedTabKey(event);
+                if (nextTab) {
+                    onChange(nextTab);
+                }
+            }}
             style={TAB_CONTAINER_STYLE}
         >
-            <Tab
-                text={t("organization.tabs.general", { defaultValue: "اطلاعات کلی" })}
-                selected={activeTab === "general"}
-                data-tab-key="general"
-            />
+            {TAB_SEQUENCE.flatMap((tab, index) => {
+                const tabItem = (
+                    <Tab
+                        key={tab}
+                        text={resolveTabLabel(tab, t)}
+                        selected={activeTab === tab}
+                        data-tab-key={tab}
+                    />
+                );
 
-            <TabSeparator />
+                if (index === 0) {
+                    return [tabItem];
+                }
 
-            <Tab
-                text={t("organization.tabs.process", { defaultValue: "فرآیند" })}
-                selected={activeTab === "process"}
-                data-tab-key="process"
-            />
+                if (index === 1) {
+                    return [<TabSeparator key="general-separator" />, tabItem];
+                }
 
-            <Tab
-                text={t("organization.tabs.risk", { defaultValue: "ریسک" })}
-                selected={activeTab === "risk"}
-                data-tab-key="risk"
-            />
-
-            <Tab
-                text={t("organization.tabs.control", { defaultValue: "کنترل" })}
-                selected={activeTab === "control"}
-                data-tab-key="control"
-            />
-
-            <Tab
-                text={t("organization.tabs.rules", { defaultValue: "قوانین" })}
-                selected={activeTab === "rules"}
-                data-tab-key="rules"
-            />
-
-            <Tab
-                text={t("organization.tabs.policies", { defaultValue: "سیاست‌ها" })}
-                selected={activeTab === "policies"}
-                data-tab-key="policies"
-            />
-
-            <Tab
-                text={t("organization.tabs.goals", { defaultValue: "اهداف" })}
-                selected={activeTab === "goals"}
-                data-tab-key="goals"
-            />
-
-            <Tab text="KPI" selected={activeTab === "kpi"} data-tab-key="kpi" />
-
-            <Tab text="KRI" selected={activeTab === "kri"} data-tab-key="kri" />
-
-            <Tab
-                text={t("organization.tabs.exceptions", { defaultValue: "استثناها" })}
-                selected={activeTab === "exceptions"}
-                data-tab-key="exceptions"
-            />
-
-            <Tab
-                text={t("organization.tabs.owner", { defaultValue: "مالک" })}
-                selected={activeTab === "owner"}
-                data-tab-key="owner"
-            />
-
-            <Tab
-                text={t("organization.tabs.documents", { defaultValue: "مستندات" })}
-                selected={activeTab === "documents"}
-                data-tab-key="documents"
-            />
+                return [tabItem];
+            })}
         </TabContainer>
     );
 }
 
+function TablePlaceholder({
+    title,
+    columns,
+    actions,
+    hint,
+    rowCount = 3,
+}: {
+    title: string;
+    columns: string[];
+    actions?: ReactNode;
+    hint?: string;
+    rowCount?: number;
+}) {
+    return (
+        <div style={TABLE_PANEL_STYLE}>
+            <Title level="H5">{title}</Title>
+
+            {hint ? <div style={TABLE_HINT_STYLE}>{hint}</div> : null}
+
+            {actions ? <div style={TABLE_ACTIONS_STYLE}>{actions}</div> : null}
+
+            <Table
+                style={TABLE_STYLE}
+                noDataText=""
+                headerRow={
+                    <TableHeaderRow>
+                        {columns.map((column) => (
+                            <TableHeaderCell key={column}>{column}</TableHeaderCell>
+                        ))}
+                    </TableHeaderRow>
+                }
+            >
+                {Array.from({ length: rowCount }, (_, rowIndex) => rowIndex).map((rowIndex) => (
+                    <TableRow key={`placeholder-row-${rowIndex}`}>
+                        {columns.map((column, columnIndex) => (
+                            <TableCell key={`${column}-${rowIndex}-${columnIndex}`}>
+                                {"\u00A0"}
+                            </TableCell>
+                        ))}
+                    </TableRow>
+                ))}
+            </Table>
+        </div>
+    );
+}
+
 export default function OrganizationObjectPage({
-                                                   mode,
-                                                   allItems,
-                                                   value,
-                                                   busy = false,
-                                                   error,
-                                                   onSubmit,
-                                                   onCancel,
-                                                   onEdit,
-                                               }: OrganizationObjectPageProps) {
+    mode,
+    allItems,
+    value,
+    busy = false,
+    error,
+    onSubmit,
+    onCancel,
+    onEdit,
+}: OrganizationObjectPageProps) {
     const { t } = useTranslation();
 
     const readOnly = mode === "view";
     const defaultParentId = value?.parentId ?? null;
 
     /*
-     * این state با key در OrganizationsFclShellPage ریست می‌شود.
-     * برای جلوگیری از خطای react-hooks/set-state-in-effect اینجا useEffect sync نگذار.
+     * This state resets by object key in OrganizationsFclShellPage.
+     * Avoid useEffect synchronization for hook-safety.
      */
     const [form, setForm] = useState<OrganizationFormState>(() =>
         toFormState(value, defaultParentId),
@@ -386,7 +472,7 @@ export default function OrganizationObjectPage({
         : null;
 
     const selectedParentTitle = selectedParent
-        ? `${selectedParent.code} — ${selectedParent.name}`
+        ? `${selectedParent.code} - ${selectedParent.name}`
         : t("common.none", { defaultValue: "ندارد" });
 
     const headerName = form.name || value?.name || "";
@@ -395,6 +481,7 @@ export default function OrganizationObjectPage({
         : t("common.none", { defaultValue: "ندارد" });
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerType = resolveTypeLabel(form.type, t);
+    const headerLocation = form.location || value?.location || "";
 
     const handleChange = <K extends keyof OrganizationFormState>(
         key: K,
@@ -425,6 +512,15 @@ export default function OrganizationObjectPage({
             return false;
         }
 
+        if (form.location.length > 255) {
+            setValidationError(
+                t("organization.validation.locationMaxLength", {
+                    defaultValue: "موقعیت نمی‌تواند بیشتر از 255 کاراکتر باشد",
+                }),
+            );
+            return false;
+        }
+
         if (form.validFrom && form.validTo && form.validFrom > form.validTo) {
             setValidationError(
                 t("organization.validation.validRange", {
@@ -447,14 +543,469 @@ export default function OrganizationObjectPage({
             code: form.code.trim(),
             name: form.name.trim(),
             type: form.type,
-            description: form.description.trim() || undefined,
+            description: normalizeOptionalText(form.description),
             parentId: form.parentId,
             status: form.status,
-            validFrom: form.validFrom || undefined,
-            validTo: form.validTo || undefined,
+            validFrom: normalizeOptionalText(form.validFrom),
+            validTo: normalizeOptionalText(form.validTo),
+            location: normalizeOptionalText(form.location),
         };
 
         await onSubmit(payload);
+    };
+
+    const renderFooterActions = () => {
+        if (mode === "view") {
+            return (
+                <>
+                    <Button
+                        design="Emphasized"
+                        disabled={busy || !onEdit}
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={onEdit}
+                    >
+                        {t("common.edit", { defaultValue: "ویرایش" })}
+                    </Button>
+
+                    <Button
+                        design="Transparent"
+                        disabled={busy}
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={onCancel}
+                    >
+                        {t("common.close", { defaultValue: "بستن" })}
+                    </Button>
+                </>
+            );
+        }
+
+        return (
+            <>
+                <Button
+                    design="Emphasized"
+                    disabled={busy}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={handleSubmit}
+                >
+                    {t("common.save", { defaultValue: "ثبت" })}
+                </Button>
+
+                <Button
+                    design="Transparent"
+                    disabled={busy}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={onCancel}
+                >
+                    {t("common.cancel", { defaultValue: "انصراف" })}
+                </Button>
+            </>
+        );
+    };
+
+    const tabActionButtons = (labels: string[]) => (
+        <>
+            {labels.map((label, index) => (
+                <Button
+                    key={label}
+                    design={index === 0 ? "Emphasized" : "Transparent"}
+                    disabled={readOnly || busy}
+                >
+                    {label}
+                </Button>
+            ))}
+        </>
+    );
+
+    const renderGeneralTab = () => (
+        <div style={FORM_GRID_STYLE}>
+            <FormField
+                label={t("organization.fields.code", { defaultValue: "کد" })}
+                required
+            >
+                <Input
+                    value={form.code}
+                    disabled={readOnly || busy}
+                    onInput={(event) => handleChange("code", readInputValue(event))}
+                />
+            </FormField>
+
+            <FormField
+                label={t("organization.fields.name", { defaultValue: "نام" })}
+                required
+            >
+                <Input
+                    value={form.name}
+                    disabled={readOnly || busy}
+                    onInput={(event) => handleChange("name", readInputValue(event))}
+                />
+            </FormField>
+
+            <FormField
+                label={t("organization.fields.type", { defaultValue: "نوع سازمان" })}
+            >
+                <Select
+                    disabled={readOnly || busy}
+                    onChange={(event) => {
+                        const nextValue = readSelectedDataValue(event, form.type);
+                        handleChange("type", nextValue as OrganizationType);
+                    }}
+                >
+                    <Option data-value="holding" selected={form.type === "holding"}>
+                        {t("organization.type.holding", { defaultValue: "هلدینگ" })}
+                    </Option>
+                    <Option data-value="company" selected={form.type === "company"}>
+                        {t("organization.type.company", { defaultValue: "شرکت" })}
+                    </Option>
+                    <Option data-value="deputy" selected={form.type === "deputy"}>
+                        {t("organization.type.deputy", { defaultValue: "معاونت" })}
+                    </Option>
+                    <Option data-value="office" selected={form.type === "office"}>
+                        {t("organization.type.office", { defaultValue: "اداره" })}
+                    </Option>
+                    <Option data-value="unit" selected={form.type === "unit"}>
+                        {t("organization.type.unit", { defaultValue: "واحد" })}
+                    </Option>
+                    <Option data-value="committee" selected={form.type === "committee"}>
+                        {t("organization.type.committee", { defaultValue: "کمیته" })}
+                    </Option>
+                    <Option data-value="group" selected={form.type === "group"}>
+                        {t("organization.type.group", { defaultValue: "گروه" })}
+                    </Option>
+                    <Option data-value="department" selected={form.type === "department"}>
+                        {t("organization.type.department", { defaultValue: "دپارتمان" })}
+                    </Option>
+                    <Option data-value="management" selected={form.type === "management"}>
+                        {t("organization.type.management", { defaultValue: "مدیریت" })}
+                    </Option>
+                    <Option data-value="branch" selected={form.type === "branch"}>
+                        {t("organization.type.branch", { defaultValue: "شعبه" })}
+                    </Option>
+                    <Option data-value="other" selected={form.type === "other"}>
+                        {t("organization.type.other", { defaultValue: "سایر" })}
+                    </Option>
+                </Select>
+            </FormField>
+
+            <FormField
+                label={t("organization.fields.status", { defaultValue: "وضعیت" })}
+            >
+                <Select
+                    disabled={readOnly || busy}
+                    onChange={(event) => {
+                        const nextValue = readSelectedDataValue(event, form.status);
+                        handleChange("status", nextValue as OrganizationStatus);
+                    }}
+                >
+                    <Option data-value="active" selected={form.status === "active"}>
+                        {t("common.active", { defaultValue: "فعال" })}
+                    </Option>
+                    <Option data-value="inactive" selected={form.status === "inactive"}>
+                        {t("common.inactive", { defaultValue: "غیرفعال" })}
+                    </Option>
+                </Select>
+            </FormField>
+
+            <FormField
+                label={t("organization.fields.parent", { defaultValue: "والد سازمان" })}
+                fullWidth
+            >
+                <div style={PARENT_PICKER_STYLE}>
+                    <Input value={selectedParentTitle} readonly />
+
+                    <Button
+                        design="Emphasized"
+                        disabled={readOnly || busy}
+                        onClick={() => setParentDialogOpen(true)}
+                    >
+                        {t("common.select", { defaultValue: "انتخاب" })}
+                    </Button>
+
+                    <Button
+                        design="Transparent"
+                        disabled={readOnly || busy || !form.parentId}
+                        onClick={() => handleChange("parentId", null)}
+                    >
+                        {t("common.clear", { defaultValue: "پاک کردن" })}
+                    </Button>
+                </div>
+            </FormField>
+
+            <FormField
+                label={t("organization.fields.validFrom", { defaultValue: "اعتبار از" })}
+            >
+                <DatePicker
+                    value={form.validFrom}
+                    primaryCalendarType="Persian"
+                    placeholder={t("organization.fields.datePlaceholder", {
+                        defaultValue: "سال/ماه/روز",
+                    })}
+                    disabled={readOnly || busy}
+                    onChange={(event) => handleChange("validFrom", readInputValue(event))}
+                />
+            </FormField>
+
+            <FormField
+                label={t("organization.fields.validTo", { defaultValue: "اعتبار تا" })}
+            >
+                <DatePicker
+                    value={form.validTo}
+                    primaryCalendarType="Persian"
+                    placeholder={t("organization.fields.datePlaceholder", {
+                        defaultValue: "سال/ماه/روز",
+                    })}
+                    disabled={readOnly || busy}
+                    onChange={(event) => handleChange("validTo", readInputValue(event))}
+                />
+            </FormField>
+
+            <FormField
+                label={t("organization.fields.location", { defaultValue: "موقعیت جغرافیایی" })}
+            >
+                <Input
+                    value={form.location}
+                    disabled={readOnly || busy}
+                    onInput={(event) => handleChange("location", readInputValue(event))}
+                />
+            </FormField>
+
+            <FormField
+                label={t("organization.fields.description", { defaultValue: "شرح" })}
+                fullWidth
+            >
+                <TextArea
+                    rows={5}
+                    value={form.description}
+                    disabled={readOnly || busy}
+                    onInput={(event) => handleChange("description", readInputValue(event))}
+                />
+            </FormField>
+        </div>
+    );
+
+    const renderTabContent = () => {
+        if (activeTab === "general") {
+            return renderGeneralTab();
+        }
+
+        if (activeTab === "subProcesses") {
+            return (
+                <TablePlaceholder
+                    title={t("organization.tabs.subProcesses.title", {
+                        defaultValue: "اضافه نمودن زیر فرآیند به سازمان",
+                    })}
+                    hint={t("organization.tabs.subProcesses.hint", {
+                        defaultValue: "1) انتخاب زیر فرآیند  2) انتخاب ریسک  3) انتخاب کنترل  4) تایید",
+                    })}
+                    actions={tabActionButtons([
+                        t("organization.actions.add", { defaultValue: "اضافه نمودن" }),
+                        t("organization.actions.delete", { defaultValue: "حذف" }),
+                        t("organization.actions.open", { defaultValue: "باز نمودن" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.subProcess", { defaultValue: "زیر فرایند" }),
+                        t("organization.fields.description", { defaultValue: "شرح" }),
+                        t("organization.fields.sharing", { defaultValue: "اشتراک گذاری" }),
+                        t("organization.fields.addedAt", { defaultValue: "تاریخ اضافه نمودن" }),
+                    ]}
+                />
+            );
+        }
+
+        if (activeTab === "risks") {
+            return (
+                <TablePlaceholder
+                    title={t("organization.tabs.risks", { defaultValue: "ریسک ها" })}
+                    actions={tabActionButtons([
+                        t("organization.actions.add", { defaultValue: "اضافه" }),
+                        t("organization.actions.delete", { defaultValue: "حذف" }),
+                        t("organization.actions.open", { defaultValue: "باز نمودن" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.subProcessName", { defaultValue: "نام زیر فرآیند" }),
+                        t("organization.fields.riskName", { defaultValue: "نام ریسک" }),
+                        t("organization.fields.riskDescription", { defaultValue: "شرح ریسک" }),
+                        t("organization.fields.riskType", { defaultValue: "نوع ریسک" }),
+                    ]}
+                />
+            );
+        }
+
+        if (activeTab === "controls") {
+            return (
+                <TablePlaceholder
+                    title={t("organization.tabs.controls", { defaultValue: "کنترل ها" })}
+                    actions={tabActionButtons([
+                        t("organization.actions.add", { defaultValue: "اضافه" }),
+                        t("organization.actions.delete", { defaultValue: "حذف" }),
+                        t("organization.actions.open", { defaultValue: "باز نمودن" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.subProcessName", { defaultValue: "نام زیر فرآیند" }),
+                        t("organization.fields.controlName", { defaultValue: "نام کنترل" }),
+                        t("organization.fields.controlDescription", { defaultValue: "شرح کنترل" }),
+                    ]}
+                />
+            );
+        }
+
+        if (activeTab === "rules") {
+            return (
+                <TablePlaceholder
+                    title={t("organization.tabs.rules", { defaultValue: "قوانین" })}
+                    actions={tabActionButtons([
+                        t("organization.actions.selectRules", { defaultValue: "انتخاب قوانین" }),
+                        t("organization.actions.delete", { defaultValue: "حذف" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.name", { defaultValue: "نام" }),
+                        t("organization.fields.description", { defaultValue: "شرح" }),
+                        t("organization.fields.validFrom", { defaultValue: "اعتبار از" }),
+                        t("organization.fields.validTo", { defaultValue: "اعتبار تا" }),
+                    ]}
+                />
+            );
+        }
+
+        if (activeTab === "policies") {
+            return (
+                <TablePlaceholder
+                    title={t("organization.tabs.policies", { defaultValue: "سیاست ها" })}
+                    actions={tabActionButtons([
+                        t("organization.actions.add", { defaultValue: "اضافه" }),
+                        t("organization.actions.delete", { defaultValue: "حذف" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.policy", { defaultValue: "سیاست" }),
+                        t("organization.fields.policyType", { defaultValue: "نوع سیاست" }),
+                        t("organization.fields.policyOwner", { defaultValue: "مالک سیاست" }),
+                        t("organization.fields.publishMethod", { defaultValue: "روش انتشار" }),
+                        t("organization.fields.assignmentMethod", { defaultValue: "روش تخصیص" }),
+                    ]}
+                />
+            );
+        }
+
+        if (activeTab === "goals") {
+            return (
+                <TablePlaceholder
+                    title={t("organization.tabs.goals", { defaultValue: "اهداف" })}
+                    actions={tabActionButtons([
+                        t("organization.actions.addGoal", { defaultValue: "اضافه نمودن یک هدف" }),
+                        t("organization.actions.delete", { defaultValue: "حذف" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.group", { defaultValue: "گروه" }),
+                        t("organization.fields.validFrom", { defaultValue: "اعتبار از" }),
+                        t("organization.fields.validTo", { defaultValue: "اعتبار تا" }),
+                    ]}
+                />
+            );
+        }
+
+        if (activeTab === "kpi") {
+            return (
+                <TablePlaceholder
+                    title="KPI"
+                    actions={tabActionButtons([
+                        t("organization.actions.addRow", { defaultValue: "اضافه ردیف" }),
+                        t("organization.actions.deleteRow", { defaultValue: "حذف ردیف" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.kpiName", { defaultValue: "نام شاخص" }),
+                        t("organization.fields.validFrom", { defaultValue: "اعتبار از" }),
+                        t("organization.fields.validTo", { defaultValue: "اعتبار تا" }),
+                    ]}
+                />
+            );
+        }
+
+        if (activeTab === "kri") {
+            return (
+                <TablePlaceholder
+                    title="KRI"
+                    actions={tabActionButtons([
+                        t("organization.actions.addRow", { defaultValue: "اضافه ردیف" }),
+                        t("organization.actions.deleteRow", { defaultValue: "حذف ردیف" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.kriName", { defaultValue: "نام شاخص" }),
+                        t("organization.fields.validFrom", { defaultValue: "اعتبار از" }),
+                        t("organization.fields.validTo", { defaultValue: "اعتبار تا" }),
+                    ]}
+                />
+            );
+        }
+
+        if (activeTab === "riskAppetite") {
+            return (
+                <TablePlaceholder
+                    title={t("organization.tabs.riskAppetite", { defaultValue: "اشتهای ریسک" })}
+                    actions={tabActionButtons([
+                        t("organization.actions.add", { defaultValue: "اضافه" }),
+                        t("organization.actions.delete", { defaultValue: "حذف" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.subProcessRisk", { defaultValue: "زیر فرآیندها/ ریسک" }),
+                        t("organization.fields.goalType", { defaultValue: "نوع هدف" }),
+                        t("organization.fields.description", { defaultValue: "شرح" }),
+                        t("organization.fields.riskTemplate", { defaultValue: "الگوی ریسک" }),
+                    ]}
+                />
+            );
+        }
+
+        if (activeTab === "owner") {
+            return (
+                <TablePlaceholder
+                    title={t("organization.tabs.owner", { defaultValue: "مالک" })}
+                    actions={tabActionButtons([
+                        t("organization.actions.addRow", { defaultValue: "اضافه ردیف" }),
+                        t("organization.actions.deleteRow", { defaultValue: "حذف ردیف" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.positionName", { defaultValue: "نام پست سازمانی" }),
+                        t("organization.fields.userId", { defaultValue: "شناسه کاربر" }),
+                        t("organization.fields.updatedAt", { defaultValue: "تاریخ بروز رسانی" }),
+                        t("organization.fields.nextUpdate", { defaultValue: "تاریخ بروز رسانی بعدی" }),
+                    ]}
+                />
+            );
+        }
+
+        if (activeTab === "documents") {
+            return (
+                <TablePlaceholder
+                    title={t("organization.tabs.documents", { defaultValue: "مستندات" })}
+                    actions={tabActionButtons([
+                        t("organization.actions.addRow", { defaultValue: "اضافه ردیف" }),
+                        t("organization.actions.deleteRow", { defaultValue: "حذف ردیف" }),
+                    ])}
+                    columns={[
+                        t("organization.fields.code", { defaultValue: "کد" }),
+                        t("organization.fields.documentName", { defaultValue: "نام مستند" }),
+                        t("organization.fields.documentType", { defaultValue: "نوع مستند" }),
+                        t("organization.fields.createYear", { defaultValue: "سال ایجاد" }),
+                        t("organization.fields.createdBy", { defaultValue: "ایجاد کننده" }),
+                        t("organization.fields.fileType", { defaultValue: "نوع فایل" }),
+                    ]}
+                />
+            );
+        }
+
+        return (
+            <TablePlaceholder
+                title={t("organization.tabs.performance", { defaultValue: "ارزیابی عملکرد" })}
+                actions={tabActionButtons([
+                    t("organization.actions.addRow", { defaultValue: "اضافه ردیف" }),
+                    t("organization.actions.deleteRow", { defaultValue: "حذف ردیف" }),
+                ])}
+                columns={[
+                    t("organization.fields.kpiName", { defaultValue: "نام شاخص" }),
+                    t("organization.fields.validFrom", { defaultValue: "اعتبار از" }),
+                    t("organization.fields.validTo", { defaultValue: "اعتبار تا" }),
+                ]}
+            />
+        );
     };
 
     return (
@@ -471,40 +1022,33 @@ export default function OrganizationObjectPage({
                         label={t("organization.fields.name", { defaultValue: "نام سازمان" })}
                         value={headerName}
                     />
-
                     <HeaderItem
                         label={t("organization.fields.parent", { defaultValue: "والد سازمان" })}
                         value={headerParent}
                     />
-
                     <HeaderItem
                         label={t("organization.fields.identifier", { defaultValue: "شناسه" })}
                         value={value?.id}
                     />
-
                     <HeaderItem
-                        label={t("organization.fields.validFrom", { defaultValue: "تاریخ ایجاد" })}
-                        value={form.validFrom}
+                        label={t("organization.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
+                        value={value?.createdAt}
                     />
-
                     <HeaderItem
                         label={t("organization.fields.status", { defaultValue: "وضعیت" })}
                         value={headerStatus}
                     />
-
                     <HeaderItem
                         label={t("organization.fields.location", { defaultValue: "موقعیت" })}
-                        value=""
+                        value={headerLocation}
                     />
-
                     <HeaderItem
                         label={t("organization.fields.type", { defaultValue: "نوع سازمان" })}
                         value={headerType}
                     />
-
                     <HeaderItem
                         label={t("organization.fields.documents", { defaultValue: "مستندات" })}
-                        value="0"
+                        value="03"
                     />
                 </div>
             </div>
@@ -523,216 +1067,9 @@ export default function OrganizationObjectPage({
                 </MessageStrip>
             ) : null}
 
-            <div style={BODY_STYLE}>
-                {activeTab === "general" ? (
-                    <>
-                        <div style={FORM_GRID_STYLE}>
-                            <FormField
-                                label={t("organization.fields.code", { defaultValue: "کد" })}
-                                required
-                            >
-                                <Input
-                                    value={form.code}
-                                    disabled={readOnly || busy}
-                                    onInput={(event) =>
-                                        handleChange("code", readInputValue(event))
-                                    }
-                                />
-                            </FormField>
+            <div style={BODY_STYLE}>{renderTabContent()}</div>
 
-                            <FormField
-                                label={t("organization.fields.name", { defaultValue: "نام" })}
-                                required
-                            >
-                                <Input
-                                    value={form.name}
-                                    disabled={readOnly || busy}
-                                    onInput={(event) =>
-                                        handleChange("name", readInputValue(event))
-                                    }
-                                />
-                            </FormField>
-
-                            <FormField
-                                label={t("organization.fields.type", { defaultValue: "نوع" })}
-                            >
-                                <Select
-                                    disabled={readOnly || busy}
-                                    onChange={(event) => {
-                                        const nextValue = readSelectedDataValue(event, form.type);
-                                        handleChange("type", nextValue as OrganizationType);
-                                    }}
-                                >
-                                    <Option data-value="company" selected={form.type === "company"}>
-                                        {t("organization.type.company", { defaultValue: "شرکت" })}
-                                    </Option>
-
-                                    <Option data-value="holding" selected={form.type === "holding"}>
-                                        {t("organization.type.holding", { defaultValue: "هلدینگ" })}
-                                    </Option>
-
-                                    <Option
-                                        data-value="department"
-                                        selected={form.type === "department"}
-                                    >
-                                        {t("organization.type.department", {
-                                            defaultValue: "دپارتمان",
-                                        })}
-                                    </Option>
-
-                                    <Option
-                                        data-value="management"
-                                        selected={form.type === "management"}
-                                    >
-                                        {t("organization.type.management", {
-                                            defaultValue: "مدیریت",
-                                        })}
-                                    </Option>
-
-                                    <Option data-value="branch" selected={form.type === "branch"}>
-                                        {t("organization.type.branch", { defaultValue: "شعبه" })}
-                                    </Option>
-
-                                    <Option data-value="unit" selected={form.type === "unit"}>
-                                        {t("organization.type.unit", { defaultValue: "واحد" })}
-                                    </Option>
-
-                                    <Option data-value="other" selected={form.type === "other"}>
-                                        {t("organization.type.other", { defaultValue: "سایر" })}
-                                    </Option>
-                                </Select>
-                            </FormField>
-
-                            <FormField
-                                label={t("organization.fields.status", { defaultValue: "وضعیت" })}
-                            >
-                                <Select
-                                    disabled={readOnly || busy}
-                                    onChange={(event) => {
-                                        const nextValue = readSelectedDataValue(event, form.status);
-                                        handleChange("status", nextValue as OrganizationStatus);
-                                    }}
-                                >
-                                    <Option data-value="active" selected={form.status === "active"}>
-                                        {t("common.active", { defaultValue: "فعال" })}
-                                    </Option>
-
-                                    <Option
-                                        data-value="inactive"
-                                        selected={form.status === "inactive"}
-                                    >
-                                        {t("common.inactive", { defaultValue: "غیرفعال" })}
-                                    </Option>
-                                </Select>
-                            </FormField>
-
-                            <FormField
-                                label={t("organization.fields.parent", { defaultValue: "والد" })}
-                                fullWidth
-                            >
-                                <div style={PARENT_PICKER_STYLE}>
-                                    <Input value={selectedParentTitle} readonly />
-
-                                    <Button
-                                        design="Emphasized"
-                                        disabled={readOnly || busy}
-                                        onClick={() => setParentDialogOpen(true)}
-                                    >
-                                        {t("common.select", { defaultValue: "انتخاب" })}
-                                    </Button>
-
-                                    <Button
-                                        design="Transparent"
-                                        disabled={readOnly || busy || !form.parentId}
-                                        onClick={() => handleChange("parentId", null)}
-                                    >
-                                        {t("common.clear", { defaultValue: "پاک کردن" })}
-                                    </Button>
-                                </div>
-                            </FormField>
-
-                            <FormField
-                                label={t("organization.fields.validFrom", {
-                                    defaultValue: "از تاریخ",
-                                })}
-                            >
-                                <DatePicker
-                                    value={form.validFrom}
-                                    disabled={readOnly || busy}
-                                    onChange={(event) =>
-                                        handleChange("validFrom", readInputValue(event))
-                                    }
-                                />
-                            </FormField>
-
-                            <FormField
-                                label={t("organization.fields.validTo", {
-                                    defaultValue: "تا تاریخ",
-                                })}
-                            >
-                                <DatePicker
-                                    value={form.validTo}
-                                    disabled={readOnly || busy}
-                                    onChange={(event) =>
-                                        handleChange("validTo", readInputValue(event))
-                                    }
-                                />
-                            </FormField>
-
-                            <FormField
-                                label={t("organization.fields.description", {
-                                    defaultValue: "توضیحات",
-                                })}
-                                fullWidth
-                            >
-                                <TextArea
-                                    rows={5}
-                                    value={form.description}
-                                    disabled={readOnly || busy}
-                                    onInput={(event) =>
-                                        handleChange("description", readInputValue(event))
-                                    }
-                                />
-                            </FormField>
-                        </div>
-
-                        <div style={FOOTER_STYLE}>
-                            {mode === "view" ? (
-                                <Button
-                                    design="Emphasized"
-                                    disabled={busy || !onEdit}
-                                    style={ACTION_BUTTON_STYLE}
-                                    onClick={onEdit}
-                                >
-                                    {t("common.edit", { defaultValue: "ویرایش" })}
-                                </Button>
-                            ) : (
-                                <Button
-                                    design="Emphasized"
-                                    disabled={busy}
-                                    style={ACTION_BUTTON_STYLE}
-                                    onClick={handleSubmit}
-                                >
-                                    {t("common.save", { defaultValue: "ثبت" })}
-                                </Button>
-                            )}
-
-                            <Button
-                                design="Transparent"
-                                disabled={busy}
-                                style={ACTION_BUTTON_STYLE}
-                                onClick={onCancel}
-                            >
-                                {mode === "view"
-                                    ? t("common.close", { defaultValue: "بستن" })
-                                    : t("common.cancel", { defaultValue: "انصراف" })}
-                            </Button>
-                        </div>
-                    </>
-                ) : (
-                    <div style={EMPTY_TAB_STYLE} />
-                )}
-            </div>
+            <div style={FOOTER_STYLE}>{renderFooterActions()}</div>
 
             <ParentValueHelpDialog
                 open={parentDialogOpen}

@@ -3,12 +3,16 @@ import type { AuditFields } from "@/shared/domain/audit.model";
 export type OrganizationStatus = "active" | "inactive";
 
 export type OrganizationType =
-    | "company"
     | "holding"
+    | "company"
+    | "deputy"
+    | "office"
+    | "unit"
+    | "committee"
+    | "group"
     | "department"
     | "management"
     | "branch"
-    | "unit"
     | "other";
 
 export interface OrganizationNode extends AuditFields {
@@ -20,6 +24,7 @@ export interface OrganizationNode extends AuditFields {
     status: OrganizationStatus;
     validFrom?: string;
     validTo?: string;
+    location?: string;
     description?: string;
 }
 

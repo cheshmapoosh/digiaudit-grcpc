@@ -12,6 +12,7 @@ export type UiSettings = {
 };
 
 const STORAGE_KEY = "grcpc.ui.settings.v1";
+const UI5_FA_LOCALE = "fa-IR-u-ca-persian-nu-arabext";
 
 export const defaultSettings: UiSettings = {
     theme: "sap_horizon_dark",
@@ -42,7 +43,7 @@ export function saveSettings(s: UiSettings) {
 export function applySettings(s: UiSettings) {
     // UI5 runtime configs
     setTheme(s.theme);
-    setLanguage(s.lang);
+    void setLanguage(s.lang === "fa" ? UI5_FA_LOCALE : "en");
     applyUiFont()
 
     // Document level direction + lang

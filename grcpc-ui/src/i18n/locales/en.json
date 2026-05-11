@@ -102,5 +102,14 @@
 
   "common.back": "Back",
   "common.refresh": "Refresh",
-  "common.new": "New"
+  "common.new": "New",
+
+  "app": {
+    "companyName": "Digiaudit",
+    "productName": "GRCPC",
+    "version": "Version {{version}}",
+    "footer": {
+      "copyright": "© {{year}} {{company}} — {{product}} v{{version}}"
+    }
+  }
 }

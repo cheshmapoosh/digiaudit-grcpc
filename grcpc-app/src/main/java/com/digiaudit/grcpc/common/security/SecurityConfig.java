@@ -154,7 +154,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/setup/initialize").permitAll()
                         .requestMatchers(HttpMethod.POST, LOGIN_URL).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/favicon.ico", "/robots.txt", "/manifest.json").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/assets/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/*.css", "/*.js", "/*.map", "/*.png", "/*.jpg", "/*.jpeg", "/*.svg", "/*.webp", "/*.gif").permitAll()
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll()
                 )
                 .logout(logout -> logout
                         .logoutUrl(LOGOUT_URL)

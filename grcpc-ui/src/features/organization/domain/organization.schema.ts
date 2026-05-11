@@ -4,12 +4,16 @@ import { t } from "@/shared/utils/i18n.util";
 export const organizationStatusSchema = z.enum(["active", "inactive"]);
 
 export const organizationTypeSchema = z.enum([
-    "company",
     "holding",
+    "company",
+    "deputy",
+    "office",
+    "unit",
+    "committee",
+    "group",
     "department",
     "management",
     "branch",
-    "unit",
     "other",
 ]);
 
@@ -47,6 +51,18 @@ const baseOrganizationPayloadSchema = z.object({
     validFrom: z.string().trim().optional(),
 
     validTo: z.string().trim().optional(),
+
+    location: z
+        .string()
+        .trim()
+        .max(
+            255,
+            t(
+                "organization.validation.locationMaxLength",
+                "موقعیت نمی‌تواند بیشتر از 255 کاراکتر باشد",
+            ),
+        )
+        .optional(),
 
     description: z
         .string()

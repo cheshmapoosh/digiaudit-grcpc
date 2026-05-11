@@ -1,13 +1,16 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import MainLayout from "../../layout/MainLayout";
+import PublicLayout from "../../layout/components/PublicLayout";
+
 import SetupGuard from "../guards/SetupGuard";
 import AuthGuard from "../guards/AuthGuard";
-import LoginPageGuard from "../guards/LoginPageGuard";
+
 import NotFoundPage from "@/pages/NotFoundPage";
-import LoginPage from "@/pages/LoginPage";
+
 import {
     setupRoutes,
+    loginRoutes,
     dashboardRoutes,
     masterDataRoutes,
     organizationRoutes,
@@ -23,16 +26,10 @@ import {
 export default function AppRouter() {
     return (
         <Routes>
-            {setupRoutes}
-
-            <Route
-                path="/login"
-                element={
-                    <LoginPageGuard>
-                        <LoginPage />
-                    </LoginPageGuard>
-                }
-            />
+            <Route element={<PublicLayout />}>
+                {setupRoutes}
+                {loginRoutes}
+            </Route>
 
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
@@ -55,6 +52,7 @@ export default function AppRouter() {
                 {objectiveRoutes}
                 {accountGroupRoutes}
                 {usermanagementRoutes}
+
                 <Route path="*" element={<NotFoundPage />} />
             </Route>
         </Routes>

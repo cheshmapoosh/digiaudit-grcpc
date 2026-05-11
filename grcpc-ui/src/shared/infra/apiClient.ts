@@ -1,11 +1,12 @@
 // src/shared/api/apiClient.ts
 
-import axios, {
+import axios, { AxiosHeaders } from "axios";
+import type {
     AxiosError,
     AxiosInstance,
     AxiosRequestConfig,
-    InternalAxiosRequestConfig,
     AxiosResponse,
+    InternalAxiosRequestConfig,
 } from "axios";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
@@ -104,10 +105,8 @@ apiClient.interceptors.response.use(
 
                 setAccessToken(newToken);
 
-                originalRequest.headers = {
-                    ...originalRequest.headers,
-                    Authorization: `Bearer ${newToken}`,
-                };
+                originalRequest.headers = AxiosHeaders.from(originalRequest.headers);
+                originalRequest.headers.set("Authorization", `Bearer ${newToken}`);
                 return apiClient(originalRequest as AxiosRequestConfig);
             } catch {
                 clearAuth();

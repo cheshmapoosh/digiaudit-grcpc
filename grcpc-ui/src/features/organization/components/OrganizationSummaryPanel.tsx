@@ -14,30 +14,38 @@ export interface OrganizationSummaryPanelProps {
 
 function mapTypeLabel(type: OrganizationNode["type"], t: ReturnType<typeof useTranslation>["t"]): string {
     switch (type) {
-        case "company":
-            return t("organization.type.company", { defaultValue: "شرکت" });
         case "holding":
             return t("organization.type.holding", { defaultValue: "هلدینگ" });
+        case "company":
+            return t("organization.type.company", { defaultValue: "شرکت" });
+        case "deputy":
+            return t("organization.type.deputy", { defaultValue: "معاونت" });
+        case "office":
+            return t("organization.type.office", { defaultValue: "اداره" });
+        case "unit":
+            return t("organization.type.unit", { defaultValue: "واحد" });
+        case "committee":
+            return t("organization.type.committee", { defaultValue: "کمیته" });
+        case "group":
+            return t("organization.type.group", { defaultValue: "گروه" });
         case "department":
             return t("organization.type.department", { defaultValue: "دپارتمان" });
         case "management":
             return t("organization.type.management", { defaultValue: "مدیریت" });
         case "branch":
             return t("organization.type.branch", { defaultValue: "شعبه" });
-        case "unit":
-            return t("organization.type.unit", { defaultValue: "واحد" });
         default:
             return t("organization.type.other", { defaultValue: "سایر" });
     }
 }
 
 export default function OrganizationSummaryPanel({
-                                                     value,
-                                                     busy = false,
-                                                     error,
-                                                     onEdit,
-                                                     onCancel,
-                                                 }: OrganizationSummaryPanelProps) {
+    value,
+    busy = false,
+    error,
+    onEdit,
+    onCancel,
+}: OrganizationSummaryPanelProps) {
     const { t } = useTranslation();
 
     const actionButtonStyle = useMemo(
@@ -79,6 +87,10 @@ export default function OrganizationSummaryPanel({
             {
                 label: t("organization.fields.validTo", { defaultValue: "تا تاریخ" }),
                 value: value.validTo || "-",
+            },
+            {
+                label: t("organization.fields.location", { defaultValue: "موقعیت" }),
+                value: value.location || "-",
             },
             {
                 label: t("organization.fields.description", { defaultValue: "توضیحات" }),

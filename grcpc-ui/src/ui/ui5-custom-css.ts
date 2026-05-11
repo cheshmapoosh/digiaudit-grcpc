@@ -9,6 +9,13 @@ const FONT_CSS = `
   }
 `;
 
+const DATE_FONT_CSS = `
+  :host, :host * {
+    font-family: ${FONT} !important;
+    font-feature-settings: "ss01" !important;
+  }
+`;
+
 // Apply font to UI5 components (Shadow DOM safe)
 const UI5_TAGS = [
     // Layout / Shell
@@ -38,6 +45,14 @@ const UI5_TAGS = [
     "ui5-checkbox",
     "ui5-radio-button",
     "ui5-switch",
+    "ui5-date-picker",
+    "ui5-daterange-picker",
+    "ui5-datetime-picker",
+    "ui5-time-picker",
+    "ui5-calendar",
+    "ui5-daypicker",
+    "ui5-monthpicker",
+    "ui5-yearpicker",
 
     // Lists / Tables
     "ui5-list",
@@ -61,6 +76,19 @@ const UI5_TAGS = [
 
 for (const tag of UI5_TAGS) {
     addCustomCSS(tag, FONT_CSS);
+}
+
+for (const tag of [
+    "ui5-date-picker",
+    "ui5-daterange-picker",
+    "ui5-datetime-picker",
+    "ui5-time-picker",
+    "ui5-calendar",
+    "ui5-daypicker",
+    "ui5-monthpicker",
+    "ui5-yearpicker",
+]) {
+    addCustomCSS(tag, DATE_FONT_CSS);
 }
 
 // UI5 ListItem focus ring tweaks (optional)

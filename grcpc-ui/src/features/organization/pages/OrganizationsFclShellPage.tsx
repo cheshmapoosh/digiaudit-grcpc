@@ -64,6 +64,10 @@ function mapError(error: unknown, fallback: string): string {
                 return "آیتم موردنظر یافت نشد";
             case "HAS_CHILDREN":
                 return "امکان حذف واحدی که زیرمجموعه دارد وجود ندارد";
+            case "PARENT_NOT_FOUND":
+                return "والد انتخاب‌شده یافت نشد";
+            case "INVALID_HIERARCHY":
+                return "ساختار سلسله‌مراتبی سازمان معتبر نیست";
             default:
                 return error.message;
         }
@@ -352,7 +356,12 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(true);
                 setPageError(null);
 
-                const created = await createNode(queryParentId, {
+                const selectedParentId =
+                    typeof payload.parentId === "string" && payload.parentId.trim()
+                        ? payload.parentId
+                        : null;
+
+                const created = await createNode(selectedParentId, {
                     code: String(payload.code ?? "").trim(),
                     name: String(payload.name ?? "").trim(),
                     type: payload.type ?? "unit",
@@ -360,7 +369,7 @@ export default function OrganizationsFclShellPage() {
                         typeof payload.description === "string"
                             ? payload.description.trim() || undefined
                             : undefined,
-                    parentId: queryParentId,
+                    parentId: selectedParentId,
                     status: payload.status === "inactive" ? "inactive" : "active",
                     validFrom:
                         typeof payload.validFrom === "string"
@@ -369,6 +378,10 @@ export default function OrganizationsFclShellPage() {
                     validTo:
                         typeof payload.validTo === "string"
                             ? payload.validTo || undefined
+                            : undefined,
+                    location:
+                        typeof payload.location === "string"
+                            ? payload.location.trim() || undefined
                             : undefined,
                 });
 
@@ -394,7 +407,7 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [createNode, navigate, queryParentId, t],
+        [createNode, navigate, t],
     );
 
     const handleSubmitUpdate = useCallback(

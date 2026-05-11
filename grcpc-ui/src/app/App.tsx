@@ -9,7 +9,7 @@ export default function App() {
                 v7_relativeSplatPath: true,
             }}
         >
-            <div className="grc-horizon-light">
+            <div>
                 <AppRouter/>
             </div>
         </BrowserRouter>

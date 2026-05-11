@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import {useMemo, useState} from "react";
+import {Outlet, useLocation, useNavigate} from "react-router-dom";
+import {useTranslation} from "react-i18next";
 
 import {
     Button,
@@ -17,7 +17,8 @@ import NotificationMenu, {
     type NotificationItem,
 } from "./components/NotificationMenu";
 import UserProfileMenu from "./components/UserProfileMenu";
-import { useAuthState } from "@/features/auth";
+import {useAuthState} from "@/features/auth";
+import {AppFooter} from "@/shared/components/AppFooter.tsx";
 
 type SelectionChangeDetail = {
     item?: HTMLElement;
@@ -67,7 +68,7 @@ function isPathInPrefixes(path: string, prefixes: string[]): boolean {
 }
 
 export default function MainLayout() {
-    const { t } = useTranslation();
+    const {t} = useTranslation();
 
     const [collapsed, setCollapsed] = useState(false);
 
@@ -100,7 +101,7 @@ export default function MainLayout() {
     async function handleLogout() {
         try {
             await logout();
-            navigate("/login", { replace: true });
+            navigate("/login", {replace: true});
         } catch {
             // بعدا toast یا MessageStrip اضافه می‌کنیم
         }
@@ -122,7 +123,7 @@ export default function MainLayout() {
     const fullName =
         me?.firstName && me?.lastName
             ? `${me.firstName} ${me.lastName}`
-            : me?.username ?? t("user.unknown", { defaultValue: "کاربر" });
+            : me?.username ?? t("user.unknown", {defaultValue: "کاربر"});
 
     const authoritySet = useMemo(
         () => new Set(me?.authorities ?? []),
@@ -167,7 +168,7 @@ export default function MainLayout() {
         },
         {
             key: "masterData",
-            text: t("nav.masterData", { defaultValue: "اطلاعات پایه" }),
+            text: t("nav.masterData", {defaultValue: "اطلاعات پایه"}),
             icon: "database",
             route: "/master-data",
             selected: isPathInPrefixes(selectedPath, MASTER_DATA_PATH_PREFIXES),
@@ -175,7 +176,12 @@ export default function MainLayout() {
     ];
 
     return (
-        <div className="appRoot" data-ui5-compact-size>
+        <div className="appRoot" data-ui5-compact-size
+             style={{
+                 minHeight: "100vh",
+                 paddingBottom: "2rem",
+             }}
+        >
             <ShellBar primaryTitle={t("app.title")} secondaryTitle={t("app.subtitle")}>
                 <Button
                     slot="startButton"
@@ -184,7 +190,7 @@ export default function MainLayout() {
                     onClick={() => setCollapsed((value) => !value)}
                 />
 
-                <UiSettingsMenu />
+                <UiSettingsMenu/>
 
                 <NotificationMenu
                     items={notifications}
@@ -209,7 +215,7 @@ export default function MainLayout() {
                     }}
                 >
                     <SideNavigation collapsed={collapsed} onSelectionChange={onSelectionChange}>
-                        <div slot="header" style={{ padding: 12, fontSize: 12, opacity: 0.8 }}>
+                        <div slot="header" style={{padding: 12, fontSize: 12, opacity: 0.8}}>
                             {collapsed ? t("app.title") : t("app.platformTitle")}
                         </div>
 
@@ -232,7 +238,7 @@ export default function MainLayout() {
                             >
                                 {canViewUsers ? (
                                     <SideNavigationSubItem
-                                        text={t("nav.users", { defaultValue: "کاربران" })}
+                                        text={t("nav.users", {defaultValue: "کاربران"})}
                                         icon="group"
                                         selected={selectedPath.startsWith("/access-control/users")}
                                         data-route="/access-control/users"
@@ -261,9 +267,10 @@ export default function MainLayout() {
                 </aside>
 
                 <main className="mainContent">
-                    <Outlet />
+                    <Outlet/>
                 </main>
             </div>
+            <AppFooter />
         </div>
     );
 }
