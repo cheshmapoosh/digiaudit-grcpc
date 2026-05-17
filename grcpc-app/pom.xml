@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.digiaudit.grc</groupId>
     <artifactId>grcpc-app</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>grc-app</name>
     <description>Digi audit grc application</description>
     <url/>

@@ -17,6 +17,7 @@ import type {
     RegulationNodeType,
     RegulationStatus,
 } from "../domain/regulation.model";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface RegulationSummaryPanelProps {
     value?: RegulationNode | null;
@@ -255,11 +256,11 @@ function GeneralTab({ value }: { value: RegulationNode }) {
             />
             <DetailRow
                 label={t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" })}
-                value={value.effectiveDate}
+                value={formatPersianDate(value.effectiveDate)}
             />
             <DetailRow
                 label={t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
-                value={value.validTo}
+                value={formatPersianDate(value.validTo)}
             />
             <DetailRow
                 label={t("regulation.fields.status", { defaultValue: "وضعیت" })}

@@ -23,6 +23,11 @@ import type {
     ObjectiveStatus,
     ObjectiveType,
 } from "../domain/objective.model";
+import {
+    formatPersianDate,
+    toEnglishDigits,
+    toPersianDigits,
+} from "@/shared/utils/date.utils";
 
 export type ObjectiveObjectMode = "create" | "edit" | "view";
 
@@ -189,8 +194,8 @@ function toFormState(
         objectiveType: value?.objectiveType ?? "operational",
         objectiveClass: value?.objectiveClass ?? "",
         organizationUnitName: value?.organizationUnitName ?? "",
-        effectiveFrom: value?.effectiveFrom ?? "",
-        validUntil: value?.validUntil ?? "",
+        effectiveFrom: toEnglishDigits(value?.effectiveFrom ?? ""),
+        validUntil: toEnglishDigits(value?.validUntil ?? ""),
     };
 }
 
@@ -588,10 +593,12 @@ export default function ObjectiveObjectPage({
                     label={t("objective.fields.effectiveFrom", { defaultValue: "تاریخ ایجاد" })}
                 >
                     <Input
-                        value={form.effectiveFrom}
+                        value={toPersianDigits(form.effectiveFrom)}
                         disabled={readOnly || busy}
                         placeholder="1404/01/01"
-                        onInput={(event) => handleChange("effectiveFrom", readInputValue(event))}
+                        onInput={(event) =>
+                            handleChange("effectiveFrom", toEnglishDigits(readInputValue(event)))
+                        }
                     />
                 </FormField>
 
@@ -599,10 +606,12 @@ export default function ObjectiveObjectPage({
                     label={t("objective.fields.validUntil", { defaultValue: "تاریخ اعتبار" })}
                 >
                     <Input
-                        value={form.validUntil}
+                        value={toPersianDigits(form.validUntil)}
                         disabled={readOnly || busy}
                         placeholder="1404/12/29"
-                        onInput={(event) => handleChange("validUntil", readInputValue(event))}
+                        onInput={(event) =>
+                            handleChange("validUntil", toEnglishDigits(readInputValue(event)))
+                        }
                     />
                 </FormField>
 
@@ -745,11 +754,11 @@ export default function ObjectiveObjectPage({
                     />
                     <HeaderItem
                         label={t("objective.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                        value={value?.createdAt ?? form.effectiveFrom}
+                        value={formatPersianDate(value?.createdAt ?? form.effectiveFrom)}
                     />
                     <HeaderItem
                         label={t("objective.fields.validUntil", { defaultValue: "تاریخ اعتبار" })}
-                        value={form.validUntil}
+                        value={formatPersianDate(form.validUntil)}
                     />
                     <HeaderItem
                         label={t("objective.fields.objectiveType", {

@@ -26,14 +26,15 @@ import ProcessSummaryPanel from "../components/ProcessSummaryPanel";
 import ProcessesListReport from "./ProcessesListReport";
 import ProcessObjectPage from "./ProcessObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 
 const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
-const DIALOG_NORMAL_WIDTH = "90vw";
-const DIALOG_LARGE_WIDTH = "60vw";
+const DIALOG_NORMAL_WIDTH = "96vw";
+const DIALOG_LARGE_WIDTH = "92vw";
 
 function useProcessRouteMode(): RouteMode {
     const { processId } = useParams();
@@ -621,6 +622,8 @@ export default function ProcessesFclShellPage() {
         )
         : null;
 
+    const dialogTitle = resolveDialogTitle(routeMode, t);
+
     return (
         <>
             {createElement(
@@ -641,11 +644,12 @@ export default function ProcessesFclShellPage() {
 
             <Dialog
                 open={showModal}
-                headerText={resolveDialogTitle(routeMode, t)}
+                accessibleName={dialogTitle}
                 className="processObjectDialog"
                 style={dialogStyle}
                 onClose={handleObjectDialogClose}
             >
+                <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <ProcessObjectPage

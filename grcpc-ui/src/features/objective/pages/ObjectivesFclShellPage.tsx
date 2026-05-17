@@ -31,6 +31,7 @@ import ObjectiveSummaryPanel from "../components/ObjectiveSummaryPanel";
 import ObjectivesListReport from "./ObjectivesListReport";
 import ObjectiveObjectPage from "./ObjectiveObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -556,9 +557,9 @@ export default function ObjectivesFclShellPage() {
 
     const inlineSummaryColumn = showInlineSummaryPane
         ? createElement(
-              "div",
-              {
-                  slot: "midColumn",
+            "div",
+            {
+                slot: "midColumn",
                   dir: appDir,
                   style: slotContainerStyle,
               },
@@ -576,6 +577,8 @@ export default function ObjectivesFclShellPage() {
               </div>,
           )
         : null;
+
+    const dialogTitle = resolveDialogTitle(routeMode, t);
 
     return (
         <>
@@ -597,11 +600,12 @@ export default function ObjectivesFclShellPage() {
 
             <Dialog
                 open={showModal}
-                headerText={resolveDialogTitle(routeMode, t)}
+                accessibleName={dialogTitle}
                 className="objectiveObjectDialog"
                 style={dialogStyle}
                 onClose={handleObjectDialogClose}
             >
+                <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <ObjectiveObjectPage

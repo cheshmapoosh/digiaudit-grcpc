@@ -20,18 +20,39 @@ export interface ProcessTreeProps {
 }
 
 type TreeEventWithItem = {
+    target?: EventTarget | null;
     detail?: {
         item?: HTMLElement & {
             dataset?: {
                 id?: string;
+                processNodeId?: string;
             };
+            getAttribute?: (name: string) => string | null;
         };
     };
     preventDefault?: () => void;
 };
 
 function readTreeItemId(event: TreeEventWithItem): string | null {
-    return event.detail?.item?.dataset?.id ?? null;
+    const item = event.detail?.item;
+
+    const itemId =
+        item?.dataset?.processNodeId ??
+        item?.dataset?.id ??
+        item?.getAttribute?.("data-process-node-id") ??
+        item?.getAttribute?.("data-id");
+
+    if (itemId) {
+        return itemId;
+    }
+
+    if (event.target instanceof HTMLElement) {
+        return event.target
+            .closest<HTMLElement>("[data-process-node-id]")
+            ?.dataset.processNodeId ?? null;
+    }
+
+    return null;
 }
 
 function collectExpandableIds(nodes: ProcessTreeNode[]): Set<string> {
@@ -91,10 +112,12 @@ function ProcessTreeItem({
     return (
         <TreeItemCustom
             data-id={node.id}
+            data-process-node-id={node.id}
             expanded={expandedIds.has(node.id)}
             selected={isSelected}
             content={
                 <div
+                    data-process-node-id={node.id}
                     title={displayName}
                     style={{
                         display: "grid",
@@ -240,15 +263,21 @@ export default function ProcessTree({
             }
 
             const isExpanded = expandedIds.has(id);
+            setManualExpandedIds((prevExpanded) => {
+                if (isExpanded) {
+                    return removeFromSet(prevExpanded, id);
+                }
 
-            if (isExpanded) {
-                setManualExpandedIds((prev) => removeFromSet(prev, id));
-                setManualCollapsedIds((prev) => addToSet(prev, id));
-                return;
-            }
+                return addToSet(prevExpanded, id);
+            });
 
-            setManualCollapsedIds((prev) => removeFromSet(prev, id));
-            setManualExpandedIds((prev) => addToSet(prev, id));
+            setManualCollapsedIds((prevCollapsed) => {
+                if (isExpanded) {
+                    return addToSet(prevCollapsed, id);
+                }
+
+                return removeFromSet(prevCollapsed, id);
+            });
         },
         [expandedIds, normalizedSearchText],
     );

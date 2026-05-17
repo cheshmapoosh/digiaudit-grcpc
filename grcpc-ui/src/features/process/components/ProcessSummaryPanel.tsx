@@ -20,6 +20,7 @@ import type {
     ProcessNodeType,
     ProcessStatus,
 } from "../domain/process.model";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface ProcessSummaryPanelProps {
     value?: ProcessNode | null;
@@ -76,9 +77,10 @@ const TAB_BODY_STYLE: CSSProperties = {
 
 const FIELD_GRID_STYLE: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "9rem minmax(0, 1fr)",
-    gap: "0.75rem",
+    gridTemplateColumns: "minmax(6rem, max-content) minmax(0, 1fr)",
+    gap: "0.5rem",
     alignItems: "start",
+    minWidth: 0,
 };
 
 const TABLE_STYLE: CSSProperties = {
@@ -86,6 +88,7 @@ const TABLE_STYLE: CSSProperties = {
     borderInlineStart: "1px solid var(--sapList_BorderColor)",
     borderBlockStart: "1px solid var(--sapList_BorderColor)",
     background: "var(--sapList_Background)",
+    minWidth: "28rem",
 };
 
 const TABLE_HEADER_CELL_STYLE: CSSProperties = {
@@ -200,12 +203,12 @@ function resolveImportanceLabel(
 function DetailRow({ label, value }: { label: string; value?: ReactNode }) {
     return (
         <div style={FIELD_GRID_STYLE}>
-            <Label showColon>{label}</Label>
+            <Label showColon wrappingType="None">{label}</Label>
             <span
                 style={{
                     minWidth: 0,
                     whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
                     lineHeight: 1.7,
                 }}
             >
@@ -233,20 +236,23 @@ function SimpleTable({
     rows?: number;
 }) {
     return (
-        <div
-            role="table"
-            style={{
-                ...TABLE_STYLE,
-                gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
-            }}
-        >
-            {columns.map((column) => (
-                <div key={column} role="columnheader" style={TABLE_HEADER_CELL_STYLE}>
-                    {column}
-                </div>
-            ))}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+            <div
+                role="table"
+                style={{
+                    ...TABLE_STYLE,
+                    minWidth: `${Math.max(columns.length * 8, 28)}rem`,
+                    gridTemplateColumns: `repeat(${columns.length}, minmax(8rem, 1fr))`,
+                }}
+            >
+                {columns.map((column) => (
+                    <div key={column} role="columnheader" style={TABLE_HEADER_CELL_STYLE}>
+                        {column}
+                    </div>
+                ))}
 
-            <EmptyRows columns={columns.length} rows={rows} />
+                <EmptyRows columns={columns.length} rows={rows} />
+            </div>
         </div>
     );
 }
@@ -347,12 +353,16 @@ function GeneralTab({ value }: { value: ProcessNode }) {
         return (
             <div style={{ display: "grid", gap: "0.75rem" }}>
                 <DetailRow
+                    label={t("process.fields.code", { defaultValue: "کد" })}
+                    value={value.code}
+                />
+                <DetailRow
                     label={t("process.fields.description", { defaultValue: "شرح" })}
                     value={value.description}
                 />
                 <DetailRow
                     label={t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                    value={value.createdAt}
+                    value={formatPersianDate(value.createdAt)}
                 />
                 <DetailRow
                     label={t("process.fields.controlAutomation", {
@@ -405,12 +415,16 @@ function GeneralTab({ value }: { value: ProcessNode }) {
     return (
         <div style={{ display: "grid", gap: "0.75rem" }}>
             <DetailRow
+                label={t("process.fields.code", { defaultValue: "کد" })}
+                value={value.code}
+            />
+            <DetailRow
                 label={t("process.fields.description", { defaultValue: "شرح" })}
                 value={value.description}
             />
             <DetailRow
                 label={t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                value={value.createdAt}
+                value={formatPersianDate(value.createdAt)}
             />
             <DetailRow
                 label={t("process.fields.processCategory", { defaultValue: "نوع" })}
@@ -501,6 +515,11 @@ export default function ProcessSummaryPanel({
                                             }: ProcessSummaryPanelProps) {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<ProcessDetailTabKey>("general");
+    const summaryTitle = value?.title
+        ? `${resolveNodeTypeLabel(value.nodeType, t)} ${value.title}`
+        : t("process.object.summaryTitle", {
+              defaultValue: "جزئیات فرآیند",
+          });
 
     const tabs = useMemo(
         () => (value ? getTabs(value.nodeType, t) : []),
@@ -518,21 +537,18 @@ export default function ProcessSummaryPanel({
                 gridTemplateRows: "auto 1fr auto",
                 minHeight: "100%",
                 gap: "1rem",
+                minWidth: 0,
             }}
         >
             <Bar
                 startContent={
                     <Title level="H4">
-                        {value?.title
-                            ? `${value.code} - ${value.title}`
-                            : t("process.object.summaryTitle", {
-                                defaultValue: "جزئیات فرآیند",
-                            })}
+                        {summaryTitle}
                     </Title>
                 }
             />
 
-            <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
+            <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
                 {error ? (
                     <MessageStrip design="Negative" hideCloseButton>
                         {error}
@@ -541,38 +557,13 @@ export default function ProcessSummaryPanel({
 
                 {value ? (
                     <div>
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                                gap: "0.75rem",
-                                padding: "0.75rem 1rem",
-                                border: "1px solid var(--sapGroup_ContentBorderColor)",
-                                borderBottom: "none",
-                                background: "var(--sapGroup_ContentBackground)",
-                            }}
-                        >
-                            <DetailRow
-                                label={t("process.fields.name", { defaultValue: "نام" })}
-                                value={value.title}
-                            />
-                            <DetailRow
-                                label={t("process.fields.code", { defaultValue: "کد" })}
-                                value={value.code}
-                            />
-                            <DetailRow
-                                label={t("process.fields.type", { defaultValue: "نوع" })}
-                                value={resolveNodeTypeLabel(value.nodeType, t)}
-                            />
-                        </div>
-
                         <ProcessTabs
                             tabs={tabs}
                             activeTab={effectiveActiveTab}
                             onChange={setActiveTab}
                         />
 
-                        <div style={TAB_BODY_STYLE}>
+                        <div style={{ ...TAB_BODY_STYLE, minWidth: 0, overflowX: "auto" }}>
                             <TabBody value={value} activeTab={effectiveActiveTab} />
                         </div>
                     </div>

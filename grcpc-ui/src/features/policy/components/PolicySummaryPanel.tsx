@@ -20,6 +20,7 @@ import type {
     PolicyNodeType,
     PolicyStatus,
 } from "../domain/policy.model";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface PolicySummaryPanelProps {
     value?: PolicyNode | null;
@@ -359,11 +360,11 @@ function GeneralTab({ value }: { value: PolicyNode }) {
                 />
                 <DetailRow
                     label={t("policy.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                    value={value.createdAt}
+                    value={formatPersianDate(value.createdAt)}
                 />
                 <DetailRow
                     label={t("policy.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
-                    value={value.validTo}
+                    value={formatPersianDate(value.validTo)}
                 />
                 <DetailRow
                     label={t("policy.fields.policyCategory", { defaultValue: "دسته‌بندی" })}
@@ -415,15 +416,15 @@ function GeneralTab({ value }: { value: PolicyNode }) {
             />
             <DetailRow
                 label={t("policy.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                value={value.createdAt}
+                value={formatPersianDate(value.createdAt)}
             />
             <DetailRow
                 label={t("policy.fields.validFrom", { defaultValue: "تاریخ شروع اعتبار" })}
-                value={value.validFrom}
+                value={formatPersianDate(value.validFrom)}
             />
             <DetailRow
                 label={t("policy.fields.validTo", { defaultValue: "تاریخ پایان اعتبار" })}
-                value={value.validTo}
+                value={formatPersianDate(value.validTo)}
             />
             <DetailRow
                 label={t("policy.fields.communicationMethod", { defaultValue: "روش اطلاع‌رسانی" })}
@@ -435,7 +436,7 @@ function GeneralTab({ value }: { value: PolicyNode }) {
             />
             <DetailRow
                 label={t("policy.fields.nextReviewDate", { defaultValue: "تاریخ بازنگری بعدی" })}
-                value={value.nextReviewDate}
+                value={formatPersianDate(value.nextReviewDate)}
             />
             <DetailRow
                 label={t("policy.fields.objective", { defaultValue: "هدف" })}

@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Bar, Button, Card, CardHeader, Label, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
 import type { UserDetail } from "@/features/usermanagement";
 import UserAssignmentsList from "../components/UserAssignmentsList";
+import { formatPersianDateTime } from "@/shared/utils/date.utils";
 
 export interface UserObjectPageProps {
     value: UserDetail | null;
@@ -11,12 +12,7 @@ export interface UserObjectPageProps {
 }
 
 function formatDate(value?: string | null): string {
-    if (!value) {
-        return "-";
-    }
-
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+    return formatPersianDateTime(value);
 }
 
 export default function UserObjectPage({ value, busy = false, error, onCancel }: UserObjectPageProps) {

@@ -24,6 +24,7 @@ import type {
     AccountGroupNodeUpdate,
     AccountGroupStatus,
 } from "../domain/accountGroup.model";
+import { toEnglishDigits, toPersianDigits } from "@/shared/utils/date.utils";
 
 export type AccountGroupObjectMode = "create" | "edit" | "view";
 
@@ -196,7 +197,7 @@ function toFormState(
         description: value?.description ?? "",
         importance: value?.importance ?? "medium",
         reasonableAssurance: value?.reasonableAssurance ?? true,
-        effectiveDate: value?.effectiveDate ?? "",
+        effectiveDate: toEnglishDigits(value?.effectiveDate ?? ""),
         documentsCount: value?.documentsCount?.toString() ?? "0",
         assertions: value?.assertions ?? DEFAULT_ASSERTIONS,
     };
@@ -668,9 +669,11 @@ export default function AccountGroupObjectPage({
                 label={t("accountGroup.fields.effectiveDate", { defaultValue: "تاریخ اعتبار" })}
             >
                 <Input
-                    value={form.effectiveDate}
+                    value={toPersianDigits(form.effectiveDate)}
                     disabled={readOnly || busy}
-                    onInput={(event) => handleChange("effectiveDate", readInputValue(event))}
+                    onInput={(event) =>
+                        handleChange("effectiveDate", toEnglishDigits(readInputValue(event)))
+                    }
                 />
             </FormField>
 

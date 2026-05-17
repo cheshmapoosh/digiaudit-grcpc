@@ -35,7 +35,14 @@ accountGroup.menu.title
 
 ## Data source
 
-By default the feature uses localStorage seed data. To switch to API repo:
+By default the feature uses localStorage seed data.
+Use one project-wide setting for all CRUD features:
+
+```env
+VITE_GRCPC_DATA_SOURCE=api
+```
+
+Optional override only for this feature:
 
 ```env
 VITE_GRCPC_ACCOUNT_GROUP_SOURCE=api

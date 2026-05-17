@@ -36,6 +36,11 @@ import type {
     OrganizationSubProcessView,
 } from "../domain/organization-process-assignment.model";
 import ParentValueHelpDialog from "../components/ParentValueHelpDialog";
+import {
+    formatPersianDate,
+    toEnglishDigits,
+    toPersianDigits,
+} from "@/shared/utils/date.utils";
 
 export type OrganizationObjectMode = "create" | "edit" | "view";
 
@@ -284,8 +289,8 @@ function toFormState(
         description: value?.description ?? "",
         parentId: value?.parentId ?? defaultParentId,
         status: value?.status ?? "active",
-        validFrom: value?.validFrom ?? "",
-        validTo: value?.validTo ?? "",
+        validFrom: toEnglishDigits(value?.validFrom ?? ""),
+        validTo: toEnglishDigits(value?.validTo ?? ""),
         location: value?.location ?? "",
     };
 }
@@ -427,7 +432,7 @@ function formatSubProcessOption(option: OrganizationSubProcessOption): string {
 }
 
 function formatOptionalValue(value?: string): string {
-    return value?.trim() ? value : "-";
+    return formatPersianDate(value);
 }
 
 function formatValidityRange(validFrom?: string, validTo?: string): string {
@@ -905,13 +910,15 @@ export default function OrganizationObjectPage({
                 label={t("organization.fields.validFrom", { defaultValue: "اعتبار از" })}
             >
                 <DatePicker
-                    value={form.validFrom}
+                    value={toPersianDigits(form.validFrom)}
                     primaryCalendarType="Persian"
                     placeholder={t("organization.fields.datePlaceholder", {
                         defaultValue: "سال/ماه/روز",
                     })}
                     disabled={readOnly || busy}
-                    onChange={(event) => handleChange("validFrom", readInputValue(event))}
+                    onChange={(event) =>
+                        handleChange("validFrom", toEnglishDigits(readInputValue(event)))
+                    }
                 />
             </FormField>
 
@@ -919,13 +926,15 @@ export default function OrganizationObjectPage({
                 label={t("organization.fields.validTo", { defaultValue: "اعتبار تا" })}
             >
                 <DatePicker
-                    value={form.validTo}
+                    value={toPersianDigits(form.validTo)}
                     primaryCalendarType="Persian"
                     placeholder={t("organization.fields.datePlaceholder", {
                         defaultValue: "سال/ماه/روز",
                     })}
                     disabled={readOnly || busy}
-                    onChange={(event) => handleChange("validTo", readInputValue(event))}
+                    onChange={(event) =>
+                        handleChange("validTo", toEnglishDigits(readInputValue(event)))
+                    }
                 />
             </FormField>
 
@@ -1377,7 +1386,7 @@ export default function OrganizationObjectPage({
                     />
                     <HeaderItem
                         label={t("organization.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                        value={value?.createdAt}
+                        value={formatPersianDate(value?.createdAt)}
                     />
                     <HeaderItem
                         label={t("organization.fields.status", { defaultValue: "وضعیت" })}

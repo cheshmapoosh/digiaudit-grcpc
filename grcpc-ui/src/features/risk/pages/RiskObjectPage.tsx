@@ -24,6 +24,11 @@ import type {
     RiskStatus,
     RiskTemplateType,
 } from "../domain/risk.model";
+import {
+    formatPersianDate,
+    toEnglishDigits,
+    toPersianDigits,
+} from "@/shared/utils/date.utils";
 
 export type RiskObjectMode = "create" | "edit" | "view";
 
@@ -196,8 +201,8 @@ function toFormState(
         status: value?.status ?? "active",
         sortOrder: value?.sortOrder?.toString() ?? "",
         description: value?.description ?? "",
-        validFrom: value?.validFrom ?? "",
-        validTo: value?.validTo ?? "",
+        validFrom: toEnglishDigits(value?.validFrom ?? ""),
+        validTo: toEnglishDigits(value?.validTo ?? ""),
         allowReference: value?.allowReference ?? true,
         analysisProfile: value?.analysisProfile ?? "",
         ownerName: value?.ownerName ?? "",
@@ -598,17 +603,21 @@ export default function RiskObjectPage({
 
                 <FormField label={t("risk.fields.validFrom", { defaultValue: "تاریخ ایجاد" })}>
                     <Input
-                        value={form.validFrom}
+                        value={toPersianDigits(form.validFrom)}
                         disabled={readOnly || busy}
-                        onInput={(event) => handleChange("validFrom", readInputValue(event))}
+                        onInput={(event) =>
+                            handleChange("validFrom", toEnglishDigits(readInputValue(event)))
+                        }
                     />
                 </FormField>
 
                 <FormField label={t("risk.fields.validTo", { defaultValue: "تاریخ اعتبار" })}>
                     <Input
-                        value={form.validTo}
+                        value={toPersianDigits(form.validTo)}
                         disabled={readOnly || busy}
-                        onInput={(event) => handleChange("validTo", readInputValue(event))}
+                        onInput={(event) =>
+                            handleChange("validTo", toEnglishDigits(readInputValue(event)))
+                        }
                     />
                 </FormField>
 
@@ -874,11 +883,11 @@ export default function RiskObjectPage({
                     />
                     <HeaderItem
                         label={t("risk.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                        value={value?.createdAt}
+                        value={formatPersianDate(value?.createdAt)}
                     />
                     <HeaderItem
                         label={t("risk.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
-                        value={form.validTo}
+                        value={formatPersianDate(form.validTo)}
                     />
                     <HeaderItem
                         label={t("risk.fields.nodeType", { defaultValue: "نوع آیتم" })}

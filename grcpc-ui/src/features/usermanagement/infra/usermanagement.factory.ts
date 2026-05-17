@@ -1,10 +1,10 @@
 import type { UserManagementRepo } from "./usermanagement.repo";
 import { UserManagementApiRepo } from "./usermanagement.api.repo";
 import { UserManagementStorageRepo } from "./usermanagement.storage.repo";
+import { resolveRepoSource } from "@/shared/infra/repoSource";
 
 function resolveSource(): "api" | "storage" {
-    const raw = String(import.meta.env.VITE_GRCPC_USERMANAGEMENT_SOURCE ?? "api").toLowerCase();
-    return raw === "storage" ? "storage" : "api";
+    return resolveRepoSource(import.meta.env.VITE_GRCPC_USERMANAGEMENT_SOURCE, "api");
 }
 
 export function createUserManagementRepo(): UserManagementRepo {

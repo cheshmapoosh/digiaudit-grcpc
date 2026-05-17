@@ -25,6 +25,7 @@ import type {
     ProcessNodeUpdate,
     ProcessStatus,
 } from "../domain/process.model";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
 
@@ -1045,7 +1046,7 @@ export default function ProcessObjectPage({
                     />
                     <HeaderItem
                         label={t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                        value={value?.createdAt}
+                        value={formatPersianDate(value?.createdAt)}
                     />
                     <HeaderItem
                         label={t("process.fields.processCategory", {

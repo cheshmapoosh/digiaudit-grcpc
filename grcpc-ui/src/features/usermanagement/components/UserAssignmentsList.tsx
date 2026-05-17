@@ -1,18 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { List, ListItemCustom, Text, Title } from "@ui5/webcomponents-react";
 import type { UserRoleAssignment } from "@/features/usermanagement";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface UserAssignmentsListProps {
     items: UserRoleAssignment[];
 }
 
 function formatDate(value?: string | null): string {
-    if (!value) {
-        return "-";
-    }
-
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+    return formatPersianDate(value);
 }
 
 export default function UserAssignmentsList({ items }: UserAssignmentsListProps) {

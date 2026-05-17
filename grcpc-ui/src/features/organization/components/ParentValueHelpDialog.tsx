@@ -7,6 +7,7 @@ import {
     List,
     ListItemStandard,
 } from "@ui5/webcomponents-react";
+import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
 import type { OrganizationNode } from "../domain/organization.model";
 import {
@@ -54,14 +55,17 @@ export default function ParentValueHelpDialog({
         return selectableItems.filter((item) => containsText(item.name, searchText));
     }, [searchText, selectableItems]);
 
+    const dialogTitle = t("organization.parent.dialog.title", {
+        defaultValue: "انتخاب والد",
+    });
+
     return (
         <Dialog
             open={open}
-            headerText={t("organization.parent.dialog.title", {
-                defaultValue: "انتخاب والد",
-            })}
+            accessibleName={dialogTitle}
             onClose={onClose}
         >
+            <ModalDialogHeader title={dialogTitle} onClose={onClose} />
             <div style={{ display: "grid", gap: "1rem", minWidth: "32rem", maxWidth: "90vw" }}>
                 <Input
                     value={searchText}

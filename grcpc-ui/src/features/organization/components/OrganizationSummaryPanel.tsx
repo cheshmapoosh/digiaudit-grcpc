@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Bar, Button, Label, MessageStrip, Title } from "@ui5/webcomponents-react";
 
 import type { OrganizationNode } from "../domain/organization.model";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface OrganizationSummaryPanelProps {
     value?: OrganizationNode | null;
@@ -47,6 +48,12 @@ export default function OrganizationSummaryPanel({
     onCancel,
 }: OrganizationSummaryPanelProps) {
     const { t } = useTranslation();
+    const summaryTitle = value?.name?.trim()
+        ? t("organization.object.summaryTitleWithName", {
+              defaultValue: "واحد سازمانی {{name}}",
+              name: value.name,
+          })
+        : t("organization.object.summaryTitle", { defaultValue: "واحد سازمانی" });
 
     const actionButtonStyle = useMemo(
         () => ({
@@ -82,11 +89,11 @@ export default function OrganizationSummaryPanel({
             },
             {
                 label: t("organization.fields.validFrom", { defaultValue: "از تاریخ" }),
-                value: value.validFrom || "-",
+                value: formatPersianDate(value.validFrom),
             },
             {
                 label: t("organization.fields.validTo", { defaultValue: "تا تاریخ" }),
-                value: value.validTo || "-",
+                value: formatPersianDate(value.validTo),
             },
             {
                 label: t("organization.fields.location", { defaultValue: "موقعیت" }),
@@ -111,7 +118,7 @@ export default function OrganizationSummaryPanel({
             <Bar
                 startContent={
                     <Title level="H4">
-                        {t("organization.object.summaryTitle", { defaultValue: "جزئیات واحد سازمانی" })}
+                        {summaryTitle}
                     </Title>
                 }
             />

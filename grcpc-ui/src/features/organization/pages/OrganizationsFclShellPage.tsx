@@ -40,6 +40,7 @@ import OrganizationSummaryPanel from "../components/OrganizationSummaryPanel";
 import OrganizationsListReport from "./OrganizationsListReport";
 import OrganizationObjectPage, { type OrganizationTabKey } from "./OrganizationObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -49,6 +50,7 @@ const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
 const DIALOG_NORMAL_WIDTH = "96vw";
 const DIALOG_LARGE_WIDTH = "92vw";
 const EMPTY_ASSIGNMENTS: OrganizationProcessAssignment[] = [];
+const MIN_PANEL_GAP = "1px";
 
 function useOrganizationRouteMode(): RouteMode {
     const { organizationId } = useParams();
@@ -819,6 +821,16 @@ export default function OrganizationsFclShellPage() {
         [appDir],
     );
 
+    const startSlotContainerStyle: CSSProperties = {
+        ...slotContainerStyle,
+        paddingInlineEnd: 0,
+    };
+
+    const midSlotContainerStyle: CSSProperties = {
+        ...slotContainerStyle,
+        paddingInlineStart: 0,
+    };
+
     const frameStyle: CSSProperties = {
         height: "100%",
         minHeight: 0,
@@ -828,6 +840,16 @@ export default function OrganizationsFclShellPage() {
         background: "var(--sapBackgroundColor)",
         boxSizing: "border-box",
         padding: "1rem",
+    };
+
+    const startFrameStyle: CSSProperties = {
+        ...frameStyle,
+        marginInlineEnd: MIN_PANEL_GAP,
+    };
+
+    const midFrameStyle: CSSProperties = {
+        ...frameStyle,
+        marginInlineStart: 0,
     };
 
     const dialogContentStyle = useMemo<CSSProperties>(
@@ -855,9 +877,9 @@ export default function OrganizationsFclShellPage() {
         {
             slot: "startColumn",
             dir: appDir,
-            style: slotContainerStyle,
+            style: startSlotContainerStyle,
         },
-        <div style={frameStyle}>
+        <div style={startFrameStyle}>
             <OrganizationsListReport
                 items={items}
                 selectedId={treeSelectedId}
@@ -880,9 +902,9 @@ export default function OrganizationsFclShellPage() {
             {
                 slot: "midColumn",
                 dir: appDir,
-                style: slotContainerStyle,
+                style: midSlotContainerStyle,
             },
-            <div style={frameStyle}>
+            <div style={midFrameStyle}>
                 <OrganizationSummaryPanel
                     value={selectedTreeItem}
                     busy={loading || submitting}
@@ -896,6 +918,8 @@ export default function OrganizationsFclShellPage() {
             </div>,
         )
         : null;
+
+    const dialogTitle = resolveDialogTitle(routeMode, t);
 
     return (
         <>
@@ -917,11 +941,12 @@ export default function OrganizationsFclShellPage() {
 
             <Dialog
                 open={showModal}
-                headerText={resolveDialogTitle(routeMode, t)}
+                accessibleName={dialogTitle}
                 className="organizationObjectDialog"
                 style={dialogStyle}
                 onClose={handleObjectDialogClose}
             >
+                <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
                 <div style={dialogContentStyle}>
                     {objectValue ? (
                         <OrganizationObjectPage

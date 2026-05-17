@@ -1,5 +1,6 @@
 import { Button, Dialog, Text } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
+import { ModalDialogHeader } from "./ModalDialogHeader";
 
 export interface DeleteConfirmDialogProps {
     open: boolean;
@@ -27,7 +28,7 @@ export function DeleteConfirmDialog({
     return (
         <Dialog
             open={open}
-            headerText={title}
+            accessibleName={title}
             onClose={onClose}
             footer={
                 <>
@@ -40,6 +41,7 @@ export function DeleteConfirmDialog({
                 </>
             }
         >
+            <ModalDialogHeader title={title} onClose={onClose} />
             <Text>{message}</Text>
         </Dialog>
     );

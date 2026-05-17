@@ -18,6 +18,7 @@ import type {
     RiskStatus,
     RiskTemplateType,
 } from "../domain/risk.model";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface RiskSummaryPanelProps {
     value?: RiskNode | null;
@@ -343,15 +344,15 @@ function GeneralTab({ value }: { value: RiskNode }) {
             />
             <DetailRow
                 label={t("risk.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                value={value.createdAt}
+                value={formatPersianDate(value.createdAt)}
             />
             <DetailRow
                 label={t("risk.fields.validFrom", { defaultValue: "تاریخ شروع اعتبار" })}
-                value={value.validFrom}
+                value={formatPersianDate(value.validFrom)}
             />
             <DetailRow
                 label={t("risk.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
-                value={value.validTo}
+                value={formatPersianDate(value.validTo)}
             />
             <DetailRow
                 label={t("risk.fields.status", { defaultValue: "وضعیت" })}

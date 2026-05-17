@@ -26,6 +26,7 @@ import PolicySummaryPanel from "../components/PolicySummaryPanel";
 import PoliciesListReport from "./PoliciesListReport";
 import PolicyObjectPage from "./PolicyObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -610,6 +611,8 @@ export default function PoliciesFclShellPage() {
         )
         : null;
 
+    const dialogTitle = resolveDialogTitle(routeMode, t);
+
     return (
         <>
             {createElement(
@@ -630,11 +633,12 @@ export default function PoliciesFclShellPage() {
 
             <Dialog
                 open={showModal}
-                headerText={resolveDialogTitle(routeMode, t)}
+                accessibleName={dialogTitle}
                 className="policyObjectDialog"
                 style={dialogStyle}
                 onClose={handleObjectDialogClose}
             >
+                <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <PolicyObjectPage

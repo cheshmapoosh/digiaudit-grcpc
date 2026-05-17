@@ -25,6 +25,7 @@ import AccountGroupSummaryPanel from "../components/AccountGroupSummaryPanel";
 import AccountGroupsListReport from "./AccountGroupsListReport";
 import AccountGroupObjectPage from "./AccountGroupObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -510,9 +511,9 @@ export default function AccountGroupsFclShellPage() {
 
     const inlineSummaryColumn = showInlineSummaryPane
         ? createElement(
-              "div",
-              {
-                  slot: "midColumn",
+            "div",
+            {
+                slot: "midColumn",
                   dir: appDir,
                   style: slotContainerStyle,
               },
@@ -530,6 +531,8 @@ export default function AccountGroupsFclShellPage() {
               </div>,
           )
         : null;
+
+    const dialogTitle = resolveDialogTitle(routeMode, t);
 
     return (
         <>
@@ -551,11 +554,12 @@ export default function AccountGroupsFclShellPage() {
 
             <Dialog
                 open={showModal}
-                headerText={resolveDialogTitle(routeMode, t)}
+                accessibleName={dialogTitle}
                 className="accountGroupObjectDialog"
                 style={dialogStyle}
                 onClose={handleObjectDialogClose}
             >
+                <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <AccountGroupObjectPage

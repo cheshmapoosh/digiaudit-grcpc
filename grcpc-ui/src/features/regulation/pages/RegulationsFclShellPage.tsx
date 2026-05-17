@@ -31,6 +31,7 @@ import RegulationSummaryPanel from "../components/RegulationSummaryPanel";
 import RegulationsListReport from "./RegulationsListReport";
 import RegulationObjectPage from "./RegulationObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -611,9 +612,9 @@ export default function RegulationsFclShellPage() {
 
     const inlineSummaryColumn = showInlineSummaryPane
         ? createElement(
-              "div",
-              {
-                  slot: "midColumn",
+            "div",
+            {
+                slot: "midColumn",
                   dir: appDir,
                   style: slotContainerStyle,
               },
@@ -631,6 +632,8 @@ export default function RegulationsFclShellPage() {
               </div>,
           )
         : null;
+
+    const dialogTitle = resolveDialogTitle(routeMode, t);
 
     return (
         <>
@@ -652,11 +655,12 @@ export default function RegulationsFclShellPage() {
 
             <Dialog
                 open={showModal}
-                headerText={resolveDialogTitle(routeMode, t)}
+                accessibleName={dialogTitle}
                 className="regulationObjectDialog"
                 style={dialogStyle}
                 onClose={handleObjectDialogClose}
             >
+                <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <RegulationObjectPage

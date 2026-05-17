@@ -17,6 +17,7 @@ import type {
     AccountGroupNode,
     AccountGroupStatus,
 } from "../domain/accountGroup.model";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface AccountGroupSummaryPanelProps {
     value?: AccountGroupNode | null;
@@ -289,11 +290,11 @@ function GeneralTab({ value }: { value: AccountGroupNode }) {
             />
             <DetailRow
                 label={t("accountGroup.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                value={value.createdAt}
+                value={formatPersianDate(value.createdAt)}
             />
             <DetailRow
                 label={t("accountGroup.fields.effectiveDate", { defaultValue: "تاریخ اعتبار" })}
-                value={value.effectiveDate}
+                value={formatPersianDate(value.effectiveDate)}
             />
             <DetailRow
                 label={t("accountGroup.fields.documents", { defaultValue: "مستندات" })}

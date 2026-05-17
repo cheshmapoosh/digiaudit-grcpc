@@ -28,6 +28,7 @@ import RiskSummaryPanel from "../components/RiskSummaryPanel";
 import RisksListReport from "./RisksListReport";
 import RiskObjectPage from "./RiskObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -671,17 +672,20 @@ export default function RisksFclShellPage() {
       ? [inlineSummaryColumn, listColumn]
       : [listColumn, inlineSummaryColumn];
 
+  const dialogTitle = resolveDialogTitle(routeMode, t);
+
   return (
     <>
       <div style={pageGridStyle}>{orderedColumns}</div>
 
       <Dialog
         open={showModal}
-        headerText={resolveDialogTitle(routeMode, t)}
+        accessibleName={dialogTitle}
         className="riskObjectDialog"
         style={dialogStyle}
         onClose={handleObjectDialogClose}
       >
+        <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
         <div style={dialogContentStyle}>
           {objectMode === "create" || objectValue ? (
             <RiskObjectPage

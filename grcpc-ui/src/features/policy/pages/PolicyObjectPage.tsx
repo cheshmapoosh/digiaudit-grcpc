@@ -25,6 +25,11 @@ import type {
     PolicyNodeUpdate,
     PolicyStatus,
 } from "../domain/policy.model";
+import {
+    formatPersianDate,
+    toEnglishDigits,
+    toPersianDigits,
+} from "@/shared/utils/date.utils";
 
 export type PolicyObjectMode = "create" | "edit" | "view";
 
@@ -221,9 +226,9 @@ function toFormState(
         creatorName: value?.creatorName ?? "",
         documentsCount: value?.documentsCount?.toString() ?? "",
         version: value?.version ?? "01",
-        validFrom: value?.validFrom ?? "",
-        validTo: value?.validTo ?? "",
-        nextReviewDate: value?.nextReviewDate ?? "",
+        validFrom: toEnglishDigits(value?.validFrom ?? ""),
+        validTo: toEnglishDigits(value?.validTo ?? ""),
+        nextReviewDate: toEnglishDigits(value?.nextReviewDate ?? ""),
         communicationMethod: value?.communicationMethod ?? "announcement",
         communicationLanguage: value?.communicationLanguage ?? "فارسی",
         objective: value?.objective ?? "",
@@ -824,9 +829,11 @@ export default function PolicyObjectPage({
                     label={t("policy.fields.validFrom", { defaultValue: "تاریخ شروع اعتبار" })}
                 >
                     <Input
-                        value={form.validFrom}
+                        value={toPersianDigits(form.validFrom)}
                         disabled={readOnly || busy}
-                        onInput={(event) => handleChange("validFrom", readInputValue(event))}
+                        onInput={(event) =>
+                            handleChange("validFrom", toEnglishDigits(readInputValue(event)))
+                        }
                     />
                 </FormField>
 
@@ -834,9 +841,11 @@ export default function PolicyObjectPage({
                     label={t("policy.fields.validTo", { defaultValue: "تاریخ پایان اعتبار" })}
                 >
                     <Input
-                        value={form.validTo}
+                        value={toPersianDigits(form.validTo)}
                         disabled={readOnly || busy}
-                        onInput={(event) => handleChange("validTo", readInputValue(event))}
+                        onInput={(event) =>
+                            handleChange("validTo", toEnglishDigits(readInputValue(event)))
+                        }
                     />
                 </FormField>
 
@@ -901,10 +910,10 @@ export default function PolicyObjectPage({
                             })}
                         >
                             <Input
-                                value={form.nextReviewDate}
+                                value={toPersianDigits(form.nextReviewDate)}
                                 disabled={readOnly || busy}
                                 onInput={(event) =>
-                                    handleChange("nextReviewDate", readInputValue(event))
+                                    handleChange("nextReviewDate", toEnglishDigits(readInputValue(event)))
                                 }
                             />
                         </FormField>
@@ -1236,11 +1245,11 @@ export default function PolicyObjectPage({
                     />
                     <HeaderItem
                         label={t("policy.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                        value={value?.createdAt}
+                        value={formatPersianDate(value?.createdAt)}
                     />
                     <HeaderItem
                         label={t("policy.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
-                        value={form.validTo || value?.validTo}
+                        value={formatPersianDate(form.validTo || value?.validTo)}
                     />
                     <HeaderItem
                         label={t("policy.fields.version", { defaultValue: "نسخه" })}

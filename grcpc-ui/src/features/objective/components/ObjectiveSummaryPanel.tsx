@@ -13,6 +13,7 @@ import {
 } from "@ui5/webcomponents-react";
 
 import type { ObjectiveNode, ObjectiveStatus, ObjectiveType } from "../domain/objective.model";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface ObjectiveSummaryPanelProps {
     value?: ObjectiveNode | null;
@@ -242,11 +243,11 @@ export default function ObjectiveSummaryPanel({
             />
             <DetailField
                 label={t("objective.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                value={value.createdAt}
+                value={formatPersianDate(value.createdAt)}
             />
             <DetailField
                 label={t("objective.fields.validUntil", { defaultValue: "تاریخ اعتبار" })}
-                value={value.validUntil}
+                value={formatPersianDate(value.validUntil)}
             />
             <DetailField
                 label={t("objective.fields.documents", { defaultValue: "مستندات" })}

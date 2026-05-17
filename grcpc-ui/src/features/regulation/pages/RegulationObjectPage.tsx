@@ -22,6 +22,11 @@ import type {
     RegulationNodeUpdate,
     RegulationStatus,
 } from "../domain/regulation.model";
+import {
+    formatPersianDate,
+    toEnglishDigits,
+    toPersianDigits,
+} from "@/shared/utils/date.utils";
 
 export type RegulationObjectMode = "create" | "edit" | "view";
 
@@ -182,8 +187,8 @@ function toFormState(
         status: value?.status ?? "active",
         sortOrder: value?.sortOrder?.toString() ?? "",
         description: value?.description ?? "",
-        effectiveDate: value?.effectiveDate ?? "",
-        validTo: value?.validTo ?? "",
+        effectiveDate: toEnglishDigits(value?.effectiveDate ?? ""),
+        validTo: toEnglishDigits(value?.validTo ?? ""),
         issuer: value?.issuer ?? "",
         ownerName: value?.ownerName ?? "",
     };
@@ -544,10 +549,12 @@ export default function RegulationObjectPage({
                     label={t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" })}
                 >
                     <Input
-                        value={form.effectiveDate}
+                        value={toPersianDigits(form.effectiveDate)}
                         disabled={readOnly || busy}
                         placeholder="1404/01/01"
-                        onInput={(event) => handleChange("effectiveDate", readInputValue(event))}
+                        onInput={(event) =>
+                            handleChange("effectiveDate", toEnglishDigits(readInputValue(event)))
+                        }
                     />
                 </FormField>
 
@@ -555,10 +562,12 @@ export default function RegulationObjectPage({
                     label={t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
                 >
                     <Input
-                        value={form.validTo}
+                        value={toPersianDigits(form.validTo)}
                         disabled={readOnly || busy}
                         placeholder="1404/12/29"
-                        onInput={(event) => handleChange("validTo", readInputValue(event))}
+                        onInput={(event) =>
+                            handleChange("validTo", toEnglishDigits(readInputValue(event)))
+                        }
                     />
                 </FormField>
 
@@ -681,11 +690,11 @@ export default function RegulationObjectPage({
                         label={t("regulation.fields.effectiveDate", {
                             defaultValue: "تاریخ ایجاد",
                         })}
-                        value={form.effectiveDate || value?.effectiveDate}
+                        value={formatPersianDate(form.effectiveDate || value?.effectiveDate)}
                     />
                     <HeaderItem
                         label={t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
-                        value={form.validTo || value?.validTo}
+                        value={formatPersianDate(form.validTo || value?.validTo)}
                     />
                     <HeaderItem
                         label={t("regulation.fields.nodeType", { defaultValue: "نوع آیتم" })}

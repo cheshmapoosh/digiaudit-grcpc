@@ -4,6 +4,7 @@ import { Bar, Button, Label, Text, Title } from "@ui5/webcomponents-react";
 
 import type { RoleDetail } from "@/features/usermanagement";
 import PermissionCatalogList from "../components/PermissionCatalogList";
+import { formatPersianDateTime } from "@/shared/utils/date.utils";
 
 type RoleObjectPageProps = {
     value: RoleDetail;
@@ -13,16 +14,7 @@ type RoleObjectPageProps = {
 };
 
 function formatDateTime(value?: string | null): string {
-    if (!value) {
-        return "-";
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-
-    return date.toLocaleString();
+    return formatPersianDateTime(value);
 }
 
 export default function RoleObjectPage({ value, onCancel }: RoleObjectPageProps) {
