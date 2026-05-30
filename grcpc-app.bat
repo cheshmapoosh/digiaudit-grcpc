@@ -148,7 +148,7 @@ if exist "%HOST_TARGET_DIR%\%IMAGE_TAR_NAME%" (
         echo Please save the image as %IMAGE_NAME%.
         echo.
         echo Example:
-        echo docker tag grcpc-app:1.0.1 grcpc-app:latest
+        echo docker tag grcpc-app:1.0.2 grcpc-app:latest
         echo docker save grcpc-app:latest -o %HOST_TARGET_DIR%\%IMAGE_TAR_NAME%
         echo.
         exit /b 1

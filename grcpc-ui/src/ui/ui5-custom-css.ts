@@ -80,6 +80,18 @@ for (const tag of UI5_TAGS) {
     addCustomCSS(tag, FONT_CSS);
 }
 
+addCustomCSS(
+    "ui5-toast",
+    `
+  :host(.grc-success-toast) {
+    color: var(--sapTextColor) !important;
+    background: var(--sapSuccessBackground) !important;
+    border: 1px solid var(--sapMessage_SuccessBorderColor) !important;
+    box-shadow: var(--sapContent_Shadow0) !important;
+  }
+`
+);
+
 for (const tag of [
     "ui5-date-picker",
     "ui5-daterange-picker",

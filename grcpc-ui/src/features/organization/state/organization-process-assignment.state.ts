@@ -3,7 +3,7 @@ import type {
     OrganizationProcessAssignment,
     OrganizationProcessAssignmentCreate,
 } from "../domain/organization-process-assignment.model";
-import { organizationProcessAssignmentStorageRepo } from "../infra/organization-process-assignment.storage.repo";
+import { createOrganizationProcessAssignmentRepo } from "../infra/organization-process-assignment.factory";
 
 interface OrganizationProcessAssignmentState {
     assignmentsByOrganizationId: Record<string, OrganizationProcessAssignment[]>;
@@ -17,16 +17,8 @@ interface OrganizationProcessAssignmentState {
     reset(): void;
 }
 
-function indexByOrganization(items: OrganizationProcessAssignment[]) {
-    const assignmentsByOrganizationId: Record<string, OrganizationProcessAssignment[]> = {};
-
-    items.forEach((item) => {
-        const current = assignmentsByOrganizationId[item.organizationId] ?? [];
-        assignmentsByOrganizationId[item.organizationId] = [...current, item];
-    });
-
-    return assignmentsByOrganizationId;
-}
+const organizationProcessAssignmentRepo =
+    createOrganizationProcessAssignmentRepo();
 
 export const useOrganizationProcessAssignmentState =
     create<OrganizationProcessAssignmentState>((set) => ({
@@ -38,7 +30,7 @@ export const useOrganizationProcessAssignmentState =
 
             try {
                 const assignments =
-                    await organizationProcessAssignmentStorageRepo.listByOrganization(
+                    await organizationProcessAssignmentRepo.listByOrganization(
                         organizationId,
                     );
 
@@ -58,13 +50,18 @@ export const useOrganizationProcessAssignmentState =
 
             try {
                 const created =
-                    await organizationProcessAssignmentStorageRepo.create(payload);
-                const allAssignments =
-                    await organizationProcessAssignmentStorageRepo.list();
+                    await organizationProcessAssignmentRepo.create(payload);
+                const assignments =
+                    await organizationProcessAssignmentRepo.listByOrganization(
+                        payload.organizationId,
+                    );
 
-                set({
-                    assignmentsByOrganizationId: indexByOrganization(allAssignments),
-                });
+                set((state) => ({
+                    assignmentsByOrganizationId: {
+                        ...state.assignmentsByOrganizationId,
+                        [payload.organizationId]: assignments,
+                    },
+                }));
 
                 return created;
             } finally {
@@ -76,9 +73,9 @@ export const useOrganizationProcessAssignmentState =
             set({ loading: true });
 
             try {
-                await organizationProcessAssignmentStorageRepo.remove(assignmentId);
+                await organizationProcessAssignmentRepo.remove(assignmentId);
                 const assignments =
-                    await organizationProcessAssignmentStorageRepo.listByOrganization(
+                    await organizationProcessAssignmentRepo.listByOrganization(
                         organizationId,
                     );
 

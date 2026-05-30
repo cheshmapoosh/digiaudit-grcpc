@@ -22,7 +22,10 @@ import type {
     OrganizationNodeUpdate,
 } from "../domain/organization.model";
 import type {
+    OrganizationControlView,
     OrganizationProcessAssignment,
+    OrganizationRiskAssignment,
+    OrganizationRiskOption,
     OrganizationSubProcessOption,
     OrganizationSubProcessView,
 } from "../domain/organization-process-assignment.model";
@@ -31,9 +34,15 @@ import {
     ROOT_PARENT as PROCESS_ROOT_PARENT,
     useProcessState,
 } from "@/features/process";
+import type { RiskNode } from "@/features/risk";
+import {
+    ROOT_PARENT as RISK_ROOT_PARENT,
+    useRiskState,
+} from "@/features/risk";
 
 import { useOrganizationState, ROOT_PARENT } from "../state/organization.state";
 import { useOrganizationProcessAssignmentState } from "../state/organization-process-assignment.state";
+import { useOrganizationProcessRelationshipState } from "../state/organization-process-relationship.state";
 import { hasChildren, sortOrganizations } from "../utils/organization.tree";
 
 import OrganizationSummaryPanel from "../components/OrganizationSummaryPanel";
@@ -50,6 +59,8 @@ const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
 const DIALOG_NORMAL_WIDTH = "96vw";
 const DIALOG_LARGE_WIDTH = "92vw";
 const EMPTY_ASSIGNMENTS: OrganizationProcessAssignment[] = [];
+const EMPTY_CONTROLS: OrganizationControlView[] = [];
+const EMPTY_RISKS: OrganizationRiskAssignment[] = [];
 const MIN_PANEL_GAP = "1px";
 
 function useOrganizationRouteMode(): RouteMode {
@@ -219,6 +230,22 @@ function sortProcessNodes(items: ProcessNode[]): ProcessNode[] {
     });
 }
 
+function sortRiskNodes(items: RiskNode[]): RiskNode[] {
+    return [...items].sort((a, b) => {
+        const orderCompare = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        if (orderCompare !== 0) {
+            return orderCompare;
+        }
+
+        const codeCompare = a.code.localeCompare(b.code, "fa");
+        if (codeCompare !== 0) {
+            return codeCompare;
+        }
+
+        return a.title.localeCompare(b.title, "fa");
+    });
+}
+
 function toSubProcessOption(
     subProcess: ProcessNode,
     nodesById: Record<string, ProcessNode>,
@@ -232,6 +259,17 @@ function toSubProcessOption(
         parentProcessCode: parent?.code,
         parentProcessTitle: parent?.title,
         status: subProcess.status,
+    };
+}
+
+function toRiskOption(risk: RiskNode): OrganizationRiskOption {
+    return {
+        riskNodeId: risk.id,
+        code: risk.code,
+        title: risk.title,
+        riskType: risk.riskType,
+        status: risk.status,
+        description: risk.description,
     };
 }
 
@@ -304,6 +342,9 @@ export default function OrganizationsFclShellPage() {
     const processNodesById = useProcessState((state) => state.nodesById);
     const processLoading = useProcessState((state) => state.loading);
     const loadProcessChildren = useProcessState((state) => state.loadChildren);
+    const riskNodesById = useRiskState((state) => state.nodesById);
+    const riskLoading = useRiskState((state) => state.loading);
+    const loadRiskChildren = useRiskState((state) => state.loadChildren);
     const assignmentsByOrganizationId = useOrganizationProcessAssignmentState(
         (state) => state.assignmentsByOrganizationId,
     );
@@ -319,9 +360,31 @@ export default function OrganizationsFclShellPage() {
     const removeSubProcessFromOrganization = useOrganizationProcessAssignmentState(
         (state) => state.removeAssignment,
     );
+    const controlsByOrganizationId = useOrganizationProcessRelationshipState(
+        (state) => state.controlsByOrganizationId,
+    );
+    const risksByOrganizationId = useOrganizationProcessRelationshipState(
+        (state) => state.risksByOrganizationId,
+    );
+    const relationshipsLoading = useOrganizationProcessRelationshipState(
+        (state) => state.loading,
+    );
+    const loadControlsForOrganization = useOrganizationProcessRelationshipState(
+        (state) => state.loadControlsForOrganization,
+    );
+    const loadRisksForOrganization = useOrganizationProcessRelationshipState(
+        (state) => state.loadRisksForOrganization,
+    );
+    const assignRiskToOrganization = useOrganizationProcessRelationshipState(
+        (state) => state.assignRisk,
+    );
+    const removeRiskFromOrganization = useOrganizationProcessRelationshipState(
+        (state) => state.removeRiskAssignment,
+    );
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
+    const [objectError, setObjectError] = useState<string | null>(null);
     const [deleteCandidate, setDeleteCandidate] = useState<OrganizationNode | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [objectActiveTab, setObjectActiveTab] =
@@ -342,12 +405,23 @@ export default function OrganizationsFclShellPage() {
         () => sortProcessNodes(Object.values(processNodesById)),
         [processNodesById],
     );
+    const riskItems = useMemo(
+        () => sortRiskNodes(Object.values(riskNodesById)),
+        [riskNodesById],
+    );
     const availableSubProcesses = useMemo(
         () =>
             processItems
                 .filter((item) => item.nodeType === "subProcess")
                 .map((item) => toSubProcessOption(item, processNodesById)),
         [processItems, processNodesById],
+    );
+    const availableRiskTemplates = useMemo(
+        () =>
+            riskItems
+                .filter((item) => item.nodeType === "riskTemplate")
+                .map(toRiskOption),
+        [riskItems],
     );
 
     const selectedRouteItem = organizationId ? nodesById[organizationId] ?? null : null;
@@ -396,6 +470,19 @@ export default function OrganizationsFclShellPage() {
         });
     }, [loadProcessChildren, t]);
 
+    useEffect(() => {
+        void loadRiskChildren(RISK_ROOT_PARENT).catch((error: unknown) => {
+            setPageError(
+                mapError(
+                    error,
+                    t("risk.errors.loadList", {
+                        defaultValue: "خطا در بارگذاری ریسک‌ها",
+                    }),
+                ),
+            );
+        });
+    }, [loadRiskChildren, t]);
+
     /**
      * در حالت create child، درخت باید parent را انتخاب/باز کند.
      * در حالت view/edit modal، درخت روی همان organizationId فوکوس می‌کند.
@@ -437,6 +524,7 @@ export default function OrganizationsFclShellPage() {
      * هیچ modal باز نمی‌شود.
      */
     const handleSelect = useCallback((id: string) => {
+        setPageError(null);
         setSelectedTreeId(id);
         setTreeExpansionAnchorId(id);
     }, []);
@@ -447,6 +535,7 @@ export default function OrganizationsFclShellPage() {
      */
     const handleShow = useCallback(
         (id: string) => {
+            setObjectError(null);
             setSelectedTreeId(id);
             setTreeExpansionAnchorId(id);
             navigate(`/organizations/${id}`);
@@ -460,6 +549,8 @@ export default function OrganizationsFclShellPage() {
      * اگر نودی انتخاب نشده باشد، root ایجاد می‌کند.
      */
     const handleCreate = useCallback(() => {
+        setObjectError(null);
+
         if (selectedTreeId) {
             setTreeExpansionAnchorId(selectedTreeId);
             navigate(`/organizations/new?parentId=${encodeURIComponent(selectedTreeId)}`);
@@ -477,6 +568,7 @@ export default function OrganizationsFclShellPage() {
                 return;
             }
 
+            setObjectError(null);
             setSelectedTreeId(targetId);
             setTreeExpansionAnchorId(targetId);
             navigate(`/organizations/${targetId}/edit`);
@@ -489,6 +581,8 @@ export default function OrganizationsFclShellPage() {
      * پنل جزئیات کناری روی آخرین انتخاب باقی می‌ماند.
      */
     const handleCancel = useCallback(() => {
+        setObjectError(null);
+
         const currentAnchorId =
             routeMode === "create"
                 ? queryParentId ?? selectedTreeId
@@ -506,7 +600,7 @@ export default function OrganizationsFclShellPage() {
         async (payload: OrganizationNodeCreate | OrganizationNodeUpdate) => {
             try {
                 setSubmitting(true);
-                setPageError(null);
+                setObjectError(null);
 
                 const selectedParentId =
                     typeof payload.parentId === "string" && payload.parentId.trim()
@@ -547,7 +641,7 @@ export default function OrganizationsFclShellPage() {
                 setTreeExpansionAnchorId(created.parentId ?? created.id);
                 navigate(`/organizations/${created.id}`);
             } catch (error) {
-                setPageError(
+                setObjectError(
                     mapError(
                         error,
                         t("organization.errors.create", {
@@ -570,7 +664,7 @@ export default function OrganizationsFclShellPage() {
 
             try {
                 setSubmitting(true);
-                setPageError(null);
+                setObjectError(null);
 
                 const updatePayload: OrganizationNodeUpdate = {
                     code: typeof payload.code === "string" ? payload.code.trim() : payload.code,
@@ -590,6 +684,10 @@ export default function OrganizationsFclShellPage() {
                         typeof payload.validTo === "string"
                             ? payload.validTo || undefined
                             : payload.validTo,
+                    location:
+                        typeof payload.location === "string"
+                            ? payload.location.trim() || undefined
+                            : payload.location,
                 };
 
                 await updateNode(organizationId, updatePayload);
@@ -599,7 +697,7 @@ export default function OrganizationsFclShellPage() {
 
                 navigate(`/organizations/${organizationId}`);
             } catch (error) {
-                setPageError(
+                setObjectError(
                     mapError(
                         error,
                         t("organization.errors.update", {
@@ -726,21 +824,38 @@ export default function OrganizationsFclShellPage() {
             return;
         }
 
-        void loadAssignmentsForOrganization(objectValue.id).catch((error: unknown) => {
-            setPageError(
+        void Promise.all([
+            loadAssignmentsForOrganization(objectValue.id),
+            loadControlsForOrganization(objectValue.id),
+            loadRisksForOrganization(objectValue.id),
+        ]).catch((error: unknown) => {
+            setObjectError(
                 mapError(
                     error,
-                    t("organization.subProcesses.errors.load", {
-                        defaultValue: "خطا در بارگذاری زیر فرآیندهای سازمان",
+                    t("organization.relationships.errors.load", {
+                        defaultValue: "خطا در بارگذاری ارتباطات سازمان",
                     }),
                 ),
             );
         });
-    }, [loadAssignmentsForOrganization, objectValue?.id, showModal, t]);
+    }, [
+        loadAssignmentsForOrganization,
+        loadControlsForOrganization,
+        loadRisksForOrganization,
+        objectValue?.id,
+        showModal,
+        t,
+    ]);
 
     const currentAssignments = objectValue?.id
         ? assignmentsByOrganizationId[objectValue.id] ?? EMPTY_ASSIGNMENTS
         : EMPTY_ASSIGNMENTS;
+    const organizationControls = objectValue?.id
+        ? controlsByOrganizationId[objectValue.id] ?? EMPTY_CONTROLS
+        : EMPTY_CONTROLS;
+    const organizationRisks = objectValue?.id
+        ? risksByOrganizationId[objectValue.id] ?? EMPTY_RISKS
+        : EMPTY_RISKS;
 
     const organizationSubProcesses = useMemo(
         () => buildOrganizationSubProcessViews(currentAssignments, processNodesById),
@@ -755,7 +870,7 @@ export default function OrganizationsFclShellPage() {
 
             try {
                 setSubmitting(true);
-                setPageError(null);
+                setObjectError(null);
 
                 await assignSubProcessToOrganization({
                     organizationId: objectValue.id,
@@ -763,8 +878,12 @@ export default function OrganizationsFclShellPage() {
                     assignmentType: "scope",
                     isActive: true,
                 });
+                await Promise.all([
+                    loadControlsForOrganization(objectValue.id),
+                    loadRisksForOrganization(objectValue.id),
+                ]);
             } catch (error) {
-                setPageError(
+                setObjectError(
                     mapError(
                         error,
                         t("organization.subProcesses.errors.assign", {
@@ -776,7 +895,13 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [assignSubProcessToOrganization, objectValue?.id, t],
+        [
+            assignSubProcessToOrganization,
+            loadControlsForOrganization,
+            loadRisksForOrganization,
+            objectValue?.id,
+            t,
+        ],
     );
 
     const handleRemoveSubProcessAssignment = useCallback(
@@ -787,11 +912,15 @@ export default function OrganizationsFclShellPage() {
 
             try {
                 setSubmitting(true);
-                setPageError(null);
+                setObjectError(null);
 
                 await removeSubProcessFromOrganization(objectValue.id, assignmentId);
+                await Promise.all([
+                    loadControlsForOrganization(objectValue.id),
+                    loadRisksForOrganization(objectValue.id),
+                ]);
             } catch (error) {
-                setPageError(
+                setObjectError(
                     mapError(
                         error,
                         t("organization.subProcesses.errors.remove", {
@@ -803,7 +932,73 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [objectValue?.id, removeSubProcessFromOrganization, t],
+        [
+            loadControlsForOrganization,
+            loadRisksForOrganization,
+            objectValue?.id,
+            removeSubProcessFromOrganization,
+            t,
+        ],
+    );
+
+    const handleAssignRiskToOrganization = useCallback(
+        async (processNodeId: string, riskNodeId: string) => {
+            if (!objectValue?.id) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setObjectError(null);
+
+                await assignRiskToOrganization({
+                    organizationId: objectValue.id,
+                    processNodeId,
+                    riskNodeId,
+                    assignmentType: "scope",
+                    isActive: true,
+                });
+            } catch (error) {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("organization.risks.errors.assign", {
+                            defaultValue: "خطا در تخصیص ریسک به سازمان",
+                        }),
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [assignRiskToOrganization, objectValue?.id, t],
+    );
+
+    const handleRemoveRiskAssignment = useCallback(
+        async (assignmentId: string) => {
+            if (!objectValue?.id) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setObjectError(null);
+
+                await removeRiskFromOrganization(objectValue.id, assignmentId);
+            } catch (error) {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("organization.risks.errors.remove", {
+                            defaultValue: "خطا در حذف ریسک از سازمان",
+                        }),
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [objectValue?.id, removeRiskFromOrganization, t],
     );
 
     const showInlineSummaryPane = Boolean(selectedTreeItem);
@@ -887,6 +1082,7 @@ export default function OrganizationsFclShellPage() {
                 searchText={searchText}
                 busy={loading || submitting}
                 error={!showModal ? pageError : null}
+                onErrorClose={() => setPageError(null)}
                 onSearchTextChange={setSearchText}
                 onCreate={handleCreate}
                 onShow={handleShow}
@@ -909,6 +1105,7 @@ export default function OrganizationsFclShellPage() {
                     value={selectedTreeItem}
                     busy={loading || submitting}
                     error={!showModal ? pageError : null}
+                    onErrorClose={() => setPageError(null)}
                     onEdit={handleEdit}
                     onCancel={() => {
                         setSelectedTreeId(null);
@@ -957,14 +1154,21 @@ export default function OrganizationsFclShellPage() {
                             activeTab={objectActiveTab}
                             subProcesses={organizationSubProcesses}
                             availableSubProcesses={availableSubProcesses}
+                            controls={organizationControls}
+                            risks={organizationRisks}
+                            availableRisks={availableRiskTemplates}
                             subProcessesBusy={processLoading || assignmentsLoading}
+                            relationshipsBusy={relationshipsLoading || riskLoading}
                             busy={loading || submitting}
-                            error={pageError}
+                            error={objectError}
+                            onErrorClose={() => setObjectError(null)}
                             onSubmit={routeMode === "create" ? handleSubmitCreate : handleSubmitUpdate}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
                             onAssignSubProcess={handleAssignSubProcessToOrganization}
                             onRemoveSubProcessAssignment={handleRemoveSubProcessAssignment}
+                            onAssignRisk={handleAssignRiskToOrganization}
+                            onRemoveRiskAssignment={handleRemoveRiskAssignment}
                             onActiveTabChange={setObjectActiveTab}
                         />
                     ) : (

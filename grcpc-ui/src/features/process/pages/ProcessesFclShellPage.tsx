@@ -277,6 +277,7 @@ export default function ProcessesFclShellPage() {
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
+    const [objectError, setObjectError] = useState<string | null>(null);
     const [deleteCandidate, setDeleteCandidate] = useState<ProcessNode | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
@@ -347,6 +348,7 @@ export default function ProcessesFclShellPage() {
 
     const handleShow = useCallback(
         (id: string) => {
+            setObjectError(null);
             setSelectedTreeId(id);
             setTreeExpansionAnchorId(id);
             navigate(`/processes/${id}`);
@@ -366,6 +368,7 @@ export default function ProcessesFclShellPage() {
                 return;
             }
 
+            setObjectError(null);
             const params = new URLSearchParams();
 
             if (parentId) {
@@ -387,6 +390,7 @@ export default function ProcessesFclShellPage() {
                 return;
             }
 
+            setObjectError(null);
             setSelectedTreeId(targetId);
             setTreeExpansionAnchorId(targetId);
             navigate(`/processes/${targetId}/edit`);
@@ -395,6 +399,8 @@ export default function ProcessesFclShellPage() {
     );
 
     const handleCancel = useCallback(() => {
+        setObjectError(null);
+
         const currentAnchorId =
             routeMode === "create" ? queryParentId ?? selectedTreeId : processId ?? selectedTreeId;
 
@@ -474,6 +480,7 @@ export default function ProcessesFclShellPage() {
             try {
                 setSubmitting(true);
                 setPageError(null);
+                setObjectError(null);
 
                 if (routeMode === "create") {
                     const createPayload = payload as ProcessNodeCreate;
@@ -492,7 +499,7 @@ export default function ProcessesFclShellPage() {
                     navigate("/processes");
                 }
             } catch (error) {
-                setPageError(
+                setObjectError(
                     mapError(
                         error,
                         t("process.errors.save", {
@@ -589,6 +596,7 @@ export default function ProcessesFclShellPage() {
                 searchText={searchText}
                 busy={loading || submitting}
                 error={!showModal ? pageError : null}
+                onErrorClose={() => setPageError(null)}
                 createOptions={createOptions}
                 onSearchTextChange={setSearchText}
                 onCreate={handleCreate}
@@ -612,6 +620,7 @@ export default function ProcessesFclShellPage() {
                     value={selectedTreeItem}
                     busy={loading || submitting}
                     error={!showModal ? pageError : null}
+                    onErrorClose={() => setPageError(null)}
                     onEdit={handleEdit}
                     onCancel={() => {
                         setSelectedTreeId(null);
@@ -660,7 +669,8 @@ export default function ProcessesFclShellPage() {
                             parent={selectedParentForCreate}
                             requestedNodeType={requestedNodeType}
                             busy={loading || submitting}
-                            error={pageError}
+                            error={objectError}
+                            onErrorClose={() => setObjectError(null)}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}

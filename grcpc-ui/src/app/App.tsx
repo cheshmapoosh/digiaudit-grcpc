@@ -1,5 +1,6 @@
 import {BrowserRouter} from "react-router-dom";
 import AppRouter from "./router/AppRouter.tsx";
+import AppToast from "@/shared/components/AppToast";
 
 export default function App() {
     return (
@@ -11,6 +12,7 @@ export default function App() {
         >
             <div>
                 <AppRouter/>
+                <AppToast/>
             </div>
         </BrowserRouter>
     );

@@ -69,6 +69,7 @@ export interface ProcessObjectPageProps {
     requestedNodeType?: ProcessNodeType;
     busy?: boolean;
     error?: string | null;
+    onErrorClose?: () => void;
     onSubmit: (payload: ProcessNodeCreate | ProcessNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
     onEdit?: () => void;
@@ -485,6 +486,7 @@ export default function ProcessObjectPage({
                                               requestedNodeType,
                                               busy = false,
                                               error,
+                                              onErrorClose,
                                               onSubmit,
                                               onCancel,
                                               onEdit,
@@ -1072,13 +1074,13 @@ export default function ProcessObjectPage({
             />
 
             {error ? (
-                <MessageStrip design="Negative" hideCloseButton>
+                <MessageStrip design="Negative" onClose={onErrorClose}>
                     {error}
                 </MessageStrip>
             ) : null}
 
             {validationError ? (
-                <MessageStrip design="Negative" hideCloseButton>
+                <MessageStrip design="Negative" onClose={() => setValidationError(null)}>
                     {validationError}
                 </MessageStrip>
             ) : null}

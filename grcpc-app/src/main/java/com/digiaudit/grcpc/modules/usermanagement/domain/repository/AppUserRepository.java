@@ -29,6 +29,18 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
     List<String> findActiveRoleCodes(@Param("userId") UUID userId);
 
     @Query("""
+            select distinct r.id
+            from UserRoleAssignmentEntity ura
+            join ura.role r
+            where ura.user.id = :userId
+              and ura.active = true
+              and r.enabled = true
+              and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
+              and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
+            """)
+    List<UUID> findActiveRoleIds(@Param("userId") UUID userId);
+
+    @Query("""
             select distinct p.code
             from UserRoleAssignmentEntity ura
             join ura.role r

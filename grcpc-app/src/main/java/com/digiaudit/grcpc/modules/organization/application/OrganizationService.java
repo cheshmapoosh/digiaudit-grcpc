@@ -118,6 +118,17 @@ public class OrganizationService {
     }
 
     @Transactional
+    public OrganizationResponse toggleStatus(UUID id) {
+        OrganizationEntity entity = getEntity(id);
+        entity.setStatus(entity.getStatus() == com.digiaudit.grcpc.modules.organization.domain.enums.OrganizationStatus.ACTIVE
+                ? com.digiaudit.grcpc.modules.organization.domain.enums.OrganizationStatus.INACTIVE
+                : com.digiaudit.grcpc.modules.organization.domain.enums.OrganizationStatus.ACTIVE);
+        OrganizationEntity saved = organizationRepository.save(entity);
+        log.info("Organization status toggled. id={}, status={}", saved.getId(), saved.getStatus());
+        return toResponse(saved);
+    }
+
+    @Transactional
     public void delete(UUID id) {
         OrganizationEntity entity = getEntity(id);
         if (organizationRepository.existsByParentId(id)) {

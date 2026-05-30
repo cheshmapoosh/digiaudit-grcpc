@@ -29,6 +29,13 @@ server:
 app:
   logging:
     path: ${APP_LOGGING_PATH:logs}
+  minio:
+    enabled: ${MINIO_ENABLED:false}
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: ${MINIO_BUCKET:grcpc-documents}
+    presigned-url-expiry-minutes: ${MINIO_PRESIGNED_URL_EXPIRY_MINUTES:15}
 
 logging:
   level:

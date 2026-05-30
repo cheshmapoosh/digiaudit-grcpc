@@ -3,6 +3,7 @@ import type {
     OrganizationProcessAssignment,
     OrganizationProcessAssignmentCreate,
 } from "../domain/organization-process-assignment.model";
+import type { OrganizationProcessAssignmentRepo } from "./organization-process-assignment.repo";
 
 const STORAGE_KEY = "grc:organization-process-assignments";
 const LOCAL_USER = "local-user";
@@ -52,7 +53,9 @@ function buildCreatedEntity(
     };
 }
 
-export class OrganizationProcessAssignmentStorageRepo {
+export class OrganizationProcessAssignmentStorageRepo
+    implements OrganizationProcessAssignmentRepo
+{
     async list(): Promise<OrganizationProcessAssignment[]> {
         return readStorage();
     }

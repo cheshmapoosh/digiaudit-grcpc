@@ -20,6 +20,7 @@ export interface ProcessesListReportProps {
     searchText: string;
     busy?: boolean;
     error?: string | null;
+    onErrorClose?: () => void;
     createOptions: ProcessNodeType[];
     onSearchTextChange: (value: string) => void;
     onCreate: (nodeType: ProcessNodeType) => void;
@@ -39,6 +40,7 @@ export default function ProcessesListReport({
                                                 searchText,
                                                 busy = false,
                                                 error,
+                                                onErrorClose,
                                                 createOptions,
                                                 onSearchTextChange,
                                                 onCreate,
@@ -123,7 +125,7 @@ export default function ProcessesListReport({
             />
 
             {error ? (
-                <MessageStrip design="Negative" hideCloseButton>
+                <MessageStrip design="Negative" onClose={onErrorClose}>
                     {error}
                 </MessageStrip>
             ) : null}

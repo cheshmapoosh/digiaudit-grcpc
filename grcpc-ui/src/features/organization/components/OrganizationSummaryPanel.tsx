@@ -9,6 +9,7 @@ export interface OrganizationSummaryPanelProps {
     value?: OrganizationNode | null;
     busy?: boolean;
     error?: string | null;
+    onErrorClose?: () => void;
     onEdit?: (id: string) => void;
     onCancel?: () => void;
 }
@@ -44,6 +45,7 @@ export default function OrganizationSummaryPanel({
     value,
     busy = false,
     error,
+    onErrorClose,
     onEdit,
     onCancel,
 }: OrganizationSummaryPanelProps) {
@@ -125,7 +127,7 @@ export default function OrganizationSummaryPanel({
 
             <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
                 {error ? (
-                    <MessageStrip design="Negative" hideCloseButton>
+                    <MessageStrip design="Negative" onClose={onErrorClose}>
                         {error}
                     </MessageStrip>
                 ) : null}

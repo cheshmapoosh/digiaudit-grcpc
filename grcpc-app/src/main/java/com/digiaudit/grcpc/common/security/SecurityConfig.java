@@ -120,7 +120,8 @@ public class SecurityConfig {
             );
 
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding("UTF-8");
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
             objectMapper.writeValue(
                     response.getWriter(),
                     Map.of(

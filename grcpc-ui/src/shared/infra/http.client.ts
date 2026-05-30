@@ -1,4 +1,5 @@
 import i18n from "@/i18n/i18n";
+import { showSuccessToast } from "@/shared/feedback/toast.store";
 
 export class HttpError extends Error {
     public readonly status: number;
@@ -25,6 +26,7 @@ type RequestOptions = {
     body?: unknown;
     headers?: Record<string, string>;
     signal?: AbortSignal;
+    successMessage?: string | false;
 };
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
@@ -97,6 +99,80 @@ function getCurrentLanguage(): string {
     return i18n.resolvedLanguage || i18n.language || "fa";
 }
 
+function getDefaultSuccessMessage(method: HttpMethod, url: string): string | null {
+    if (method === "GET") {
+        return null;
+    }
+
+    const normalizedUrl = url.toLowerCase();
+
+    if (normalizedUrl.includes("/auth/login")) {
+        return i18n.t("toast.success.login", {
+            defaultValue: "ورود با موفقیت انجام شد.",
+        });
+    }
+
+    if (normalizedUrl.includes("/auth/logout")) {
+        return i18n.t("toast.success.logout", {
+            defaultValue: "خروج با موفقیت انجام شد.",
+        });
+    }
+
+    if (normalizedUrl.includes("/setup/initialize")) {
+        return i18n.t("toast.success.setupInitialized", {
+            defaultValue: "راه اندازی اولیه با موفقیت انجام شد.",
+        });
+    }
+
+    if (method === "POST") {
+        return i18n.t("toast.success.created", {
+            defaultValue: "رکورد با موفقیت ایجاد شد.",
+        });
+    }
+
+    if (method === "PUT") {
+        return i18n.t("toast.success.saved", {
+            defaultValue: "تغییرات با موفقیت ذخیره شد.",
+        });
+    }
+
+    if (method === "PATCH") {
+        if (normalizedUrl.includes("toggle-status")) {
+            return i18n.t("toast.success.statusChanged", {
+                defaultValue: "وضعیت با موفقیت تغییر کرد.",
+            });
+        }
+
+        return i18n.t("toast.success.updated", {
+            defaultValue: "تغییرات با موفقیت اعمال شد.",
+        });
+    }
+
+    if (method === "DELETE") {
+        return i18n.t("toast.success.deleted", {
+            defaultValue: "رکورد با موفقیت حذف شد.",
+        });
+    }
+
+    return i18n.t("toast.success.generic", {
+        defaultValue: "عملیات با موفقیت انجام شد.",
+    });
+}
+
+function notifySuccessfulMutation(method: HttpMethod, url: string, options: RequestOptions): void {
+    if (options.successMessage === false) {
+        return;
+    }
+
+    const message = typeof options.successMessage === "string"
+        ? options.successMessage
+        : getDefaultSuccessMessage(method, url);
+
+    if (message) {
+        showSuccessToast(message);
+    }
+}
+
 async function request<T>(
     url: string,
     method: HttpMethod,
@@ -128,6 +204,8 @@ async function request<T>(
             payload,
         );
     }
+
+    notifySuccessfulMutation(method, url, options);
 
     return payload as T;
 }

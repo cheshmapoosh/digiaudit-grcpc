@@ -115,6 +115,17 @@ public class RegulationService {
     }
 
     @Transactional
+    public RegulationResponse toggleStatus(UUID id) {
+        RegulationEntity entity = getEntity(id);
+        entity.setStatus(entity.getStatus() == com.digiaudit.grcpc.modules.regulation.domain.enums.RegulationStatus.ACTIVE
+                ? com.digiaudit.grcpc.modules.regulation.domain.enums.RegulationStatus.INACTIVE
+                : com.digiaudit.grcpc.modules.regulation.domain.enums.RegulationStatus.ACTIVE);
+        RegulationEntity saved = regulationRepository.save(entity);
+        log.info("Regulation status toggled. id={}, status={}", saved.getId(), saved.getStatus());
+        return toResponse(saved);
+    }
+
+    @Transactional
     public void delete(UUID id) {
         RegulationEntity entity = getEntity(id);
         if (regulationRepository.existsByParentId(id)) {

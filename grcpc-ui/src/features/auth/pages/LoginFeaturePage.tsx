@@ -282,7 +282,7 @@ export default function LoginFeaturePage() {
                             }}
                         >
                             {error ? (
-                                <MessageStrip design="Negative" hideCloseButton>
+                                <MessageStrip design="Negative" onClose={clearError}>
                                     {error}
                                 </MessageStrip>
                             ) : null}

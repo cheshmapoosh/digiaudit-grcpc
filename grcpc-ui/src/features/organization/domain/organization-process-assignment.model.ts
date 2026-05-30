@@ -40,3 +40,66 @@ export interface OrganizationSubProcessView extends OrganizationSubProcessOption
     description?: string;
     controlsCount: number;
 }
+
+export interface OrganizationControlView {
+    organizationId: string;
+    processNodeId: string;
+    subProcessCode: string;
+    subProcessTitle: string;
+    controlId: string;
+    controlCode: string;
+    controlTitle: string;
+    controlDescription?: string;
+    controlAutomation?: string;
+    controlFrequency?: string;
+    controlClassification?: string;
+    controlOwner?: string;
+    importance?: string;
+    status: "active" | "inactive";
+    processControlAssignmentId: string;
+    assignmentType: OrganizationProcessAssignmentType;
+    validFrom?: string;
+    validTo?: string;
+    isActive: boolean;
+}
+
+export interface OrganizationRiskAssignment {
+    id: string;
+    organizationId: string;
+    processNodeId: string;
+    subProcessCode: string;
+    subProcessTitle: string;
+    riskNodeId: string;
+    riskCode: string;
+    riskTitle: string;
+    riskDescription?: string;
+    riskType?: string;
+    status: "active" | "inactive";
+    assignmentType: OrganizationProcessAssignmentType;
+    validFrom?: string;
+    validTo?: string;
+    isActive: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string | null;
+    updatedBy?: string | null;
+}
+
+export interface OrganizationRiskAssignmentCreate {
+    organizationId: string;
+    processNodeId: string;
+    riskNodeId: string;
+    assignmentType?: OrganizationProcessAssignmentType;
+    validFrom?: string;
+    validTo?: string;
+    isActive?: boolean;
+}
+
+export interface OrganizationRiskOption {
+    riskNodeId: string;
+    code: string;
+    title: string;
+    riskType?: string;
+    status: "active" | "inactive";
+    description?: string;
+}

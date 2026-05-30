@@ -19,6 +19,7 @@ export interface OrganizationsListReportProps {
     searchText: string;
     busy?: boolean;
     error?: string | null;
+    onErrorClose?: () => void;
     onSearchTextChange: (value: string) => void;
     onCreate: () => void;
     onShow: (id: string) => void;
@@ -33,6 +34,7 @@ export default function OrganizationsListReport({
                                                     searchText,
                                                     busy = false,
                                                     error,
+                                                    onErrorClose,
                                                     onSearchTextChange,
                                                     onCreate,
                                                     onShow,
@@ -109,7 +111,7 @@ export default function OrganizationsListReport({
             />
 
             {error ? (
-                <MessageStrip design="Negative" hideCloseButton>
+                <MessageStrip design="Negative" onClose={onErrorClose}>
                     {error}
                 </MessageStrip>
             ) : null}

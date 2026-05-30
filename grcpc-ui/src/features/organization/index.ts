@@ -15,6 +15,10 @@ export type {
     OrganizationProcessAssignmentType,
     OrganizationSubProcessOption,
     OrganizationSubProcessView,
+    OrganizationControlView,
+    OrganizationRiskAssignment,
+    OrganizationRiskAssignmentCreate,
+    OrganizationRiskOption,
 } from "./domain/organization-process-assignment.model";
 
 export type {
