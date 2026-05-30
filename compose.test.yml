@@ -1,0 +1,68 @@
+name: grcpc-test
+
+services:
+  oracle:
+    image: ${ORACLE_IMAGE:-gvenzl/oracle-free:23-slim}
+    restart: unless-stopped
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_SYS_PASSWORD:-oracle}
+      APP_USER: ${DB_USERNAME:-GRCPC}
+      APP_USER_PASSWORD: ${DB_PASSWORD:-grcpc}
+    ports:
+      - "${ORACLE_PORT:-1521}:1521"
+    volumes:
+      - oracle_data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-09-07T16-13-09Z}
+    restart: unless-stopped
+    command: server ${MINIO_DATA_DIR:-/var/lib/minio/data} --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:${MINIO_DATA_DIR:-/var/lib/minio/data}
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    image: ${GRCPC_APP_IMAGE:-grcpc-app:latest}
+    restart: unless-stopped
+    depends_on:
+      oracle:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      SERVER_PORT: 8080
+      DB_URL: ${DB_URL:-jdbc:oracle:thin:@//oracle:1521/FREEPDB1}
+      DB_USERNAME: ${DB_USERNAME:-GRCPC}
+      DB_PASSWORD: ${DB_PASSWORD:-grcpc}
+      DB_DRIVER_CLASS_NAME: oracle.jdbc.OracleDriver
+      DB_SCHEMA: ${DB_SCHEMA:-GRCPC}
+      MINIO_ENABLED: "true"
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-grcpc-documents}
+      APP_LOGGING_PATH: /opt/grcpc/logs
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+
+volumes:
+  oracle_data:
+    name: ${ORACLE_VOLUME:-grcpc_test_oradata}
+  minio_data:
+    name: ${MINIO_VOLUME:-grcpc_test_minio}

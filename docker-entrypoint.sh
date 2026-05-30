@@ -23,79 +23,76 @@ file_env() {
     unset "$file_var"
 }
 
-PGDATA="${PGDATA:-/var/lib/postgresql/data}"
 APP_JAR="${APP_JAR:-/mnt/app/grcpc-app.jar}"
+MINIO_DATA_DIR="${MINIO_DATA_DIR:-/var/lib/minio/data}"
+MINIO_SERVER_ENABLED="${MINIO_SERVER_ENABLED:-true}"
 
-POSTGRES_USER="${POSTGRES_USER:-grcpc}"
-POSTGRES_DB="${POSTGRES_DB:-grcpc}"
-GRC_SCHEMA="${GRC_SCHEMA:-grc}"
+MINIO_ROOT_USER="${MINIO_ROOT_USER:-${MINIO_ACCESS_KEY:-minioadmin}}"
+MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-${MINIO_SECRET_KEY:-minioadmin}}"
+MINIO_ENDPOINT="${MINIO_ENDPOINT:-http://localhost:9000}"
+MINIO_PUBLIC_ENDPOINT="${MINIO_PUBLIC_ENDPOINT:-$MINIO_ENDPOINT}"
+MINIO_BUCKET="${MINIO_BUCKET:-grcpc-documents}"
+MINIO_ENABLED="${MINIO_ENABLED:-true}"
 
-file_env "POSTGRES_PASSWORD"
+file_env "MINIO_ROOT_USER" "$MINIO_ROOT_USER"
+file_env "MINIO_ROOT_PASSWORD" "$MINIO_ROOT_PASSWORD"
+file_env "DB_PASSWORD" "${DB_PASSWORD:-}"
 
-mkdir -p "$PGDATA"
-chown -R postgres:postgres "$PGDATA"
+MINIO_ACCESS_KEY="${MINIO_ACCESS_KEY:-$MINIO_ROOT_USER}"
+MINIO_SECRET_KEY="${MINIO_SECRET_KEY:-$MINIO_ROOT_PASSWORD}"
 
-if [ ! -s "$PGDATA/PG_VERSION" ]; then
-    if [ -z "${POSTGRES_PASSWORD:-}" ]; then
-        echo "ERROR: POSTGRES_PASSWORD is required for first database initialization."
-        echo "Set it with -e POSTGRES_PASSWORD=grcpc or POSTGRES_PASSWORD_FILE."
-        exit 1
-    fi
+export MINIO_ROOT_USER
+export MINIO_ROOT_PASSWORD
+export MINIO_ACCESS_KEY
+export MINIO_SECRET_KEY
+export MINIO_ENDPOINT
+export MINIO_PUBLIC_ENDPOINT
+export MINIO_BUCKET
+export MINIO_ENABLED
 
-    echo "Initializing PostgreSQL database..."
+MINIO_PID=""
 
-    gosu postgres initdb -D "$PGDATA" --encoding=UTF8 --locale=C.UTF-8
+if [ "$MINIO_SERVER_ENABLED" = "true" ]; then
+    mkdir -p "$MINIO_DATA_DIR"
+    chown -R minio:minio "$MINIO_DATA_DIR"
 
-    echo "listen_addresses='*'" >> "$PGDATA/postgresql.conf"
-    echo "host all all all scram-sha-256" >> "$PGDATA/pg_hba.conf"
+    echo "Starting MinIO..."
+    gosu minio minio server "$MINIO_DATA_DIR" --address ":9000" --console-address ":9001" &
+    MINIO_PID="$!"
 
-    gosu postgres pg_ctl -D "$PGDATA" -w start
+    until curl -fsS "http://localhost:9000/minio/health/live" >/dev/null; do
+        sleep 1
+    done
 
-    gosu postgres psql -v ON_ERROR_STOP=1 --username postgres --dbname postgres \
-        -v app_user="$POSTGRES_USER" \
-        -v app_password="$POSTGRES_PASSWORD" \
-        -v app_db="$POSTGRES_DB" <<'EOSQL'
-CREATE USER :"app_user" WITH PASSWORD :'app_password';
-CREATE DATABASE :"app_db" OWNER :"app_user";
-EOSQL
-
-    gosu postgres psql -v ON_ERROR_STOP=1 --username postgres --dbname "$POSTGRES_DB" \
-        -v app_user="$POSTGRES_USER" \
-        -v app_schema="$GRC_SCHEMA" <<'EOSQL'
-CREATE SCHEMA IF NOT EXISTS :"app_schema" AUTHORIZATION :"app_user";
-ALTER ROLE :"app_user" SET search_path TO :"app_schema", public;
-GRANT ALL ON SCHEMA :"app_schema" TO :"app_user";
-EOSQL
-
-    gosu postgres pg_ctl -D "$PGDATA" -m fast -w stop
-
-    echo "PostgreSQL initialized."
+    echo "MinIO is ready."
 fi
-
-echo "Starting PostgreSQL..."
-gosu postgres postgres -D "$PGDATA" &
-
-POSTGRES_PID="$!"
-
-until gosu postgres pg_isready -q; do
-    sleep 1
-done
-
-echo "PostgreSQL is ready."
 
 if [ ! -f "$APP_JAR" ]; then
     echo "ERROR: Jar file not found: $APP_JAR"
     echo "Mount your jar directory to /mnt/app and set APP_JAR correctly."
-    kill -TERM "$POSTGRES_PID"
+    if [ -n "$MINIO_PID" ]; then
+        kill -TERM "$MINIO_PID"
+    fi
     exit 1
 fi
 
 echo "Starting Java application from mounted jar: $APP_JAR"
 
 java ${JAVA_OPTS:-} -jar "$APP_JAR" &
-
 APP_PID="$!"
 
-trap 'kill -TERM "$APP_PID" "$POSTGRES_PID"; wait' TERM INT
+shutdown() {
+    kill -TERM "$APP_PID" 2>/dev/null || true
+    if [ -n "$MINIO_PID" ]; then
+        kill -TERM "$MINIO_PID" 2>/dev/null || true
+    fi
+    wait
+}
 
-wait -n "$APP_PID" "$POSTGRES_PID"
+trap shutdown TERM INT
+
+if [ -n "$MINIO_PID" ]; then
+    wait -n "$APP_PID" "$MINIO_PID"
+else
+    wait -n "$APP_PID"
+fi

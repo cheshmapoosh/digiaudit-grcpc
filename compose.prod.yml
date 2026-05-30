@@ -1,0 +1,43 @@
+name: grcpc-prod
+
+services:
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-09-07T16-13-09Z}
+    restart: unless-stopped
+    command: server ${MINIO_DATA_DIR:-/var/lib/minio/data} --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:${MINIO_DATA_DIR:-/var/lib/minio/data}
+
+  app:
+    image: ${GRCPC_APP_IMAGE:-grcpc-app:latest}
+    restart: unless-stopped
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      SERVER_PORT: 8080
+      DB_URL: ${DB_URL:?Set DB_URL for external Oracle}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      DB_DRIVER_CLASS_NAME: ${DB_DRIVER_CLASS_NAME:-oracle.jdbc.OracleDriver}
+      DB_SCHEMA: ${DB_SCHEMA:?Set DB_SCHEMA}
+      MINIO_ENABLED: "true"
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:?Set MINIO_PUBLIC_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET:-grcpc-documents}
+      APP_LOGGING_PATH: ${APP_LOGGING_PATH:-/opt/grcpc/logs}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+
+volumes:
+  minio_data:
+    name: ${MINIO_VOLUME:-grcpc_prod_minio}

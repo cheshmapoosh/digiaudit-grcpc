@@ -7,13 +7,18 @@ REM =========================
 
 set CONTAINER_NAME=grcpc-app
 set IMAGE_NAME=grcpc-app:latest
-set PG_VOLUME=grcpc_pgdata
+set FILE_VOLUME=grcpc_filedata
+
+set DB_URL=jdbc:oracle:thin:@//host.docker.internal:1521/FREEPDB1
+set DB_USERNAME=GRCPC
+set DB_PASSWORD=grcpc
+set DB_SCHEMA=GRCPC
 
 set HOST_TARGET_DIR=.
 set APP_JAR_NAME=grcpc-app.jar
 set IMAGE_TAR_NAME=grcpc-app.tar
 
-set RESET_DB=false
+set RESET_FILES=false
 set JAVA_OPTS=-Xms256m -Xmx512m
 
 set DOCKER_STARTED_BY_SCRIPT=false
@@ -111,10 +116,10 @@ echo.
 echo Removing old container if exists...
 docker rm -f "%CONTAINER_NAME%" >nul 2>&1
 
-if /I "%RESET_DB%"=="true" (
+if /I "%RESET_FILES%"=="true" (
     echo.
-    echo Removing PostgreSQL volume: %PG_VOLUME%
-    docker volume rm "%PG_VOLUME%" >nul 2>&1
+    echo Removing file storage volume: %FILE_VOLUME%
+    docker volume rm "%FILE_VOLUME%" >nul 2>&1
 )
 
 if exist "%HOST_TARGET_DIR%\%IMAGE_TAR_NAME%" (
@@ -175,18 +180,31 @@ echo When this BAT exits, the container/app will stop.
 echo.
 echo Container: %CONTAINER_NAME%
 echo Image:     %IMAGE_NAME%
+echo DB URL:    %DB_URL%
+echo Files:     %FILE_VOLUME%
 echo.
 
 docker run --rm --name "%CONTAINER_NAME%" ^
   -p 8080:8080 ^
-  -p 5432:5432 ^
-  -v "%PG_VOLUME%:/var/lib/postgresql/data" ^
+  -p 9000:9000 ^
+  -p 9001:9001 ^
+  -v "%FILE_VOLUME%:/var/lib/minio/data" ^
   -v "%HOST_TARGET_DIR%:/mnt/app:ro" ^
   -e "APP_JAR=/mnt/app/%APP_JAR_NAME%" ^
-  -e "POSTGRES_USER=grcpc" ^
-  -e "POSTGRES_PASSWORD=grcpc" ^
-  -e "POSTGRES_DB=grcpc" ^
-  -e "GRC_SCHEMA=grc" ^
+  -e "DB_URL=%DB_URL%" ^
+  -e "DB_USERNAME=%DB_USERNAME%" ^
+  -e "DB_PASSWORD=%DB_PASSWORD%" ^
+  -e "DB_DRIVER_CLASS_NAME=oracle.jdbc.OracleDriver" ^
+  -e "DB_SCHEMA=%DB_SCHEMA%" ^
+  -e "MINIO_SERVER_ENABLED=true" ^
+  -e "MINIO_ENABLED=true" ^
+  -e "MINIO_ENDPOINT=http://localhost:9000" ^
+  -e "MINIO_PUBLIC_ENDPOINT=http://localhost:9000" ^
+  -e "MINIO_ACCESS_KEY=minioadmin" ^
+  -e "MINIO_SECRET_KEY=minioadmin" ^
+  -e "MINIO_ROOT_USER=minioadmin" ^
+  -e "MINIO_ROOT_PASSWORD=minioadmin" ^
+  -e "MINIO_BUCKET=grcpc-documents" ^
   -e "JAVA_OPTS=%JAVA_OPTS%" ^
   "%IMAGE_NAME%"
 

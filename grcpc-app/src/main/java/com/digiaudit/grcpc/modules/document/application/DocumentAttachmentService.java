@@ -60,7 +60,7 @@ public class DocumentAttachmentService {
     @Transactional
     public DocumentAttachmentResponse upload(String targetType, UUID targetId, MultipartFile file, HttpServletRequest httpRequest) {
         authorizationService.assertCanAccess(targetType, targetId, "DOCUMENT_UPLOAD");
-        MinioClient client = minioClient();
+        MinioClient client = presignedUrlClient();
         try {
             ensureBucket(client);
             String safeTargetType = normalizeRequired(targetType);
@@ -150,6 +150,17 @@ public class DocumentAttachmentService {
             throw new ConflictException("DOCUMENT_STORAGE_DISABLED", "error.document.minioDisabled", "MinIO is disabled or not configured");
         }
         return client;
+    }
+
+    private MinioClient presignedUrlClient() {
+        minioClient();
+        String endpoint = properties.publicEndpoint() == null || properties.publicEndpoint().isBlank()
+                ? properties.endpoint()
+                : properties.publicEndpoint();
+        return MinioClient.builder()
+                .endpoint(endpoint)
+                .credentials(properties.accessKey(), properties.secretKey())
+                .build();
     }
 
     private void ensureBucket(MinioClient client) throws Exception {

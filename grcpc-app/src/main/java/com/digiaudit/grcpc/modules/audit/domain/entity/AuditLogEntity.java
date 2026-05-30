@@ -9,7 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 
@@ -46,7 +46,7 @@ public class AuditLogEntity {
 
     @CreationTimestamp
     @Column(name = "event_time", nullable = false, updatable = false)
-    private Instant eventTime;
+    private LocalDateTime eventTime;
 
     @Column(name = "ip_address", length = 100)
     private String ipAddress;
@@ -55,6 +55,6 @@ public class AuditLogEntity {
     private String userAgent;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "details_json", nullable = false)
+    @Column(name = "details_json", nullable = false, columnDefinition = "clob")
     private Map<String, Object> detailsJson;
 }

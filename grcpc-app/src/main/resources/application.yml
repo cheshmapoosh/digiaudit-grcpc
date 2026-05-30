@@ -3,10 +3,10 @@ spring:
     name: grcpc-api
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/grcpc?currentSchema=grc}
-    username: ${DB_USERNAME:grcpc}
+    url: ${DB_URL:jdbc:oracle:thin:@//localhost:1521/FREEPDB1}
+    username: ${DB_USERNAME:GRCPC}
     password: ${DB_PASSWORD:grcpc}
-    driver-class-name: ${DB_DRIVER_CLASS_NAME:org.postgresql.Driver}
+    driver-class-name: ${DB_DRIVER_CLASS_NAME:oracle.jdbc.OracleDriver}
 
   jpa:
     hibernate:
@@ -14,13 +14,15 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        default_schema: ${DB_SCHEMA:grc}
+        default_schema: ${DB_SCHEMA:GRCPC}
+        type:
+          preferred_uuid_jdbc_type: VARCHAR
 
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
-    default-schema: ${DB_SCHEMA:grc}
-    schemas: ${DB_SCHEMA:grc}
-    locations: classpath:db/migration/common,classpath:db/migration/{vendor}
+    default-schema: ${DB_SCHEMA:GRCPC}
+    schemas: ${DB_SCHEMA:GRCPC}
+    locations: classpath:db/migration/common,classpath:db/migration/oracle
     baseline-on-migrate: true
 
 server:
@@ -32,6 +34,7 @@ app:
   minio:
     enabled: ${MINIO_ENABLED:false}
     endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    public-endpoint: ${MINIO_PUBLIC_ENDPOINT:${MINIO_ENDPOINT:http://localhost:9000}}
     access-key: ${MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${MINIO_SECRET_KEY:minioadmin}
     bucket: ${MINIO_BUCKET:grcpc-documents}

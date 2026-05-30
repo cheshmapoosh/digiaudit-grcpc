@@ -1,6 +1,7 @@
 package com.digiaudit.grcpc.modules.masterdata.risk.domain.entity;
 
 import com.digiaudit.grcpc.common.persistence.AuditableEntity;
+import com.digiaudit.grcpc.modules.masterdata.risk.domain.converter.RiskEffectListConverter;
 import com.digiaudit.grcpc.modules.masterdata.risk.domain.value.RiskEffectValue;
 import jakarta.persistence.*;
 import java.time.LocalDate;
@@ -8,8 +9,6 @@ import java.util.List;
 import java.util.UUID;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(
@@ -83,8 +82,8 @@ public class RiskNodeEntity extends AuditableEntity {
     @Column(name = "causes", length = 2000)
     private String causes;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "effects_json")
+    @Convert(converter = RiskEffectListConverter.class)
+    @Column(name = "effects_json", columnDefinition = "clob")
     private List<RiskEffectValue> effects;
 
     @Column(name = "existing_risks_count", nullable = false)

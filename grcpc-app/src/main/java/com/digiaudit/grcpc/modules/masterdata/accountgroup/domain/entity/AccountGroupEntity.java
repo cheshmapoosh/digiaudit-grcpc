@@ -58,13 +58,13 @@ public class AccountGroupEntity extends AuditableEntity {
     @Column(name = "assertion_disclosure")
     private Boolean assertionDisclosure;
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "objectives_json")
+    @Column(name = "objectives_json", columnDefinition = "clob")
     private List<AccountGroupObjectiveValue> objectives;
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "account_ranges_json")
+    @Column(name = "account_ranges_json", columnDefinition = "clob")
     private List<AccountRangeValue> accountRanges;
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "risks_json")
+    @Column(name = "risks_json", columnDefinition = "clob")
     private List<AccountGroupRiskValue> risks;
 
     public AccountGroupAssertionsValue getAssertions() {

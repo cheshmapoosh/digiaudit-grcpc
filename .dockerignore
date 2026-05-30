@@ -1,0 +1,8 @@
+.git
+.idea
+logs
+grcpc-app/logs
+grcpc-app/target
+grcpc-ui/dist
+grcpc-ui/node_modules
+**/.DS_Store

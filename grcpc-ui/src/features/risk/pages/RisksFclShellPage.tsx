@@ -293,6 +293,7 @@ export default function RisksFclShellPage() {
 
   const [searchText, setSearchText] = useState("");
   const [pageError, setPageError] = useState<string | null>(null);
+  const [objectError, setObjectError] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<RiskNode | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
@@ -374,6 +375,8 @@ export default function RisksFclShellPage() {
     (id: string) => {
       setSelectedTreeId(id);
       setTreeExpansionAnchorId(id);
+      setPageError(null);
+      setObjectError(null);
       navigate(`/risks/${id}`);
     },
     [navigate],
@@ -381,6 +384,8 @@ export default function RisksFclShellPage() {
 
   const handleCreate = useCallback(
     (nodeType: RiskNodeType) => {
+      setPageError(null);
+      setObjectError(null);
       const selectedId = selectedTreeId ?? riskId ?? null;
       const selectedItem = selectedId ? (nodesById[selectedId] ?? null) : null;
       const parentId = resolveCreateParentId(nodeType, selectedItem, nodesById);
@@ -417,12 +422,17 @@ export default function RisksFclShellPage() {
 
       setSelectedTreeId(targetId);
       setTreeExpansionAnchorId(targetId);
+      setPageError(null);
+      setObjectError(null);
       navigate(`/risks/${targetId}/edit`);
     },
     [navigate, riskId, selectedTreeId],
   );
 
   const handleCancel = useCallback(() => {
+    setObjectError(null);
+    setPageError(null);
+
     const currentAnchorId =
       routeMode === "create"
         ? (queryParentId ?? selectedTreeId)
@@ -504,6 +514,7 @@ export default function RisksFclShellPage() {
       try {
         setSubmitting(true);
         setPageError(null);
+        setObjectError(null);
 
         if (routeMode === "create") {
           const createPayload = payload as RiskNodeCreate;
@@ -525,7 +536,7 @@ export default function RisksFclShellPage() {
           navigate("/risks");
         }
       } catch (error) {
-        setPageError(
+        setObjectError(
           mapError(
             error,
             t("risk.errors.save", {
@@ -685,7 +696,7 @@ export default function RisksFclShellPage() {
         style={dialogStyle}
         onClose={handleObjectDialogClose}
       >
-        <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
+        <ModalDialogHeader title={dialogTitle} onClose={handleCancel} />
         <div style={dialogContentStyle}>
           {objectMode === "create" || objectValue ? (
             <RiskObjectPage
@@ -696,7 +707,7 @@ export default function RisksFclShellPage() {
               parent={selectedParentForCreate}
               requestedNodeType={requestedNodeType}
               busy={loading || submitting}
-              error={pageError}
+              error={objectError}
               onSubmit={handleObjectSubmit}
               onCancel={handleCancel}
               onEdit={() => handleEdit()}

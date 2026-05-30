@@ -23,7 +23,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Map;
@@ -93,7 +92,7 @@ public class SetupApplicationService {
                 .orElse(SystemSetupEntity.builder().initialized(false).build());
 
         setupEntity.setInitialized(true);
-        setupEntity.setInitializedAt(Instant.now());
+        setupEntity.setInitializedAt(LocalDateTime.now());
         setupEntity.setInitializedByUserId(rootUser.getId());
         systemSetupRepository.save(setupEntity);
 

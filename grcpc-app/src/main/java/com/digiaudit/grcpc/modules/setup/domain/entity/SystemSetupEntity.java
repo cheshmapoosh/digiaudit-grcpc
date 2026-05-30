@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -25,7 +25,7 @@ public class SystemSetupEntity extends AuditableEntity {
     private boolean initialized;
 
     @Column(name = "initialized_at")
-    private Instant initializedAt;
+    private LocalDateTime initializedAt;
 
     @Column(name = "initialized_by_user_id")
     private UUID initializedByUserId;
