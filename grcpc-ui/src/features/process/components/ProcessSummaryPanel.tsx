@@ -26,6 +26,7 @@ export interface ProcessSummaryPanelProps {
     value?: ProcessNode | null;
     busy?: boolean;
     error?: string | null;
+    onErrorClose?: () => void;
     onEdit?: (id: string) => void;
     onCancel?: () => void;
 }
@@ -510,6 +511,7 @@ export default function ProcessSummaryPanel({
                                                 value,
                                                 busy = false,
                                                 error,
+                                                onErrorClose,
                                                 onEdit,
                                                 onCancel,
                                             }: ProcessSummaryPanelProps) {
@@ -550,7 +552,7 @@ export default function ProcessSummaryPanel({
 
             <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
                 {error ? (
-                    <MessageStrip design="Negative" hideCloseButton>
+                    <MessageStrip design="Negative" onClose={onErrorClose}>
                         {error}
                     </MessageStrip>
                 ) : null}

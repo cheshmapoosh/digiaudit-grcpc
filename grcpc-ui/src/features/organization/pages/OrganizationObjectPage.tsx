@@ -31,7 +31,10 @@ import type {
     OrganizationType,
 } from "../domain/organization.model";
 import type {
+    OrganizationControlView,
     OrganizationProcessAssignmentType,
+    OrganizationRiskAssignment,
+    OrganizationRiskOption,
     OrganizationSubProcessOption,
     OrganizationSubProcessView,
 } from "../domain/organization-process-assignment.model";
@@ -39,7 +42,6 @@ import ParentValueHelpDialog from "../components/ParentValueHelpDialog";
 import {
     formatPersianDate,
     toEnglishDigits,
-    toPersianDigits,
 } from "@/shared/utils/date.utils";
 
 export type OrganizationObjectMode = "create" | "edit" | "view";
@@ -78,14 +80,21 @@ export interface OrganizationObjectPageProps {
     activeTab?: OrganizationTabKey;
     subProcesses?: OrganizationSubProcessView[];
     availableSubProcesses?: OrganizationSubProcessOption[];
+    controls?: OrganizationControlView[];
+    risks?: OrganizationRiskAssignment[];
+    availableRisks?: OrganizationRiskOption[];
     subProcessesBusy?: boolean;
+    relationshipsBusy?: boolean;
     busy?: boolean;
     error?: string | null;
+    onErrorClose?: () => void;
     onSubmit: (payload: OrganizationNodeCreate | OrganizationNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
     onEdit?: () => void;
     onAssignSubProcess?: (processNodeId: string) => Promise<void> | void;
     onRemoveSubProcessAssignment?: (assignmentId: string) => Promise<void> | void;
+    onAssignRisk?: (processNodeId: string, riskNodeId: string) => Promise<void> | void;
+    onRemoveRiskAssignment?: (assignmentId: string) => Promise<void> | void;
     onActiveTabChange?: (tab: OrganizationTabKey) => void;
 }
 
@@ -185,6 +194,9 @@ const FOOTER_STYLE: CSSProperties = {
 const ACTION_BUTTON_STYLE: CSSProperties = {
     minWidth: "8rem",
 };
+
+const DATE_VALUE_FORMAT = "yyyy-MM-dd";
+const DATE_DISPLAY_FORMAT = "d MMMM y";
 
 const TABLE_PANEL_STYLE: CSSProperties = {
     display: "grid",
@@ -297,6 +309,12 @@ function toFormState(
 
 function readInputValue(event: unknown): string {
     return (event as { target?: { value?: string } }).target?.value ?? "";
+}
+
+function readDatePickerValue(event: unknown): string {
+    const detailValue = (event as { detail?: { value?: string } }).detail?.value;
+
+    return toEnglishDigits(detailValue ?? readInputValue(event));
 }
 
 function readSelectedDataValue(event: unknown, fallback: string): string {
@@ -429,6 +447,14 @@ function formatSubProcessOption(option: OrganizationSubProcessOption): string {
         : "";
 
     return `${option.code} - ${option.title}${parentTitle}`;
+}
+
+function formatAssignedSubProcessOption(option: OrganizationSubProcessView): string {
+    return `${option.code} - ${option.title}`;
+}
+
+function formatRiskOption(option: OrganizationRiskOption): string {
+    return `${option.code} - ${option.title}`;
 }
 
 function formatOptionalValue(value?: string): string {
@@ -568,14 +594,21 @@ export default function OrganizationObjectPage({
     activeTab: controlledActiveTab,
     subProcesses = [],
     availableSubProcesses = [],
+    controls = [],
+    risks = [],
+    availableRisks = [],
     subProcessesBusy = false,
+    relationshipsBusy = false,
     busy = false,
     error,
+    onErrorClose,
     onSubmit,
     onCancel,
     onEdit,
     onAssignSubProcess,
     onRemoveSubProcessAssignment,
+    onAssignRisk,
+    onRemoveRiskAssignment,
     onActiveTabChange,
 }: OrganizationObjectPageProps) {
     const { t } = useTranslation();
@@ -596,6 +629,9 @@ export default function OrganizationObjectPage({
     const [internalActiveTab, setInternalActiveTab] = useState<OrganizationTabKey>("general");
     const [selectedSubProcessId, setSelectedSubProcessId] = useState("");
     const [selectedSubProcessSearchValue, setSelectedSubProcessSearchValue] = useState("");
+    const [selectedRiskSubProcessId, setSelectedRiskSubProcessId] = useState("");
+    const [selectedRiskId, setSelectedRiskId] = useState("");
+    const [selectedRiskSearchValue, setSelectedRiskSearchValue] = useState("");
     const activeTab = controlledActiveTab ?? internalActiveTab;
 
     const handleActiveTabChange = (tab: OrganizationTabKey) => {
@@ -774,6 +810,26 @@ export default function OrganizationObjectPage({
         selectedSubProcessOption
             ? formatSubProcessOption(selectedSubProcessOption)
             : selectedSubProcessSearchValue;
+    const selectedRiskSubProcess = subProcesses.find(
+        (subProcess) => subProcess.processNodeId === selectedRiskSubProcessId,
+    );
+    const riskSubProcessComboBoxValue = selectedRiskSubProcess
+        ? formatAssignedSubProcessOption(selectedRiskSubProcess)
+        : "";
+    const assignedRiskKeys = new Set(
+        risks.map((risk) => `${risk.processNodeId}:${risk.riskNodeId}`),
+    );
+    const assignableRisks = selectedRiskSubProcessId
+        ? availableRisks.filter(
+              (risk) => !assignedRiskKeys.has(`${selectedRiskSubProcessId}:${risk.riskNodeId}`),
+          )
+        : availableRisks;
+    const selectedRiskOption = assignableRisks.find(
+        (risk) => risk.riskNodeId === selectedRiskId,
+    );
+    const riskComboBoxValue = selectedRiskOption
+        ? formatRiskOption(selectedRiskOption)
+        : selectedRiskSearchValue;
 
     const handleAssignSubProcess = async () => {
         const typedMatch = unassignedSubProcesses.find(
@@ -790,6 +846,21 @@ export default function OrganizationObjectPage({
         await onAssignSubProcess(targetId);
         setSelectedSubProcessId("");
         setSelectedSubProcessSearchValue("");
+    };
+
+    const handleAssignRisk = async () => {
+        const typedMatch = assignableRisks.find(
+            (risk) => formatRiskOption(risk) === selectedRiskSearchValue,
+        );
+        const targetRiskId = selectedRiskId || typedMatch?.riskNodeId;
+
+        if (!selectedRiskSubProcessId || !targetRiskId || !onAssignRisk || !value?.id) {
+            return;
+        }
+
+        await onAssignRisk(selectedRiskSubProcessId, targetRiskId);
+        setSelectedRiskId("");
+        setSelectedRiskSearchValue("");
     };
 
     const renderGeneralTab = () => (
@@ -910,14 +981,16 @@ export default function OrganizationObjectPage({
                 label={t("organization.fields.validFrom", { defaultValue: "اعتبار از" })}
             >
                 <DatePicker
-                    value={toPersianDigits(form.validFrom)}
+                    value={form.validFrom}
+                    valueFormat={DATE_VALUE_FORMAT}
+                    displayFormat={DATE_DISPLAY_FORMAT}
                     primaryCalendarType="Persian"
                     placeholder={t("organization.fields.datePlaceholder", {
                         defaultValue: "سال/ماه/روز",
                     })}
                     disabled={readOnly || busy}
                     onChange={(event) =>
-                        handleChange("validFrom", toEnglishDigits(readInputValue(event)))
+                        handleChange("validFrom", readDatePickerValue(event))
                     }
                 />
             </FormField>
@@ -926,14 +999,16 @@ export default function OrganizationObjectPage({
                 label={t("organization.fields.validTo", { defaultValue: "اعتبار تا" })}
             >
                 <DatePicker
-                    value={toPersianDigits(form.validTo)}
+                    value={form.validTo}
+                    valueFormat={DATE_VALUE_FORMAT}
+                    displayFormat={DATE_DISPLAY_FORMAT}
                     primaryCalendarType="Persian"
                     placeholder={t("organization.fields.datePlaceholder", {
                         defaultValue: "سال/ماه/روز",
                     })}
                     disabled={readOnly || busy}
                     onChange={(event) =>
-                        handleChange("validTo", toEnglishDigits(readInputValue(event)))
+                        handleChange("validTo", readDatePickerValue(event))
                     }
                 />
             </FormField>
@@ -1156,6 +1231,267 @@ export default function OrganizationObjectPage({
         );
     };
 
+    const renderRisksTab = () => {
+        const canSelectRisk =
+            !readOnly &&
+            !busy &&
+            !relationshipsBusy &&
+            Boolean(value?.id) &&
+            Boolean(onAssignRisk) &&
+            subProcesses.length > 0 &&
+            availableRisks.length > 0;
+        const canAssignRisk = canSelectRisk && Boolean(selectedRiskSubProcessId) && Boolean(selectedRiskId);
+
+        return (
+            <div style={TABLE_PANEL_STYLE}>
+                <Title level="H5">
+                    {t("organization.tabs.risks", { defaultValue: "ریسک ها" })}
+                </Title>
+
+                <div style={TABLE_HINT_STYLE}>
+                    {value?.id
+                        ? t("organization.tabs.risks.hint", {
+                              defaultValue:
+                                  "ریسک ها به زیرفرآیندهای تخصیص داده شده به سازمان وصل می شوند.",
+                          })
+                        : t("organization.tabs.risks.saveFirstHint", {
+                              defaultValue: "برای تخصیص ریسک، ابتدا سازمان را ذخیره کنید.",
+                          })}
+                </div>
+
+                {!readOnly ? (
+                    <div style={SUB_PROCESS_PICKER_STYLE}>
+                        <ComboBox
+                            style={SUB_PROCESS_COMBOBOX_STYLE}
+                            filter="Contains"
+                            value={riskSubProcessComboBoxValue}
+                            placeholder={t("organization.risks.selectSubProcess", {
+                                defaultValue: "انتخاب زیر فرآیند",
+                            })}
+                            disabled={!canSelectRisk}
+                            onSelectionChange={(event) => {
+                                const nextValue = readSelectedComboBoxDataValue(
+                                    event,
+                                    selectedRiskSubProcessId,
+                                );
+                                setSelectedRiskSubProcessId(nextValue);
+                                setSelectedRiskId("");
+                                setSelectedRiskSearchValue("");
+                            }}
+                        >
+                            {subProcesses.map((subProcess) => (
+                                <ComboBoxItem
+                                    key={subProcess.processNodeId}
+                                    data-value={subProcess.processNodeId}
+                                    text={formatAssignedSubProcessOption(subProcess)}
+                                />
+                            ))}
+                        </ComboBox>
+
+                        <ComboBox
+                            style={SUB_PROCESS_COMBOBOX_STYLE}
+                            filter="Contains"
+                            showClearIcon
+                            value={riskComboBoxValue}
+                            placeholder={t("organization.risks.selectRisk", {
+                                defaultValue: "انتخاب ریسک",
+                            })}
+                            disabled={!canSelectRisk || !selectedRiskSubProcessId}
+                            onInput={(event) => {
+                                const nextValue = readInputValue(event);
+                                setSelectedRiskSearchValue(nextValue);
+
+                                const matchedOption = assignableRisks.find(
+                                    (risk) => formatRiskOption(risk) === nextValue,
+                                );
+                                setSelectedRiskId(matchedOption?.riskNodeId ?? "");
+                            }}
+                            onSelectionChange={(event) => {
+                                const nextValue = readSelectedComboBoxDataValue(
+                                    event,
+                                    selectedRiskId,
+                                );
+                                const selectedOption = assignableRisks.find(
+                                    (risk) => risk.riskNodeId === nextValue,
+                                );
+
+                                setSelectedRiskId(nextValue);
+                                setSelectedRiskSearchValue(
+                                    selectedOption ? formatRiskOption(selectedOption) : "",
+                                );
+                            }}
+                        >
+                            {assignableRisks.map((risk) => (
+                                <ComboBoxItem
+                                    key={risk.riskNodeId}
+                                    data-value={risk.riskNodeId}
+                                    text={formatRiskOption(risk)}
+                                    additionalText={risk.riskType}
+                                />
+                            ))}
+                        </ComboBox>
+
+                        <Button
+                            style={SUB_PROCESS_ADD_BUTTON_STYLE}
+                            design="Emphasized"
+                            disabled={!canAssignRisk}
+                            onClick={() => {
+                                void handleAssignRisk();
+                            }}
+                        >
+                            {t("organization.actions.add", { defaultValue: "اضافه نمودن" })}
+                        </Button>
+                    </div>
+                ) : null}
+
+                <Table
+                    style={TABLE_STYLE}
+                    noDataText={t("organization.risks.noData", {
+                        defaultValue: "برای این سازمان ریسکی تخصیص داده نشده است.",
+                    })}
+                    headerRow={
+                        <TableHeaderRow>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.subProcessName", { defaultValue: "نام زیر فرآیند" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.riskName", { defaultValue: "نام ریسک" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.riskDescription", { defaultValue: "شرح ریسک" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.riskType", { defaultValue: "نوع ریسک" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.assignmentAndStatus", { defaultValue: "رابطه / وضعیت" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.actions", { defaultValue: "عملیات" })}
+                            </TableHeaderCell>
+                        </TableHeaderRow>
+                    }
+                >
+                    {risks.map((risk) => (
+                        <TableRow key={risk.id}>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <strong>{risk.subProcessTitle}</strong>
+                                    <span style={TABLE_SECONDARY_TEXT_STYLE}>{risk.subProcessCode}</span>
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <strong>{risk.riskTitle}</strong>
+                                    <span style={TABLE_SECONDARY_TEXT_STYLE}>{risk.riskCode}</span>
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                {risk.riskDescription || "-"}
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                {risk.riskType || "-"}
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <span>{resolveAssignmentTypeLabel(risk.assignmentType, t)}</span>
+                                    <span style={TABLE_INLINE_META_STYLE}>
+                                        {risk.isActive
+                                            ? t("common.active", { defaultValue: "فعال" })
+                                            : t("common.inactive", { defaultValue: "غیرفعال" })}
+                                    </span>
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <Button
+                                    design="Transparent"
+                                    disabled={
+                                        readOnly ||
+                                        busy ||
+                                        relationshipsBusy ||
+                                        !onRemoveRiskAssignment
+                                    }
+                                    onClick={() => {
+                                        void onRemoveRiskAssignment?.(risk.id);
+                                    }}
+                                >
+                                    {t("organization.actions.delete", { defaultValue: "حذف" })}
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </Table>
+            </div>
+        );
+    };
+
+    const renderControlsTab = () => (
+        <div style={TABLE_PANEL_STYLE}>
+            <Title level="H5">
+                {t("organization.tabs.controls", { defaultValue: "کنترل ها" })}
+            </Title>
+
+            <div style={TABLE_HINT_STYLE}>
+                {t("organization.tabs.controls.hint", {
+                    defaultValue:
+                        "کنترل ها از زیرفرآیندهای تخصیص داده شده به سازمان خوانده می شوند.",
+                })}
+            </div>
+
+            <Table
+                style={TABLE_STYLE}
+                noDataText={t("organization.controls.noData", {
+                    defaultValue: "برای زیرفرآیندهای این سازمان کنترلی ثبت نشده است.",
+                })}
+                headerRow={
+                    <TableHeaderRow>
+                        <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                            {t("organization.fields.subProcessName", { defaultValue: "نام زیر فرآیند" })}
+                        </TableHeaderCell>
+                        <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                            {t("organization.fields.controlName", { defaultValue: "نام کنترل" })}
+                        </TableHeaderCell>
+                        <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                            {t("organization.fields.controlDescription", { defaultValue: "شرح کنترل" })}
+                        </TableHeaderCell>
+                        <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                            {t("organization.fields.controlOwner", { defaultValue: "مسئول کنترل" })}
+                        </TableHeaderCell>
+                        <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                            {t("organization.fields.importance", { defaultValue: "اهمیت" })}
+                        </TableHeaderCell>
+                    </TableHeaderRow>
+                }
+            >
+                {controls.map((control) => (
+                    <TableRow key={`${control.processNodeId}:${control.controlId}`}>
+                        <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                            <div style={TABLE_CELL_CONTENT_STYLE}>
+                                <strong>{control.subProcessTitle}</strong>
+                                <span style={TABLE_SECONDARY_TEXT_STYLE}>{control.subProcessCode}</span>
+                            </div>
+                        </TableCell>
+                        <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                            <div style={TABLE_CELL_CONTENT_STYLE}>
+                                <strong>{control.controlTitle}</strong>
+                                <span style={TABLE_SECONDARY_TEXT_STYLE}>{control.controlCode}</span>
+                            </div>
+                        </TableCell>
+                        <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                            {control.controlDescription || "-"}
+                        </TableCell>
+                        <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                            {control.controlOwner || "-"}
+                        </TableCell>
+                        <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                            {control.importance || "-"}
+                        </TableCell>
+                    </TableRow>
+                ))}
+            </Table>
+        </div>
+    );
+
     const renderTabContent = () => {
         if (activeTab === "general") {
             return renderGeneralTab();
@@ -1166,40 +1502,11 @@ export default function OrganizationObjectPage({
         }
 
         if (activeTab === "risks") {
-            return (
-                <TablePlaceholder
-                    title={t("organization.tabs.risks", { defaultValue: "ریسک ها" })}
-                    actions={tabActionButtons([
-                        t("organization.actions.add", { defaultValue: "اضافه" }),
-                        t("organization.actions.delete", { defaultValue: "حذف" }),
-                        t("organization.actions.open", { defaultValue: "باز نمودن" }),
-                    ])}
-                    columns={[
-                        t("organization.fields.subProcessName", { defaultValue: "نام زیر فرآیند" }),
-                        t("organization.fields.riskName", { defaultValue: "نام ریسک" }),
-                        t("organization.fields.riskDescription", { defaultValue: "شرح ریسک" }),
-                        t("organization.fields.riskType", { defaultValue: "نوع ریسک" }),
-                    ]}
-                />
-            );
+            return renderRisksTab();
         }
 
         if (activeTab === "controls") {
-            return (
-                <TablePlaceholder
-                    title={t("organization.tabs.controls", { defaultValue: "کنترل ها" })}
-                    actions={tabActionButtons([
-                        t("organization.actions.add", { defaultValue: "اضافه" }),
-                        t("organization.actions.delete", { defaultValue: "حذف" }),
-                        t("organization.actions.open", { defaultValue: "باز نمودن" }),
-                    ])}
-                    columns={[
-                        t("organization.fields.subProcessName", { defaultValue: "نام زیر فرآیند" }),
-                        t("organization.fields.controlName", { defaultValue: "نام کنترل" }),
-                        t("organization.fields.controlDescription", { defaultValue: "شرح کنترل" }),
-                    ]}
-                />
-            );
+            return renderControlsTab();
         }
 
         if (activeTab === "rules") {
@@ -1410,13 +1717,16 @@ export default function OrganizationObjectPage({
             <OrganizationTabs activeTab={activeTab} onChange={handleActiveTabChange} />
 
             {error ? (
-                <MessageStrip design="Negative" hideCloseButton>
+                <MessageStrip design="Negative" onClose={onErrorClose}>
                     {error}
                 </MessageStrip>
             ) : null}
 
             {validationError ? (
-                <MessageStrip design="Negative" hideCloseButton>
+                <MessageStrip
+                    design="Negative"
+                    onClose={() => setValidationError(null)}
+                >
                     {validationError}
                 </MessageStrip>
             ) : null}
