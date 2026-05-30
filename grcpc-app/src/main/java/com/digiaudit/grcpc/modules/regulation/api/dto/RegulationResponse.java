@@ -17,8 +17,14 @@ public record RegulationResponse(
         RegulationNodeType nodeType,
         RegulationStatus status,
         String description,
+        Integer sortOrder,
+        LocalDate effectiveDate,
+        LocalDate validTo,
         LocalDate effectiveFrom,
         LocalDate effectiveTo,
+        String issuer,
+        String ownerName,
+        Integer documentsCount,
         Instant createdAt,
         Instant updatedAt
 ) {

@@ -22,8 +22,11 @@ import type {
     OrganizationNodeUpdate,
 } from "../domain/organization.model";
 import type {
-    OrganizationControlView,
     OrganizationProcessAssignment,
+    OrganizationReferenceAssignment,
+    OrganizationReferenceOption,
+    OrganizationReferenceType,
+    OrganizationReferenceView,
     OrganizationRiskAssignment,
     OrganizationRiskOption,
     OrganizationSubProcessOption,
@@ -39,10 +42,26 @@ import {
     ROOT_PARENT as RISK_ROOT_PARENT,
     useRiskState,
 } from "@/features/risk";
+import type { PolicyNode } from "@/features/policy";
+import {
+    ROOT_PARENT as POLICY_ROOT_PARENT,
+    usePolicyState,
+} from "@/features/policy";
+import type { RegulationNode } from "@/features/regulation";
+import {
+    ROOT_PARENT as REGULATION_ROOT_PARENT,
+    useRegulationState,
+} from "@/features/regulation";
+import type { ObjectiveNode } from "@/features/objective";
+import {
+    ROOT_PARENT as OBJECTIVE_ROOT_PARENT,
+    useObjectiveState,
+} from "@/features/objective";
 
 import { useOrganizationState, ROOT_PARENT } from "../state/organization.state";
 import { useOrganizationProcessAssignmentState } from "../state/organization-process-assignment.state";
 import { useOrganizationProcessRelationshipState } from "../state/organization-process-relationship.state";
+import { useOrganizationReferenceAssignmentState } from "../state/organization-reference-assignment.state";
 import { hasChildren, sortOrganizations } from "../utils/organization.tree";
 
 import OrganizationSummaryPanel from "../components/OrganizationSummaryPanel";
@@ -59,8 +78,14 @@ const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
 const DIALOG_NORMAL_WIDTH = "96vw";
 const DIALOG_LARGE_WIDTH = "92vw";
 const EMPTY_ASSIGNMENTS: OrganizationProcessAssignment[] = [];
-const EMPTY_CONTROLS: OrganizationControlView[] = [];
 const EMPTY_RISKS: OrganizationRiskAssignment[] = [];
+const EMPTY_REFERENCE_ASSIGNMENTS: OrganizationReferenceAssignment[] = [];
+const REFERENCE_TYPES: readonly OrganizationReferenceType[] = [
+    "CONTROL",
+    "REGULATION",
+    "POLICY",
+    "OBJECTIVE",
+];
 const MIN_PANEL_GAP = "1px";
 
 function useOrganizationRouteMode(): RouteMode {
@@ -246,6 +271,24 @@ function sortRiskNodes(items: RiskNode[]): RiskNode[] {
     });
 }
 
+function sortReferenceNodes<T extends { code: string; title: string; sortOrder?: number }>(
+    items: T[],
+): T[] {
+    return [...items].sort((a, b) => {
+        const orderCompare = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        if (orderCompare !== 0) {
+            return orderCompare;
+        }
+
+        const codeCompare = a.code.localeCompare(b.code, "fa");
+        if (codeCompare !== 0) {
+            return codeCompare;
+        }
+
+        return a.title.localeCompare(b.title, "fa");
+    });
+}
+
 function toSubProcessOption(
     subProcess: ProcessNode,
     nodesById: Record<string, ProcessNode>,
@@ -270,6 +313,67 @@ function toRiskOption(risk: RiskNode): OrganizationRiskOption {
         riskType: risk.riskType,
         status: risk.status,
         description: risk.description,
+    };
+}
+
+function toControlReferenceOption(
+    control: ProcessNode,
+    nodesById: Record<string, ProcessNode>,
+): OrganizationReferenceOption {
+    const parent = control.parentId ? nodesById[control.parentId] : null;
+
+    return {
+        referenceId: control.id,
+        code: control.code,
+        title: control.title,
+        description: control.description,
+        status: control.status,
+        ownerName: control.controlOwner ?? control.ownerName,
+        typeLabel: control.controlClassification,
+        parentCode: parent?.code,
+        parentTitle: parent?.title,
+    };
+}
+
+function toRegulationReferenceOption(regulation: RegulationNode): OrganizationReferenceOption {
+    return {
+        referenceId: regulation.id,
+        code: regulation.code,
+        title: regulation.title,
+        description: regulation.description,
+        status: regulation.status,
+        ownerName: regulation.ownerName,
+        typeLabel: regulation.issuer,
+        validFrom: regulation.effectiveDate,
+        validTo: regulation.validTo,
+    };
+}
+
+function toPolicyReferenceOption(policy: PolicyNode): OrganizationReferenceOption {
+    return {
+        referenceId: policy.id,
+        code: policy.code,
+        title: policy.title,
+        description: policy.description,
+        status: policy.status,
+        ownerName: policy.ownerName,
+        typeLabel: policy.policyKind,
+        validFrom: policy.validFrom,
+        validTo: policy.validTo,
+    };
+}
+
+function toObjectiveReferenceOption(objective: ObjectiveNode): OrganizationReferenceOption {
+    return {
+        referenceId: objective.id,
+        code: objective.code,
+        title: objective.title,
+        description: objective.description,
+        status: objective.status,
+        ownerName: objective.organizationUnitName,
+        typeLabel: objective.objectiveType,
+        validFrom: objective.effectiveFrom,
+        validTo: objective.validUntil,
     };
 }
 
@@ -323,6 +427,51 @@ function buildOrganizationSubProcessViews(
         });
 }
 
+function buildOrganizationReferenceViews(
+    assignments: OrganizationReferenceAssignment[],
+    options: OrganizationReferenceOption[],
+): OrganizationReferenceView[] {
+    const optionsById = new Map(options.map((option) => [option.referenceId, option]));
+
+    return assignments
+        .map((assignment): OrganizationReferenceView | null => {
+            const option = optionsById.get(assignment.referenceId);
+
+            if (!option) {
+                return null;
+            }
+
+            return {
+                ...option,
+                assignmentId: assignment.id,
+                organizationId: assignment.organizationId,
+                referenceType: assignment.referenceType,
+                assignmentType: assignment.assignmentType,
+                validFrom: assignment.validFrom ?? option.validFrom,
+                validTo: assignment.validTo ?? option.validTo,
+                isActive: assignment.isActive,
+            };
+        })
+        .filter((item): item is OrganizationReferenceView => item !== null)
+        .sort((a, b) => {
+            const codeCompare = a.code.localeCompare(b.code, "fa");
+            return codeCompare !== 0 ? codeCompare : a.title.localeCompare(b.title, "fa");
+        });
+}
+
+function getReferenceAssignments(
+    assignmentsByOrganizationAndType: Record<string, OrganizationReferenceAssignment[]>,
+    organizationId: string | undefined,
+    referenceType: OrganizationReferenceType,
+): OrganizationReferenceAssignment[] {
+    if (!organizationId) {
+        return EMPTY_REFERENCE_ASSIGNMENTS;
+    }
+
+    return assignmentsByOrganizationAndType[`${organizationId}:${referenceType}`] ??
+        EMPTY_REFERENCE_ASSIGNMENTS;
+}
+
 export default function OrganizationsFclShellPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -345,6 +494,15 @@ export default function OrganizationsFclShellPage() {
     const riskNodesById = useRiskState((state) => state.nodesById);
     const riskLoading = useRiskState((state) => state.loading);
     const loadRiskChildren = useRiskState((state) => state.loadChildren);
+    const policyNodesById = usePolicyState((state) => state.nodesById);
+    const policyLoading = usePolicyState((state) => state.loading);
+    const loadPolicyChildren = usePolicyState((state) => state.loadChildren);
+    const regulationNodesById = useRegulationState((state) => state.nodesById);
+    const regulationLoading = useRegulationState((state) => state.loading);
+    const loadRegulationChildren = useRegulationState((state) => state.loadChildren);
+    const objectiveNodesById = useObjectiveState((state) => state.nodesById);
+    const objectiveLoading = useObjectiveState((state) => state.loading);
+    const loadObjectiveChildren = useObjectiveState((state) => state.loadChildren);
     const assignmentsByOrganizationId = useOrganizationProcessAssignmentState(
         (state) => state.assignmentsByOrganizationId,
     );
@@ -360,17 +518,11 @@ export default function OrganizationsFclShellPage() {
     const removeSubProcessFromOrganization = useOrganizationProcessAssignmentState(
         (state) => state.removeAssignment,
     );
-    const controlsByOrganizationId = useOrganizationProcessRelationshipState(
-        (state) => state.controlsByOrganizationId,
-    );
     const risksByOrganizationId = useOrganizationProcessRelationshipState(
         (state) => state.risksByOrganizationId,
     );
     const relationshipsLoading = useOrganizationProcessRelationshipState(
         (state) => state.loading,
-    );
-    const loadControlsForOrganization = useOrganizationProcessRelationshipState(
-        (state) => state.loadControlsForOrganization,
     );
     const loadRisksForOrganization = useOrganizationProcessRelationshipState(
         (state) => state.loadRisksForOrganization,
@@ -380,6 +532,21 @@ export default function OrganizationsFclShellPage() {
     );
     const removeRiskFromOrganization = useOrganizationProcessRelationshipState(
         (state) => state.removeRiskAssignment,
+    );
+    const referenceAssignmentsByOrganizationAndType = useOrganizationReferenceAssignmentState(
+        (state) => state.assignmentsByOrganizationAndType,
+    );
+    const referenceAssignmentsLoading = useOrganizationReferenceAssignmentState(
+        (state) => state.loading,
+    );
+    const loadReferenceAssignmentsForOrganization = useOrganizationReferenceAssignmentState(
+        (state) => state.loadForOrganization,
+    );
+    const assignReferenceToOrganization = useOrganizationReferenceAssignmentState(
+        (state) => state.assignReference,
+    );
+    const removeReferenceFromOrganization = useOrganizationReferenceAssignmentState(
+        (state) => state.removeAssignment,
     );
 
     const [searchText, setSearchText] = useState("");
@@ -409,6 +576,18 @@ export default function OrganizationsFclShellPage() {
         () => sortRiskNodes(Object.values(riskNodesById)),
         [riskNodesById],
     );
+    const policyItems = useMemo(
+        () => sortReferenceNodes(Object.values(policyNodesById)),
+        [policyNodesById],
+    );
+    const regulationItems = useMemo(
+        () => sortReferenceNodes(Object.values(regulationNodesById)),
+        [regulationNodesById],
+    );
+    const objectiveItems = useMemo(
+        () => sortReferenceNodes(Object.values(objectiveNodesById)),
+        [objectiveNodesById],
+    );
     const availableSubProcesses = useMemo(
         () =>
             processItems
@@ -422,6 +601,31 @@ export default function OrganizationsFclShellPage() {
                 .filter((item) => item.nodeType === "riskTemplate")
                 .map(toRiskOption),
         [riskItems],
+    );
+    const availableControlReferences = useMemo(
+        () =>
+            processItems
+                .filter((item) => item.nodeType === "control")
+                .map((item) => toControlReferenceOption(item, processNodesById)),
+        [processItems, processNodesById],
+    );
+    const availableRegulationReferences = useMemo(
+        () =>
+            regulationItems
+                .filter((item) => item.nodeType === "law")
+                .map(toRegulationReferenceOption),
+        [regulationItems],
+    );
+    const availablePolicyReferences = useMemo(
+        () =>
+            policyItems
+                .filter((item) => item.nodeType === "policy")
+                .map(toPolicyReferenceOption),
+        [policyItems],
+    );
+    const availableObjectiveReferences = useMemo(
+        () => objectiveItems.map(toObjectiveReferenceOption),
+        [objectiveItems],
     );
 
     const selectedRouteItem = organizationId ? nodesById[organizationId] ?? null : null;
@@ -482,6 +686,23 @@ export default function OrganizationsFclShellPage() {
             );
         });
     }, [loadRiskChildren, t]);
+
+    useEffect(() => {
+        void Promise.all([
+            loadPolicyChildren(POLICY_ROOT_PARENT),
+            loadRegulationChildren(REGULATION_ROOT_PARENT),
+            loadObjectiveChildren(OBJECTIVE_ROOT_PARENT),
+        ]).catch((error: unknown) => {
+            setPageError(
+                mapError(
+                    error,
+                    t("organization.references.errors.loadCatalog", {
+                        defaultValue: "خطا در بارگذاری قوانین، سیاست ها و اهداف",
+                    }),
+                ),
+            );
+        });
+    }, [loadObjectiveChildren, loadPolicyChildren, loadRegulationChildren, t]);
 
     /**
      * در حالت create child، درخت باید parent را انتخاب/باز کند.
@@ -826,8 +1047,10 @@ export default function OrganizationsFclShellPage() {
 
         void Promise.all([
             loadAssignmentsForOrganization(objectValue.id),
-            loadControlsForOrganization(objectValue.id),
             loadRisksForOrganization(objectValue.id),
+            ...REFERENCE_TYPES.map((referenceType) =>
+                loadReferenceAssignmentsForOrganization(objectValue.id, referenceType),
+            ),
         ]).catch((error: unknown) => {
             setObjectError(
                 mapError(
@@ -840,8 +1063,8 @@ export default function OrganizationsFclShellPage() {
         });
     }, [
         loadAssignmentsForOrganization,
-        loadControlsForOrganization,
         loadRisksForOrganization,
+        loadReferenceAssignmentsForOrganization,
         objectValue?.id,
         showModal,
         t,
@@ -850,9 +1073,6 @@ export default function OrganizationsFclShellPage() {
     const currentAssignments = objectValue?.id
         ? assignmentsByOrganizationId[objectValue.id] ?? EMPTY_ASSIGNMENTS
         : EMPTY_ASSIGNMENTS;
-    const organizationControls = objectValue?.id
-        ? controlsByOrganizationId[objectValue.id] ?? EMPTY_CONTROLS
-        : EMPTY_CONTROLS;
     const organizationRisks = objectValue?.id
         ? risksByOrganizationId[objectValue.id] ?? EMPTY_RISKS
         : EMPTY_RISKS;
@@ -860,6 +1080,70 @@ export default function OrganizationsFclShellPage() {
     const organizationSubProcesses = useMemo(
         () => buildOrganizationSubProcessViews(currentAssignments, processNodesById),
         [currentAssignments, processNodesById],
+    );
+    const organizationControlReferences = useMemo(
+        () =>
+            buildOrganizationReferenceViews(
+                getReferenceAssignments(
+                    referenceAssignmentsByOrganizationAndType,
+                    objectValue?.id,
+                    "CONTROL",
+                ),
+                availableControlReferences,
+            ),
+        [
+            availableControlReferences,
+            objectValue?.id,
+            referenceAssignmentsByOrganizationAndType,
+        ],
+    );
+    const organizationRegulationReferences = useMemo(
+        () =>
+            buildOrganizationReferenceViews(
+                getReferenceAssignments(
+                    referenceAssignmentsByOrganizationAndType,
+                    objectValue?.id,
+                    "REGULATION",
+                ),
+                availableRegulationReferences,
+            ),
+        [
+            availableRegulationReferences,
+            objectValue?.id,
+            referenceAssignmentsByOrganizationAndType,
+        ],
+    );
+    const organizationPolicyReferences = useMemo(
+        () =>
+            buildOrganizationReferenceViews(
+                getReferenceAssignments(
+                    referenceAssignmentsByOrganizationAndType,
+                    objectValue?.id,
+                    "POLICY",
+                ),
+                availablePolicyReferences,
+            ),
+        [
+            availablePolicyReferences,
+            objectValue?.id,
+            referenceAssignmentsByOrganizationAndType,
+        ],
+    );
+    const organizationObjectiveReferences = useMemo(
+        () =>
+            buildOrganizationReferenceViews(
+                getReferenceAssignments(
+                    referenceAssignmentsByOrganizationAndType,
+                    objectValue?.id,
+                    "OBJECTIVE",
+                ),
+                availableObjectiveReferences,
+            ),
+        [
+            availableObjectiveReferences,
+            objectValue?.id,
+            referenceAssignmentsByOrganizationAndType,
+        ],
     );
 
     const handleAssignSubProcessToOrganization = useCallback(
@@ -878,10 +1162,7 @@ export default function OrganizationsFclShellPage() {
                     assignmentType: "scope",
                     isActive: true,
                 });
-                await Promise.all([
-                    loadControlsForOrganization(objectValue.id),
-                    loadRisksForOrganization(objectValue.id),
-                ]);
+                await loadRisksForOrganization(objectValue.id);
             } catch (error) {
                 setObjectError(
                     mapError(
@@ -897,7 +1178,6 @@ export default function OrganizationsFclShellPage() {
         },
         [
             assignSubProcessToOrganization,
-            loadControlsForOrganization,
             loadRisksForOrganization,
             objectValue?.id,
             t,
@@ -915,10 +1195,7 @@ export default function OrganizationsFclShellPage() {
                 setObjectError(null);
 
                 await removeSubProcessFromOrganization(objectValue.id, assignmentId);
-                await Promise.all([
-                    loadControlsForOrganization(objectValue.id),
-                    loadRisksForOrganization(objectValue.id),
-                ]);
+                await loadRisksForOrganization(objectValue.id);
             } catch (error) {
                 setObjectError(
                     mapError(
@@ -933,7 +1210,6 @@ export default function OrganizationsFclShellPage() {
             }
         },
         [
-            loadControlsForOrganization,
             loadRisksForOrganization,
             objectValue?.id,
             removeSubProcessFromOrganization,
@@ -999,6 +1275,70 @@ export default function OrganizationsFclShellPage() {
             }
         },
         [objectValue?.id, removeRiskFromOrganization, t],
+    );
+
+    const handleAssignReferenceToOrganization = useCallback(
+        async (referenceType: OrganizationReferenceType, referenceId: string) => {
+            if (!objectValue?.id) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setObjectError(null);
+
+                await assignReferenceToOrganization({
+                    organizationId: objectValue.id,
+                    referenceType,
+                    referenceId,
+                    assignmentType: "scope",
+                    isActive: true,
+                });
+            } catch (error) {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("organization.references.errors.assign", {
+                            defaultValue: "خطا در تخصیص آیتم به سازمان",
+                        }),
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [assignReferenceToOrganization, objectValue?.id, t],
+    );
+
+    const handleRemoveReferenceAssignment = useCallback(
+        async (referenceType: OrganizationReferenceType, assignmentId: string) => {
+            if (!objectValue?.id) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setObjectError(null);
+
+                await removeReferenceFromOrganization(
+                    objectValue.id,
+                    referenceType,
+                    assignmentId,
+                );
+            } catch (error) {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("organization.references.errors.remove", {
+                            defaultValue: "خطا در حذف تخصیص از سازمان",
+                        }),
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [objectValue?.id, removeReferenceFromOrganization, t],
     );
 
     const showInlineSummaryPane = Boolean(selectedTreeItem);
@@ -1154,11 +1494,25 @@ export default function OrganizationsFclShellPage() {
                             activeTab={objectActiveTab}
                             subProcesses={organizationSubProcesses}
                             availableSubProcesses={availableSubProcesses}
-                            controls={organizationControls}
+                            controlReferences={organizationControlReferences}
+                            availableControlReferences={availableControlReferences}
+                            regulationReferences={organizationRegulationReferences}
+                            availableRegulationReferences={availableRegulationReferences}
+                            policyReferences={organizationPolicyReferences}
+                            availablePolicyReferences={availablePolicyReferences}
+                            objectiveReferences={organizationObjectiveReferences}
+                            availableObjectiveReferences={availableObjectiveReferences}
                             risks={organizationRisks}
                             availableRisks={availableRiskTemplates}
                             subProcessesBusy={processLoading || assignmentsLoading}
                             relationshipsBusy={relationshipsLoading || riskLoading}
+                            referencesBusy={
+                                referenceAssignmentsLoading ||
+                                processLoading ||
+                                regulationLoading ||
+                                policyLoading ||
+                                objectiveLoading
+                            }
                             busy={loading || submitting}
                             error={objectError}
                             onErrorClose={() => setObjectError(null)}
@@ -1169,6 +1523,8 @@ export default function OrganizationsFclShellPage() {
                             onRemoveSubProcessAssignment={handleRemoveSubProcessAssignment}
                             onAssignRisk={handleAssignRiskToOrganization}
                             onRemoveRiskAssignment={handleRemoveRiskAssignment}
+                            onAssignReference={handleAssignReferenceToOrganization}
+                            onRemoveReferenceAssignment={handleRemoveReferenceAssignment}
                             onActiveTabChange={setObjectActiveTab}
                         />
                     ) : (

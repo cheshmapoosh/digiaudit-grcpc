@@ -3,6 +3,7 @@ import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
     Button,
+    DatePicker,
     Input,
     Label,
     MessageStrip,
@@ -25,7 +26,6 @@ import type {
 import {
     formatPersianDate,
     toEnglishDigits,
-    toPersianDigits,
 } from "@/shared/utils/date.utils";
 
 export type RegulationObjectMode = "create" | "edit" | "view";
@@ -148,6 +148,9 @@ const ACTION_BUTTON_STYLE: CSSProperties = {
     minWidth: "6rem",
 };
 
+const DATE_VALUE_FORMAT = "yyyy-MM-dd";
+const DATE_DISPLAY_FORMAT = "d MMMM y";
+
 const TABLE_PANEL_STYLE: CSSProperties = {
     minHeight: "15rem",
     background: "var(--sapGroup_ContentBackground)",
@@ -196,6 +199,12 @@ function toFormState(
 
 function readInputValue(event: unknown): string {
     return (event as { target?: { value?: string } }).target?.value ?? "";
+}
+
+function readDatePickerValue(event: unknown): string {
+    const detailValue = (event as { detail?: { value?: string } }).detail?.value;
+
+    return toEnglishDigits(detailValue ?? readInputValue(event));
 }
 
 function readSelectedDataValue(event: unknown, fallback: string): string {
@@ -548,12 +557,17 @@ export default function RegulationObjectPage({
                 <FormField
                     label={t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" })}
                 >
-                    <Input
-                        value={toPersianDigits(form.effectiveDate)}
+                    <DatePicker
+                        value={form.effectiveDate}
+                        valueFormat={DATE_VALUE_FORMAT}
+                        displayFormat={DATE_DISPLAY_FORMAT}
+                        primaryCalendarType="Persian"
                         disabled={readOnly || busy}
-                        placeholder="1404/01/01"
-                        onInput={(event) =>
-                            handleChange("effectiveDate", toEnglishDigits(readInputValue(event)))
+                        placeholder={t("organization.fields.datePlaceholder", {
+                            defaultValue: "سال/ماه/روز",
+                        })}
+                        onChange={(event) =>
+                            handleChange("effectiveDate", readDatePickerValue(event))
                         }
                     />
                 </FormField>
@@ -561,12 +575,17 @@ export default function RegulationObjectPage({
                 <FormField
                     label={t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
                 >
-                    <Input
-                        value={toPersianDigits(form.validTo)}
+                    <DatePicker
+                        value={form.validTo}
+                        valueFormat={DATE_VALUE_FORMAT}
+                        displayFormat={DATE_DISPLAY_FORMAT}
+                        primaryCalendarType="Persian"
                         disabled={readOnly || busy}
-                        placeholder="1404/12/29"
-                        onInput={(event) =>
-                            handleChange("validTo", toEnglishDigits(readInputValue(event)))
+                        placeholder={t("organization.fields.datePlaceholder", {
+                            defaultValue: "سال/ماه/روز",
+                        })}
+                        onChange={(event) =>
+                            handleChange("validTo", readDatePickerValue(event))
                         }
                     />
                 </FormField>

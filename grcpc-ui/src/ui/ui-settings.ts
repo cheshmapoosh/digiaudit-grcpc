@@ -11,7 +11,6 @@ export type UiSettings = {
     dir: UiDir;
 };
 
-const STORAGE_KEY = "grcpc.ui.settings.v1";
 const UI5_FA_LOCALE = "fa-IR-u-ca-persian-nu-arabext";
 
 export const defaultSettings: UiSettings = {
@@ -20,24 +19,14 @@ export const defaultSettings: UiSettings = {
     dir: "rtl",
 };
 
-export function loadSettings(): UiSettings {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return defaultSettings;
-        const parsed = JSON.parse(raw) as Partial<UiSettings>;
+let currentSettings: UiSettings = defaultSettings;
 
-        return {
-            theme: parsed.theme === "sap_horizon_dark" ? "sap_horizon_dark" : "sap_horizon",
-            lang: parsed.lang === "en" ? "en" : "fa",
-            dir: parsed.dir === "ltr" ? "ltr" : "rtl",
-        };
-    } catch {
-        return defaultSettings;
-    }
+export function loadSettings(): UiSettings {
+    return currentSettings;
 }
 
 export function saveSettings(s: UiSettings) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    currentSettings = s;
 }
 
 export function applySettings(s: UiSettings) {

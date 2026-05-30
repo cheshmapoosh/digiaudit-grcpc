@@ -10,6 +10,7 @@ public interface ObjectiveNodeRepository extends JpaRepository<ObjectiveNodeEnti
     List<ObjectiveNodeEntity> findAllByOrderBySortOrderAscTitleAsc();
     List<ObjectiveNodeEntity> findByParentIdOrderBySortOrderAscTitleAsc(UUID parentId);
     List<ObjectiveNodeEntity> findByParentIdIsNullOrderBySortOrderAscTitleAsc();
+    List<ObjectiveNodeEntity> findByNodeTypeOrderBySortOrderAscTitleAsc(String nodeType);
     boolean existsByParentId(UUID parentId);
     boolean existsByCodeIgnoreCase(String code);
     boolean existsByCodeIgnoreCaseAndIdNot(String code, UUID id);

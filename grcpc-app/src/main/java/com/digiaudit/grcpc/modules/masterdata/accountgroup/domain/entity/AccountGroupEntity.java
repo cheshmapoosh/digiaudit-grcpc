@@ -1,6 +1,9 @@
 package com.digiaudit.grcpc.modules.masterdata.accountgroup.domain.entity;
 
 import com.digiaudit.grcpc.common.persistence.AuditableEntity;
+import com.digiaudit.grcpc.modules.masterdata.accountgroup.domain.converter.AccountGroupObjectiveListConverter;
+import com.digiaudit.grcpc.modules.masterdata.accountgroup.domain.converter.AccountGroupRiskListConverter;
+import com.digiaudit.grcpc.modules.masterdata.accountgroup.domain.converter.AccountRangeListConverter;
 import com.digiaudit.grcpc.modules.masterdata.accountgroup.domain.value.*;
 import jakarta.persistence.*;
 import java.time.LocalDate;
@@ -8,8 +11,6 @@ import java.util.List;
 import java.util.UUID;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(
@@ -57,13 +58,13 @@ public class AccountGroupEntity extends AuditableEntity {
     private Boolean assertionValuation;
     @Column(name = "assertion_disclosure")
     private Boolean assertionDisclosure;
-    @JdbcTypeCode(SqlTypes.JSON)
+    @Convert(converter = AccountGroupObjectiveListConverter.class)
     @Column(name = "objectives_json", columnDefinition = "clob")
     private List<AccountGroupObjectiveValue> objectives;
-    @JdbcTypeCode(SqlTypes.JSON)
+    @Convert(converter = AccountRangeListConverter.class)
     @Column(name = "account_ranges_json", columnDefinition = "clob")
     private List<AccountRangeValue> accountRanges;
-    @JdbcTypeCode(SqlTypes.JSON)
+    @Convert(converter = AccountGroupRiskListConverter.class)
     @Column(name = "risks_json", columnDefinition = "clob")
     private List<AccountGroupRiskValue> risks;
 

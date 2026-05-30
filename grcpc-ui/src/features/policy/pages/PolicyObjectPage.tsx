@@ -3,6 +3,7 @@ import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
     Button,
+    DatePicker,
     Input,
     Label,
     MessageStrip,
@@ -28,7 +29,6 @@ import type {
 import {
     formatPersianDate,
     toEnglishDigits,
-    toPersianDigits,
 } from "@/shared/utils/date.utils";
 
 export type PolicyObjectMode = "create" | "edit" | "view";
@@ -102,7 +102,7 @@ const HEADER_TITLE_STYLE: CSSProperties = {
 
 const HEADER_GRID_STYLE: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
     gap: "0.35rem 1rem",
     padding: "0.75rem 1rem",
     minHeight: "4.5rem",
@@ -110,9 +110,10 @@ const HEADER_GRID_STYLE: CSSProperties = {
 
 const HEADER_ROW_STYLE: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "7rem minmax(0, 1fr)",
+    gridTemplateColumns: "minmax(6.5rem, 40%) minmax(0, 1fr)",
     gap: "0.5rem",
     alignItems: "center",
+    minWidth: 0,
 };
 
 const POLICY_TAB_CONTAINER_CLASS = "policyObjectTabs";
@@ -170,6 +171,9 @@ const FOOTER_STYLE: CSSProperties = {
 const ACTION_BUTTON_STYLE: CSSProperties = {
     minWidth: "8rem",
 };
+
+const DATE_VALUE_FORMAT = "yyyy-MM-dd";
+const DATE_DISPLAY_FORMAT = "d MMMM y";
 
 const TABLE_PANEL_STYLE: CSSProperties = {
     display: "grid",
@@ -239,6 +243,12 @@ function toFormState(
 
 function readInputValue(event: unknown): string {
     return (event as { target?: { value?: string } }).target?.value ?? "";
+}
+
+function readDatePickerValue(event: unknown): string {
+    const detailValue = (event as { detail?: { value?: string } }).detail?.value;
+
+    return toEnglishDigits(detailValue ?? readInputValue(event));
 }
 
 function readSelectedDataValue(event: unknown, fallback: string): string {
@@ -828,11 +838,17 @@ export default function PolicyObjectPage({
                 <FormField
                     label={t("policy.fields.validFrom", { defaultValue: "تاریخ شروع اعتبار" })}
                 >
-                    <Input
-                        value={toPersianDigits(form.validFrom)}
+                    <DatePicker
+                        value={form.validFrom}
+                        valueFormat={DATE_VALUE_FORMAT}
+                        displayFormat={DATE_DISPLAY_FORMAT}
+                        primaryCalendarType="Persian"
                         disabled={readOnly || busy}
-                        onInput={(event) =>
-                            handleChange("validFrom", toEnglishDigits(readInputValue(event)))
+                        placeholder={t("organization.fields.datePlaceholder", {
+                            defaultValue: "سال/ماه/روز",
+                        })}
+                        onChange={(event) =>
+                            handleChange("validFrom", readDatePickerValue(event))
                         }
                     />
                 </FormField>
@@ -840,11 +856,17 @@ export default function PolicyObjectPage({
                 <FormField
                     label={t("policy.fields.validTo", { defaultValue: "تاریخ پایان اعتبار" })}
                 >
-                    <Input
-                        value={toPersianDigits(form.validTo)}
+                    <DatePicker
+                        value={form.validTo}
+                        valueFormat={DATE_VALUE_FORMAT}
+                        displayFormat={DATE_DISPLAY_FORMAT}
+                        primaryCalendarType="Persian"
                         disabled={readOnly || busy}
-                        onInput={(event) =>
-                            handleChange("validTo", toEnglishDigits(readInputValue(event)))
+                        placeholder={t("organization.fields.datePlaceholder", {
+                            defaultValue: "سال/ماه/روز",
+                        })}
+                        onChange={(event) =>
+                            handleChange("validTo", readDatePickerValue(event))
                         }
                     />
                 </FormField>
@@ -909,11 +931,17 @@ export default function PolicyObjectPage({
                                 defaultValue: "تاریخ بازنگری بعدی",
                             })}
                         >
-                            <Input
-                                value={toPersianDigits(form.nextReviewDate)}
+                            <DatePicker
+                                value={form.nextReviewDate}
+                                valueFormat={DATE_VALUE_FORMAT}
+                                displayFormat={DATE_DISPLAY_FORMAT}
+                                primaryCalendarType="Persian"
                                 disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("nextReviewDate", toEnglishDigits(readInputValue(event)))
+                                placeholder={t("organization.fields.datePlaceholder", {
+                                    defaultValue: "سال/ماه/روز",
+                                })}
+                                onChange={(event) =>
+                                    handleChange("nextReviewDate", readDatePickerValue(event))
                                 }
                             />
                         </FormField>

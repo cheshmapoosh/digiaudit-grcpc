@@ -35,18 +35,8 @@ accountGroup.menu.title
 
 ## Data source
 
-By default the feature uses localStorage seed data.
-Use one project-wide setting for all CRUD features:
-
-```env
-VITE_GRCPC_DATA_SOURCE=api
-```
-
-Optional override only for this feature:
-
-```env
-VITE_GRCPC_ACCOUNT_GROUP_SOURCE=api
-```
+The feature always uses the backend API. Local storage seed data and source
+overrides are not supported.
 
 Expected API base path:
 

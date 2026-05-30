@@ -3,6 +3,7 @@ import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
     Button,
+    DatePicker,
     Input,
     Label,
     MessageStrip,
@@ -26,7 +27,6 @@ import type {
 import {
     formatPersianDate,
     toEnglishDigits,
-    toPersianDigits,
 } from "@/shared/utils/date.utils";
 
 export type ObjectiveObjectMode = "create" | "edit" | "view";
@@ -151,6 +151,9 @@ const ACTION_BUTTON_STYLE: CSSProperties = {
     minWidth: "6rem",
 };
 
+const DATE_VALUE_FORMAT = "yyyy-MM-dd";
+const DATE_DISPLAY_FORMAT = "d MMMM y";
+
 const TABLE_PANEL_STYLE: CSSProperties = {
     minHeight: "15rem",
     background: "var(--sapGroup_ContentBackground)",
@@ -201,6 +204,12 @@ function toFormState(
 
 function readInputValue(event: unknown): string {
     return (event as { target?: { value?: string } }).target?.value ?? "";
+}
+
+function readDatePickerValue(event: unknown): string {
+    const detailValue = (event as { detail?: { value?: string } }).detail?.value;
+
+    return toEnglishDigits(detailValue ?? readInputValue(event));
 }
 
 function readSelectedDataValue(event: unknown, fallback: string): string {
@@ -592,12 +601,17 @@ export default function ObjectiveObjectPage({
                 <FormField
                     label={t("objective.fields.effectiveFrom", { defaultValue: "تاریخ ایجاد" })}
                 >
-                    <Input
-                        value={toPersianDigits(form.effectiveFrom)}
+                    <DatePicker
+                        value={form.effectiveFrom}
+                        valueFormat={DATE_VALUE_FORMAT}
+                        displayFormat={DATE_DISPLAY_FORMAT}
+                        primaryCalendarType="Persian"
                         disabled={readOnly || busy}
-                        placeholder="1404/01/01"
-                        onInput={(event) =>
-                            handleChange("effectiveFrom", toEnglishDigits(readInputValue(event)))
+                        placeholder={t("organization.fields.datePlaceholder", {
+                            defaultValue: "سال/ماه/روز",
+                        })}
+                        onChange={(event) =>
+                            handleChange("effectiveFrom", readDatePickerValue(event))
                         }
                     />
                 </FormField>
@@ -605,12 +619,17 @@ export default function ObjectiveObjectPage({
                 <FormField
                     label={t("objective.fields.validUntil", { defaultValue: "تاریخ اعتبار" })}
                 >
-                    <Input
-                        value={toPersianDigits(form.validUntil)}
+                    <DatePicker
+                        value={form.validUntil}
+                        valueFormat={DATE_VALUE_FORMAT}
+                        displayFormat={DATE_DISPLAY_FORMAT}
+                        primaryCalendarType="Persian"
                         disabled={readOnly || busy}
-                        placeholder="1404/12/29"
-                        onInput={(event) =>
-                            handleChange("validUntil", toEnglishDigits(readInputValue(event)))
+                        placeholder={t("organization.fields.datePlaceholder", {
+                            defaultValue: "سال/ماه/روز",
+                        })}
+                        onChange={(event) =>
+                            handleChange("validUntil", readDatePickerValue(event))
                         }
                     />
                 </FormField>
@@ -662,38 +681,6 @@ export default function ObjectiveObjectPage({
                 </FormField>
             </div>
 
-            <div style={FOOTER_STYLE}>
-                {mode === "view" ? (
-                    <Button
-                        design="Emphasized"
-                        disabled={busy || !onEdit}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={onEdit}
-                    >
-                        {t("common.edit", { defaultValue: "ویرایش" })}
-                    </Button>
-                ) : (
-                    <Button
-                        design="Emphasized"
-                        disabled={busy}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={handleSubmit}
-                    >
-                        {t("common.save", { defaultValue: "ذخیره" })}
-                    </Button>
-                )}
-
-                <Button
-                    design="Transparent"
-                    disabled={busy}
-                    style={ACTION_BUTTON_STYLE}
-                    onClick={onCancel}
-                >
-                    {mode === "view"
-                        ? t("common.close", { defaultValue: "بستن" })
-                        : t("common.cancel", { defaultValue: "انصراف" })}
-                </Button>
-            </div>
         </>
     );
 
@@ -726,6 +713,39 @@ export default function ObjectiveObjectPage({
             />
         );
     };
+
+    const renderFooterActions = () => (
+        <div style={FOOTER_STYLE}>
+            {mode === "view" ? (
+                <Button
+                    design="Emphasized"
+                    disabled={busy || !onEdit}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={onEdit}
+                >
+                    {t("common.edit", { defaultValue: "ویرایش" })}
+                </Button>
+            ) : (
+                <Button
+                    design="Emphasized"
+                    disabled={busy}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={handleSubmit}
+                >
+                    {t("common.save", { defaultValue: "ذخیره" })}
+                </Button>
+            )}
+
+            <Button
+                design="Transparent"
+                disabled={busy}
+                style={ACTION_BUTTON_STYLE}
+                onClick={onCancel}
+            >
+                {t("common.cancel", { defaultValue: "انصراف" })}
+            </Button>
+        </div>
+    );
 
     return (
         <div style={ROOT_STYLE}>
@@ -792,6 +812,8 @@ export default function ObjectiveObjectPage({
             ) : null}
 
             <div style={BODY_STYLE}>{renderTabContent()}</div>
+
+            {renderFooterActions()}
         </div>
     );
 }

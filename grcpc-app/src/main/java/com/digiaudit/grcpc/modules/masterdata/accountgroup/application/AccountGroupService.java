@@ -61,12 +61,14 @@ public class AccountGroupService {
     @Transactional
     public AccountGroupResponse update(UUID id, AccountGroupRequest request, HttpServletRequest httpRequest) {
         AccountGroupEntity entity = get(id);
-        validateCode(request.code(), id);
+        String targetCode = request.code() == null ? entity.getCode() : request.code();
+        validateCode(targetCode, id);
         if (id.equals(request.parentId())) {
             throw invalidParent(request.parentId());
         }
         validateParent(request.parentId());
-        AccountGroupEntity saved = repository.save(fill(entity, request));
+        ensureNoCycle(id, request.parentId());
+        AccountGroupEntity saved = repository.save(fillUpdate(entity, request));
         audit("ACCOUNT_GROUP_UPDATED", saved.getId(), httpRequest, Map.of("code", saved.getCode()));
         return mapper.toResponse(saved);
     }
@@ -108,9 +110,64 @@ public class AccountGroupService {
         return entity;
     }
 
+    private AccountGroupEntity fillUpdate(AccountGroupEntity entity, AccountGroupRequest request) {
+        if (request.code() != null) {
+            entity.setCode(normalizeRequired(request.code()));
+        }
+        if (request.title() != null) {
+            entity.setTitle(normalizeRequired(request.title()));
+        }
+        entity.setParentId(request.parentId());
+        if (request.status() != null) {
+            entity.setStatus(normalizeNullable(request.status()) == null ? "active" : normalizeNullable(request.status()));
+        }
+        if (request.sortOrder() != null) {
+            entity.setSortOrder(request.sortOrder());
+        }
+        if (request.description() != null) {
+            entity.setDescription(normalizeNullable(request.description()));
+        }
+        if (request.importance() != null) {
+            entity.setImportance(normalizeNullable(request.importance()));
+        }
+        if (request.reasonableAssurance() != null) {
+            entity.setReasonableAssurance(request.reasonableAssurance());
+        }
+        if (request.effectiveDate() != null) {
+            entity.setEffectiveDate(parseNullable(request.effectiveDate()));
+        }
+        if (request.documentsCount() != null) {
+            entity.setDocumentsCount(request.documentsCount());
+        }
+        if (request.assertions() != null) {
+            entity.setAssertions(request.assertions());
+        }
+        if (request.objectives() != null) {
+            entity.setObjectives(request.objectives());
+        }
+        if (request.accountRanges() != null) {
+            entity.setAccountRanges(request.accountRanges());
+        }
+        if (request.risks() != null) {
+            entity.setRisks(request.risks());
+        }
+        return entity;
+    }
+
     private void validateParent(UUID parentId) {
         if (parentId != null && !repository.existsById(parentId)) {
             throw invalidParent(parentId);
+        }
+    }
+
+    private void ensureNoCycle(UUID id, UUID parentId) {
+        UUID current = parentId;
+        while (current != null) {
+            AccountGroupEntity node = get(current);
+            if (id.equals(node.getId())) {
+                throw invalidParent(parentId);
+            }
+            current = node.getParentId();
         }
     }
 

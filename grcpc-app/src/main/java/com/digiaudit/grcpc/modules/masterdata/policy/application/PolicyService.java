@@ -37,6 +37,16 @@ public class PolicyService {
         return repository.findAllByOrderBySortOrderAscTitleAsc().stream().map(mapper::toResponse).toList();
     }
 
+    public List<PolicyNodeResponse> findAll(String nodeType) {
+        String normalizedNodeType = normalizeNullable(nodeType);
+        return normalizedNodeType == null ? findAll() : findByNodeType(normalizedNodeType);
+    }
+
+    public List<PolicyNodeResponse> findByNodeType(String nodeType) {
+        String normalizedNodeType = normalizeRequired(nodeType);
+        return repository.findByNodeTypeOrderBySortOrderAscTitleAsc(normalizedNodeType).stream().map(mapper::toResponse).toList();
+    }
+
     public List<PolicyNodeResponse> findRoots() {
         return repository.findByParentIdIsNullOrderBySortOrderAscTitleAsc().stream().map(mapper::toResponse).toList();
     }
@@ -62,12 +72,18 @@ public class PolicyService {
     @Transactional
     public PolicyNodeResponse update(UUID id, PolicyNodeRequest request, HttpServletRequest httpRequest) {
         PolicyNodeEntity entity = get(id);
-        validateCode(request.code(), id);
+        String targetCode = request.code() == null ? entity.getCode() : request.code();
+        String targetNodeType = request.nodeType() == null ? entity.getNodeType() : request.nodeType();
+        validateCode(targetCode, id);
         if (id.equals(request.parentId())) {
             throw invalidParent(request.parentId());
         }
-        validateParent(request.parentId(), request.nodeType());
-        PolicyNodeEntity saved = repository.save(fill(entity, request));
+        validateParent(request.parentId(), targetNodeType);
+        ensureNoCycle(id, request.parentId());
+        if ("policy".equals(targetNodeType) && repository.existsByParentId(id)) {
+            throw invalidParent(id);
+        }
+        PolicyNodeEntity saved = repository.save(fillUpdate(entity, request));
         audit("POLICY_UPDATED", saved.getId(), httpRequest, Map.of("code", saved.getCode()));
         return mapper.toResponse(saved);
     }
@@ -121,16 +137,106 @@ public class PolicyService {
         return entity;
     }
 
-    private void validateParent(UUID parentId, String nodeType) {
-        if ("policyGroup".equals(nodeType) && parentId == null) {
-            return;
+    private PolicyNodeEntity fillUpdate(PolicyNodeEntity entity, PolicyNodeRequest request) {
+        LocalDate validFrom = request.validFrom() == null ? entity.getValidFrom() : parseNullable(request.validFrom());
+        LocalDate validTo = request.validTo() == null ? entity.getValidTo() : parseNullable(request.validTo());
+        requireValidRange(validFrom, validTo, "Policy validTo cannot be before validFrom");
+
+        if (request.code() != null) {
+            entity.setCode(normalizeRequired(request.code()));
         }
+        if (request.title() != null) {
+            entity.setTitle(normalizeRequired(request.title()));
+        }
+        if (request.nodeType() != null) {
+            entity.setNodeType(normalizeRequired(request.nodeType()));
+        }
+        entity.setParentId(request.parentId());
+        if (request.status() != null) {
+            entity.setStatus(normalizeNullable(request.status()) == null ? "draft" : normalizeNullable(request.status()));
+        }
+        if (request.sortOrder() != null) {
+            entity.setSortOrder(request.sortOrder());
+        }
+        if (request.description() != null) {
+            entity.setDescription(normalizeNullable(request.description()));
+        }
+        if (request.policyCategory() != null) {
+            entity.setPolicyCategory(normalizeNullable(request.policyCategory()));
+        }
+        if (request.policyKind() != null) {
+            entity.setPolicyKind(normalizeNullable(request.policyKind()));
+        }
+        if (request.ownerId() != null) {
+            entity.setOwnerId(request.ownerId());
+        }
+        if (request.ownerName() != null) {
+            entity.setOwnerName(normalizeNullable(request.ownerName()));
+        }
+        if (request.ownerOrganization() != null) {
+            entity.setOwnerOrganization(normalizeNullable(request.ownerOrganization()));
+        }
+        if (request.creatorName() != null) {
+            entity.setCreatorName(normalizeNullable(request.creatorName()));
+        }
+        if (request.documentsCount() != null) {
+            entity.setDocumentsCount(request.documentsCount());
+        }
+        if (request.version() != null) {
+            entity.setPolicyVersion(normalizeNullable(request.version()));
+        }
+        if (request.validFrom() != null) {
+            entity.setValidFrom(validFrom);
+        }
+        if (request.validTo() != null) {
+            entity.setValidTo(validTo);
+        }
+        if (request.nextReviewDate() != null) {
+            entity.setNextReviewDate(parseNullable(request.nextReviewDate()));
+        }
+        if (request.communicationMethod() != null) {
+            entity.setCommunicationMethod(normalizeNullable(request.communicationMethod()));
+        }
+        if (request.communicationLanguage() != null) {
+            entity.setCommunicationLanguage(normalizeNullable(request.communicationLanguage()));
+        }
+        if (request.objective() != null) {
+            entity.setObjective(normalizeNullable(request.objective()));
+        }
+        if (request.note() != null) {
+            entity.setNote(normalizeNullable(request.note()));
+        }
+        if (request.evaluationConfirmed() != null) {
+            entity.setEvaluationConfirmed(request.evaluationConfirmed());
+        }
+        return entity;
+    }
+
+    private void validateParent(UUID parentId, String nodeType) {
+        String normalizedNodeType = normalizeRequired(nodeType);
         if (parentId == null) {
+            if ("policyGroup".equals(normalizedNodeType)) {
+                return;
+            }
             throw invalidParent(parentId);
         }
         PolicyNodeEntity parent = repository.findById(parentId).orElseThrow(() -> invalidParent(parentId));
-        if ("policy".equals(nodeType) && !"policyGroup".equals(parent.getNodeType())) {
+
+        boolean valid = "policyGroup".equals(parent.getNodeType())
+                && ("policyGroup".equals(normalizedNodeType) || "policy".equals(normalizedNodeType));
+        if (!valid) {
             throw invalidParent(parentId);
+        }
+    }
+
+    private void ensureNoCycle(UUID id, UUID parentId) {
+        UUID current = parentId;
+        while (current != null) {
+            PolicyNodeEntity node = get(current);
+            if (id.equals(node.getId())) {
+                throw invalidParent(parentId);
+            }
+            current = node.getParentId();
         }
     }
 

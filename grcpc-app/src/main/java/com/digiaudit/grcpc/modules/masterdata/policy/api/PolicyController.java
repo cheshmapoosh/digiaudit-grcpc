@@ -21,9 +21,9 @@ public class PolicyController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('POLICY_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public List<PolicyNodeResponse> findAll() {
+    public List<PolicyNodeResponse> findAll(@RequestParam(required = false) String nodeType) {
         log.debug("REST request to find all policies");
-        return policyService.findAll();
+        return policyService.findAll(nodeType);
     }
 
     @GetMapping("/roots")
@@ -32,10 +32,28 @@ public class PolicyController {
         return policyService.findRoots();
     }
 
+    @GetMapping("/groups")
+    @PreAuthorize("hasAuthority('POLICY_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    public List<PolicyNodeResponse> findGroups() {
+        return policyService.findByNodeType("policyGroup");
+    }
+
+    @GetMapping("/types/{nodeType}")
+    @PreAuthorize("hasAuthority('POLICY_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    public List<PolicyNodeResponse> findByNodeType(@PathVariable String nodeType) {
+        return policyService.findByNodeType(nodeType);
+    }
+
     @GetMapping("/children/{parentId}")
     @PreAuthorize("hasAuthority('POLICY_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
     public List<PolicyNodeResponse> findChildren(@PathVariable UUID parentId) {
         return policyService.findChildren(parentId);
+    }
+
+    @GetMapping("/{id}/children")
+    @PreAuthorize("hasAuthority('POLICY_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    public List<PolicyNodeResponse> findChildrenByObjectPath(@PathVariable UUID id) {
+        return policyService.findChildren(id);
     }
 
     @GetMapping("/{id}")

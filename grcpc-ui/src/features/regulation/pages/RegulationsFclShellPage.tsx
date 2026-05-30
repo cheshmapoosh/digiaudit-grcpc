@@ -1,15 +1,6 @@
-import {
-    createElement,
-    useCallback,
-    useEffect,
-    useMemo,
-    useState,
-    type CSSProperties,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-
-import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
 
 import { Dialog, MessageStrip } from "@ui5/webcomponents-react";
 
@@ -35,7 +26,6 @@ import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
-type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 
 const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
 const DIALOG_NORMAL_WIDTH = "90vw";
@@ -286,6 +276,7 @@ export default function RegulationsFclShellPage() {
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
+    const [objectError, setObjectError] = useState<string | null>(null);
     const [deleteCandidate, setDeleteCandidate] = useState<RegulationNode | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
@@ -352,12 +343,15 @@ export default function RegulationsFclShellPage() {
         setSelectedTreeId(id);
         setTreeExpansionAnchorId(id);
         setPageError(null);
+        setObjectError(null);
     }, []);
 
     const handleShow = useCallback(
         (id: string) => {
             setSelectedTreeId(id);
             setTreeExpansionAnchorId(id);
+            setPageError(null);
+            setObjectError(null);
             navigate(`/regulations/${id}`);
         },
         [navigate],
@@ -365,6 +359,8 @@ export default function RegulationsFclShellPage() {
 
     const handleCreate = useCallback(
         (nodeType: RegulationNodeType) => {
+            setPageError(null);
+            setObjectError(null);
             const selectedId = selectedTreeId ?? regulationId ?? null;
             const selectedItem = selectedId ? nodesById[selectedId] ?? null : null;
             const parentId = resolveCreateParentId(nodeType, selectedItem, nodesById);
@@ -398,6 +394,8 @@ export default function RegulationsFclShellPage() {
 
             setSelectedTreeId(targetId);
             setTreeExpansionAnchorId(targetId);
+            setPageError(null);
+            setObjectError(null);
             navigate(`/regulations/${targetId}/edit`);
         },
         [navigate, regulationId, selectedTreeId],
@@ -414,11 +412,14 @@ export default function RegulationsFclShellPage() {
             setTreeExpansionAnchorId(currentAnchorId);
         }
 
+        setPageError(null);
+        setObjectError(null);
         navigate("/regulations");
     }, [navigate, regulationId, queryParentId, routeMode, selectedTreeId]);
 
     const requestDelete = useCallback(
         (id: string) => {
+            setObjectError(null);
             const target = nodesById[id];
 
             if (!target) {
@@ -450,6 +451,7 @@ export default function RegulationsFclShellPage() {
         try {
             setSubmitting(true);
             setPageError(null);
+            setObjectError(null);
 
             const parentId = deleteCandidate.parentId ?? null;
             await removeNode(deleteCandidate.id);
@@ -485,6 +487,7 @@ export default function RegulationsFclShellPage() {
             try {
                 setSubmitting(true);
                 setPageError(null);
+                setObjectError(null);
 
                 if (routeMode === "create") {
                     const createPayload = payload as RegulationNodeCreate;
@@ -503,7 +506,7 @@ export default function RegulationsFclShellPage() {
                     navigate("/regulations");
                 }
             } catch (error) {
-                setPageError(
+                setObjectError(
                     mapError(
                         error,
                         t("regulation.errors.save", {
@@ -538,10 +541,28 @@ export default function RegulationsFclShellPage() {
     const objectValue = routeMode === "create" ? null : selectedRouteItem;
 
     const showInlineSummaryPane = Boolean(selectedTreeItem);
-    const fclLayout: FclLayout = showInlineSummaryPane ? "TwoColumnsStartExpanded" : "OneColumn";
     const createOptions = CREATE_NODE_TYPES;
 
-    const slotContainerStyle = useMemo<CSSProperties>(
+    const pageGridStyle = useMemo<CSSProperties>(
+        () => ({
+            height: "calc(100vh - 10rem)",
+            minHeight: "36rem",
+            display: "grid",
+            gridTemplateColumns: showInlineSummaryPane
+                ? appDir === "rtl"
+                    ? "minmax(0, 40%) minmax(0, 60%)"
+                    : "minmax(0, 60%) minmax(0, 40%)"
+                : "minmax(0, 1fr)",
+            gap: showInlineSummaryPane ? "1rem" : 0,
+            boxSizing: "border-box",
+            overflow: "hidden",
+            direction: "ltr",
+            background: "var(--sapBackgroundColor)",
+        }),
+        [appDir, showInlineSummaryPane],
+    );
+
+    const columnContainerStyle = useMemo<CSSProperties>(
         () => ({
             height: "100%",
             boxSizing: "border-box",
@@ -556,6 +577,7 @@ export default function RegulationsFclShellPage() {
     const frameStyle: CSSProperties = {
         height: "100%",
         minHeight: 0,
+        minWidth: 0,
         overflow: "auto",
         border: "1px solid var(--sapGroup_ContentBorderColor)",
         borderRadius: "0",
@@ -585,73 +607,59 @@ export default function RegulationsFclShellPage() {
         };
     }, [isLargeDialogViewport]);
 
-    const listColumn = createElement(
-        "div",
-        {
-            slot: "startColumn",
-            dir: appDir,
-            style: slotContainerStyle,
-        },
-        <div style={frameStyle}>
-            <RegulationsListReport
-                items={items}
-                selectedId={treeSelectedId}
-                expansionAnchorId={treeExpansionAnchorIdValue}
-                searchText={searchText}
-                busy={loading || submitting}
-                error={!showModal ? pageError : null}
-                createOptions={createOptions}
-                onSearchTextChange={setSearchText}
-                onCreate={handleCreate}
-                onShow={handleShow}
-                onDelete={requestDelete}
-                onSelect={handleSelect}
-            />
-        </div>,
+    const listColumn = (
+        <div key="list" dir={appDir} style={columnContainerStyle}>
+            <div style={frameStyle}>
+                <RegulationsListReport
+                    items={items}
+                    selectedId={treeSelectedId}
+                    expansionAnchorId={treeExpansionAnchorIdValue}
+                    searchText={searchText}
+                    busy={loading || submitting}
+                    error={!showModal ? pageError : null}
+                    createOptions={createOptions}
+                    onSearchTextChange={setSearchText}
+                    onCreate={handleCreate}
+                    onShow={handleShow}
+                    onDelete={requestDelete}
+                    onSelect={handleSelect}
+                />
+            </div>
+        </div>
     );
 
     const inlineSummaryColumn = showInlineSummaryPane
-        ? createElement(
-            "div",
-            {
-                slot: "midColumn",
-                  dir: appDir,
-                  style: slotContainerStyle,
-              },
-              <div style={frameStyle}>
-                  <RegulationSummaryPanel
-                      value={selectedTreeItem}
-                      busy={loading || submitting}
-                      error={!showModal ? pageError : null}
-                      onEdit={handleEdit}
-                      onCancel={() => {
-                          setSelectedTreeId(null);
-                          setTreeExpansionAnchorId(null);
-                      }}
-                  />
-              </div>,
-          )
+        ? (
+            <div key="summary" dir={appDir} style={columnContainerStyle}>
+                <div style={frameStyle}>
+                    <RegulationSummaryPanel
+                        value={selectedTreeItem}
+                        allItems={items}
+                        busy={loading || submitting}
+                        error={!showModal ? pageError : null}
+                        onEdit={handleEdit}
+                        onCancel={() => {
+                            setSelectedTreeId(null);
+                            setTreeExpansionAnchorId(null);
+                            setPageError(null);
+                            setObjectError(null);
+                        }}
+                    />
+                </div>
+            </div>
+        )
         : null;
+
+    const orderedColumns =
+        appDir === "rtl" && inlineSummaryColumn
+            ? [inlineSummaryColumn, listColumn]
+            : [listColumn, inlineSummaryColumn];
 
     const dialogTitle = resolveDialogTitle(routeMode, t);
 
     return (
         <>
-            {createElement(
-                "ui5-flexible-column-layout",
-                {
-                    layout: fclLayout,
-                    dir: appDir,
-                    "disable-resizing": true,
-                    style: {
-                        height: "calc(100vh - 10rem)",
-                        minHeight: "36rem",
-                        display: "block",
-                    },
-                },
-                listColumn,
-                inlineSummaryColumn,
-            )}
+            <div style={pageGridStyle}>{orderedColumns}</div>
 
             <Dialog
                 open={showModal}
@@ -660,7 +668,7 @@ export default function RegulationsFclShellPage() {
                 style={dialogStyle}
                 onClose={handleObjectDialogClose}
             >
-                <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
+                <ModalDialogHeader title={dialogTitle} onClose={handleCancel} />
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <RegulationObjectPage
@@ -671,7 +679,7 @@ export default function RegulationsFclShellPage() {
                             parent={selectedParentForCreate}
                             requestedNodeType={requestedNodeType}
                             busy={loading || submitting}
-                            error={pageError}
+                            error={objectError}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}

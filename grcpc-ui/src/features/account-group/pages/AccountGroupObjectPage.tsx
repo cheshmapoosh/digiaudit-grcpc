@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
     Button,
     CheckBox,
+    DatePicker,
     Input,
     Label,
     MessageStrip,
@@ -24,7 +25,7 @@ import type {
     AccountGroupNodeUpdate,
     AccountGroupStatus,
 } from "../domain/accountGroup.model";
-import { toEnglishDigits, toPersianDigits } from "@/shared/utils/date.utils";
+import { toEnglishDigits } from "@/shared/utils/date.utils";
 
 export type AccountGroupObjectMode = "create" | "edit" | "view";
 
@@ -158,6 +159,9 @@ const ACTION_BUTTON_STYLE: CSSProperties = {
     minWidth: "6rem",
 };
 
+const DATE_VALUE_FORMAT = "yyyy-MM-dd";
+const DATE_DISPLAY_FORMAT = "d MMMM y";
+
 const TABLE_PANEL_STYLE: CSSProperties = {
     minHeight: "15rem",
     background: "var(--sapGroup_ContentBackground)",
@@ -205,6 +209,12 @@ function toFormState(
 
 function readInputValue(event: unknown): string {
     return (event as { target?: { value?: string } }).target?.value ?? "";
+}
+
+function readDatePickerValue(event: unknown): string {
+    const detailValue = (event as { detail?: { value?: string } }).detail?.value;
+
+    return toEnglishDigits(detailValue ?? readInputValue(event));
 }
 
 function readCheckedValue(event: unknown): boolean {
@@ -668,11 +678,17 @@ export default function AccountGroupObjectPage({
             <FormField
                 label={t("accountGroup.fields.effectiveDate", { defaultValue: "تاریخ اعتبار" })}
             >
-                <Input
-                    value={toPersianDigits(form.effectiveDate)}
+                <DatePicker
+                    value={form.effectiveDate}
+                    valueFormat={DATE_VALUE_FORMAT}
+                    displayFormat={DATE_DISPLAY_FORMAT}
+                    primaryCalendarType="Persian"
                     disabled={readOnly || busy}
-                    onInput={(event) =>
-                        handleChange("effectiveDate", toEnglishDigits(readInputValue(event)))
+                    placeholder={t("organization.fields.datePlaceholder", {
+                        defaultValue: "سال/ماه/روز",
+                    })}
+                    onChange={(event) =>
+                        handleChange("effectiveDate", readDatePickerValue(event))
                     }
                 />
             </FormField>

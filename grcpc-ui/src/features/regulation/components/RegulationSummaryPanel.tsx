@@ -21,6 +21,7 @@ import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface RegulationSummaryPanelProps {
     value?: RegulationNode | null;
+    allItems?: RegulationNode[];
     busy?: boolean;
     error?: string | null;
     onEdit?: (id: string) => void;
@@ -69,9 +70,10 @@ const TAB_BODY_STYLE: CSSProperties = {
 
 const FIELD_GRID_STYLE: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "9rem minmax(0, 1fr)",
-    gap: "0.75rem",
+    gridTemplateColumns: "minmax(6rem, max-content) minmax(0, 1fr)",
+    gap: "0.5rem",
     alignItems: "start",
+    minWidth: 0,
 };
 
 const TABLE_STYLE: CSSProperties = {
@@ -79,6 +81,7 @@ const TABLE_STYLE: CSSProperties = {
     borderInlineStart: "1px solid var(--sapList_BorderColor)",
     borderBlockStart: "1px solid var(--sapList_BorderColor)",
     background: "var(--sapList_Background)",
+    minWidth: "28rem",
 };
 
 const TABLE_HEADER_CELL_STYLE: CSSProperties = {
@@ -89,6 +92,7 @@ const TABLE_HEADER_CELL_STYLE: CSSProperties = {
     background: "var(--sapList_HeaderBackground)",
     fontWeight: 700,
     boxSizing: "border-box",
+    overflowWrap: "anywhere",
 };
 
 const TABLE_CELL_STYLE: CSSProperties = {
@@ -98,6 +102,7 @@ const TABLE_CELL_STYLE: CSSProperties = {
     borderBlockEnd: "1px solid var(--sapList_BorderColor)",
     background: "var(--sapList_Background)",
     boxSizing: "border-box",
+    overflowWrap: "anywhere",
 };
 
 function readSelectedTabKey(event: unknown): RegulationDetailTabKey | null {
@@ -137,12 +142,12 @@ function resolveStatusLabel(
 function DetailRow({ label, value }: { label: string; value?: ReactNode }) {
     return (
         <div style={FIELD_GRID_STYLE}>
-            <Label showColon>{label}</Label>
+            <Label showColon wrappingType="None">{label}</Label>
             <span
                 style={{
                     minWidth: 0,
                     whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
                     lineHeight: 1.7,
                 }}
             >
@@ -162,22 +167,49 @@ function EmptyRows({ columns, rows = 3 }: { columns: number; rows?: number }) {
     );
 }
 
-function SimpleTable({ columns, rows = 3 }: { columns: string[]; rows?: number }) {
-    return (
-        <div
-            role="table"
-            style={{
-                ...TABLE_STYLE,
-                gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
-            }}
-        >
-            {columns.map((column) => (
-                <div key={column} role="columnheader" style={TABLE_HEADER_CELL_STYLE}>
-                    {column}
-                </div>
-            ))}
+function SimpleTable({
+    columns,
+    data,
+    rows = 3,
+}: {
+    columns: string[];
+    data?: ReactNode[][];
+    rows?: number;
+}) {
+    const tableData = data ?? [];
 
-            <EmptyRows columns={columns.length} rows={rows} />
+    return (
+        <div style={{ overflowX: "auto", width: "100%" }}>
+            <div
+                role="table"
+                style={{
+                    ...TABLE_STYLE,
+                    minWidth: `${Math.max(columns.length * 8, 28)}rem`,
+                    gridTemplateColumns: `repeat(${columns.length}, minmax(8rem, 1fr))`,
+                }}
+            >
+                {columns.map((column) => (
+                    <div key={column} role="columnheader" style={TABLE_HEADER_CELL_STYLE}>
+                        {column}
+                    </div>
+                ))}
+
+                {tableData.length > 0
+                    ? tableData.flatMap((row, rowIndex) =>
+                          row.map((cell, columnIndex) => (
+                              <div
+                                  key={`${rowIndex}-${columnIndex}`}
+                                  role="cell"
+                                  style={TABLE_CELL_STYLE}
+                              >
+                                  {cell || "-"}
+                              </div>
+                          )),
+                      )
+                    : (
+                        <EmptyRows columns={columns.length} rows={rows} />
+                    )}
+            </div>
         </div>
     );
 }
@@ -280,9 +312,11 @@ function GeneralTab({ value }: { value: RegulationNode }) {
 
 function TabBody({
     value,
+    allItems,
     activeTab,
 }: {
     value: RegulationNode;
+    allItems: RegulationNode[];
     activeTab: RegulationDetailTabKey;
 }) {
     const { t } = useTranslation();
@@ -292,6 +326,10 @@ function TabBody({
     }
 
     if (activeTab === "requirements") {
+        const requirements = allItems.filter(
+            (item) => item.parentId === value.id && item.nodeType === "lawRequirement",
+        );
+
         return (
             <SimpleTable
                 columns={[
@@ -301,6 +339,13 @@ function TabBody({
                     t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" }),
                     t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" }),
                 ]}
+                data={requirements.map((requirement) => [
+                    requirement.title,
+                    requirement.description,
+                    value.title,
+                    formatPersianDate(requirement.effectiveDate),
+                    formatPersianDate(requirement.validTo),
+                ])}
             />
         );
     }
@@ -318,6 +363,7 @@ function TabBody({
 
 export default function RegulationSummaryPanel({
     value,
+    allItems = [],
     busy = false,
     error,
     onEdit,
@@ -339,6 +385,7 @@ export default function RegulationSummaryPanel({
                 gridTemplateRows: "auto 1fr auto",
                 minHeight: "100%",
                 gap: "1rem",
+                minWidth: 0,
             }}
         >
             <Bar
@@ -353,7 +400,7 @@ export default function RegulationSummaryPanel({
                 }
             />
 
-            <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
+            <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
                 {error ? (
                     <MessageStrip design="Negative" hideCloseButton>
                         {error}
@@ -365,8 +412,8 @@ export default function RegulationSummaryPanel({
                         <div
                             style={{
                                 display: "grid",
-                                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                                gap: "0.75rem",
+                                gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
+                                gap: "0.75rem 1rem",
                                 padding: "0.75rem 1rem",
                                 border: "1px solid var(--sapGroup_ContentBorderColor)",
                                 borderBottom: "none",
@@ -393,8 +440,12 @@ export default function RegulationSummaryPanel({
                             onChange={setActiveTab}
                         />
 
-                        <div style={TAB_BODY_STYLE}>
-                            <TabBody value={value} activeTab={effectiveActiveTab} />
+                        <div style={{ ...TAB_BODY_STYLE, minWidth: 0, overflowX: "auto" }}>
+                            <TabBody
+                                value={value}
+                                allItems={allItems}
+                                activeTab={effectiveActiveTab}
+                            />
                         </div>
                     </div>
                 ) : (

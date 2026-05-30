@@ -609,7 +609,7 @@ export default function PolicySummaryPanel({
                         <div
                             style={{
                                 display: "grid",
-                                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                                gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
                                 gap: "0.75rem",
                                 padding: "0.75rem 1rem",
                                 border: "1px solid var(--sapGroup_ContentBorderColor)",

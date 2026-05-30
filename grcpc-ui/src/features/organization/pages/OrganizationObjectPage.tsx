@@ -31,8 +31,10 @@ import type {
     OrganizationType,
 } from "../domain/organization.model";
 import type {
-    OrganizationControlView,
     OrganizationProcessAssignmentType,
+    OrganizationReferenceOption,
+    OrganizationReferenceType,
+    OrganizationReferenceView,
     OrganizationRiskAssignment,
     OrganizationRiskOption,
     OrganizationSubProcessOption,
@@ -80,11 +82,19 @@ export interface OrganizationObjectPageProps {
     activeTab?: OrganizationTabKey;
     subProcesses?: OrganizationSubProcessView[];
     availableSubProcesses?: OrganizationSubProcessOption[];
-    controls?: OrganizationControlView[];
+    controlReferences?: OrganizationReferenceView[];
+    availableControlReferences?: OrganizationReferenceOption[];
+    regulationReferences?: OrganizationReferenceView[];
+    availableRegulationReferences?: OrganizationReferenceOption[];
+    policyReferences?: OrganizationReferenceView[];
+    availablePolicyReferences?: OrganizationReferenceOption[];
+    objectiveReferences?: OrganizationReferenceView[];
+    availableObjectiveReferences?: OrganizationReferenceOption[];
     risks?: OrganizationRiskAssignment[];
     availableRisks?: OrganizationRiskOption[];
     subProcessesBusy?: boolean;
     relationshipsBusy?: boolean;
+    referencesBusy?: boolean;
     busy?: boolean;
     error?: string | null;
     onErrorClose?: () => void;
@@ -95,6 +105,14 @@ export interface OrganizationObjectPageProps {
     onRemoveSubProcessAssignment?: (assignmentId: string) => Promise<void> | void;
     onAssignRisk?: (processNodeId: string, riskNodeId: string) => Promise<void> | void;
     onRemoveRiskAssignment?: (assignmentId: string) => Promise<void> | void;
+    onAssignReference?: (
+        referenceType: OrganizationReferenceType,
+        referenceId: string,
+    ) => Promise<void> | void;
+    onRemoveReferenceAssignment?: (
+        referenceType: OrganizationReferenceType,
+        assignmentId: string,
+    ) => Promise<void> | void;
     onActiveTabChange?: (tab: OrganizationTabKey) => void;
 }
 
@@ -290,6 +308,13 @@ const TAB_SEQUENCE: readonly OrganizationTabKey[] = [
     "performance",
 ];
 
+const EMPTY_SELECTED_REFERENCES: Record<OrganizationReferenceType, string> = {
+    CONTROL: "",
+    REGULATION: "",
+    POLICY: "",
+    OBJECTIVE: "",
+};
+
 function toFormState(
     value: OrganizationNode | null,
     defaultParentId: string | null,
@@ -457,6 +482,14 @@ function formatRiskOption(option: OrganizationRiskOption): string {
     return `${option.code} - ${option.title}`;
 }
 
+function formatReferenceOption(option: OrganizationReferenceOption): string {
+    const parentTitle = option.parentTitle
+        ? ` (${option.parentCode ? `${option.parentCode} - ` : ""}${option.parentTitle})`
+        : "";
+
+    return `${option.code} - ${option.title}${parentTitle}`;
+}
+
 function formatOptionalValue(value?: string): string {
     return formatPersianDate(value);
 }
@@ -594,11 +627,19 @@ export default function OrganizationObjectPage({
     activeTab: controlledActiveTab,
     subProcesses = [],
     availableSubProcesses = [],
-    controls = [],
+    controlReferences = [],
+    availableControlReferences = [],
+    regulationReferences = [],
+    availableRegulationReferences = [],
+    policyReferences = [],
+    availablePolicyReferences = [],
+    objectiveReferences = [],
+    availableObjectiveReferences = [],
     risks = [],
     availableRisks = [],
     subProcessesBusy = false,
     relationshipsBusy = false,
+    referencesBusy = false,
     busy = false,
     error,
     onErrorClose,
@@ -609,6 +650,8 @@ export default function OrganizationObjectPage({
     onRemoveSubProcessAssignment,
     onAssignRisk,
     onRemoveRiskAssignment,
+    onAssignReference,
+    onRemoveReferenceAssignment,
     onActiveTabChange,
 }: OrganizationObjectPageProps) {
     const { t } = useTranslation();
@@ -632,6 +675,12 @@ export default function OrganizationObjectPage({
     const [selectedRiskSubProcessId, setSelectedRiskSubProcessId] = useState("");
     const [selectedRiskId, setSelectedRiskId] = useState("");
     const [selectedRiskSearchValue, setSelectedRiskSearchValue] = useState("");
+    const [selectedReferenceIds, setSelectedReferenceIds] = useState<
+        Record<OrganizationReferenceType, string>
+    >(EMPTY_SELECTED_REFERENCES);
+    const [selectedReferenceSearchValues, setSelectedReferenceSearchValues] = useState<
+        Record<OrganizationReferenceType, string>
+    >(EMPTY_SELECTED_REFERENCES);
     const activeTab = controlledActiveTab ?? internalActiveTab;
 
     const handleActiveTabChange = (tab: OrganizationTabKey) => {
@@ -830,6 +879,40 @@ export default function OrganizationObjectPage({
     const riskComboBoxValue = selectedRiskOption
         ? formatRiskOption(selectedRiskOption)
         : selectedRiskSearchValue;
+
+    const setReferenceSelection = (
+        referenceType: OrganizationReferenceType,
+        referenceId: string,
+        searchValue: string,
+    ) => {
+        setSelectedReferenceIds((current) => ({
+            ...current,
+            [referenceType]: referenceId,
+        }));
+        setSelectedReferenceSearchValues((current) => ({
+            ...current,
+            [referenceType]: searchValue,
+        }));
+    };
+
+    const handleAssignReference = async (
+        referenceType: OrganizationReferenceType,
+        options: OrganizationReferenceOption[],
+    ) => {
+        const selectedReferenceId = selectedReferenceIds[referenceType];
+        const selectedSearchValue = selectedReferenceSearchValues[referenceType];
+        const typedMatch = options.find(
+            (option) => formatReferenceOption(option) === selectedSearchValue,
+        );
+        const targetId = selectedReferenceId || typedMatch?.referenceId;
+
+        if (!targetId || !onAssignReference || !value?.id) {
+            return;
+        }
+
+        await onAssignReference(referenceType, targetId);
+        setReferenceSelection(referenceType, "", "");
+    };
 
     const handleAssignSubProcess = async () => {
         const typedMatch = unassignedSubProcesses.find(
@@ -1425,72 +1508,303 @@ export default function OrganizationObjectPage({
         );
     };
 
-    const renderControlsTab = () => (
-        <div style={TABLE_PANEL_STYLE}>
-            <Title level="H5">
-                {t("organization.tabs.controls", { defaultValue: "کنترل ها" })}
-            </Title>
+    const renderReferenceAssignmentTab = ({
+        referenceType,
+        title,
+        entityLabel,
+        options,
+        assignments,
+        selectPlaceholder,
+        noDataText,
+        hint,
+        saveFirstHint,
+    }: {
+        referenceType: OrganizationReferenceType;
+        title: string;
+        entityLabel: string;
+        options: OrganizationReferenceOption[];
+        assignments: OrganizationReferenceView[];
+        selectPlaceholder: string;
+        noDataText: string;
+        hint: string;
+        saveFirstHint: string;
+    }) => {
+        const assignedReferenceIds = new Set(
+            assignments.map((assignment) => assignment.referenceId),
+        );
+        const unassignedOptions = options.filter(
+            (option) => !assignedReferenceIds.has(option.referenceId),
+        );
+        const selectedReferenceId = selectedReferenceIds[referenceType];
+        const selectedReferenceSearchValue = selectedReferenceSearchValues[referenceType];
+        const selectedAssignableReference = unassignedOptions.some(
+            (option) => option.referenceId === selectedReferenceId,
+        )
+            ? selectedReferenceId
+            : "";
+        const selectedReferenceOption = unassignedOptions.find(
+            (option) => option.referenceId === selectedAssignableReference,
+        );
+        const comboBoxValue = selectedReferenceOption
+            ? formatReferenceOption(selectedReferenceOption)
+            : selectedReferenceSearchValue;
+        const canSelect =
+            !readOnly &&
+            !busy &&
+            !referencesBusy &&
+            Boolean(value?.id) &&
+            Boolean(onAssignReference) &&
+            unassignedOptions.length > 0;
+        const canAssign = canSelect && Boolean(selectedAssignableReference);
 
-            <div style={TABLE_HINT_STYLE}>
-                {t("organization.tabs.controls.hint", {
-                    defaultValue:
-                        "کنترل ها از زیرفرآیندهای تخصیص داده شده به سازمان خوانده می شوند.",
-                })}
+        return (
+            <div style={TABLE_PANEL_STYLE}>
+                <Title level="H5">{title}</Title>
+
+                <div style={TABLE_HINT_STYLE}>{value?.id ? hint : saveFirstHint}</div>
+
+                {!readOnly ? (
+                    <div style={SUB_PROCESS_PICKER_STYLE}>
+                        <ComboBox
+                            style={SUB_PROCESS_COMBOBOX_STYLE}
+                            filter="Contains"
+                            showClearIcon
+                            value={comboBoxValue}
+                            placeholder={selectPlaceholder}
+                            disabled={!canSelect}
+                            onInput={(event) => {
+                                const nextValue = readInputValue(event);
+                                const matchedOption = unassignedOptions.find(
+                                    (option) => formatReferenceOption(option) === nextValue,
+                                );
+                                setReferenceSelection(
+                                    referenceType,
+                                    matchedOption?.referenceId ?? "",
+                                    nextValue,
+                                );
+                            }}
+                            onSelectionChange={(event) => {
+                                const nextValue = readSelectedComboBoxDataValue(
+                                    event,
+                                    selectedAssignableReference,
+                                );
+                                const selectedOption = unassignedOptions.find(
+                                    (option) => option.referenceId === nextValue,
+                                );
+
+                                setReferenceSelection(
+                                    referenceType,
+                                    nextValue,
+                                    selectedOption ? formatReferenceOption(selectedOption) : "",
+                                );
+                            }}
+                        >
+                            {unassignedOptions.map((option) => (
+                                <ComboBoxItem
+                                    key={option.referenceId}
+                                    data-value={option.referenceId}
+                                    text={formatReferenceOption(option)}
+                                    additionalText={option.parentTitle ?? option.typeLabel}
+                                />
+                            ))}
+                        </ComboBox>
+
+                        <Button
+                            style={SUB_PROCESS_ADD_BUTTON_STYLE}
+                            design="Emphasized"
+                            disabled={!canAssign}
+                            onClick={() => {
+                                void handleAssignReference(referenceType, unassignedOptions);
+                            }}
+                        >
+                            {t("organization.actions.add", { defaultValue: "اضافه نمودن" })}
+                        </Button>
+                    </div>
+                ) : null}
+
+                <Table
+                    style={TABLE_STYLE}
+                    noDataText={noDataText}
+                    headerRow={
+                        <TableHeaderRow>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {entityLabel}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.description", { defaultValue: "شرح" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.owner", { defaultValue: "مالک / نوع" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.assignmentAndStatus", {
+                                    defaultValue: "رابطه / وضعیت",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.validity", { defaultValue: "اعتبار" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.actions", { defaultValue: "عملیات" })}
+                            </TableHeaderCell>
+                        </TableHeaderRow>
+                    }
+                >
+                    {assignments.map((assignment) => (
+                        <TableRow key={assignment.assignmentId}>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <strong>{assignment.title}</strong>
+                                    <span style={TABLE_SECONDARY_TEXT_STYLE}>
+                                        {assignment.code}
+                                    </span>
+                                    {assignment.parentTitle ? (
+                                        <span style={TABLE_SECONDARY_TEXT_STYLE}>
+                                            {assignment.parentCode
+                                                ? `${assignment.parentCode} - ${assignment.parentTitle}`
+                                                : assignment.parentTitle}
+                                        </span>
+                                    ) : null}
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                {assignment.description || "-"}
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <span>{assignment.ownerName || "-"}</span>
+                                    <span style={TABLE_INLINE_META_STYLE}>
+                                        {assignment.typeLabel || "-"}
+                                    </span>
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <span>
+                                        {resolveAssignmentTypeLabel(assignment.assignmentType, t)}
+                                    </span>
+                                    <span style={TABLE_INLINE_META_STYLE}>
+                                        {assignment.isActive
+                                            ? t("common.active", { defaultValue: "فعال" })
+                                            : t("common.inactive", {
+                                                  defaultValue: "غیرفعال",
+                                              })}
+                                        {assignment.status ? ` / ${assignment.status}` : ""}
+                                    </span>
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                {formatValidityRange(assignment.validFrom, assignment.validTo)}
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <Button
+                                    design="Transparent"
+                                    disabled={
+                                        readOnly ||
+                                        busy ||
+                                        referencesBusy ||
+                                        !onRemoveReferenceAssignment
+                                    }
+                                    onClick={() => {
+                                        void onRemoveReferenceAssignment?.(
+                                            referenceType,
+                                            assignment.assignmentId,
+                                        );
+                                    }}
+                                >
+                                    {t("organization.actions.delete", { defaultValue: "حذف" })}
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </Table>
             </div>
+        );
+    };
 
-            <Table
-                style={TABLE_STYLE}
-                noDataText={t("organization.controls.noData", {
-                    defaultValue: "برای زیرفرآیندهای این سازمان کنترلی ثبت نشده است.",
-                })}
-                headerRow={
-                    <TableHeaderRow>
-                        <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                            {t("organization.fields.subProcessName", { defaultValue: "نام زیر فرآیند" })}
-                        </TableHeaderCell>
-                        <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                            {t("organization.fields.controlName", { defaultValue: "نام کنترل" })}
-                        </TableHeaderCell>
-                        <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                            {t("organization.fields.controlDescription", { defaultValue: "شرح کنترل" })}
-                        </TableHeaderCell>
-                        <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                            {t("organization.fields.controlOwner", { defaultValue: "مسئول کنترل" })}
-                        </TableHeaderCell>
-                        <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                            {t("organization.fields.importance", { defaultValue: "اهمیت" })}
-                        </TableHeaderCell>
-                    </TableHeaderRow>
-                }
-            >
-                {controls.map((control) => (
-                    <TableRow key={`${control.processNodeId}:${control.controlId}`}>
-                        <TableCell style={TABLE_TEXT_CELL_STYLE}>
-                            <div style={TABLE_CELL_CONTENT_STYLE}>
-                                <strong>{control.subProcessTitle}</strong>
-                                <span style={TABLE_SECONDARY_TEXT_STYLE}>{control.subProcessCode}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell style={TABLE_TEXT_CELL_STYLE}>
-                            <div style={TABLE_CELL_CONTENT_STYLE}>
-                                <strong>{control.controlTitle}</strong>
-                                <span style={TABLE_SECONDARY_TEXT_STYLE}>{control.controlCode}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell style={TABLE_TEXT_CELL_STYLE}>
-                            {control.controlDescription || "-"}
-                        </TableCell>
-                        <TableCell style={TABLE_TEXT_CELL_STYLE}>
-                            {control.controlOwner || "-"}
-                        </TableCell>
-                        <TableCell style={TABLE_TEXT_CELL_STYLE}>
-                            {control.importance || "-"}
-                        </TableCell>
-                    </TableRow>
-                ))}
-            </Table>
-        </div>
-    );
+    const renderControlsTab = () =>
+        renderReferenceAssignmentTab({
+            referenceType: "CONTROL",
+            title: t("organization.tabs.controls", { defaultValue: "کنترل ها" }),
+            entityLabel: t("organization.fields.controlName", { defaultValue: "نام کنترل" }),
+            options: availableControlReferences,
+            assignments: controlReferences,
+            selectPlaceholder: t("organization.controls.selectPlaceholder", {
+                defaultValue: "انتخاب کنترل",
+            }),
+            noDataText: t("organization.controls.noData", {
+                defaultValue: "برای این سازمان کنترلی تخصیص داده نشده است.",
+            }),
+            hint: t("organization.tabs.controls.hint", {
+                defaultValue: "کنترل ها از فیچر کنترل خوانده می شوند و رابطه آن ها با سازمان ذخیره می شود.",
+            }),
+            saveFirstHint: t("organization.tabs.controls.saveFirstHint", {
+                defaultValue: "برای تخصیص کنترل، ابتدا سازمان را ذخیره کنید.",
+            }),
+        });
+
+    const renderRulesTab = () =>
+        renderReferenceAssignmentTab({
+            referenceType: "REGULATION",
+            title: t("organization.tabs.rules", { defaultValue: "قوانین" }),
+            entityLabel: t("organization.fields.rule", { defaultValue: "قانون" }),
+            options: availableRegulationReferences,
+            assignments: regulationReferences,
+            selectPlaceholder: t("organization.rules.selectPlaceholder", {
+                defaultValue: "انتخاب قانون",
+            }),
+            noDataText: t("organization.rules.noData", {
+                defaultValue: "برای این سازمان قانونی تخصیص داده نشده است.",
+            }),
+            hint: t("organization.tabs.rules.hint", {
+                defaultValue: "قوانین از فیچر قوانین و مقررات خوانده می شوند و رابطه آن ها با سازمان ذخیره می شود.",
+            }),
+            saveFirstHint: t("organization.tabs.rules.saveFirstHint", {
+                defaultValue: "برای تخصیص قانون، ابتدا سازمان را ذخیره کنید.",
+            }),
+        });
+
+    const renderPoliciesTab = () =>
+        renderReferenceAssignmentTab({
+            referenceType: "POLICY",
+            title: t("organization.tabs.policies", { defaultValue: "سیاست ها" }),
+            entityLabel: t("organization.fields.policy", { defaultValue: "سیاست" }),
+            options: availablePolicyReferences,
+            assignments: policyReferences,
+            selectPlaceholder: t("organization.policies.selectPlaceholder", {
+                defaultValue: "انتخاب سیاست",
+            }),
+            noDataText: t("organization.policies.noData", {
+                defaultValue: "برای این سازمان سیاستی تخصیص داده نشده است.",
+            }),
+            hint: t("organization.tabs.policies.hint", {
+                defaultValue: "سیاست ها از فیچر سیاست ها خوانده می شوند و رابطه آن ها با سازمان ذخیره می شود.",
+            }),
+            saveFirstHint: t("organization.tabs.policies.saveFirstHint", {
+                defaultValue: "برای تخصیص سیاست، ابتدا سازمان را ذخیره کنید.",
+            }),
+        });
+
+    const renderGoalsTab = () =>
+        renderReferenceAssignmentTab({
+            referenceType: "OBJECTIVE",
+            title: t("organization.tabs.goals", { defaultValue: "اهداف" }),
+            entityLabel: t("organization.fields.goal", { defaultValue: "هدف" }),
+            options: availableObjectiveReferences,
+            assignments: objectiveReferences,
+            selectPlaceholder: t("organization.goals.selectPlaceholder", {
+                defaultValue: "انتخاب هدف",
+            }),
+            noDataText: t("organization.goals.noData", {
+                defaultValue: "برای این سازمان هدفی تخصیص داده نشده است.",
+            }),
+            hint: t("organization.tabs.goals.hint", {
+                defaultValue: "اهداف از فیچر اهداف کنترلی خوانده می شوند و رابطه آن ها با سازمان ذخیره می شود.",
+            }),
+            saveFirstHint: t("organization.tabs.goals.saveFirstHint", {
+                defaultValue: "برای تخصیص هدف، ابتدا سازمان را ذخیره کنید.",
+            }),
+        });
 
     const renderTabContent = () => {
         if (activeTab === "general") {
@@ -1510,57 +1824,15 @@ export default function OrganizationObjectPage({
         }
 
         if (activeTab === "rules") {
-            return (
-                <TablePlaceholder
-                    title={t("organization.tabs.rules", { defaultValue: "قوانین" })}
-                    actions={tabActionButtons([
-                        t("organization.actions.selectRules", { defaultValue: "انتخاب قوانین" }),
-                        t("organization.actions.delete", { defaultValue: "حذف" }),
-                    ])}
-                    columns={[
-                        t("organization.fields.name", { defaultValue: "نام" }),
-                        t("organization.fields.description", { defaultValue: "شرح" }),
-                        t("organization.fields.validFrom", { defaultValue: "اعتبار از" }),
-                        t("organization.fields.validTo", { defaultValue: "اعتبار تا" }),
-                    ]}
-                />
-            );
+            return renderRulesTab();
         }
 
         if (activeTab === "policies") {
-            return (
-                <TablePlaceholder
-                    title={t("organization.tabs.policies", { defaultValue: "سیاست ها" })}
-                    actions={tabActionButtons([
-                        t("organization.actions.add", { defaultValue: "اضافه" }),
-                        t("organization.actions.delete", { defaultValue: "حذف" }),
-                    ])}
-                    columns={[
-                        t("organization.fields.policy", { defaultValue: "سیاست" }),
-                        t("organization.fields.policyType", { defaultValue: "نوع سیاست" }),
-                        t("organization.fields.policyOwner", { defaultValue: "مالک سیاست" }),
-                        t("organization.fields.publishMethod", { defaultValue: "روش انتشار" }),
-                        t("organization.fields.assignmentMethod", { defaultValue: "روش تخصیص" }),
-                    ]}
-                />
-            );
+            return renderPoliciesTab();
         }
 
         if (activeTab === "goals") {
-            return (
-                <TablePlaceholder
-                    title={t("organization.tabs.goals", { defaultValue: "اهداف" })}
-                    actions={tabActionButtons([
-                        t("organization.actions.addGoal", { defaultValue: "اضافه نمودن یک هدف" }),
-                        t("organization.actions.delete", { defaultValue: "حذف" }),
-                    ])}
-                    columns={[
-                        t("organization.fields.group", { defaultValue: "گروه" }),
-                        t("organization.fields.validFrom", { defaultValue: "اعتبار از" }),
-                        t("organization.fields.validTo", { defaultValue: "اعتبار تا" }),
-                    ]}
-                />
-            );
+            return renderGoalsTab();
         }
 
         if (activeTab === "kpi") {

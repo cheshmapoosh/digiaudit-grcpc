@@ -21,9 +21,9 @@ public class ObjectiveController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public List<ObjectiveNodeResponse> findAll() {
+    public List<ObjectiveNodeResponse> findAll(@RequestParam(required = false) String nodeType) {
         log.debug("REST request to find all objectives");
-        return objectiveService.findAll();
+        return objectiveService.findAll(nodeType);
     }
 
     @GetMapping("/roots")
@@ -32,10 +32,22 @@ public class ObjectiveController {
         return objectiveService.findRoots();
     }
 
+    @GetMapping("/types/{nodeType}")
+    @PreAuthorize("hasAuthority('OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    public List<ObjectiveNodeResponse> findByNodeType(@PathVariable String nodeType) {
+        return objectiveService.findByNodeType(nodeType);
+    }
+
     @GetMapping("/children/{parentId}")
     @PreAuthorize("hasAuthority('OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
     public List<ObjectiveNodeResponse> findChildren(@PathVariable UUID parentId) {
         return objectiveService.findChildren(parentId);
+    }
+
+    @GetMapping("/{id}/children")
+    @PreAuthorize("hasAuthority('OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    public List<ObjectiveNodeResponse> findChildrenByObjectPath(@PathVariable UUID id) {
+        return objectiveService.findChildren(id);
     }
 
     @GetMapping("/{id}")

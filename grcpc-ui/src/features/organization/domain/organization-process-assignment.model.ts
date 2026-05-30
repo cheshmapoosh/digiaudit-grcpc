@@ -103,3 +103,52 @@ export interface OrganizationRiskOption {
     status: "active" | "inactive";
     description?: string;
 }
+
+export type OrganizationReferenceType =
+    | "CONTROL"
+    | "REGULATION"
+    | "POLICY"
+    | "OBJECTIVE";
+
+export interface OrganizationReferenceAssignment extends AuditFields {
+    id: string;
+    organizationId: string;
+    referenceType: OrganizationReferenceType;
+    referenceId: string;
+    assignmentType: OrganizationProcessAssignmentType;
+    validFrom?: string;
+    validTo?: string;
+    isActive: boolean;
+}
+
+export interface OrganizationReferenceAssignmentCreate {
+    organizationId: string;
+    referenceType: OrganizationReferenceType;
+    referenceId: string;
+    assignmentType?: OrganizationProcessAssignmentType;
+    validFrom?: string;
+    validTo?: string;
+    isActive?: boolean;
+}
+
+export interface OrganizationReferenceOption {
+    referenceId: string;
+    code: string;
+    title: string;
+    description?: string;
+    status?: string;
+    ownerName?: string;
+    typeLabel?: string;
+    parentCode?: string;
+    parentTitle?: string;
+    validFrom?: string;
+    validTo?: string;
+}
+
+export interface OrganizationReferenceView extends OrganizationReferenceOption {
+    assignmentId: string;
+    organizationId: string;
+    referenceType: OrganizationReferenceType;
+    assignmentType: OrganizationProcessAssignmentType;
+    isActive: boolean;
+}

@@ -37,6 +37,17 @@ public class ObjectiveService {
         return repository.findAllByOrderBySortOrderAscTitleAsc().stream().map(mapper::toResponse).toList();
     }
 
+    public List<ObjectiveNodeResponse> findAll(String nodeType) {
+        String normalizedNodeType = normalizeNullable(nodeType);
+        return normalizedNodeType == null ? findAll() : findByNodeType(normalizedNodeType);
+    }
+
+    public List<ObjectiveNodeResponse> findByNodeType(String nodeType) {
+        String normalizedNodeType = normalizeRequired(nodeType);
+        validateNodeType(normalizedNodeType);
+        return repository.findByNodeTypeOrderBySortOrderAscTitleAsc(normalizedNodeType).stream().map(mapper::toResponse).toList();
+    }
+
     public List<ObjectiveNodeResponse> findRoots() {
         return repository.findByParentIdIsNullOrderBySortOrderAscTitleAsc().stream().map(mapper::toResponse).toList();
     }
@@ -52,6 +63,7 @@ public class ObjectiveService {
 
     @Transactional
     public ObjectiveNodeResponse create(ObjectiveNodeRequest request, HttpServletRequest httpRequest) {
+        validateNodeType(request.nodeType() == null ? "objective" : request.nodeType());
         validateCode(request.code(), null);
         validateParent(request.parentId());
         ObjectiveNodeEntity saved = repository.save(fill(ObjectiveNodeEntity.builder().build(), request));
@@ -62,12 +74,16 @@ public class ObjectiveService {
     @Transactional
     public ObjectiveNodeResponse update(UUID id, ObjectiveNodeRequest request, HttpServletRequest httpRequest) {
         ObjectiveNodeEntity entity = get(id);
-        validateCode(request.code(), id);
+        String targetCode = request.code() == null ? entity.getCode() : request.code();
+        String targetNodeType = request.nodeType() == null ? entity.getNodeType() : request.nodeType();
+        validateNodeType(targetNodeType);
+        validateCode(targetCode, id);
         if (id.equals(request.parentId())) {
             throw invalidParent(request.parentId());
         }
         validateParent(request.parentId());
-        ObjectiveNodeEntity saved = repository.save(fill(entity, request));
+        ensureNoCycle(id, request.parentId());
+        ObjectiveNodeEntity saved = repository.save(fillUpdate(entity, request));
         audit("OBJECTIVE_UPDATED", saved.getId(), httpRequest, Map.of("code", saved.getCode()));
         return mapper.toResponse(saved);
     }
@@ -113,9 +129,77 @@ public class ObjectiveService {
         return entity;
     }
 
+    private ObjectiveNodeEntity fillUpdate(ObjectiveNodeEntity entity, ObjectiveNodeRequest request) {
+        LocalDate effectiveFrom = request.effectiveFrom() == null ? entity.getEffectiveFrom() : parseNullable(request.effectiveFrom());
+        LocalDate validUntil = request.validUntil() == null ? entity.getValidUntil() : parseNullable(request.validUntil());
+        requireValidRange(effectiveFrom, validUntil, "Objective validUntil cannot be before effectiveFrom");
+
+        if (request.code() != null) {
+            entity.setCode(normalizeRequired(request.code()));
+        }
+        if (request.title() != null) {
+            entity.setTitle(normalizeRequired(request.title()));
+        }
+        if (request.nodeType() != null) {
+            entity.setNodeType(normalizeNullable(request.nodeType()) == null ? "objective" : normalizeNullable(request.nodeType()));
+        }
+        entity.setParentId(request.parentId());
+        if (request.status() != null) {
+            entity.setStatus(normalizeNullable(request.status()) == null ? "active" : normalizeNullable(request.status()));
+        }
+        if (request.sortOrder() != null) {
+            entity.setSortOrder(request.sortOrder());
+        }
+        if (request.description() != null) {
+            entity.setDescription(normalizeNullable(request.description()));
+        }
+        if (request.strategy() != null) {
+            entity.setStrategy(normalizeNullable(request.strategy()));
+        }
+        if (request.objectiveType() != null) {
+            entity.setObjectiveType(normalizeNullable(request.objectiveType()));
+        }
+        if (request.objectiveClass() != null) {
+            entity.setObjectiveClass(normalizeNullable(request.objectiveClass()));
+        }
+        if (request.organizationUnitId() != null) {
+            entity.setOrganizationUnitId(request.organizationUnitId());
+        }
+        if (request.organizationUnitName() != null) {
+            entity.setOrganizationUnitName(normalizeNullable(request.organizationUnitName()));
+        }
+        if (request.effectiveFrom() != null) {
+            entity.setEffectiveFrom(effectiveFrom);
+        }
+        if (request.validUntil() != null) {
+            entity.setValidUntil(validUntil);
+        }
+        if (request.documentsCount() != null) {
+            entity.setDocumentsCount(request.documentsCount());
+        }
+        return entity;
+    }
+
     private void validateParent(UUID parentId) {
         if (parentId != null && !repository.existsById(parentId)) {
             throw invalidParent(parentId);
+        }
+    }
+
+    private void ensureNoCycle(UUID id, UUID parentId) {
+        UUID current = parentId;
+        while (current != null) {
+            ObjectiveNodeEntity node = get(current);
+            if (id.equals(node.getId())) {
+                throw invalidParent(parentId);
+            }
+            current = node.getParentId();
+        }
+    }
+
+    private void validateNodeType(String nodeType) {
+        if (!"objective".equals(normalizeRequired(nodeType))) {
+            throw invalidParent(null);
         }
     }
 

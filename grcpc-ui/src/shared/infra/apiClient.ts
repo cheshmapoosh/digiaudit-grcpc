@@ -40,16 +40,18 @@ interface RefreshResponse {
 
 /* -------------------------------------------------------------------------- */
 
+let accessToken: string | null = null;
+
 function getAccessToken(): string | null {
-    return localStorage.getItem("access_token");
+    return accessToken;
 }
 
 function setAccessToken(token: string): void {
-    localStorage.setItem("access_token", token);
+    accessToken = token;
 }
 
 function clearAuth(): void {
-    localStorage.removeItem("access_token");
+    accessToken = null;
 }
 
 /* -------------------------------------------------------------------------- */

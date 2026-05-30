@@ -10,6 +10,7 @@ public interface PolicyNodeRepository extends JpaRepository<PolicyNodeEntity, UU
     List<PolicyNodeEntity> findAllByOrderBySortOrderAscTitleAsc();
     List<PolicyNodeEntity> findByParentIdOrderBySortOrderAscTitleAsc(UUID parentId);
     List<PolicyNodeEntity> findByParentIdIsNullOrderBySortOrderAscTitleAsc();
+    List<PolicyNodeEntity> findByNodeTypeOrderBySortOrderAscTitleAsc(String nodeType);
     boolean existsByParentId(UUID parentId);
     boolean existsByCodeIgnoreCase(String code);
     boolean existsByCodeIgnoreCaseAndIdNot(String code, UUID id);

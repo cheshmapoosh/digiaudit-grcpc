@@ -38,6 +38,12 @@ public class AccountGroupController {
         return accountGroupService.findChildren(parentId);
     }
 
+    @GetMapping("/{id}/children")
+    @PreAuthorize("hasAuthority('ACCOUNT_GROUP_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    public List<AccountGroupResponse> findChildrenByObjectPath(@PathVariable UUID id) {
+        return accountGroupService.findChildren(id);
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('ACCOUNT_GROUP_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
     public AccountGroupResponse findById(@PathVariable UUID id) {

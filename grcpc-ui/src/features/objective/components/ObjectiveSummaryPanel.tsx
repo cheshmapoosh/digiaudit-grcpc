@@ -302,15 +302,67 @@ export default function ObjectiveSummaryPanel({
     };
 
     return (
-        <div style={{ display: "grid", gap: "1rem", minHeight: 0 }}>
+        <div
+            style={{
+                display: "grid",
+                gridTemplateRows: "auto 1fr auto",
+                minHeight: "100%",
+                gap: "1rem",
+            }}
+        >
             <Bar
                 startContent={
                     <Title level="H4">
                         {t("objective.object.summaryTitle", { defaultValue: "جزئیات هدف" })}
                     </Title>
                 }
+            />
+
+            <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
+                {error ? (
+                    <MessageStrip design="Negative" hideCloseButton>
+                        {error}
+                    </MessageStrip>
+                ) : null}
+
+                <TabContainer
+                    className={OBJECTIVE_SUMMARY_TAB_CLASS}
+                    style={TAB_CONTAINER_STYLE}
+                    onTabSelect={(event) => {
+                        const nextTab = readSelectedTabKey(event);
+                        if (nextTab) {
+                            setActiveTab(nextTab);
+                        }
+                    }}
+                >
+                    {tabs.flatMap((tab, index) => {
+                        const item = (
+                            <Tab
+                                key={tab.key}
+                                text={tab.label}
+                                selected={activeTab === tab.key}
+                                data-tab-key={tab.key}
+                            />
+                        );
+
+                        if (index === 0) {
+                            return [item];
+                        }
+
+                        if (index === 1) {
+                            return [<TabSeparator key="general-separator" />, item];
+                        }
+
+                        return [item];
+                    })}
+                </TabContainer>
+
+                <div style={TAB_BODY_STYLE}>{renderActiveTab()}</div>
+            </div>
+
+            <Bar
                 endContent={
-                    <div style={{ display: "inline-flex", gap: "0.5rem" }}>
+                    <>
                         <Button
                             design="Emphasized"
                             disabled={busy || !onEdit}
@@ -319,57 +371,18 @@ export default function ObjectiveSummaryPanel({
                         >
                             {t("common.edit", { defaultValue: "ویرایش" })}
                         </Button>
+
                         <Button
                             design="Transparent"
                             disabled={busy}
                             style={ACTION_BUTTON_STYLE}
                             onClick={onCancel}
                         >
-                            {t("common.close", { defaultValue: "بستن" })}
+                            {t("common.cancel", { defaultValue: "انصراف" })}
                         </Button>
-                    </div>
+                    </>
                 }
             />
-
-            {error ? (
-                <MessageStrip design="Negative" hideCloseButton>
-                    {error}
-                </MessageStrip>
-            ) : null}
-
-            <TabContainer
-                className={OBJECTIVE_SUMMARY_TAB_CLASS}
-                style={TAB_CONTAINER_STYLE}
-                onTabSelect={(event) => {
-                    const nextTab = readSelectedTabKey(event);
-                    if (nextTab) {
-                        setActiveTab(nextTab);
-                    }
-                }}
-            >
-                {tabs.flatMap((tab, index) => {
-                    const item = (
-                        <Tab
-                            key={tab.key}
-                            text={tab.label}
-                            selected={activeTab === tab.key}
-                            data-tab-key={tab.key}
-                        />
-                    );
-
-                    if (index === 0) {
-                        return [item];
-                    }
-
-                    if (index === 1) {
-                        return [<TabSeparator key="general-separator" />, item];
-                    }
-
-                    return [item];
-                })}
-            </TabContainer>
-
-            <div style={TAB_BODY_STYLE}>{renderActiveTab()}</div>
         </div>
     );
 }

@@ -55,11 +55,23 @@ public class RegulationEntity {
     @Column(name = "description", length = 2000)
     private String description;
 
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+
     @Column(name = "effective_from")
-    private LocalDate effectiveFrom;
+    private LocalDate effectiveDate;
 
     @Column(name = "effective_to")
-    private LocalDate effectiveTo;
+    private LocalDate validTo;
+
+    @Column(name = "issuer", length = 255)
+    private String issuer;
+
+    @Column(name = "owner_name", length = 255)
+    private String ownerName;
+
+    @Column(name = "documents_count", nullable = false)
+    private Integer documentsCount;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
