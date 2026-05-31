@@ -62,6 +62,22 @@
       "validTo": "Valid To",
       "lawName": "Law Name"
     },
+    "controls": {
+      "title": "Controls",
+      "empty": "No controls have been registered for this subprocess.",
+      "saveFirst": "Save the subprocess first to view controls.",
+      "loadError": "Failed to load subprocess controls.",
+      "retry": "Retry",
+      "tableAccessibleName": "Subprocess controls table",
+      "columns": {
+        "code": "Code",
+        "title": "Title",
+        "controlAutomation": "Control Automation",
+        "controlOwner": "Control Owner",
+        "importance": "Importance",
+        "status": "Status"
+      }
+    },
     "tabs": {
       "general": "General Information",
       "controlObjectives": "Control Objectives",

@@ -62,6 +62,22 @@
       "validTo": "تاریخ اعتبار",
       "lawName": "نام قانون"
     },
+    "controls": {
+      "title": "کنترل‌ها",
+      "empty": "برای این زیر فرآیند کنترلی ثبت نشده است.",
+      "saveFirst": "برای مشاهده کنترل‌ها، ابتدا زیر فرآیند را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری کنترل‌های زیر فرآیند.",
+      "retry": "تلاش دوباره",
+      "tableAccessibleName": "جدول کنترل‌های زیر فرآیند",
+      "columns": {
+        "code": "کد",
+        "title": "عنوان",
+        "controlAutomation": "کنترل سیستمی",
+        "controlOwner": "مالک کنترل",
+        "importance": "اهمیت",
+        "status": "وضعیت"
+      }
+    },
     "tabs": {
       "general": "اطلاعات کلی",
       "controlObjectives": "اهداف کنترلی",
