@@ -57,6 +57,8 @@ import {
     ROOT_PARENT as OBJECTIVE_ROOT_PARENT,
     useObjectiveState,
 } from "@/features/objective";
+import type { DocumentAttachment, DocumentUploadPolicy } from "@/features/document";
+import { useDocumentAttachmentState } from "@/features/document";
 
 import { useOrganizationState, ROOT_PARENT } from "../state/organization.state";
 import { useOrganizationProcessAssignmentState } from "../state/organization-process-assignment.state";
@@ -80,6 +82,8 @@ const DIALOG_LARGE_WIDTH = "92vw";
 const EMPTY_ASSIGNMENTS: OrganizationProcessAssignment[] = [];
 const EMPTY_RISKS: OrganizationRiskAssignment[] = [];
 const EMPTY_REFERENCE_ASSIGNMENTS: OrganizationReferenceAssignment[] = [];
+const EMPTY_DOCUMENTS: DocumentAttachment[] = [];
+const DOCUMENT_TARGET_TYPE = "ORGANIZATION";
 const REFERENCE_TYPES: readonly OrganizationReferenceType[] = [
     "CONTROL",
     "REGULATION",
@@ -472,6 +476,18 @@ function getReferenceAssignments(
         EMPTY_REFERENCE_ASSIGNMENTS;
 }
 
+function createDocumentTempSessionId(): string {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getDocumentTargetKey(targetType: string, targetId: string | undefined): string | null {
+    return targetId ? `${targetType}:${targetId}` : null;
+}
+
 export default function OrganizationsFclShellPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -548,6 +564,26 @@ export default function OrganizationsFclShellPage() {
     const removeReferenceFromOrganization = useOrganizationReferenceAssignmentState(
         (state) => state.removeAssignment,
     );
+    const documentsByTarget = useDocumentAttachmentState((state) => state.documentsByTarget);
+    const tempDocumentsBySession = useDocumentAttachmentState(
+        (state) => state.tempDocumentsBySession,
+    );
+    const documentUploadPoliciesByTargetType = useDocumentAttachmentState(
+        (state) => state.uploadPoliciesByTargetType,
+    );
+    const documentsLoading = useDocumentAttachmentState((state) => state.loading);
+    const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
+    const loadTempDocuments = useDocumentAttachmentState((state) => state.loadTemp);
+    const loadDocumentUploadPolicy = useDocumentAttachmentState(
+        (state) => state.loadUploadPolicy,
+    );
+    const uploadTempDocument = useDocumentAttachmentState((state) => state.uploadTemp);
+    const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
+    const updateDocumentTitle = useDocumentAttachmentState((state) => state.updateTitle);
+    const deleteDocument = useDocumentAttachmentState((state) => state.deleteDocument);
+    const createDocumentDownloadUrl = useDocumentAttachmentState(
+        (state) => state.createDownloadUrl,
+    );
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -566,6 +602,9 @@ export default function OrganizationsFclShellPage() {
      */
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
+    const [documentTempSessionId, setDocumentTempSessionId] = useState(
+        createDocumentTempSessionId,
+    );
 
     const items = useMemo(() => sortOrganizations(Object.values(nodesById)), [nodesById]);
     const processItems = useMemo(
@@ -659,6 +698,7 @@ export default function OrganizationsFclShellPage() {
 
     useEffect(() => {
         setObjectActiveTab("general");
+        setDocumentTempSessionId(createDocumentTempSessionId());
     }, [objectTabScopeKey]);
 
     useEffect(() => {
@@ -703,6 +743,34 @@ export default function OrganizationsFclShellPage() {
             );
         });
     }, [loadObjectiveChildren, loadPolicyChildren, loadRegulationChildren, t]);
+
+    useEffect(() => {
+        void loadDocumentUploadPolicy(DOCUMENT_TARGET_TYPE).catch((error: unknown) => {
+            setPageError(
+                mapError(
+                    error,
+                    t("organization.documents.errors.loadPolicy", {
+                        defaultValue: "خطا در بارگذاری تنظیمات آپلود مستندات",
+                    }),
+                ),
+            );
+        });
+    }, [loadDocumentUploadPolicy, t]);
+
+    useEffect(() => {
+        void loadTempDocuments(DOCUMENT_TARGET_TYPE, documentTempSessionId).catch(
+            (error: unknown) => {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("organization.documents.errors.loadTemp", {
+                            defaultValue: "خطا در بارگذاری مستندات موقت",
+                        }),
+                    ),
+                );
+            },
+        );
+    }, [documentTempSessionId, loadTempDocuments, t]);
 
     /**
      * در حالت create child، درخت باید parent را انتخاب/باز کند.
@@ -817,6 +885,29 @@ export default function OrganizationsFclShellPage() {
         navigate("/organizations");
     }, [navigate, organizationId, queryParentId, routeMode, selectedTreeId]);
 
+    const commitOrganizationTempDocuments = useCallback(
+        async (targetId: string) => {
+            const tempDocuments = tempDocumentsBySession[documentTempSessionId] ?? [];
+            if (tempDocuments.length === 0) {
+                return;
+            }
+
+            await commitTempDocuments({
+                tempSessionId: documentTempSessionId,
+                targetType: DOCUMENT_TARGET_TYPE,
+                targetId,
+                documentIds: tempDocuments.map((documentItem) => documentItem.id),
+                documentTitles: Object.fromEntries(
+                    tempDocuments.map((documentItem) => [
+                        documentItem.id,
+                        documentItem.title || documentItem.originalFileName,
+                    ]),
+                ),
+            });
+        },
+        [commitTempDocuments, documentTempSessionId, tempDocumentsBySession],
+    );
+
     const handleSubmitCreate = useCallback(
         async (payload: OrganizationNodeCreate | OrganizationNodeUpdate) => {
             try {
@@ -851,6 +942,7 @@ export default function OrganizationsFclShellPage() {
                             ? payload.location.trim() || undefined
                             : undefined,
                 });
+                await commitOrganizationTempDocuments(created.id);
 
                 /**
                  * بعد از create:
@@ -874,7 +966,7 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [createNode, navigate, t],
+        [commitOrganizationTempDocuments, createNode, navigate, t],
     );
 
     const handleSubmitUpdate = useCallback(
@@ -912,6 +1004,7 @@ export default function OrganizationsFclShellPage() {
                 };
 
                 await updateNode(organizationId, updatePayload);
+                await commitOrganizationTempDocuments(organizationId);
 
                 setSelectedTreeId(organizationId);
                 setTreeExpansionAnchorId(updatePayload.parentId ?? organizationId);
@@ -930,7 +1023,7 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [navigate, organizationId, t, updateNode],
+        [commitOrganizationTempDocuments, navigate, organizationId, t, updateNode],
     );
 
     const requestDelete = useCallback(
@@ -1048,6 +1141,7 @@ export default function OrganizationsFclShellPage() {
         void Promise.all([
             loadAssignmentsForOrganization(objectValue.id),
             loadRisksForOrganization(objectValue.id),
+            loadDocumentsForTarget(DOCUMENT_TARGET_TYPE, objectValue.id),
             ...REFERENCE_TYPES.map((referenceType) =>
                 loadReferenceAssignmentsForOrganization(objectValue.id, referenceType),
             ),
@@ -1063,6 +1157,7 @@ export default function OrganizationsFclShellPage() {
         });
     }, [
         loadAssignmentsForOrganization,
+        loadDocumentsForTarget,
         loadRisksForOrganization,
         loadReferenceAssignmentsForOrganization,
         objectValue?.id,
@@ -1076,6 +1171,17 @@ export default function OrganizationsFclShellPage() {
     const organizationRisks = objectValue?.id
         ? risksByOrganizationId[objectValue.id] ?? EMPTY_RISKS
         : EMPTY_RISKS;
+    const organizationDocumentTargetKey = getDocumentTargetKey(
+        DOCUMENT_TARGET_TYPE,
+        objectValue?.id || undefined,
+    );
+    const organizationDocuments = organizationDocumentTargetKey
+        ? documentsByTarget[organizationDocumentTargetKey] ?? EMPTY_DOCUMENTS
+        : EMPTY_DOCUMENTS;
+    const organizationTempDocuments =
+        tempDocumentsBySession[documentTempSessionId] ?? EMPTY_DOCUMENTS;
+    const organizationDocumentUploadPolicy: DocumentUploadPolicy | undefined =
+        documentUploadPoliciesByTargetType[DOCUMENT_TARGET_TYPE];
 
     const organizationSubProcesses = useMemo(
         () => buildOrganizationSubProcessViews(currentAssignments, processNodesById),
@@ -1341,6 +1447,88 @@ export default function OrganizationsFclShellPage() {
         [objectValue?.id, removeReferenceFromOrganization, t],
     );
 
+    const handleUploadOrganizationDocument = useCallback(
+        async (file: File, onProgress?: (progress: number) => void) => {
+            await uploadTempDocument(
+                {
+                    targetType: DOCUMENT_TARGET_TYPE,
+                    targetId: objectValue?.id || null,
+                    tempSessionId: documentTempSessionId,
+                    title: file.name,
+                    file,
+                },
+                onProgress,
+            );
+        },
+        [documentTempSessionId, objectValue?.id, uploadTempDocument],
+    );
+
+    const handleUpdateOrganizationDocumentTitle = useCallback(
+        async (documentId: string, title: string) => {
+            try {
+                setSubmitting(true);
+                setObjectError(null);
+                await updateDocumentTitle(documentId, title);
+            } catch (error) {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("organization.documents.errors.updateTitle", {
+                            defaultValue: "خطا در ثبت عنوان مستند",
+                        }),
+                    ),
+                );
+                throw error;
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [t, updateDocumentTitle],
+    );
+
+    const handleDeleteOrganizationDocument = useCallback(
+        async (documentId: string) => {
+            try {
+                setSubmitting(true);
+                setObjectError(null);
+                await deleteDocument(documentId);
+            } catch (error) {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("organization.documents.errors.delete", {
+                            defaultValue: "خطا در حذف مستند",
+                        }),
+                    ),
+                );
+                throw error;
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [deleteDocument, t],
+    );
+
+    const handleDownloadOrganizationDocument = useCallback(
+        async (documentId: string) => {
+            try {
+                setObjectError(null);
+                const url = await createDocumentDownloadUrl(documentId);
+                window.open(url, "_blank", "noopener,noreferrer");
+            } catch (error) {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("organization.documents.errors.download", {
+                            defaultValue: "خطا در دریافت لینک دانلود مستند",
+                        }),
+                    ),
+                );
+            }
+        },
+        [createDocumentDownloadUrl, t],
+    );
+
     const showInlineSummaryPane = Boolean(selectedTreeItem);
     const fclLayout: FclLayout = showInlineSummaryPane ? "TwoColumnsStartExpanded" : "OneColumn";
 
@@ -1504,15 +1692,20 @@ export default function OrganizationsFclShellPage() {
                             availableObjectiveReferences={availableObjectiveReferences}
                             risks={organizationRisks}
                             availableRisks={availableRiskTemplates}
+                            documents={organizationDocuments}
+                            tempDocuments={organizationTempDocuments}
+                            documentUploadPolicy={organizationDocumentUploadPolicy}
+                            documentTempSessionId={documentTempSessionId}
                             subProcessesBusy={processLoading || assignmentsLoading}
                             relationshipsBusy={relationshipsLoading || riskLoading}
                             referencesBusy={
                                 referenceAssignmentsLoading ||
                                 processLoading ||
                                 regulationLoading ||
-                                policyLoading ||
-                                objectiveLoading
+                                    policyLoading ||
+                                    objectiveLoading
                             }
+                            documentsBusy={documentsLoading}
                             busy={loading || submitting}
                             error={objectError}
                             onErrorClose={() => setObjectError(null)}
@@ -1525,6 +1718,10 @@ export default function OrganizationsFclShellPage() {
                             onRemoveRiskAssignment={handleRemoveRiskAssignment}
                             onAssignReference={handleAssignReferenceToOrganization}
                             onRemoveReferenceAssignment={handleRemoveReferenceAssignment}
+                            onUploadDocument={handleUploadOrganizationDocument}
+                            onUpdateDocumentTitle={handleUpdateOrganizationDocumentTitle}
+                            onDeleteDocument={handleDeleteOrganizationDocument}
+                            onDownloadDocument={handleDownloadOrganizationDocument}
                             onActiveTabChange={setObjectActiveTab}
                         />
                     ) : (

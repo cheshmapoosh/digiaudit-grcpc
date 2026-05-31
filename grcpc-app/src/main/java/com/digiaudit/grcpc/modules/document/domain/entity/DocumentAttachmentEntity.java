@@ -13,7 +13,9 @@ import lombok.experimental.SuperBuilder;
         indexes = {
                 @Index(name = "idx_document_attachment_target", columnList = "target_type,target_id"),
                 @Index(name = "idx_document_attachment_status", columnList = "status"),
-                @Index(name = "idx_document_attachment_uploaded_by", columnList = "uploaded_by")
+                @Index(name = "idx_document_attachment_uploaded_by", columnList = "uploaded_by"),
+                @Index(name = "idx_document_attachment_temp_session", columnList = "temp_session_id"),
+                @Index(name = "idx_document_attachment_expires_at", columnList = "expires_at")
         },
         uniqueConstraints = @UniqueConstraint(name = "uk_document_attachment_object", columnNames = {"bucket_name", "object_key"})
 )
@@ -43,6 +45,9 @@ public class DocumentAttachmentEntity extends AuditableEntity {
     @Column(name = "original_file_name", nullable = false, length = 500)
     private String originalFileName;
 
+    @Column(name = "title", nullable = false, length = 500)
+    private String title;
+
     @Column(name = "content_type", length = 255)
     private String contentType;
 
@@ -63,4 +68,13 @@ public class DocumentAttachmentEntity extends AuditableEntity {
 
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt;
+
+    @Column(name = "temp_session_id")
+    private UUID tempSessionId;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
+    @Column(name = "committed_at")
+    private LocalDateTime committedAt;
 }

@@ -2,7 +2,9 @@ package com.digiaudit.grcpc.modules.document.application;
 
 import static com.digiaudit.grcpc.common.util.Texts.normalizeRequired;
 
+import com.digiaudit.grcpc.common.exception.BusinessException;
 import com.digiaudit.grcpc.common.exception.ConflictException;
+import com.digiaudit.grcpc.common.exception.ForbiddenException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
 import com.digiaudit.grcpc.modules.audit.application.AuditService;
@@ -10,7 +12,10 @@ import com.digiaudit.grcpc.modules.audit.domain.enums.ActionResult;
 import com.digiaudit.grcpc.modules.audit.domain.enums.AuditEventType;
 import com.digiaudit.grcpc.modules.audit.domain.enums.AuditTargetType;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentAttachmentResponse;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommitRequest;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentDownloadUrlResponse;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentTitleUpdateRequest;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentUploadPolicyResponse;
 import com.digiaudit.grcpc.modules.document.api.mapper.DocumentAttachmentMapper;
 import com.digiaudit.grcpc.modules.document.config.MinioProperties;
 import com.digiaudit.grcpc.modules.document.domain.entity.DocumentAttachmentEntity;
@@ -26,11 +31,13 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,6 +48,12 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional(readOnly = true)
 public class DocumentAttachmentService {
 
+    private static final String STATUS_ACTIVE = "ACTIVE";
+    private static final String STATUS_TEMP = "TEMP";
+    private static final String STATUS_DELETED = "DELETED";
+    private static final long BYTES_PER_MB = 1024L * 1024L;
+    private static final int MAX_DOCUMENT_TITLE_LENGTH = 500;
+
     private final DocumentAttachmentRepository repository;
     private final DocumentAttachmentMapper mapper;
     private final ObjectProvider<MinioClient> minioClientProvider;
@@ -50,22 +63,50 @@ public class DocumentAttachmentService {
     private final CurrentUserProvider currentUserProvider;
 
     public List<DocumentAttachmentResponse> list(String targetType, UUID targetId) {
-        authorizationService.assertCanAccess(targetType, targetId, "DOCUMENT_VIEW");
-        return repository.findByTargetTypeAndTargetIdAndStatusOrderByUploadedAtDesc(targetType, targetId, "ACTIVE")
+        String safeTargetType = normalizeTargetType(targetType);
+        authorizationService.assertCanAccess(safeTargetType, targetId, "DOCUMENT_VIEW");
+        return repository.findByTargetTypeAndTargetIdAndStatusOrderByUploadedAtDesc(safeTargetType, targetId, STATUS_ACTIVE)
                 .stream()
                 .map(mapper::toResponse)
                 .toList();
     }
 
+    public List<DocumentAttachmentResponse> listTemp(String targetType, UUID tempSessionId) {
+        String safeTargetType = normalizeTargetType(targetType);
+        return repository
+                .findByTargetTypeAndTempSessionIdAndStatusOrderByUploadedAtDesc(
+                        safeTargetType,
+                        tempSessionId,
+                        STATUS_TEMP
+                )
+                .stream()
+                .filter(this::canReadTempDocument)
+                .map(mapper::toResponse)
+                .toList();
+    }
+
+    public DocumentUploadPolicyResponse uploadPolicy(String targetType) {
+        String safeTargetType = normalizeTargetType(targetType);
+        long maxFileSizeMb = resolveMaxUploadSizeMb(safeTargetType);
+        return new DocumentUploadPolicyResponse(
+                safeTargetType,
+                maxFileSizeMb * BYTES_PER_MB,
+                maxFileSizeMb,
+                Math.max(1, properties.tempTtlMinutes())
+        );
+    }
+
     @Transactional
-    public DocumentAttachmentResponse upload(String targetType, UUID targetId, MultipartFile file, HttpServletRequest httpRequest) {
-        authorizationService.assertCanAccess(targetType, targetId, "DOCUMENT_UPLOAD");
-        MinioClient client = presignedUrlClient();
+    public DocumentAttachmentResponse upload(String targetType, UUID targetId, String title, MultipartFile file, HttpServletRequest httpRequest) {
+        String safeTargetType = normalizeTargetType(targetType);
+        authorizationService.assertCanAccess(safeTargetType, targetId, "DOCUMENT_UPLOAD");
+        validateFileSize(safeTargetType, file);
+        MinioClient client = minioClient();
         try {
             ensureBucket(client);
-            String safeTargetType = normalizeRequired(targetType);
-            String originalFileName = normalizeRequired(file.getOriginalFilename());
-            String objectKey = "%s/%s/%s/%s".formatted(safeTargetType, targetId, UUID.randomUUID(), originalFileName);
+            String originalFileName = sanitizeFileName(file.getOriginalFilename());
+            String documentTitle = normalizeDocumentTitle(title, originalFileName);
+            String objectKey = finalObjectKey(safeTargetType, targetId, originalFileName);
             String checksum = sha256(file);
             try (InputStream inputStream = file.getInputStream()) {
                 ObjectWriteResponse response = client.putObject(PutObjectArgs.builder()
@@ -80,28 +121,218 @@ public class DocumentAttachmentService {
                         .bucketName(properties.bucket())
                         .objectKey(objectKey)
                         .originalFileName(originalFileName)
+                        .title(documentTitle)
                         .contentType(file.getContentType())
                         .sizeBytes(file.getSize())
                         .checksumSha256(checksum)
                         .versionId(response.versionId())
-                        .status("ACTIVE")
+                        .status(STATUS_ACTIVE)
                         .uploadedBy(currentUserProvider.getCurrentUserIdOrNull())
                         .uploadedAt(LocalDateTime.now())
                         .build();
                 DocumentAttachmentEntity saved = repository.save(entity);
-                audit("DOCUMENT_UPLOADED", saved.getId(), httpRequest, Map.of("targetType", safeTargetType, "targetId", targetId, "objectKey", objectKey));
+                audit("DOCUMENT_UPLOADED", saved.getId(), httpRequest, Map.of("targetType", safeTargetType, "targetId", targetId, "objectKey", objectKey, "title", documentTitle));
                 return mapper.toResponse(saved);
             }
+        } catch (BusinessException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.error("Failed to upload document. targetType={}, targetId={}, fileName={}", targetType, targetId, file.getOriginalFilename(), ex);
             throw new ConflictException("DOCUMENT_UPLOAD_FAILED", "error.internal", "Document upload failed: " + ex.getMessage());
         }
     }
 
+    @Transactional
+    public DocumentAttachmentResponse uploadTemp(
+            String targetType,
+            UUID targetId,
+            UUID tempSessionId,
+            String title,
+            MultipartFile file,
+            HttpServletRequest httpRequest
+    ) {
+        String safeTargetType = normalizeTargetType(targetType);
+        if (targetId != null) {
+            authorizationService.assertCanAccess(safeTargetType, targetId, "DOCUMENT_UPLOAD");
+        }
+        validateFileSize(safeTargetType, file);
+        MinioClient client = minioClient();
+        try {
+            ensureBucket(client);
+            String originalFileName = sanitizeFileName(file.getOriginalFilename());
+            String documentTitle = normalizeDocumentTitle(title, originalFileName);
+            String objectKey = tempObjectKey(safeTargetType, tempSessionId, originalFileName);
+            String checksum = sha256(file);
+            LocalDateTime now = LocalDateTime.now();
+            try (InputStream inputStream = file.getInputStream()) {
+                ObjectWriteResponse response = client.putObject(PutObjectArgs.builder()
+                        .bucket(properties.bucket())
+                        .object(objectKey)
+                        .contentType(file.getContentType())
+                        .stream(inputStream, file.getSize(), -1)
+                        .build());
+                DocumentAttachmentEntity entity = DocumentAttachmentEntity.builder()
+                        .targetType(safeTargetType)
+                        .targetId(targetId == null ? tempSessionId : targetId)
+                        .bucketName(properties.bucket())
+                        .objectKey(objectKey)
+                        .originalFileName(originalFileName)
+                        .title(documentTitle)
+                        .contentType(file.getContentType())
+                        .sizeBytes(file.getSize())
+                        .checksumSha256(checksum)
+                        .versionId(response.versionId())
+                        .status(STATUS_TEMP)
+                        .uploadedBy(currentUserProvider.getCurrentUserIdOrNull())
+                        .uploadedAt(now)
+                        .tempSessionId(tempSessionId)
+                        .expiresAt(now.plusMinutes(Math.max(1, properties.tempTtlMinutes())))
+                        .build();
+                DocumentAttachmentEntity saved = repository.save(entity);
+                audit("DOCUMENT_TEMP_UPLOADED", saved.getId(), httpRequest, Map.of(
+                        "targetType", safeTargetType,
+                        "targetId", targetId == null ? tempSessionId : targetId,
+                        "tempSessionId", tempSessionId,
+                        "objectKey", objectKey,
+                        "title", documentTitle
+                ));
+                return mapper.toResponse(saved);
+            }
+        } catch (BusinessException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Failed to upload temp document. targetType={}, tempSessionId={}, fileName={}", targetType, tempSessionId, file.getOriginalFilename(), ex);
+            throw new ConflictException("DOCUMENT_UPLOAD_FAILED", "error.internal", "Document upload failed: " + ex.getMessage());
+        }
+    }
+
+    @Transactional
+    public List<DocumentAttachmentResponse> commitTemp(
+            DocumentCommitRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String safeTargetType = normalizeTargetType(request.targetType());
+        authorizationService.assertCanAccess(safeTargetType, request.targetId(), "DOCUMENT_UPLOAD");
+        MinioClient client = minioClient();
+        try {
+            ensureBucket(client);
+            List<UUID> requestedIds = request.documentIds() == null ? List.of() : request.documentIds();
+            Map<UUID, String> requestedTitles = request.documentTitles() == null ? Map.of() : request.documentTitles();
+            LocalDateTime now = LocalDateTime.now();
+            List<DocumentAttachmentEntity> tempDocuments = repository
+                    .findByTempSessionIdAndStatus(request.tempSessionId(), STATUS_TEMP)
+                    .stream()
+                    .filter(item -> safeTargetType.equals(item.getTargetType()))
+                    .filter(item -> requestedIds.isEmpty() || requestedIds.contains(item.getId()))
+                    .toList();
+
+            if (!requestedIds.isEmpty() && tempDocuments.isEmpty()) {
+                throw new NotFoundException(
+                        "DOCUMENT_TEMP_NOT_FOUND",
+                        "error.document.notFound",
+                        "No temp documents found for session " + request.tempSessionId(),
+                        request.tempSessionId()
+                );
+            }
+
+            for (DocumentAttachmentEntity entity : tempDocuments) {
+                if (!canMutateTempDocument(entity)) {
+                    throw new ForbiddenException(
+                            "RESOURCE_ACCESS_DENIED",
+                            "error.security.forbidden",
+                            "Access denied for temp document " + entity.getId()
+                    );
+                }
+            }
+
+            for (DocumentAttachmentEntity entity : tempDocuments) {
+                String requestedTitle = requestedTitles.get(entity.getId());
+                if (requestedTitle != null) {
+                    entity.setTitle(normalizeDocumentTitle(requestedTitle, entity.getOriginalFileName()));
+                } else if (entity.getTitle() == null || entity.getTitle().isBlank()) {
+                    entity.setTitle(normalizeDocumentTitle(null, entity.getOriginalFileName()));
+                }
+
+                String finalObjectKey = finalObjectKey(
+                        safeTargetType,
+                        request.targetId(),
+                        entity.getOriginalFileName()
+                );
+                ObjectWriteResponse copyResponse = client.copyObject(CopyObjectArgs.builder()
+                        .bucket(properties.bucket())
+                        .object(finalObjectKey)
+                        .source(CopySource.builder()
+                                .bucket(entity.getBucketName())
+                                .object(entity.getObjectKey())
+                                .build())
+                        .build());
+                removeObjectQuietly(client, entity.getBucketName(), entity.getObjectKey());
+
+                entity.setTargetType(safeTargetType);
+                entity.setTargetId(request.targetId());
+                entity.setBucketName(properties.bucket());
+                entity.setObjectKey(finalObjectKey);
+                entity.setVersionId(copyResponse.versionId());
+                entity.setStatus(STATUS_ACTIVE);
+                entity.setExpiresAt(null);
+                entity.setCommittedAt(now);
+            }
+
+            List<DocumentAttachmentEntity> saved = repository.saveAll(tempDocuments);
+            saved.forEach(item -> audit("DOCUMENT_TEMP_COMMITTED", item.getId(), httpRequest, Map.of(
+                    "targetType", item.getTargetType(),
+                    "targetId", item.getTargetId(),
+                    "tempSessionId", request.tempSessionId(),
+                    "objectKey", item.getObjectKey()
+            )));
+
+            return saved.stream().map(mapper::toResponse).toList();
+        } catch (BusinessException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Failed to commit temp documents. targetType={}, targetId={}, tempSessionId={}", request.targetType(), request.targetId(), request.tempSessionId(), ex);
+            throw new ConflictException("DOCUMENT_COMMIT_FAILED", "error.internal", "Document commit failed: " + ex.getMessage());
+        }
+    }
+
+    @Transactional
+    public DocumentAttachmentResponse updateTitle(
+            UUID id,
+            DocumentTitleUpdateRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        DocumentAttachmentEntity entity = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("DOCUMENT_NOT_FOUND", "error.document.notFound", "Document not found: " + id, id));
+
+        if (STATUS_ACTIVE.equals(entity.getStatus())) {
+            authorizationService.assertCanAccess(entity.getTargetType(), entity.getTargetId(), "DOCUMENT_UPLOAD");
+        } else if (STATUS_TEMP.equals(entity.getStatus())) {
+            if (!canMutateTempDocument(entity)) {
+                throw new ForbiddenException(
+                        "RESOURCE_ACCESS_DENIED",
+                        "error.security.forbidden",
+                        "Access denied for temp document " + id
+                );
+            }
+        } else {
+            throw new NotFoundException("DOCUMENT_NOT_FOUND", "error.document.notFound", "Document is not active: " + id, id);
+        }
+
+        String nextTitle = normalizeDocumentTitle(request == null ? null : request.title(), entity.getOriginalFileName());
+        entity.setTitle(nextTitle);
+        DocumentAttachmentEntity saved = repository.save(entity);
+        audit("DOCUMENT_TITLE_UPDATED", id, httpRequest, Map.of(
+                "targetType", entity.getTargetType(),
+                "targetId", entity.getTargetId(),
+                "title", nextTitle
+        ));
+        return mapper.toResponse(saved);
+    }
+
     public DocumentDownloadUrlResponse createDownloadUrl(UUID id) {
         DocumentAttachmentEntity entity = getActive(id);
         authorizationService.assertCanAccess(entity.getTargetType(), entity.getTargetId(), "DOCUMENT_DOWNLOAD");
-        MinioClient client = minioClient();
+        MinioClient client = presignedUrlClient();
         try {
             int expiryMinutes = Math.max(1, properties.presignedUrlExpiryMinutes());
             String url = client.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
@@ -119,26 +350,57 @@ public class DocumentAttachmentService {
 
     @Transactional
     public void delete(UUID id, HttpServletRequest httpRequest) {
-        DocumentAttachmentEntity entity = getActive(id);
-        authorizationService.assertCanAccess(entity.getTargetType(), entity.getTargetId(), "DOCUMENT_DELETE");
-        MinioClient client = minioClient();
-        try {
-            client.removeObject(RemoveObjectArgs.builder()
-                    .bucket(entity.getBucketName())
-                    .object(entity.getObjectKey())
-                    .build());
-        } catch (Exception ex) {
-            log.warn("MinIO object removal failed, metadata will be marked deleted. documentId={}, objectKey={}, error={}", id, entity.getObjectKey(), ex.getMessage());
+        DocumentAttachmentEntity entity = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("DOCUMENT_NOT_FOUND", "error.document.notFound", "Document not found: " + id, id));
+        if (STATUS_ACTIVE.equals(entity.getStatus())) {
+            authorizationService.assertCanAccess(entity.getTargetType(), entity.getTargetId(), "DOCUMENT_DELETE");
+        } else if (STATUS_TEMP.equals(entity.getStatus()) && !canMutateTempDocument(entity)) {
+            throw new ForbiddenException(
+                    "RESOURCE_ACCESS_DENIED",
+                    "error.security.forbidden",
+                    "Access denied for temp document " + id
+            );
+        } else if (!STATUS_TEMP.equals(entity.getStatus())) {
+            throw new NotFoundException("DOCUMENT_NOT_FOUND", "error.document.notFound", "Document is not active: " + id, id);
         }
-        entity.setStatus("DELETED");
+        MinioClient client = minioClient();
+        removeObjectQuietly(client, entity.getBucketName(), entity.getObjectKey());
+        entity.setStatus(STATUS_DELETED);
+        entity.setExpiresAt(null);
         repository.save(entity);
         audit("DOCUMENT_DELETED", id, httpRequest, Map.of("targetType", entity.getTargetType(), "targetId", entity.getTargetId(), "objectKey", entity.getObjectKey()));
+    }
+
+    @Scheduled(
+            fixedDelayString = "${app.minio.temp-cleanup-fixed-delay-ms:3600000}",
+            initialDelayString = "${app.minio.temp-cleanup-fixed-delay-ms:3600000}"
+    )
+    @Transactional
+    public void cleanupExpiredTempDocuments() {
+        List<DocumentAttachmentEntity> expired = repository.findByStatusAndExpiresAtBefore(
+                STATUS_TEMP,
+                LocalDateTime.now()
+        );
+        if (expired.isEmpty()) {
+            return;
+        }
+
+        MinioClient client = minioClientProvider.getIfAvailable();
+        for (DocumentAttachmentEntity entity : expired) {
+            if (client != null && properties.enabled()) {
+                removeObjectQuietly(client, entity.getBucketName(), entity.getObjectKey());
+            }
+            entity.setStatus(STATUS_DELETED);
+            entity.setExpiresAt(null);
+        }
+        repository.saveAll(expired);
+        log.info("Cleaned up expired temp documents. count={}", expired.size());
     }
 
     private DocumentAttachmentEntity getActive(UUID id) {
         DocumentAttachmentEntity entity = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("DOCUMENT_NOT_FOUND", "error.document.notFound", "Document not found: " + id, id));
-        if (!"ACTIVE".equals(entity.getStatus())) {
+        if (!STATUS_ACTIVE.equals(entity.getStatus())) {
             throw new NotFoundException("DOCUMENT_NOT_FOUND", "error.document.notFound", "Document is not active: " + id, id);
         }
         return entity;
@@ -167,6 +429,89 @@ public class DocumentAttachmentService {
         boolean exists = client.bucketExists(BucketExistsArgs.builder().bucket(properties.bucket()).build());
         if (!exists) {
             client.makeBucket(MakeBucketArgs.builder().bucket(properties.bucket()).build());
+        }
+    }
+
+    private String normalizeTargetType(String targetType) {
+        return normalizeRequired(targetType).toUpperCase();
+    }
+
+    private String sanitizeFileName(String fileName) {
+        return normalizeRequired(fileName)
+                .replace('\\', '_')
+                .replace('/', '_');
+    }
+
+    private String normalizeDocumentTitle(String title, String fallbackTitle) {
+        String normalized = title == null ? "" : title.trim();
+        if (normalized.isBlank()) {
+            normalized = normalizeRequired(fallbackTitle);
+        }
+
+        if (normalized.length() > MAX_DOCUMENT_TITLE_LENGTH) {
+            throw new ConflictException(
+                    "DOCUMENT_TITLE_TOO_LONG",
+                    "error.document.titleTooLong",
+                    "Document title exceeds max length: " + MAX_DOCUMENT_TITLE_LENGTH
+            );
+        }
+
+        return normalized;
+    }
+
+    private String finalObjectKey(String targetType, UUID targetId, String originalFileName) {
+        return "%s/%s/%s/%s".formatted(targetType, targetId, UUID.randomUUID(), originalFileName);
+    }
+
+    private String tempObjectKey(String targetType, UUID tempSessionId, String originalFileName) {
+        return "temp/%s/%s/%s/%s".formatted(targetType, tempSessionId, UUID.randomUUID(), originalFileName);
+    }
+
+    private long resolveMaxUploadSizeMb(String targetType) {
+        long defaultSize = properties.defaultMaxUploadSizeMb() > 0
+                ? properties.defaultMaxUploadSizeMb()
+                : 20;
+        Map<String, Long> featureSizes = properties.featureMaxUploadSizeMb();
+        if (featureSizes == null || featureSizes.isEmpty()) {
+            return defaultSize;
+        }
+
+        Long targetSize = featureSizes.get(targetType);
+        return targetSize != null && targetSize > 0 ? targetSize : defaultSize;
+    }
+
+    private void validateFileSize(String targetType, MultipartFile file) {
+        long maxUploadSizeMb = resolveMaxUploadSizeMb(targetType);
+        long maxUploadSizeBytes = maxUploadSizeMb * BYTES_PER_MB;
+        if (file.getSize() > maxUploadSizeBytes) {
+            throw new ConflictException(
+                    "DOCUMENT_FILE_TOO_LARGE",
+                    "error.document.fileTooLarge",
+                    "Document exceeds max upload size for " + targetType + ": " + maxUploadSizeMb + " MB"
+            );
+        }
+    }
+
+    private boolean canReadTempDocument(DocumentAttachmentEntity entity) {
+        return canMutateTempDocument(entity);
+    }
+
+    private boolean canMutateTempDocument(DocumentAttachmentEntity entity) {
+        return currentUserProvider.getCurrentPrincipalOptional()
+                .map(currentUser -> currentUser.isRootUser()
+                        || entity.getUploadedBy() == null
+                        || Objects.equals(currentUser.getUserId(), entity.getUploadedBy()))
+                .orElse(false);
+    }
+
+    private void removeObjectQuietly(MinioClient client, String bucketName, String objectKey) {
+        try {
+            client.removeObject(RemoveObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(objectKey)
+                    .build());
+        } catch (Exception ex) {
+            log.warn("MinIO object removal failed. bucket={}, objectKey={}, error={}", bucketName, objectKey, ex.getMessage());
         }
     }
 
