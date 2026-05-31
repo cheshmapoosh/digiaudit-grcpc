@@ -96,7 +96,7 @@
       "remove": "حذف",
       "removeTitle": "حذف تخصیص هدف",
       "removeConfirm": "آیا از حذف تخصیص هدف «{{title}}» مطمئن هستید؟",
-      "confirmRemove": "تأیید حذف",
+      "confirmRemove": "حذف",
       "cancelRemove": "انصراف",
       "tableAccessibleName": "جدول اهداف فرآیند",
       "columns": {

@@ -50,14 +50,16 @@ const ERROR_ACTION_STYLE: CSSProperties = {
 };
 
 const ASSIGNMENT_TOOLBAR_STYLE: CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "minmax(14rem, 1fr) auto",
+    display: "flex",
+    justifyContent: "flex-start",
+    alignItems: "center",
     gap: "0.75rem",
-    alignItems: "end",
+    flexWrap: "wrap",
 };
 
 const OBJECTIVE_COMBOBOX_STYLE: CSSProperties = {
-    width: "100%",
+    width: "min(28rem, 100%)",
+    minWidth: "18rem",
 };
 
 const EMPTY_ASSIGNMENTS: ProcessObjectiveAssignment[] = [];

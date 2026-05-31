@@ -96,7 +96,7 @@
       "remove": "Remove",
       "removeTitle": "Remove Objective Assignment",
       "removeConfirm": "Remove assignment for \"{{title}}\"?",
-      "confirmRemove": "Confirm Remove",
+      "confirmRemove": "Delete",
       "cancelRemove": "Cancel",
       "tableAccessibleName": "Process objectives table",
       "columns": {
