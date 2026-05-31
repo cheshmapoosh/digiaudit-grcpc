@@ -31,13 +31,26 @@ public class ProcessObjectiveAssignmentController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('OBJECTIVE_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
     public ProcessObjectiveAssignmentResponse assign(@Valid @RequestBody ProcessObjectiveAssignmentRequest request, HttpServletRequest httpRequest) {
-        return service.assign(request, httpRequest);
+        log.debug(
+                "REST request to assign process objective. processNodeId={}, objectiveNodeId={}",
+                request.processNodeId(),
+                request.objectiveNodeId()
+        );
+        ProcessObjectiveAssignmentResponse response = service.assign(request, httpRequest);
+        log.debug(
+                "REST request completed to assign process objective. assignmentId={}, processNodeId={}, objectiveNodeId={}",
+                response.assignmentId(),
+                response.processNodeId(),
+                response.objectiveNodeId()
+        );
+        return response;
     }
 
     @DeleteMapping("/api/process-objective-assignments/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('OBJECTIVE_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
     public void remove(@PathVariable UUID id, HttpServletRequest httpRequest) {
+        log.debug("REST request to remove process objective assignment. assignmentId={}", id);
         service.remove(id, httpRequest);
     }
 }

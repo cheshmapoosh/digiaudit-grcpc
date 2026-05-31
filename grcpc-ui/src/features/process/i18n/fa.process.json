@@ -94,6 +94,7 @@
       "noAssignable": "هدف قابل تخصیص دیگری وجود ندارد.",
       "mutationError": "خطا در ذخیره تغییرات اهداف فرآیند.",
       "remove": "حذف",
+      "removeTitle": "حذف تخصیص هدف",
       "removeConfirm": "آیا از حذف تخصیص هدف «{{title}}» مطمئن هستید؟",
       "confirmRemove": "تأیید حذف",
       "cancelRemove": "انصراف",

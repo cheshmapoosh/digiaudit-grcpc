@@ -3,6 +3,7 @@ package com.digiaudit.grcpc.modules.masterdata.process.application;
 import static com.digiaudit.grcpc.common.util.Dates.*;
 import static com.digiaudit.grcpc.common.util.Texts.normalizeNullable;
 
+import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
 import com.digiaudit.grcpc.modules.audit.application.AuditService;
@@ -22,6 +23,7 @@ import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -35,6 +37,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ProcessObjectiveAssignmentService {
+
+    private static final Set<String> SUPPORTED_ASSIGNMENT_TYPES = Set.of("scope", "owner", "participant");
 
     private final ProcessObjectiveAssignmentRepository repository;
     private final ProcessNodeRepository processNodeRepository;
@@ -70,13 +74,18 @@ public class ProcessObjectiveAssignmentService {
                         .processNodeId(request.processNodeId())
                         .objectiveNodeId(request.objectiveNodeId())
                         .build());
-        String assignmentType = normalizeNullable(request.assignmentType());
-        entity.setAssignmentType(assignmentType == null ? "scope" : assignmentType);
+        entity.setAssignmentType(normalizeAssignmentType(request.assignmentType()));
         entity.setValidFrom(validFrom);
         entity.setValidTo(validTo);
         entity.setActive(request.isActive() == null || request.isActive());
 
         ProcessObjectiveAssignmentEntity saved = repository.save(entity);
+        log.debug(
+                "Saved process objective assignment. assignmentId={}, processNodeId={}, objectiveNodeId={}",
+                saved.getId(),
+                saved.getProcessNodeId(),
+                saved.getObjectiveNodeId()
+        );
         audit("PROCESS_OBJECTIVE_ASSIGNED", saved.getId(), httpRequest, Map.of(
                 "processNodeId", saved.getProcessNodeId(),
                 "objectiveNodeId", saved.getObjectiveNodeId()
@@ -88,6 +97,12 @@ public class ProcessObjectiveAssignmentService {
     public void remove(UUID id, HttpServletRequest httpRequest) {
         ProcessObjectiveAssignmentEntity entity = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("MASTER_DATA_NOT_FOUND", "error.masterdata.notFound", "Process objective assignment not found: " + id, id));
+        log.debug(
+                "Deleting process objective assignment. assignmentId={}, processNodeId={}, objectiveNodeId={}",
+                entity.getId(),
+                entity.getProcessNodeId(),
+                entity.getObjectiveNodeId()
+        );
         repository.delete(entity);
         audit("PROCESS_OBJECTIVE_ASSIGNMENT_DELETED", id, httpRequest, Map.of(
                 "processNodeId", entity.getProcessNodeId(),
@@ -113,6 +128,24 @@ public class ProcessObjectiveAssignmentService {
         }
 
         return objective;
+    }
+
+    private String normalizeAssignmentType(String assignmentType) {
+        String normalized = normalizeNullable(assignmentType);
+        if (normalized == null) {
+            return "scope";
+        }
+
+        if (!SUPPORTED_ASSIGNMENT_TYPES.contains(normalized)) {
+            throw new ConflictException(
+                    "MASTER_DATA_INVALID_ASSIGNMENT_TYPE",
+                    "error.masterdata.invalidAssignmentType",
+                    "Invalid process objective assignment type: " + assignmentType,
+                    assignmentType
+            );
+        }
+
+        return normalized;
     }
 
     private void audit(String eventName, UUID targetId, HttpServletRequest request, Map<String, Object> details) {

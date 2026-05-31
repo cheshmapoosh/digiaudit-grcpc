@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { useTranslation } from "react-i18next";
 import {
     Button,
+    ComboBox,
+    ComboBoxItem,
     MessageStrip,
-    Option,
-    Select,
     Table,
     TableCell,
     TableHeaderCell,
@@ -15,6 +15,7 @@ import {
 
 import type { ObjectiveNode } from "@/features/objective";
 import { objectiveService } from "@/features/objective";
+import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import type {
     ProcessObjectiveAssignment,
     ProcessObjectiveAssignmentType,
@@ -55,11 +56,8 @@ const ASSIGNMENT_TOOLBAR_STYLE: CSSProperties = {
     alignItems: "end",
 };
 
-const INLINE_ACTIONS_STYLE: CSSProperties = {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: "0.5rem",
-    paddingTop: "0.75rem",
+const OBJECTIVE_COMBOBOX_STYLE: CSSProperties = {
+    width: "100%",
 };
 
 const EMPTY_ASSIGNMENTS: ProcessObjectiveAssignment[] = [];
@@ -80,16 +78,37 @@ function formatOptionalValue(value: string | null | undefined, fallback: string)
     return trimmed ? trimmed : fallback;
 }
 
-function readSelectedDataValue(event: unknown, fallback: string): string {
-    const selectedOption = (event as {
+function formatObjectiveOption(objective: ObjectiveNode, fallback: string): string {
+    return `${formatOptionalValue(objective.code, fallback)} - ${formatOptionalValue(
+        objective.title,
+        fallback,
+    )}`;
+}
+
+function formatAssignmentOption(
+    assignment: ProcessObjectiveAssignment,
+    fallback: string,
+): string {
+    return `${formatOptionalValue(assignment.code, fallback)} - ${formatOptionalValue(
+        assignment.title,
+        fallback,
+    )}`;
+}
+
+function readInputValue(event: unknown): string {
+    return (event as { target?: { value?: string } }).target?.value ?? "";
+}
+
+function readSelectedComboBoxDataValue(event: unknown, fallback: string): string {
+    const selectedItem = (event as {
         detail?: {
-            selectedOption?: {
+            item?: {
                 getAttribute?: (name: string) => string | null;
             };
         };
-    }).detail?.selectedOption;
+    }).detail?.item;
 
-    return selectedOption?.getAttribute?.("data-value") ?? fallback;
+    return selectedItem?.getAttribute?.("data-value") ?? fallback;
 }
 
 function resolveAssignmentTypeLabel(
@@ -122,6 +141,7 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
     const requestSeq = useRef(0);
     const [retryKey, setRetryKey] = useState(0);
     const [selectedObjectiveId, setSelectedObjectiveId] = useState("");
+    const [selectedObjectiveSearchValue, setSelectedObjectiveSearchValue] = useState("");
     const [mutationBusy, setMutationBusy] = useState(false);
     const [mutationError, setMutationError] = useState(false);
     const [removeCandidate, setRemoveCandidate] =
@@ -203,6 +223,15 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
         () => objectiveOptions.filter((objective) => !assignedObjectiveIds.has(objective.id)),
         [assignedObjectiveIds, objectiveOptions],
     );
+    const selectedObjective = availableObjectives.find(
+        (objective) => objective.id === selectedObjectiveId,
+    );
+    const objectiveComboBoxValue = selectedObjective
+        ? formatObjectiveOption(selectedObjective, noneText)
+        : selectedObjectiveSearchValue;
+    const removeCandidateLabel = removeCandidate
+        ? formatAssignmentOption(removeCandidate, noneText)
+        : "";
     const canAssign =
         !!processId &&
         !!selectedObjectiveId &&
@@ -228,6 +257,7 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
                 isActive: true,
             });
             setSelectedObjectiveId("");
+            setSelectedObjectiveSearchValue("");
             refresh();
         } catch {
             setMutationError(true);
@@ -300,27 +330,43 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
             <div style={{ height: "0.75rem" }} />
 
             <div style={ASSIGNMENT_TOOLBAR_STYLE}>
-                <Select
+                <ComboBox
                     accessibleName={t("process.objectives.assignAccessibleName")}
+                    filter="Contains"
+                    placeholder={t("process.objectives.assignPlaceholder")}
+                    showClearIcon
+                    style={OBJECTIVE_COMBOBOX_STYLE}
+                    value={objectiveComboBoxValue}
                     disabled={isLoading || mutationBusy || availableObjectives.length === 0}
-                    onChange={(event) =>
-                        setSelectedObjectiveId(readSelectedDataValue(event, ""))
-                    }
+                    onInput={(event) => {
+                        const nextValue = readInputValue(event);
+                        setSelectedObjectiveSearchValue(nextValue);
+
+                        const matchedOption = availableObjectives.find(
+                            (objective) => formatObjectiveOption(objective, noneText) === nextValue,
+                        );
+                        setSelectedObjectiveId(matchedOption?.id ?? "");
+                    }}
+                    onSelectionChange={(event) => {
+                        const nextValue = readSelectedComboBoxDataValue(event, selectedObjectiveId);
+                        const selectedOption = availableObjectives.find(
+                            (objective) => objective.id === nextValue,
+                        );
+
+                        setSelectedObjectiveId(nextValue);
+                        setSelectedObjectiveSearchValue(
+                            selectedOption ? formatObjectiveOption(selectedOption, noneText) : "",
+                        );
+                    }}
                 >
-                    <Option data-value="" selected={selectedObjectiveId === ""}>
-                        {t("process.objectives.assignPlaceholder")}
-                    </Option>
                     {availableObjectives.map((objective) => (
-                        <Option
+                        <ComboBoxItem
                             key={objective.id}
                             data-value={objective.id}
-                            selected={selectedObjectiveId === objective.id}
-                        >
-                            {formatOptionalValue(objective.code, noneText)} -{" "}
-                            {formatOptionalValue(objective.title, noneText)}
-                        </Option>
+                            text={formatObjectiveOption(objective, noneText)}
+                        />
                     ))}
-                </Select>
+                </ComboBox>
 
                 <Button design="Emphasized" disabled={!canAssign} onClick={handleAssign}>
                     {t("process.objectives.assign")}
@@ -342,33 +388,6 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
                     <MessageStrip design="Negative" hideCloseButton>
                         {t("process.objectives.mutationError")}
                     </MessageStrip>
-                </>
-            ) : null}
-
-            {removeCandidate ? (
-                <>
-                    <div style={{ height: "0.75rem" }} />
-                    <MessageStrip design="Information" hideCloseButton>
-                        {t("process.objectives.removeConfirm", {
-                            title: removeCandidate.title,
-                        })}
-                    </MessageStrip>
-                    <div style={INLINE_ACTIONS_STYLE}>
-                        <Button
-                            design="Emphasized"
-                            disabled={mutationBusy}
-                            onClick={handleRemove}
-                        >
-                            {t("process.objectives.confirmRemove")}
-                        </Button>
-                        <Button
-                            design="Transparent"
-                            disabled={mutationBusy}
-                            onClick={() => setRemoveCandidate(null)}
-                        >
-                            {t("process.objectives.cancelRemove")}
-                        </Button>
-                    </div>
                 </>
             ) : null}
 
@@ -427,6 +446,23 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
                     </TableRow>
                 ))}
             </Table>
+
+            <DeleteConfirmDialog
+                open={!!removeCandidate}
+                title={t("process.objectives.removeTitle")}
+                message={t("process.objectives.removeConfirm", {
+                    title: removeCandidateLabel,
+                })}
+                loading={mutationBusy}
+                confirmText={t("process.objectives.confirmRemove")}
+                cancelText={t("process.objectives.cancelRemove")}
+                onClose={() => {
+                    if (!mutationBusy) {
+                        setRemoveCandidate(null);
+                    }
+                }}
+                onConfirm={handleRemove}
+            />
         </div>
     );
 }

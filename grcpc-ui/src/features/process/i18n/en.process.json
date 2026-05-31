@@ -94,6 +94,7 @@
       "noAssignable": "No other objective is available to assign.",
       "mutationError": "Failed to save objective assignment changes.",
       "remove": "Remove",
+      "removeTitle": "Remove Objective Assignment",
       "removeConfirm": "Remove assignment for \"{{title}}\"?",
       "confirmRemove": "Confirm Remove",
       "cancelRemove": "Cancel",
