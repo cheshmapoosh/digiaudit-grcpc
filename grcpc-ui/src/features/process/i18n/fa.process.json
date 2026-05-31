@@ -82,6 +82,44 @@
         "status": "وضعیت"
       }
     },
+    "objectives": {
+      "title": "اهداف",
+      "empty": "هیچ هدفی به این آیتم فرآیندی تخصیص داده نشده است.",
+      "saveFirst": "برای مشاهده اهداف، ابتدا آیتم فرآیندی را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری اهداف تخصیص‌یافته.",
+      "retry": "تلاش دوباره",
+      "assign": "تخصیص هدف",
+      "assignPlaceholder": "انتخاب هدف",
+      "assignAccessibleName": "انتخاب هدف برای تخصیص",
+      "noAssignable": "هدف قابل تخصیص دیگری وجود ندارد.",
+      "mutationError": "خطا در ذخیره تغییرات اهداف فرآیند.",
+      "remove": "حذف",
+      "removeConfirm": "آیا از حذف تخصیص هدف «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "تأیید حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول اهداف فرآیند",
+      "columns": {
+        "code": "کد",
+        "title": "عنوان",
+        "description": "شرح",
+        "assignmentType": "نوع تخصیص",
+        "status": "وضعیت",
+        "actions": "عملیات"
+      },
+      "assignmentTypes": {
+        "scope": "دامنه",
+        "owner": "مالک",
+        "participant": "مشارکت‌کننده"
+      },
+      "types": {
+        "operational": "عملیاتی",
+        "compliance": "انطباق",
+        "strategic": "استراتژیک",
+        "financial": "مالی",
+        "reporting": "گزارشگری",
+        "market": "بازار"
+      }
+    },
     "tabs": {
       "general": "اطلاعات کلی",
       "controlObjectives": "اهداف کنترلی",

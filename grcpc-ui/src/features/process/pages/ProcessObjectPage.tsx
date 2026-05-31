@@ -26,6 +26,7 @@ import type {
     ProcessStatus,
 } from "../domain/process.model";
 import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
+import ProcessObjectivesTab from "../components/tabs/ProcessObjectivesTab";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
@@ -972,12 +973,9 @@ export default function ProcessObjectPage({
 
         if (activeTab === "objectives") {
             return (
-                <TablePlaceholder
-                    title={t("process.tabs.objectives", { defaultValue: "اهداف" })}
-                    columns={[
-                        t("process.fields.name", { defaultValue: "نام" }),
-                        t("process.fields.description", { defaultValue: "شرح" }),
-                    ]}
+                <ProcessObjectivesTab
+                    key={currentProcessId ?? "unsaved-process-objectives"}
+                    processId={currentProcessId}
                 />
             );
         }

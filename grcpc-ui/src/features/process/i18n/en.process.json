@@ -82,6 +82,44 @@
         "status": "Status"
       }
     },
+    "objectives": {
+      "title": "Objectives",
+      "empty": "No objectives are assigned to this process item.",
+      "saveFirst": "Save the process item first to view objectives.",
+      "loadError": "Failed to load assigned objectives.",
+      "retry": "Retry",
+      "assign": "Assign Objective",
+      "assignPlaceholder": "Select objective",
+      "assignAccessibleName": "Select objective to assign",
+      "noAssignable": "No other objective is available to assign.",
+      "mutationError": "Failed to save objective assignment changes.",
+      "remove": "Remove",
+      "removeConfirm": "Remove assignment for \"{{title}}\"?",
+      "confirmRemove": "Confirm Remove",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Process objectives table",
+      "columns": {
+        "code": "Code",
+        "title": "Title",
+        "description": "Description",
+        "assignmentType": "Assignment Type",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "assignmentTypes": {
+        "scope": "Scope",
+        "owner": "Owner",
+        "participant": "Participant"
+      },
+      "types": {
+        "operational": "Operational",
+        "compliance": "Compliance",
+        "strategic": "Strategic",
+        "financial": "Financial",
+        "reporting": "Reporting",
+        "market": "Market"
+      }
+    },
     "tabs": {
       "general": "General Information",
       "controlObjectives": "Control Objectives",

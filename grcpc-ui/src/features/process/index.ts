@@ -13,6 +13,13 @@ export type {
 } from "./domain/process.model";
 
 export type {
+    ProcessObjectiveAssignment,
+    ProcessObjectiveAssignmentCreate,
+    ProcessObjectiveAssignmentStatus,
+    ProcessObjectiveAssignmentType,
+} from "./domain/process-objective-assignment.model";
+
+export type {
     ProcessCreateInput,
     ProcessUpdateInput,
 } from "./domain/process.schema";
@@ -28,5 +35,10 @@ export {
 } from "./domain/process.schema";
 
 export { createProcessService, processService } from "./service/process.service";
+
+export {
+    createProcessObjectiveAssignmentService,
+    processObjectiveAssignmentService,
+} from "./service/process-objective-assignment.service";
 
 export { ROOT_PARENT, useProcessState } from "./state/process.state";
