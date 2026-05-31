@@ -27,6 +27,7 @@ import type {
 } from "../domain/process.model";
 import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
 import ProcessObjectivesTab from "../components/tabs/ProcessObjectivesTab";
+import ProcessAccountGroupsTab from "../components/tabs/ProcessAccountGroupsTab";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
@@ -982,12 +983,9 @@ export default function ProcessObjectPage({
 
         if (activeTab === "accountGroups") {
             return (
-                <TablePlaceholder
-                    title={t("process.tabs.accountGroups", { defaultValue: "گروه حساب" })}
-                    columns={[
-                        t("process.fields.name", { defaultValue: "نام" }),
-                        t("process.fields.description", { defaultValue: "شرح" }),
-                    ]}
+                <ProcessAccountGroupsTab
+                    key={currentProcessId ?? "unsaved-process-account-groups"}
+                    processId={currentProcessId}
                 />
             );
         }

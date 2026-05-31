@@ -16,6 +16,7 @@ import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ControlEntit
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ProcessControlAssignmentEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ProcessNodeEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ControlRepository;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessAccountGroupAssignmentRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessControlAssignmentRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessNodeRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessObjectiveAssignmentRepository;
@@ -38,6 +39,7 @@ public class ProcessService {
     private final ControlRepository controlRepository;
     private final ProcessControlAssignmentRepository assignmentRepository;
     private final ProcessObjectiveAssignmentRepository objectiveAssignmentRepository;
+    private final ProcessAccountGroupAssignmentRepository accountGroupAssignmentRepository;
     private final ProcessMapper mapper;
     private final AuditService auditService;
     private final CurrentUserProvider currentUserProvider;
@@ -118,7 +120,8 @@ public class ProcessService {
             ProcessNodeEntity entity = processNode.get();
             if (processNodeRepository.existsByParentId(id)
                     || assignmentRepository.existsByProcessNodeId(id)
-                    || objectiveAssignmentRepository.existsByProcessNodeId(id)) {
+                    || objectiveAssignmentRepository.existsByProcessNodeId(id)
+                    || accountGroupAssignmentRepository.existsByProcessNodeId(id)) {
                 throw new ConflictException("MASTER_DATA_HAS_CHILDREN", "error.masterdata.hasChildren", "Process node has children, controls, or assignments: " + id);
             }
             processNodeRepository.delete(entity);

@@ -20,6 +20,13 @@ export type {
 } from "./domain/process-objective-assignment.model";
 
 export type {
+    ProcessAccountGroupAssignment,
+    ProcessAccountGroupAssignmentCreate,
+    ProcessAccountGroupAssignmentStatus,
+    ProcessAccountGroupAssignmentType,
+} from "./domain/process-account-group-assignment.model";
+
+export type {
     ProcessCreateInput,
     ProcessUpdateInput,
 } from "./domain/process.schema";
@@ -40,5 +47,10 @@ export {
     createProcessObjectiveAssignmentService,
     processObjectiveAssignmentService,
 } from "./service/process-objective-assignment.service";
+
+export {
+    createProcessAccountGroupAssignmentService,
+    processAccountGroupAssignmentService,
+} from "./service/process-account-group-assignment.service";
 
 export { ROOT_PARENT, useProcessState } from "./state/process.state";

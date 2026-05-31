@@ -121,6 +121,37 @@
         "market": "بازار"
       }
     },
+    "accountGroups": {
+      "title": "گروه‌های حساب",
+      "empty": "هیچ گروه حسابی به این آیتم فرآیندی تخصیص داده نشده است.",
+      "saveFirst": "برای مشاهده گروه‌های حساب، ابتدا آیتم فرآیندی را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری گروه‌های حساب تخصیص‌یافته.",
+      "retry": "تلاش دوباره",
+      "assign": "تخصیص گروه حساب",
+      "assignPlaceholder": "انتخاب گروه حساب",
+      "assignAccessibleName": "انتخاب گروه حساب برای تخصیص",
+      "noAssignable": "گروه حساب قابل تخصیص دیگری وجود ندارد.",
+      "mutationError": "خطا در ذخیره تغییرات گروه‌های حساب فرآیند.",
+      "remove": "حذف",
+      "removeTitle": "حذف تخصیص گروه حساب",
+      "removeConfirm": "آیا از حذف تخصیص گروه حساب «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول گروه‌های حساب فرآیند",
+      "columns": {
+        "code": "کد",
+        "title": "عنوان",
+        "description": "شرح",
+        "assignmentType": "نوع تخصیص",
+        "status": "وضعیت",
+        "actions": "عملیات"
+      },
+      "assignmentTypes": {
+        "scope": "دامنه",
+        "owner": "مالک",
+        "participant": "مشارکت‌کننده"
+      }
+    },
     "tabs": {
       "general": "اطلاعات کلی",
       "controlObjectives": "اهداف کنترلی",

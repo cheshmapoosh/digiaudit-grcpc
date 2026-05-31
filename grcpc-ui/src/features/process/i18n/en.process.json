@@ -121,6 +121,37 @@
         "market": "Market"
       }
     },
+    "accountGroups": {
+      "title": "Account Groups",
+      "empty": "No account groups are assigned to this process item.",
+      "saveFirst": "Save the process item first to view account groups.",
+      "loadError": "Failed to load assigned account groups.",
+      "retry": "Retry",
+      "assign": "Assign Account Group",
+      "assignPlaceholder": "Select account group",
+      "assignAccessibleName": "Select account group to assign",
+      "noAssignable": "No other account group is available to assign.",
+      "mutationError": "Failed to save account group assignment changes.",
+      "remove": "Remove",
+      "removeTitle": "Remove Account Group Assignment",
+      "removeConfirm": "Remove assignment for \"{{title}}\"?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Process account groups table",
+      "columns": {
+        "code": "Code",
+        "title": "Title",
+        "description": "Description",
+        "assignmentType": "Assignment Type",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "assignmentTypes": {
+        "scope": "Scope",
+        "owner": "Owner",
+        "participant": "Participant"
+      }
+    },
     "tabs": {
       "general": "General Information",
       "controlObjectives": "Control Objectives",
