@@ -20,7 +20,7 @@ services:
       start_period: 60s
 
   minio:
-    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-09-07T16-13-09Z}
+    image: ${MINIO_IMAGE:-minio/minio:latest}
     restart: unless-stopped
     command: server ${MINIO_DATA_DIR:-/var/lib/minio/data} --console-address ":9001"
     environment:
@@ -33,23 +33,25 @@ services:
       - minio_data:${MINIO_DATA_DIR:-/var/lib/minio/data}
 
   app:
-    build:
-      context: .
-      dockerfile: docker/app/Dockerfile
-    image: ${GRCPC_APP_IMAGE:-grcpc-app:latest}
+    image: ${JAVA_IMAGE:-eclipse-temurin:21-jre-noble}
     restart: unless-stopped
+    working_dir: /opt/grcpc
     depends_on:
       oracle:
         condition: service_healthy
       minio:
         condition: service_started
+    volumes:
+      - ${HOST_APP_JAR:-./.docker/test/app/grcpc-app.jar}:/opt/grcpc/grcpc-app.jar:ro
+      - app_logs:/opt/grcpc/logs
     environment:
       SERVER_PORT: 8080
       DB_URL: ${DB_URL:-jdbc:oracle:thin:@//oracle:1521/FREEPDB1}
       DB_USERNAME: ${DB_USERNAME:-GRCPC}
       DB_PASSWORD: ${DB_PASSWORD:-grcpc}
-      DB_DRIVER_CLASS_NAME: oracle.jdbc.OracleDriver
+      DB_DRIVER_CLASS_NAME: ${DB_DRIVER_CLASS_NAME:-oracle.jdbc.OracleDriver}
       DB_SCHEMA: ${DB_SCHEMA:-GRCPC}
+      FLYWAY_ENABLED: ${FLYWAY_ENABLED:-true}
       MINIO_ENABLED: "true"
       MINIO_ENDPOINT: http://minio:9000
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}
@@ -57,12 +59,17 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-grcpc-documents}
       APP_LOGGING_PATH: /opt/grcpc/logs
+      ROOT_LOG_LEVEL: ${ROOT_LOG_LEVEL:-INFO}
+      APP_LOG_LEVEL: ${APP_LOG_LEVEL:-DEBUG}
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
     ports:
       - "${APP_PORT:-8080}:8080"
+    command: ["sh", "-c", "exec java $${JAVA_OPTS:-} -jar /opt/grcpc/grcpc-app.jar"]
 
 volumes:
   oracle_data:
     name: ${ORACLE_VOLUME:-grcpc_test_oradata}
   minio_data:
     name: ${MINIO_VOLUME:-grcpc_test_minio}
+  app_logs:
+    name: ${APP_LOG_VOLUME:-grcpc_test_app_logs}

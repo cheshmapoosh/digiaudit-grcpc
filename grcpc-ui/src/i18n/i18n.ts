@@ -14,7 +14,7 @@ export function initI18n(lang: "fa" | "en") {
         i18n.use(initReactI18next).init({
             resources,
             lng: lang,
-            fallbackLng: "en",
+            fallbackLng: "fa",
             interpolation: { escapeValue: false }
         });
     } else {
