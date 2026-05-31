@@ -6,21 +6,9 @@ import enProcess from "../features/process/i18n/en.process.json";
 import fa from "./locales/fa.json";
 import en from "./locales/en.json";
 
-const faProcessTranslation = {
-    process: {
-        controls: faProcess.process.controls
-    }
-};
-
-const enProcessTranslation = {
-    process: {
-        controls: enProcess.process.controls
-    }
-};
-
 export const resources = {
-    fa: { translation: { ...fa, ...faProcessTranslation } },
-    en: { translation: { ...en, ...enProcessTranslation } }
+    fa: { translation: { ...fa, ...faProcess } },
+    en: { translation: { ...en, ...enProcess } }
 } as const;
 
 export function initI18n(lang: "fa" | "en") {

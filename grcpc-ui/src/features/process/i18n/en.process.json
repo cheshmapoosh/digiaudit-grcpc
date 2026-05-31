@@ -30,6 +30,10 @@
       "high": "High",
       "critical": "Critical"
     },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
     "fields": {
       "name": "Name",
       "code": "Code",

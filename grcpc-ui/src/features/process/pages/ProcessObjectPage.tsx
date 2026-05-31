@@ -11,11 +11,6 @@ import {
     Tab,
     TabContainer,
     TabSeparator,
-    Table,
-    TableCell,
-    TableHeaderCell,
-    TableHeaderRow,
-    TableRow,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
@@ -30,7 +25,7 @@ import type {
     ProcessNodeUpdate,
     ProcessStatus,
 } from "../domain/process.model";
-import { processService } from "../service/process.service";
+import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
@@ -196,12 +191,6 @@ const TABLE_CELL_STYLE: CSSProperties = {
     height: "2rem",
 };
 
-const CONTROLS_ERROR_ACTION_STYLE: CSSProperties = {
-    display: "flex",
-    justifyContent: "flex-end",
-    paddingTop: "0.75rem",
-};
-
 function toFormState(
     value: ProcessNode | null,
     parent: ProcessNode | null | undefined,
@@ -259,11 +248,6 @@ function readSelectedTabKey(event: unknown): ProcessTabKey | null {
 function normalizeOptionalText(value: string): string | undefined {
     const trimmed = value.trim();
     return trimmed ? trimmed : undefined;
-}
-
-function formatOptionalValue(value: string | null | undefined, fallback: string): string {
-    const trimmed = value?.trim();
-    return trimmed ? trimmed : fallback;
 }
 
 function parseSortOrder(value: string): number | undefined {
@@ -522,9 +506,6 @@ export default function ProcessObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(form.nodeType), [form.nodeType]);
     const [activeTab, setActiveTab] = useState<ProcessTabKey>("general");
-    const [controls, setControls] = useState<ProcessNode[]>([]);
-    const [controlsBusy, setControlsBusy] = useState(false);
-    const [controlsLoadFailed, setControlsLoadFailed] = useState(false);
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? parent ?? null
@@ -538,37 +519,6 @@ export default function ProcessObjectPage({
     const headerType = resolveNodeTypeLabel(form.nodeType, t);
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerCategory = resolveCategoryLabel(form.processCategory, t);
-
-    const loadControls = async (parentId: string | null) => {
-        if (!parentId) {
-            setControls([]);
-            setControlsBusy(false);
-            setControlsLoadFailed(false);
-            return;
-        }
-
-        setControls([]);
-        setControlsBusy(true);
-        setControlsLoadFailed(false);
-
-        try {
-            const items = await processService.getChildren(parentId);
-            setControls(items.filter((item) => item.nodeType === "control"));
-        } catch {
-            setControls([]);
-            setControlsLoadFailed(true);
-        } finally {
-            setControlsBusy(false);
-        }
-    };
-
-    const handleTabChange = (nextTab: ProcessTabKey) => {
-        setActiveTab(nextTab);
-
-        if (nextTab === "controls" && form.nodeType === "subProcess") {
-            void loadControls(currentProcessId);
-        }
-    };
 
     const handleChange = <K extends keyof ProcessFormState>(
         key: K,
@@ -645,103 +595,6 @@ export default function ProcessObjectPage({
                   };
 
         await onSubmit(payload);
-    };
-
-    const renderControlsTab = () => {
-        const noneText = t("common.none");
-        const controlsTitle = t("process.controls.title");
-        const titleLabel = t("process.controls.columns.title");
-        const codeLabel = t("process.controls.columns.code");
-        const automationLabel = t("process.controls.columns.controlAutomation");
-        const ownerLabel = t("process.controls.columns.controlOwner");
-        const importanceLabel = t("process.controls.columns.importance");
-        const statusLabel = t("process.controls.columns.status");
-
-        if (!currentProcessId) {
-            return (
-                <div style={TABLE_PANEL_STYLE}>
-                    <Title level="H5">{controlsTitle}</Title>
-
-                    <div style={{ height: "0.75rem" }} />
-
-                    <MessageStrip design="Information" hideCloseButton>
-                        {t("process.controls.saveFirst")}
-                    </MessageStrip>
-                </div>
-            );
-        }
-
-        if (controlsLoadFailed) {
-            return (
-                <div style={TABLE_PANEL_STYLE}>
-                    <Title level="H5">{controlsTitle}</Title>
-
-                    <div style={{ height: "0.75rem" }} />
-
-                    <MessageStrip design="Negative" hideCloseButton>
-                        {t("process.controls.loadError")}
-                    </MessageStrip>
-
-                    <div style={CONTROLS_ERROR_ACTION_STYLE}>
-                        <Button
-                            design="Emphasized"
-                            disabled={controlsBusy}
-                            onClick={() => void loadControls(currentProcessId)}
-                        >
-                            {t("process.controls.retry")}
-                        </Button>
-                    </div>
-                </div>
-            );
-        }
-
-        return (
-            <div style={TABLE_PANEL_STYLE}>
-                <Title level="H5">{controlsTitle}</Title>
-
-                <div style={{ height: "0.75rem" }} />
-
-                <Table
-                    accessibleName={t("process.controls.tableAccessibleName")}
-                    alternateRowColors
-                    headerRow={
-                        <TableHeaderRow>
-                            <TableHeaderCell width="8rem">{codeLabel}</TableHeaderCell>
-                            <TableHeaderCell minWidth="12rem">{titleLabel}</TableHeaderCell>
-                            <TableHeaderCell minWidth="10rem">{automationLabel}</TableHeaderCell>
-                            <TableHeaderCell minWidth="10rem">{ownerLabel}</TableHeaderCell>
-                            <TableHeaderCell width="8rem">{importanceLabel}</TableHeaderCell>
-                            <TableHeaderCell width="8rem">{statusLabel}</TableHeaderCell>
-                        </TableHeaderRow>
-                    }
-                    loading={controlsBusy}
-                    loadingDelay={0}
-                    noDataText={t("process.controls.empty")}
-                    overflowMode="Popin"
-                >
-                    {controls.map((control) => (
-                        <TableRow key={control.id} rowKey={control.id}>
-                            <TableCell>{formatOptionalValue(control.code, noneText)}</TableCell>
-                            <TableCell>{formatOptionalValue(control.title, noneText)}</TableCell>
-                            <TableCell>
-                                {control.controlAutomation
-                                    ? resolveAutomationLabel(control.controlAutomation, t)
-                                    : noneText}
-                            </TableCell>
-                            <TableCell>
-                                {formatOptionalValue(control.controlOwner, noneText)}
-                            </TableCell>
-                            <TableCell>
-                                {control.importance
-                                    ? resolveImportanceLabel(control.importance, t)
-                                    : noneText}
-                            </TableCell>
-                            <TableCell>{resolveStatusLabel(control.status, t)}</TableCell>
-                        </TableRow>
-                    ))}
-                </Table>
-            </div>
-        );
     };
 
     const renderGeneralTab = () => (
@@ -1094,7 +947,12 @@ export default function ProcessObjectPage({
         }
 
         if (activeTab === "controls") {
-            return renderControlsTab();
+            return (
+                <ProcessControlsTab
+                    key={currentProcessId ?? "unsaved-sub-process"}
+                    parentId={currentProcessId}
+                />
+            );
         }
 
         if (activeTab === "rules" || activeTab === "requirements") {
@@ -1210,7 +1068,7 @@ export default function ProcessObjectPage({
             <ProcessTabs
                 tabs={tabs}
                 activeTab={tabs.includes(activeTab) ? activeTab : "general"}
-                onChange={handleTabChange}
+                onChange={setActiveTab}
             />
 
             {error ? (

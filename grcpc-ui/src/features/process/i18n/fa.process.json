@@ -30,6 +30,10 @@
       "high": "زیاد",
       "critical": "بحرانی"
     },
+    "status": {
+      "active": "فعال",
+      "inactive": "غیرفعال"
+    },
     "fields": {
       "name": "نام",
       "code": "کد",
