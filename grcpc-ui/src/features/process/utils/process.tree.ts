@@ -9,7 +9,6 @@ export interface ProcessTreeNode extends ProcessNode {
 const NODE_TYPE_ORDER: Record<ProcessNodeType, number> = {
     process: 1,
     subProcess: 2,
-    control: 3,
 };
 
 export function sortProcesses(items: ProcessNode[]): ProcessNode[] {
@@ -230,7 +229,7 @@ export function hasChildren(items: ProcessNode[], id: string): boolean {
 }
 
 export function canHaveChildren(nodeType: ProcessNodeType): boolean {
-    return nodeType !== "control";
+    return nodeType === "process";
 }
 
 export function allowedChildTypes(parentType: ProcessNodeType | null): ProcessNodeType[] {
@@ -240,10 +239,6 @@ export function allowedChildTypes(parentType: ProcessNodeType | null): ProcessNo
 
     if (parentType === "process") {
         return ["process", "subProcess"];
-    }
-
-    if (parentType === "subProcess") {
-        return ["control"];
     }
 
     return [];
@@ -257,9 +252,5 @@ export function canCreateChild(
 }
 
 export function defaultChildType(parentType: ProcessNodeType | null): ProcessNodeType {
-    if (parentType === "subProcess") {
-        return "control";
-    }
-
-    return "process";
+    return allowedChildTypes(parentType)[0] ?? "process";
 }

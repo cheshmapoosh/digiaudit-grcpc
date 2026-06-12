@@ -7,8 +7,7 @@
     },
     "nodeType": {
       "process": "فرآیند",
-      "subProcess": "زیر فرآیند",
-      "control": "کنترل"
+      "subProcess": "زیر فرآیند"
     },
     "category": {
       "operational": "عملیاتی",
@@ -18,17 +17,6 @@
       "other": "سایر",
       "support": "پشتیبانی",
       "strategic": "استراتژیک"
-    },
-    "controlAutomation": {
-      "manual": "دستی",
-      "automated": "خودکار",
-      "semiAutomated": "نیمه‌خودکار"
-    },
-    "importance": {
-      "low": "کم",
-      "medium": "متوسط",
-      "high": "زیاد",
-      "critical": "بحرانی"
     },
     "status": {
       "active": "فعال",
@@ -45,15 +33,8 @@
       "processCategory": "نوع فرآیند",
       "owner": "مالک",
       "documents": "مستندات",
-      "controlAutomation": "کنترل سیستمی",
       "operationCycle": "دوره عملیاتی",
       "objective": "هدف",
-      "importance": "اهمیت",
-      "controlClassification": "طبقه بندی کنترل",
-      "controlOwner": "مالک",
-      "testDirection": "جهت آزمون",
-      "testType": "نوع آزمون",
-      "testProgram": "برنامه آزمون",
       "requirement": "الزام",
       "regulationName": "نام قانون",
       "effectiveDate": "تاریخ اعتبار",
@@ -62,25 +43,8 @@
       "parentProcess": "والد فرآیند",
       "nodeType": "نوع آیتم",
       "sortOrder": "ترتیب نمایش",
-      "controlFrequency": "تناوب کنترل",
       "validTo": "تاریخ اعتبار",
       "lawName": "نام قانون"
-    },
-    "controls": {
-      "title": "کنترل‌ها",
-      "empty": "برای این زیر فرآیند کنترلی ثبت نشده است.",
-      "saveFirst": "برای مشاهده کنترل‌ها، ابتدا زیر فرآیند را ذخیره کنید.",
-      "loadError": "خطا در بارگذاری کنترل‌های زیر فرآیند.",
-      "retry": "تلاش دوباره",
-      "tableAccessibleName": "جدول کنترل‌های زیر فرآیند",
-      "columns": {
-        "code": "کد",
-        "title": "عنوان",
-        "controlAutomation": "کنترل سیستمی",
-        "controlOwner": "مالک کنترل",
-        "importance": "اهمیت",
-        "status": "وضعیت"
-      }
     },
     "objectives": {
       "title": "اهداف",
@@ -154,13 +118,9 @@
     },
     "tabs": {
       "general": "اطلاعات کلی",
-      "controlObjectives": "اهداف کنترلی",
       "accountGroups": "گروه حساب",
-      "regulations": "الزامات",
       "risks": "ریسک",
-      "controls": "کنترل‌ها",
       "rules": "قوانین",
-      "requirements": "الزامات",
       "objectives": "اهداف",
       "documents": "مستندات"
     },
@@ -195,11 +155,9 @@
       "parentNotFound": "والد انتخاب‌شده یافت نشد",
       "hasChildren": "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
       "invalidHierarchy": "ساختار انتخاب‌شده برای فرآیند معتبر نیست",
-      "controlCannotHaveChildren": "کنترل زیرشاخه ندارد و امکان ایجاد آیتم زیر کنترل وجود ندارد",
       "delete": "خطا در حذف آیتم فرآیندی",
       "save": "خطا در ذخیره آیتم فرآیندی",
-      "selectProcessParent": "برای ایجاد زیر فرآیند، ابتدا یک فرآیند یا زیر فرآیند همان والد را انتخاب کنید.",
-      "selectSubProcessParent": "برای ایجاد کنترل، ابتدا یک زیر فرآیند یا کنترل همان والد را انتخاب کنید."
+      "selectProcessParent": "برای ایجاد زیر فرآیند، ابتدا یک فرآیند یا زیر فرآیند همان والد را انتخاب کنید."
     },
     "validation": {
       "codeRequired": "کد الزامی است",

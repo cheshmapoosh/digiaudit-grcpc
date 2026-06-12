@@ -3,7 +3,7 @@ import { t } from "@/shared/utils/i18n.util";
 
 export const processStatusSchema = z.enum(["active", "inactive"]);
 
-export const processNodeTypeSchema = z.enum(["process", "subProcess", "control"]);
+export const processNodeTypeSchema = z.enum(["process", "subProcess"]);
 
 export const processCategorySchema = z.enum([
     "operational",
@@ -13,19 +13,6 @@ export const processCategorySchema = z.enum([
     "compliance",
     "it",
     "other",
-]);
-
-export const controlImportanceSchema = z.enum([
-    "low",
-    "medium",
-    "high",
-    "critical",
-]);
-
-export const controlAutomationSchema = z.enum([
-    "manual",
-    "automated",
-    "semiAutomated",
 ]);
 
 const optionalTextSchema = z
@@ -82,15 +69,6 @@ const baseProcessPayloadSchema = z.object({
 
     objective: optionalTextSchema,
     operationCycle: z.string().trim().max(255).optional(),
-
-    controlAutomation: controlAutomationSchema.optional(),
-    controlFrequency: z.string().trim().max(255).optional(),
-    controlClassification: z.string().trim().max(255).optional(),
-    controlOwner: z.string().trim().max(255).optional(),
-    testDirection: z.string().trim().max(255).optional(),
-    testType: z.string().trim().max(255).optional(),
-    testProgram: optionalTextSchema,
-    importance: controlImportanceSchema.optional(),
 });
 
 const forbiddenReadonlyFields = {

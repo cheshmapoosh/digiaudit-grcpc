@@ -320,25 +320,6 @@ function toRiskOption(risk: RiskNode): OrganizationRiskOption {
     };
 }
 
-function toControlReferenceOption(
-    control: ProcessNode,
-    nodesById: Record<string, ProcessNode>,
-): OrganizationReferenceOption {
-    const parent = control.parentId ? nodesById[control.parentId] : null;
-
-    return {
-        referenceId: control.id,
-        code: control.code,
-        title: control.title,
-        description: control.description,
-        status: control.status,
-        ownerName: control.controlOwner ?? control.ownerName,
-        typeLabel: control.controlClassification,
-        parentCode: parent?.code,
-        parentTitle: parent?.title,
-    };
-}
-
 function toRegulationReferenceOption(regulation: RegulationNode): OrganizationReferenceOption {
     return {
         referenceId: regulation.id,
@@ -381,27 +362,10 @@ function toObjectiveReferenceOption(objective: ObjectiveNode): OrganizationRefer
     };
 }
 
-function countControlsBySubProcess(nodes: ProcessNode[]): Map<string, number> {
-    const counts = new Map<string, number>();
-
-    nodes.forEach((node) => {
-        if (node.nodeType !== "control" || !node.parentId) {
-            return;
-        }
-
-        counts.set(node.parentId, (counts.get(node.parentId) ?? 0) + 1);
-    });
-
-    return counts;
-}
-
 function buildOrganizationSubProcessViews(
     assignments: OrganizationProcessAssignment[],
     nodesById: Record<string, ProcessNode>,
 ): OrganizationSubProcessView[] {
-    const processNodes = Object.values(nodesById);
-    const controlCounts = countControlsBySubProcess(processNodes);
-
     return assignments
         .map((assignment): OrganizationSubProcessView | null => {
             const subProcess = nodesById[assignment.processNodeId];
@@ -419,7 +383,7 @@ function buildOrganizationSubProcessViews(
                 validTo: assignment.validTo,
                 isActive: assignment.isActive,
                 description: subProcess.description,
-                controlsCount: controlCounts.get(subProcess.id) ?? 0,
+                controlsCount: 0,
             };
 
             return view;
@@ -641,12 +605,9 @@ export default function OrganizationsFclShellPage() {
                 .map(toRiskOption),
         [riskItems],
     );
-    const availableControlReferences = useMemo(
-        () =>
-            processItems
-                .filter((item) => item.nodeType === "control")
-                .map((item) => toControlReferenceOption(item, processNodesById)),
-        [processItems, processNodesById],
+    const availableControlReferences = useMemo<OrganizationReferenceOption[]>(
+        () => [],
+        [],
     );
     const availableRegulationReferences = useMemo(
         () =>

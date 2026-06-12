@@ -56,7 +56,7 @@ function useProcessRouteMode(): RouteMode {
 }
 
 function isProcessNodeType(value: string | null): value is ProcessNodeType {
-    return value === "process" || value === "subProcess" || value === "control";
+    return value === "process" || value === "subProcess";
 }
 
 function mapError(
@@ -192,7 +192,7 @@ function resolveDialogTitle(
     return "";
 }
 
-const CREATE_NODE_TYPES: ProcessNodeType[] = ["process", "subProcess", "control"];
+const CREATE_NODE_TYPES: ProcessNodeType[] = ["process", "subProcess"];
 
 function findNearestAncestorOfType(
     start: ProcessNode | null,
@@ -233,8 +233,7 @@ function resolveCreateParentId(
         return nearestProcess?.id;
     }
 
-    const nearestSubProcess = findNearestAncestorOfType(selectedItem, "subProcess", nodesById);
-    return nearestSubProcess?.id;
+    return undefined;
 }
 
 function resolveInvalidCreateMessage(
@@ -244,12 +243,6 @@ function resolveInvalidCreateMessage(
     if (nodeType === "subProcess") {
         return t("process.errors.selectProcessParent", {
             defaultValue: "برای ایجاد زیر فرآیند، ابتدا یک فرآیند یا زیر فرآیند همان والد را انتخاب کنید.",
-        });
-    }
-
-    if (nodeType === "control") {
-        return t("process.errors.selectSubProcessParent", {
-            defaultValue: "برای ایجاد کنترل، ابتدا یک زیر فرآیند یا کنترل همان والد را انتخاب کنید.",
         });
     }
 

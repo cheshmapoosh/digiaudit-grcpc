@@ -1,8 +1,6 @@
 export { processRoutes } from "./routes";
 
 export type {
-    ControlAutomation,
-    ControlImportance,
     ProcessCategory,
     ProcessNode,
     ProcessNodeCreate,
@@ -32,8 +30,6 @@ export type {
 } from "./domain/process.schema";
 
 export {
-    controlAutomationSchema,
-    controlImportanceSchema,
     processCategorySchema,
     processCreateSchema,
     processNodeTypeSchema,

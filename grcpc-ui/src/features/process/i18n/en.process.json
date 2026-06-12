@@ -7,8 +7,7 @@
     },
     "nodeType": {
       "process": "Process",
-      "subProcess": "Sub-process",
-      "control": "Control"
+      "subProcess": "Sub-process"
     },
     "category": {
       "operational": "Operational",
@@ -18,17 +17,6 @@
       "other": "Other",
       "support": "Support",
       "strategic": "Strategic"
-    },
-    "controlAutomation": {
-      "manual": "Manual",
-      "automated": "Automated",
-      "semiAutomated": "Semi-automated"
-    },
-    "importance": {
-      "low": "Low",
-      "medium": "Medium",
-      "high": "High",
-      "critical": "Critical"
     },
     "status": {
       "active": "Active",
@@ -45,15 +33,8 @@
       "processCategory": "Process Type",
       "owner": "Owner",
       "documents": "Documents",
-      "controlAutomation": "Automated Control",
       "operationCycle": "Operation Cycle",
       "objective": "Objective",
-      "importance": "Importance",
-      "controlClassification": "Control Classification",
-      "controlOwner": "Owner",
-      "testDirection": "Test Direction",
-      "testType": "Test Type",
-      "testProgram": "Test Program",
       "requirement": "Requirement",
       "regulationName": "Regulation Name",
       "effectiveDate": "Effective Date",
@@ -62,25 +43,8 @@
       "parentProcess": "Parent Process",
       "nodeType": "Item Type",
       "sortOrder": "Sort Order",
-      "controlFrequency": "Control Frequency",
       "validTo": "Valid To",
       "lawName": "Law Name"
-    },
-    "controls": {
-      "title": "Controls",
-      "empty": "No controls have been registered for this subprocess.",
-      "saveFirst": "Save the subprocess first to view controls.",
-      "loadError": "Failed to load subprocess controls.",
-      "retry": "Retry",
-      "tableAccessibleName": "Subprocess controls table",
-      "columns": {
-        "code": "Code",
-        "title": "Title",
-        "controlAutomation": "Control Automation",
-        "controlOwner": "Control Owner",
-        "importance": "Importance",
-        "status": "Status"
-      }
     },
     "objectives": {
       "title": "Objectives",
@@ -154,13 +118,9 @@
     },
     "tabs": {
       "general": "General Information",
-      "controlObjectives": "Control Objectives",
       "accountGroups": "Account Group",
-      "regulations": "Regulations",
       "risks": "Risk",
-      "controls": "Controls",
       "rules": "Rules",
-      "requirements": "Requirements",
       "objectives": "Objectives",
       "documents": "Documents"
     },
@@ -195,11 +155,9 @@
       "parentNotFound": "The selected parent was not found",
       "hasChildren": "You cannot delete an item that has children",
       "invalidHierarchy": "The selected process structure is not valid",
-      "controlCannotHaveChildren": "A control cannot have child items",
       "delete": "Failed to delete process item",
       "save": "Failed to save process item",
-      "selectProcessParent": "To create a subprocess, select a process or a subprocess with the same parent first.",
-      "selectSubProcessParent": "To create a control, select a subprocess or a control with the same parent first."
+      "selectProcessParent": "To create a subprocess, select a process or a subprocess with the same parent first."
     },
     "validation": {
       "codeRequired": "Code is required",

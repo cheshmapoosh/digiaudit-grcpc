@@ -13,8 +13,6 @@ import {
 } from "@ui5/webcomponents-react";
 
 import type {
-    ControlAutomation,
-    ControlImportance,
     ProcessCategory,
     ProcessNode,
     ProcessNodeType,
@@ -33,9 +31,8 @@ export interface ProcessSummaryPanelProps {
 
 type ProcessDetailTabKey =
     | "general"
-    | "controlObjectives"
+    | "objectives"
     | "accountGroups"
-    | "regulations"
     | "risks";
 
 interface DetailTabDefinition {
@@ -128,7 +125,6 @@ function resolveNodeTypeLabel(
     const labels: Record<ProcessNodeType, string> = {
         process: t("process.nodeType.process", { defaultValue: "فرآیند" }),
         subProcess: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
-        control: t("process.nodeType.control", { defaultValue: "کنترل" }),
     };
 
     return labels[nodeType];
@@ -162,43 +158,6 @@ function resolveCategoryLabel(
     };
 
     return labels[category];
-}
-
-function resolveAutomationLabel(
-    automation: ControlAutomation | undefined,
-    t: ReturnType<typeof useTranslation>["t"],
-): string {
-    if (!automation) {
-        return "-";
-    }
-
-    const labels: Record<ControlAutomation, string> = {
-        manual: t("process.controlAutomation.manual", { defaultValue: "دستی" }),
-        automated: t("process.controlAutomation.automated", { defaultValue: "سیستمی" }),
-        semiAutomated: t("process.controlAutomation.semiAutomated", {
-            defaultValue: "نیمه سیستمی",
-        }),
-    };
-
-    return labels[automation];
-}
-
-function resolveImportanceLabel(
-    importance: ControlImportance | undefined,
-    t: ReturnType<typeof useTranslation>["t"],
-): string {
-    if (!importance) {
-        return "-";
-    }
-
-    const labels: Record<ControlImportance, string> = {
-        low: t("process.importance.low", { defaultValue: "کم" }),
-        medium: t("process.importance.medium", { defaultValue: "متوسط" }),
-        high: t("process.importance.high", { defaultValue: "زیاد" }),
-        critical: t("process.importance.critical", { defaultValue: "بحرانی" }),
-    };
-
-    return labels[importance];
 }
 
 function DetailRow({ label, value }: { label: string; value?: ReactNode }) {
@@ -262,23 +221,6 @@ function getTabs(
     nodeType: ProcessNodeType,
     t: ReturnType<typeof useTranslation>["t"],
 ): DetailTabDefinition[] {
-    if (nodeType === "control") {
-        return [
-            {
-                key: "general",
-                label: t("process.tabs.general", { defaultValue: "اطلاعات کلی" }),
-            },
-            {
-                key: "regulations",
-                label: t("process.tabs.regulations", { defaultValue: "الزامات" }),
-            },
-            {
-                key: "risks",
-                label: t("process.tabs.risks", { defaultValue: "ریسک" }),
-            },
-        ];
-    }
-
     if (nodeType === "subProcess") {
         return [
             {
@@ -286,10 +228,8 @@ function getTabs(
                 label: t("process.tabs.general", { defaultValue: "اطلاعات کلی" }),
             },
             {
-                key: "controlObjectives",
-                label: t("process.tabs.controlObjectives", {
-                    defaultValue: "اهداف کنترلی",
-                }),
+                key: "objectives",
+                label: t("process.tabs.objectives", { defaultValue: "اهداف" }),
             },
             {
                 key: "accountGroups",
@@ -350,69 +290,6 @@ function ProcessTabs({
 function GeneralTab({ value }: { value: ProcessNode }) {
     const { t } = useTranslation();
 
-    if (value.nodeType === "control") {
-        return (
-            <div style={{ display: "grid", gap: "0.75rem" }}>
-                <DetailRow
-                    label={t("process.fields.code", { defaultValue: "کد" })}
-                    value={value.code}
-                />
-                <DetailRow
-                    label={t("process.fields.description", { defaultValue: "شرح" })}
-                    value={value.description}
-                />
-                <DetailRow
-                    label={t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                    value={formatPersianDate(value.createdAt)}
-                />
-                <DetailRow
-                    label={t("process.fields.controlAutomation", {
-                        defaultValue: "کنترل سیستمی",
-                    })}
-                    value={resolveAutomationLabel(value.controlAutomation, t)}
-                />
-                <DetailRow
-                    label={t("process.fields.operationCycle", { defaultValue: "دوره عملیاتی" })}
-                    value={value.operationCycle}
-                />
-                <DetailRow
-                    label={t("process.fields.objective", { defaultValue: "هدف" })}
-                    value={value.objective}
-                />
-                <DetailRow
-                    label={t("process.fields.importance", { defaultValue: "اهمیت" })}
-                    value={resolveImportanceLabel(value.importance, t)}
-                />
-                <DetailRow
-                    label={t("process.fields.controlClassification", {
-                        defaultValue: "طبقه بندی کنترل",
-                    })}
-                    value={value.controlClassification}
-                />
-                <DetailRow
-                    label={t("process.fields.controlOwner", { defaultValue: "مالک" })}
-                    value={value.controlOwner}
-                />
-                <DetailRow
-                    label={t("process.fields.testDirection", { defaultValue: "جهت آزمون" })}
-                    value={value.testDirection}
-                />
-                <DetailRow
-                    label={t("process.fields.testType", { defaultValue: "نوع آزمون" })}
-                    value={value.testType}
-                />
-                <DetailRow
-                    label={t("process.fields.testProgram", { defaultValue: "برنامه آزمون" })}
-                    value={value.testProgram}
-                />
-                <DetailRow
-                    label={t("process.fields.documents", { defaultValue: "مستندات" })}
-                    value={String(value.documentsCount ?? 0)}
-                />
-            </div>
-        );
-    }
-
     return (
         <div style={{ display: "grid", gap: "0.75rem" }}>
             <DetailRow
@@ -460,7 +337,7 @@ function TabBody({
         return <GeneralTab value={value} />;
     }
 
-    if (activeTab === "controlObjectives") {
+    if (activeTab === "objectives") {
         return (
             <SimpleTable
                 columns={[
@@ -477,20 +354,6 @@ function TabBody({
                 columns={[
                     t("process.fields.name", { defaultValue: "نام" }),
                     t("process.fields.description", { defaultValue: "شرح" }),
-                ]}
-            />
-        );
-    }
-
-    if (activeTab === "regulations") {
-        return (
-            <SimpleTable
-                columns={[
-                    t("process.fields.requirement", { defaultValue: "الزامات" }),
-                    t("process.fields.description", { defaultValue: "شرح" }),
-                    t("process.fields.regulationName", { defaultValue: "نام قانون" }),
-                    t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                    t("process.fields.effectiveDate", { defaultValue: "تاریخ اعتبار" }),
                 ]}
             />
         );

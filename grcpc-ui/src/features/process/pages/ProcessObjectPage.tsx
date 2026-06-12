@@ -16,8 +16,6 @@ import {
 } from "@ui5/webcomponents-react";
 
 import type {
-    ControlAutomation,
-    ControlImportance,
     ProcessCategory,
     ProcessNode,
     ProcessNodeCreate,
@@ -25,7 +23,6 @@ import type {
     ProcessNodeUpdate,
     ProcessStatus,
 } from "../domain/process.model";
-import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
 import ProcessObjectivesTab from "../components/tabs/ProcessObjectivesTab";
 import ProcessAccountGroupsTab from "../components/tabs/ProcessAccountGroupsTab";
 import { formatPersianDate } from "@/shared/utils/date.utils";
@@ -34,9 +31,7 @@ export type ProcessObjectMode = "create" | "edit" | "view";
 
 type ProcessTabKey =
     | "general"
-    | "controls"
     | "rules"
-    | "requirements"
     | "objectives"
     | "accountGroups"
     | "risks"
@@ -54,14 +49,6 @@ interface ProcessFormState {
     ownerName: string;
     objective: string;
     operationCycle: string;
-    controlAutomation: ControlAutomation;
-    controlFrequency: string;
-    controlClassification: string;
-    controlOwner: string;
-    testDirection: string;
-    testType: string;
-    testProgram: string;
-    importance: ControlImportance;
 }
 
 export interface ProcessObjectPageProps {
@@ -210,14 +197,6 @@ function toFormState(
         ownerName: value?.ownerName ?? "",
         objective: value?.objective ?? "",
         operationCycle: value?.operationCycle ?? "",
-        controlAutomation: value?.controlAutomation ?? "manual",
-        controlFrequency: value?.controlFrequency ?? "",
-        controlClassification: value?.controlClassification ?? "",
-        controlOwner: value?.controlOwner ?? "",
-        testDirection: value?.testDirection ?? "",
-        testType: value?.testType ?? "",
-        testProgram: value?.testProgram ?? "",
-        importance: value?.importance ?? "medium",
     };
 }
 
@@ -300,7 +279,6 @@ function resolveNodeTypeLabel(
     const map: Record<ProcessNodeType, string> = {
         process: t("process.nodeType.process", { defaultValue: "فرآیند" }),
         subProcess: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
-        control: t("process.nodeType.control", { defaultValue: "کنترل" }),
     };
 
     return map[nodeType];
@@ -332,44 +310,10 @@ function resolveCategoryLabel(
     return map[category];
 }
 
-function resolveAutomationLabel(
-    automation: ControlAutomation,
-    t: ReturnType<typeof useTranslation>["t"],
-): string {
-    const map: Record<ControlAutomation, string> = {
-        manual: t("process.controlAutomation.manual", { defaultValue: "دستی" }),
-        automated: t("process.controlAutomation.automated", { defaultValue: "خودکار" }),
-        semiAutomated: t("process.controlAutomation.semiAutomated", {
-            defaultValue: "نیمه‌خودکار",
-        }),
-    };
-
-    return map[automation];
-}
-
-function resolveImportanceLabel(
-    importance: ControlImportance,
-    t: ReturnType<typeof useTranslation>["t"],
-): string {
-    const map: Record<ControlImportance, string> = {
-        low: t("process.importance.low", { defaultValue: "کم" }),
-        medium: t("process.importance.medium", { defaultValue: "متوسط" }),
-        high: t("process.importance.high", { defaultValue: "زیاد" }),
-        critical: t("process.importance.critical", { defaultValue: "بحرانی" }),
-    };
-
-    return map[importance];
-}
-
 function defaultTabs(nodeType: ProcessNodeType): ProcessTabKey[] {
-    if (nodeType === "control") {
-        return ["general", "requirements", "risks"];
-    }
-
     if (nodeType === "subProcess") {
         return [
             "general",
-            "controls",
             "rules",
             "objectives",
             "accountGroups",
@@ -384,9 +328,7 @@ function defaultTabs(nodeType: ProcessNodeType): ProcessTabKey[] {
 function resolveTabLabel(tab: ProcessTabKey, t: ReturnType<typeof useTranslation>["t"]): string {
     const labels: Record<ProcessTabKey, string> = {
         general: t("process.tabs.general", { defaultValue: "اطلاعات کلی" }),
-        controls: t("process.tabs.controls", { defaultValue: "کنترل‌ها" }),
         rules: t("process.tabs.rules", { defaultValue: "قوانین" }),
-        requirements: t("process.tabs.requirements", { defaultValue: "الزامات" }),
         objectives: t("process.tabs.objectives", { defaultValue: "اهداف" }),
         accountGroups: t("process.tabs.accountGroups", { defaultValue: "گروه حساب" }),
         risks: t("process.tabs.risks", { defaultValue: "ریسک" }),
@@ -577,24 +519,11 @@ export default function ProcessObjectPage({
             ownerName: normalizeOptionalText(form.ownerName),
         };
 
-        const payload: ProcessNodeCreate | ProcessNodeUpdate =
-            form.nodeType === "control"
-                ? {
-                      ...basePayload,
-                      controlAutomation: form.controlAutomation,
-                      controlFrequency: normalizeOptionalText(form.controlFrequency),
-                      controlClassification: normalizeOptionalText(form.controlClassification),
-                      controlOwner: normalizeOptionalText(form.controlOwner),
-                      testDirection: normalizeOptionalText(form.testDirection),
-                      testType: normalizeOptionalText(form.testType),
-                      testProgram: normalizeOptionalText(form.testProgram),
-                      importance: form.importance,
-                  }
-                : {
-                      ...basePayload,
-                      objective: normalizeOptionalText(form.objective),
-                      operationCycle: normalizeOptionalText(form.operationCycle),
-                  };
+        const payload: ProcessNodeCreate | ProcessNodeUpdate = {
+            ...basePayload,
+            objective: normalizeOptionalText(form.objective),
+            operationCycle: normalizeOptionalText(form.operationCycle),
+        };
 
         await onSubmit(payload);
     };
@@ -709,191 +638,31 @@ export default function ProcessObjectPage({
                     />
                 </FormField>
 
-                {form.nodeType !== "control" ? (
-                    <>
-                        <FormField
-                            label={t("process.fields.operationCycle", {
-                                defaultValue: "دوره عملیاتی",
-                            })}
-                        >
-                            <Input
-                                value={form.operationCycle}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("operationCycle", readInputValue(event))
-                                }
-                            />
-                        </FormField>
+                <FormField
+                    label={t("process.fields.operationCycle", {
+                        defaultValue: "دوره عملیاتی",
+                    })}
+                >
+                    <Input
+                        value={form.operationCycle}
+                        disabled={readOnly || busy}
+                        onInput={(event) =>
+                            handleChange("operationCycle", readInputValue(event))
+                        }
+                    />
+                </FormField>
 
-                        <FormField
-                            label={t("process.fields.objective", { defaultValue: "هدف" })}
-                            fullWidth
-                        >
-                            <TextArea
-                                rows={3}
-                                value={form.objective}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("objective", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-                    </>
-                ) : (
-                    <>
-                        <FormField
-                            label={t("process.fields.controlAutomation", {
-                                defaultValue: "ماهیت کنترل",
-                            })}
-                        >
-                            <Select
-                                disabled={readOnly || busy}
-                                onChange={(event) => {
-                                    const nextValue = readSelectedDataValue(
-                                        event,
-                                        form.controlAutomation,
-                                    );
-                                    handleChange(
-                                        "controlAutomation",
-                                        nextValue as ControlAutomation,
-                                    );
-                                }}
-                            >
-                                <Option
-                                    data-value="manual"
-                                    selected={form.controlAutomation === "manual"}
-                                >
-                                    {resolveAutomationLabel("manual", t)}
-                                </Option>
-                                <Option
-                                    data-value="automated"
-                                    selected={form.controlAutomation === "automated"}
-                                >
-                                    {resolveAutomationLabel("automated", t)}
-                                </Option>
-                                <Option
-                                    data-value="semiAutomated"
-                                    selected={form.controlAutomation === "semiAutomated"}
-                                >
-                                    {resolveAutomationLabel("semiAutomated", t)}
-                                </Option>
-                            </Select>
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.controlFrequency", {
-                                defaultValue: "تناوب کنترل",
-                            })}
-                        >
-                            <Input
-                                value={form.controlFrequency}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("controlFrequency", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.controlClassification", {
-                                defaultValue: "طبقه‌بندی کنترل",
-                            })}
-                        >
-                            <Input
-                                value={form.controlClassification}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("controlClassification", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.controlOwner", {
-                                defaultValue: "مسئول کنترل",
-                            })}
-                        >
-                            <Input
-                                value={form.controlOwner}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("controlOwner", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.importance", { defaultValue: "اهمیت" })}
-                        >
-                            <Select
-                                disabled={readOnly || busy}
-                                onChange={(event) => {
-                                    const nextValue = readSelectedDataValue(event, form.importance);
-                                    handleChange("importance", nextValue as ControlImportance);
-                                }}
-                            >
-                                <Option data-value="low" selected={form.importance === "low"}>
-                                    {resolveImportanceLabel("low", t)}
-                                </Option>
-                                <Option
-                                    data-value="medium"
-                                    selected={form.importance === "medium"}
-                                >
-                                    {resolveImportanceLabel("medium", t)}
-                                </Option>
-                                <Option data-value="high" selected={form.importance === "high"}>
-                                    {resolveImportanceLabel("high", t)}
-                                </Option>
-                                <Option
-                                    data-value="critical"
-                                    selected={form.importance === "critical"}
-                                >
-                                    {resolveImportanceLabel("critical", t)}
-                                </Option>
-                            </Select>
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.testDirection", {
-                                defaultValue: "جهت آزمون",
-                            })}
-                        >
-                            <Input
-                                value={form.testDirection}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("testDirection", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.testType", { defaultValue: "نوع آزمون" })}
-                        >
-                            <Input
-                                value={form.testType}
-                                disabled={readOnly || busy}
-                                onInput={(event) => handleChange("testType", readInputValue(event))}
-                            />
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.testProgram", {
-                                defaultValue: "برنامه آزمون",
-                            })}
-                            fullWidth
-                        >
-                            <TextArea
-                                rows={3}
-                                value={form.testProgram}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("testProgram", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-                    </>
-                )}
+                <FormField
+                    label={t("process.fields.objective", { defaultValue: "هدف" })}
+                    fullWidth
+                >
+                    <TextArea
+                        rows={3}
+                        value={form.objective}
+                        disabled={readOnly || busy}
+                        onInput={(event) => handleChange("objective", readInputValue(event))}
+                    />
+                </FormField>
 
                 <FormField
                     label={t("process.fields.description", { defaultValue: "شرح" })}
@@ -943,24 +712,15 @@ export default function ProcessObjectPage({
         </>
     );
 
-    const renderTabContent = () => {
-        if (activeTab === "general") {
+    const renderTabContent = (tab: ProcessTabKey) => {
+        if (tab === "general") {
             return renderGeneralTab();
         }
 
-        if (activeTab === "controls") {
-            return (
-                <ProcessControlsTab
-                    key={currentProcessId ?? "unsaved-sub-process"}
-                    parentId={currentProcessId}
-                />
-            );
-        }
-
-        if (activeTab === "rules" || activeTab === "requirements") {
+        if (tab === "rules") {
             return (
                 <TablePlaceholder
-                    title={resolveTabLabel(activeTab, t)}
+                    title={resolveTabLabel(tab, t)}
                     columns={[
                         t("process.fields.requirement", { defaultValue: "الزام" }),
                         t("process.fields.description", { defaultValue: "شرح" }),
@@ -972,7 +732,7 @@ export default function ProcessObjectPage({
             );
         }
 
-        if (activeTab === "objectives") {
+        if (tab === "objectives") {
             return (
                 <ProcessObjectivesTab
                     key={currentProcessId ?? "unsaved-process-objectives"}
@@ -981,7 +741,7 @@ export default function ProcessObjectPage({
             );
         }
 
-        if (activeTab === "accountGroups") {
+        if (tab === "accountGroups") {
             return (
                 <ProcessAccountGroupsTab
                     key={currentProcessId ?? "unsaved-process-account-groups"}
@@ -990,7 +750,7 @@ export default function ProcessObjectPage({
             );
         }
 
-        if (activeTab === "risks") {
+        if (tab === "risks") {
             return (
                 <TablePlaceholder
                     title={t("process.tabs.risks", { defaultValue: "ریسک" })}
@@ -1079,7 +839,9 @@ export default function ProcessObjectPage({
                 </MessageStrip>
             ) : null}
 
-            <div style={BODY_STYLE}>{renderTabContent()}</div>
+            <div style={BODY_STYLE}>
+                {renderTabContent(tabs.includes(activeTab) ? activeTab : "general")}
+            </div>
         </div>
     );
 }

@@ -5,18 +5,16 @@ import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 import type { ProcessNodeType } from "../domain/process.model";
 
-const DEFAULT_CREATE_NODE_TYPES: ProcessNodeType[] = ["process", "subProcess", "control"];
+const DEFAULT_CREATE_NODE_TYPES: ProcessNodeType[] = ["process", "subProcess"];
 
 const createMenuItemIdByNodeType: Record<ProcessNodeType, string> = {
     process: "process-create-menu-process",
     subProcess: "process-create-menu-sub-process",
-    control: "process-create-menu-control",
 };
 
 const nodeTypeByCreateMenuItemId: Record<string, ProcessNodeType> = {
     "process-create-menu-process": "process",
     "process-create-menu-sub-process": "subProcess",
-    "process-create-menu-control": "control",
 };
 
 type MenuItemClickEvent = {
@@ -76,7 +74,6 @@ export default function CreateProcessSplitButton({
         () => ({
             process: t("process.nodeType.process", { defaultValue: "فرآیند" }),
             subProcess: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
-            control: t("process.nodeType.control", { defaultValue: "کنترل" }),
         }),
         [t],
     );

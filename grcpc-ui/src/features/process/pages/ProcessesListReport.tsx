@@ -90,7 +90,7 @@ export default function ProcessesListReport({
                     <div style={actionGroupStyle}>
                         <CreateProcessSplitButton
                             disabled={!canCreate}
-                            nodeTypes={["process", "subProcess", "control"]}
+                            nodeTypes={createOptions}
                             onCreate={onCreate}
                         />
 
