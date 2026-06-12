@@ -1,10 +1,10 @@
-package com.digiaudit.grcpc.modules.masterdata.process.domain.entity;
+package com.digiaudit.grcpc.modules.masterdata.control.domain.entity;
 
 import com.digiaudit.grcpc.common.persistence.AuditableEntity;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlAutomationType;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlImportance;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlNature;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlStatus;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlAutomationType;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlImportance;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlNature;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlStatus;
 import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;

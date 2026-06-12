@@ -1,8 +1,8 @@
-package com.digiaudit.grcpc.modules.masterdata.process.api.dto;
+package com.digiaudit.grcpc.modules.masterdata.control.api.dto;
 
-import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlAutomationType;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlImportance;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlNature;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlAutomationType;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlImportance;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlNature;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;

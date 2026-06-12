@@ -1,4 +1,4 @@
-package com.digiaudit.grcpc.modules.masterdata.process.api.dto;
+package com.digiaudit.grcpc.modules.masterdata.control.api.dto;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;

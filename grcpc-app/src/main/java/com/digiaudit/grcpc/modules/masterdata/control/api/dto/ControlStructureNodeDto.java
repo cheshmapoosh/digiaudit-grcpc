@@ -1,4 +1,4 @@
-package com.digiaudit.grcpc.modules.masterdata.process.api.dto;
+package com.digiaudit.grcpc.modules.masterdata.control.api.dto;
 
 import java.time.LocalDate;
 import java.util.UUID;

@@ -13,7 +13,7 @@ import com.digiaudit.grcpc.modules.audit.domain.enums.AuditTargetType;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.repository.ObjectiveNodeRepository;
 import com.digiaudit.grcpc.modules.masterdata.policy.domain.entity.PolicyNodeEntity;
 import com.digiaudit.grcpc.modules.masterdata.policy.domain.repository.PolicyNodeRepository;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ControlRepository;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.repository.ControlRepository;
 import com.digiaudit.grcpc.modules.organization.api.dto.OrganizationReferenceAssignmentRequest;
 import com.digiaudit.grcpc.modules.organization.api.dto.OrganizationReferenceAssignmentResponse;
 import com.digiaudit.grcpc.modules.organization.domain.entity.OrganizationReferenceAssignmentEntity;

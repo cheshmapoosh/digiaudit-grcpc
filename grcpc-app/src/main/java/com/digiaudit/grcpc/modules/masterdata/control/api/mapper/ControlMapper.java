@@ -1,12 +1,12 @@
-package com.digiaudit.grcpc.modules.masterdata.process.api.mapper;
+package com.digiaudit.grcpc.modules.masterdata.control.api.mapper;
 
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.AttachExistingControlRequest;
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.ControlDetailsDto;
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.ControlSummaryDto;
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CreateControlAndAssignRequest;
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.UpdateControlAssignmentRequest;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ControlAssignmentEntity;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ControlEntity;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.AttachExistingControlRequest;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.ControlDetailsDto;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.ControlSummaryDto;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.CreateControlAndAssignRequest;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.UpdateControlAssignmentRequest;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.entity.ControlAssignmentEntity;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.entity.ControlEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ProcessNodeEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

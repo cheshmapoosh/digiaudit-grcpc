@@ -1,7 +1,7 @@
-package com.digiaudit.grcpc.modules.masterdata.process.domain.repository;
+package com.digiaudit.grcpc.modules.masterdata.control.domain.repository;
 
-import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ControlAssignmentEntity;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlAssignmentStatus;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.entity.ControlAssignmentEntity;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlAssignmentStatus;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;

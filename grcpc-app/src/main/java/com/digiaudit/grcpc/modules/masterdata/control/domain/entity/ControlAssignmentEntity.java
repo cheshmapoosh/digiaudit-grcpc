@@ -1,7 +1,7 @@
-package com.digiaudit.grcpc.modules.masterdata.process.domain.entity;
+package com.digiaudit.grcpc.modules.masterdata.control.domain.entity;
 
 import com.digiaudit.grcpc.common.persistence.AuditableEntity;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlAssignmentStatus;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlAssignmentStatus;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.util.UUID;

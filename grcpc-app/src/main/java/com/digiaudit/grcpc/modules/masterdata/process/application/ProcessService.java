@@ -15,7 +15,7 @@ import com.digiaudit.grcpc.modules.masterdata.process.api.dto.ProcessNodeRequest
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.ProcessNodeResponse;
 import com.digiaudit.grcpc.modules.masterdata.process.api.mapper.ProcessMapper;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ProcessNodeEntity;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ControlAssignmentRepository;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.repository.ControlAssignmentRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessAccountGroupAssignmentRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessNodeRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessObjectiveAssignmentRepository;

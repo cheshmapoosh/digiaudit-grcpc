@@ -1,6 +1,6 @@
-package com.digiaudit.grcpc.modules.masterdata.process.api.dto;
+package com.digiaudit.grcpc.modules.masterdata.control.api.dto;
 
-import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlAssignmentStatus;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlAssignmentStatus;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;

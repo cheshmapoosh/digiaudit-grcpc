@@ -1,13 +1,13 @@
-package com.digiaudit.grcpc.modules.masterdata.process.api;
+package com.digiaudit.grcpc.modules.masterdata.control.api;
 
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.AttachExistingControlRequest;
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.ControlDetailsDto;
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.ControlStructureNodeDto;
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.ControlSummaryDto;
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CreateControlAndAssignRequest;
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.MoveControlAssignmentRequest;
-import com.digiaudit.grcpc.modules.masterdata.process.api.dto.UpdateControlAssignmentRequest;
-import com.digiaudit.grcpc.modules.masterdata.process.application.ControlService;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.AttachExistingControlRequest;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.ControlDetailsDto;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.ControlStructureNodeDto;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.ControlSummaryDto;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.CreateControlAndAssignRequest;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.MoveControlAssignmentRequest;
+import com.digiaudit.grcpc.modules.masterdata.control.api.dto.UpdateControlAssignmentRequest;
+import com.digiaudit.grcpc.modules.masterdata.control.application.ControlService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
