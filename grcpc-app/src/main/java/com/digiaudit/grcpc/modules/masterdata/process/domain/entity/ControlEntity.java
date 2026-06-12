@@ -1,6 +1,10 @@
 package com.digiaudit.grcpc.modules.masterdata.process.domain.entity;
 
 import com.digiaudit.grcpc.common.persistence.AuditableEntity;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlAutomationType;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlImportance;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlNature;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.enums.ControlStatus;
 import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;
@@ -11,8 +15,7 @@ import lombok.experimental.SuperBuilder;
         name = "control",
         indexes = {
                 @Index(name = "idx_control_status", columnList = "status"),
-                @Index(name = "idx_control_title", columnList = "title"),
-                @Index(name = "idx_control_objective_id", columnList = "control_objective_id")
+                @Index(name = "idx_control_name", columnList = "name")
         },
         uniqueConstraints = @UniqueConstraint(name = "uk_control_code", columnNames = "code")
 )
@@ -30,51 +33,31 @@ public class ControlEntity extends AuditableEntity {
     @Column(name = "code", nullable = false, length = 50)
     private String code;
 
-    @Column(name = "title", nullable = false, length = 255)
-    private String title;
-
-    @Column(name = "status", nullable = false, length = 50)
-    private String status;
-
-    @Column(name = "sort_order")
-    private Integer sortOrder;
+    @Column(name = "name", nullable = false, length = 255)
+    private String name;
 
     @Column(name = "description", length = 2000)
     private String description;
 
-    @Column(name = "owner_id")
-    private UUID ownerId;
+    @Column(name = "control_class", length = 255)
+    private String controlClass;
 
-    @Column(name = "owner_name", length = 255)
-    private String ownerName;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "control_nature", length = 50)
+    private ControlNature controlNature;
 
-    @Column(name = "documents_count", nullable = false)
-    private Integer documentsCount;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "automation_type", length = 50)
+    private ControlAutomationType automationType;
 
-    @Column(name = "control_objective_id")
-    private UUID controlObjectiveId;
-
-    @Column(name = "control_automation", length = 50)
-    private String controlAutomation;
-
-    @Column(name = "control_frequency", length = 255)
-    private String controlFrequency;
-
-    @Column(name = "control_classification", length = 255)
-    private String controlClassification;
-
-    @Column(name = "control_owner", length = 255)
-    private String controlOwner;
-
-    @Column(name = "test_direction", length = 255)
-    private String testDirection;
-
-    @Column(name = "test_type", length = 255)
-    private String testType;
-
-    @Column(name = "test_program", length = 2000)
-    private String testProgram;
-
+    @Enumerated(EnumType.STRING)
     @Column(name = "importance", length = 50)
-    private String importance;
+    private ControlImportance importance;
+
+    @Column(name = "objective", length = 2000)
+    private String objective;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 50)
+    private ControlStatus status;
 }

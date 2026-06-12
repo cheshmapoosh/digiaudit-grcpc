@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ControlRepository extends JpaRepository<ControlEntity, UUID> {
 
-    List<ControlEntity> findAllByOrderBySortOrderAscTitleAsc();
+    List<ControlEntity> findAllByOrderByCodeAscNameAsc();
 
     boolean existsByCodeIgnoreCase(String code);
 

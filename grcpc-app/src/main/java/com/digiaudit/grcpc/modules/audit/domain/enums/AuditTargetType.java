@@ -7,6 +7,7 @@ public enum AuditTargetType {
     DELEGATION_POLICY,
     PROCESS,
     CONTROL,
+    CONTROL_ASSIGNMENT,
     RISK,
     OBJECTIVE,
     POLICY,
