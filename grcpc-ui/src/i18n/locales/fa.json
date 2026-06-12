@@ -81,6 +81,7 @@
   "org.errors.duplicateCode": "کد تکراری است",
   "org.errors.hasChildren": "این سازمان زیرمجموعه دارد و قابل حذف نیست",
   "org.errors.notFound": "رکورد یافت نشد",
+  "control.errors.loadList": "خطا در بارگذاری کنترل‌ها",
   "common.search": "جستجو...",
   "common.actions": "عملیات",
   "common.count": "تعداد",

@@ -57,6 +57,7 @@ import {
     ROOT_PARENT as OBJECTIVE_ROOT_PARENT,
     useObjectiveState,
 } from "@/features/objective";
+import { controlService, type ControlSummary } from "@/features/control";
 import type { DocumentAttachment, DocumentUploadPolicy } from "@/features/document";
 import { useDocumentAttachmentState } from "@/features/document";
 
@@ -320,6 +321,20 @@ function toRiskOption(risk: RiskNode): OrganizationRiskOption {
     };
 }
 
+function toControlReferenceOption(control: ControlSummary): OrganizationReferenceOption {
+    return {
+        referenceId: control.id,
+        code: control.code,
+        title: control.name,
+        description: control.description ?? undefined,
+        status: control.status,
+        ownerName: undefined,
+        typeLabel: control.controlClass ?? control.automationType ?? control.controlNature ?? undefined,
+        validFrom: undefined,
+        validTo: undefined,
+    };
+}
+
 function toRegulationReferenceOption(regulation: RegulationNode): OrganizationReferenceOption {
     return {
         referenceId: regulation.id,
@@ -569,6 +584,8 @@ export default function OrganizationsFclShellPage() {
     const [documentTempSessionId, setDocumentTempSessionId] = useState(
         createDocumentTempSessionId,
     );
+    const [controlItems, setControlItems] = useState<ControlSummary[]>([]);
+    const [controlLoading, setControlLoading] = useState(false);
 
     const items = useMemo(() => sortOrganizations(Object.values(nodesById)), [nodesById]);
     const processItems = useMemo(
@@ -605,9 +622,9 @@ export default function OrganizationsFclShellPage() {
                 .map(toRiskOption),
         [riskItems],
     );
-    const availableControlReferences = useMemo<OrganizationReferenceOption[]>(
-        () => [],
-        [],
+    const availableControlReferences = useMemo(
+        () => controlItems.map(toControlReferenceOption),
+        [controlItems],
     );
     const availableRegulationReferences = useMemo(
         () =>
@@ -687,6 +704,40 @@ export default function OrganizationsFclShellPage() {
             );
         });
     }, [loadRiskChildren, t]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        setControlLoading(true);
+
+        void controlService.list()
+            .then((items) => {
+                if (!cancelled) {
+                    setControlItems(items);
+                }
+            })
+            .catch((error: unknown) => {
+                if (!cancelled) {
+                    setPageError(
+                        mapError(
+                            error,
+                            t("control.errors.loadList", {
+                                defaultValue: "خطا در بارگذاری کنترل‌ها",
+                            }),
+                        ),
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setControlLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [t]);
 
     useEffect(() => {
         void Promise.all([
@@ -1661,10 +1712,10 @@ export default function OrganizationsFclShellPage() {
                             relationshipsBusy={relationshipsLoading || riskLoading}
                             referencesBusy={
                                 referenceAssignmentsLoading ||
-                                processLoading ||
+                                controlLoading ||
                                 regulationLoading ||
-                                    policyLoading ||
-                                    objectiveLoading
+                                policyLoading ||
+                                objectiveLoading
                             }
                             documentsBusy={documentsLoading}
                             busy={loading || submitting}

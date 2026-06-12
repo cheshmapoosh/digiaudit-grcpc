@@ -81,6 +81,7 @@
   "org.errors.duplicateCode": "Duplicate code",
   "org.errors.hasChildren": "This organization has children and cannot be deleted",
   "org.errors.notFound": "Record not found",
+  "control.errors.loadList": "Error loading controls",
   "common.search": "Search...",
   "common.actions": "Actions",
   "common.count": "Count",
