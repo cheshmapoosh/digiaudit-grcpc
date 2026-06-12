@@ -313,15 +313,15 @@ function resolveTabLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const labels: Record<ControlTabKey, string> = {
-        general: t("control.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
-        steps: t("control.tabs.steps", { defaultValue: "Ù…Ø±Ø§Ø­Ù„" }),
-        regulations: t("control.tabs.regulations", { defaultValue: "Ù‚ÙˆØ§Ù†ÛŒÙ†" }),
-        requirements: t("control.tabs.requirements", { defaultValue: "Ø§Ù„Ø²Ø§Ù…Ø§Øª" }),
-        risks: t("control.tabs.risks", { defaultValue: "Ø±ÛŒØ³Ú©â€ŒÙ‡Ø§" }),
-        accountGroups: t("control.tabs.accountGroups", { defaultValue: "Ú¯Ø±ÙˆÙ‡ Ø­Ø³Ø§Ø¨â€ŒÙ‡Ø§" }),
-        documents: t("control.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }),
+        general: t("control.tabs.general", { defaultValue: "اطلاعات کلی" }),
+        steps: t("control.tabs.steps", { defaultValue: "مراحل" }),
+        regulations: t("control.tabs.regulations", { defaultValue: "قوانین" }),
+        requirements: t("control.tabs.requirements", { defaultValue: "الزامات" }),
+        risks: t("control.tabs.risks", { defaultValue: "ریسک‌ها" }),
+        accountGroups: t("control.tabs.accountGroups", { defaultValue: "گروه حساب‌ها" }),
+        documents: t("control.tabs.documents", { defaultValue: "مستندات" }),
         performancePlan: t("control.tabs.performancePlan", {
-            defaultValue: "Ø¨Ø±Ù†Ø§Ù…Ù‡ Ø¹Ù…Ù„Ú©Ø±Ø¯",
+            defaultValue: "برنامه عملکرد",
         }),
     };
 
@@ -621,7 +621,7 @@ export default function ControlObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={onEdit}
                     >
-                        {t("common.edit", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´" })}
+                        {t("common.edit", { defaultValue: "ویرایش" })}
                     </Button>
                 ) : (
                     <Button
@@ -630,7 +630,7 @@ export default function ControlObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={handleSubmit}
                     >
-                        {t("common.save", { defaultValue: "Ø°Ø®ÛŒØ±Ù‡" })}
+                        {t("common.save", { defaultValue: "ذخیره" })}
                     </Button>
                 )}
 
@@ -641,8 +641,8 @@ export default function ControlObjectPage({
                     onClick={onCancel}
                 >
                     {mode === "view"
-                        ? t("common.close", { defaultValue: "Ø¨Ø³ØªÙ†" })
-                        : t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
+                        ? t("common.close", { defaultValue: "بستن" })
+                        : t("common.cancel", { defaultValue: "انصراف" })}
                 </Button>
             </div>
         </>

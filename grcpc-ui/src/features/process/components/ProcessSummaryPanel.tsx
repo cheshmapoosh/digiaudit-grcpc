@@ -22,6 +22,7 @@ import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface ProcessSummaryPanelProps {
     value?: ProcessNode | null;
+    controlsCount?: number;
     busy?: boolean;
     error?: string | null;
     onErrorClose?: () => void;
@@ -287,7 +288,13 @@ function ProcessTabs({
     );
 }
 
-function GeneralTab({ value }: { value: ProcessNode }) {
+function GeneralTab({
+                        value,
+                        controlsCount,
+                    }: {
+    value: ProcessNode;
+    controlsCount?: number;
+}) {
     const { t } = useTranslation();
 
     return (
@@ -320,6 +327,12 @@ function GeneralTab({ value }: { value: ProcessNode }) {
                 label={t("process.fields.documents", { defaultValue: "مستندات" })}
                 value={String(value.documentsCount ?? 0)}
             />
+            {value.nodeType === "subProcess" ? (
+                <DetailRow
+                    label={t("control.fields.controlsCount", { defaultValue: "تعداد کنترل‌ها" })}
+                    value={String(controlsCount ?? 0)}
+                />
+            ) : null}
         </div>
     );
 }
@@ -327,14 +340,16 @@ function GeneralTab({ value }: { value: ProcessNode }) {
 function TabBody({
                      value,
                      activeTab,
+                     controlsCount,
                  }: {
     value: ProcessNode;
     activeTab: ProcessDetailTabKey;
+    controlsCount?: number;
 }) {
     const { t } = useTranslation();
 
     if (activeTab === "general") {
-        return <GeneralTab value={value} />;
+        return <GeneralTab value={value} controlsCount={controlsCount} />;
     }
 
     if (activeTab === "objectives") {
@@ -372,6 +387,7 @@ function TabBody({
 
 export default function ProcessSummaryPanel({
                                                 value,
+                                                controlsCount,
                                                 busy = false,
                                                 error,
                                                 onErrorClose,
@@ -429,7 +445,11 @@ export default function ProcessSummaryPanel({
                         />
 
                         <div style={{ ...TAB_BODY_STYLE, minWidth: 0, overflowX: "auto" }}>
-                            <TabBody value={value} activeTab={effectiveActiveTab} />
+                            <TabBody
+                                value={value}
+                                activeTab={effectiveActiveTab}
+                                controlsCount={controlsCount}
+                            />
                         </div>
                     </div>
                 ) : (

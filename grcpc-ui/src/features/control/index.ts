@@ -40,4 +40,3 @@ export {
 
 export { createControlService, controlService } from "./service/control.service";
 export { useControlState } from "./state/control.state";
-export { controlRoutes } from "./routes";

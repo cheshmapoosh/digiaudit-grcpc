@@ -2,7 +2,6 @@ export { setupRoutes } from "./setup";
 export { loginRoutes } from "./usermanagement";
 export { dashboardRoutes } from "./dashboard";
 export { masterDataRoutes } from "./master-data";
-export { controlRoutes } from "./control";
 export { processRoutes } from "./process";
 export { regulationRoutes } from "./regulation";
 export { organizationRoutes } from "./organization";

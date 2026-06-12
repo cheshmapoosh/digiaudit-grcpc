@@ -25,8 +25,27 @@ import {
 import ProcessSummaryPanel from "../components/ProcessSummaryPanel";
 import ProcessesListReport from "./ProcessesListReport";
 import ProcessObjectPage from "./ProcessObjectPage";
+import type {
+    AttachExistingControlRequest,
+    ControlDetails,
+    ControlStructureNode,
+    CreateControlAndAssignRequest,
+    UpdateControlAssignmentRequest,
+} from "@/features/control/domain/control.model";
+import { useControlState } from "@/features/control/state/control.state";
+import type { ControlCreateAction } from "@/features/control/components/ControlActionMenu";
+import AttachControlDialog from "@/features/control/pages/AttachControlDialog";
+import ControlObjectPage from "@/features/control/pages/ControlObjectPage";
+import CreateControlDialog from "@/features/control/pages/CreateControlDialog";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import {
+    countSubProcessControls,
+    findProcessControlItemById,
+    sortProcessControlItems,
+    toProcessControlTreeItem,
+    type ProcessControlTreeItem,
+} from "../utils/process-control.tree";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -37,18 +56,18 @@ const DIALOG_NORMAL_WIDTH = "96vw";
 const DIALOG_LARGE_WIDTH = "92vw";
 
 function useProcessRouteMode(): RouteMode {
-    const { processId } = useParams();
+    const { processId, controlAssignmentId } = useParams();
     const location = useLocation();
 
     if (location.pathname.endsWith("/new")) {
         return "create";
     }
 
-    if (location.pathname.endsWith("/edit")) {
+    if ((processId || controlAssignmentId) && location.pathname.endsWith("/edit")) {
         return "edit";
     }
 
-    if (processId) {
+    if (processId || controlAssignmentId) {
         return "view";
     }
 
@@ -84,6 +103,103 @@ function mapError(
     }
 
     return fallback;
+}
+
+function mapControlError(
+    error: unknown,
+    fallback: string,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    if (error instanceof Error && error.message) {
+        switch (error.message) {
+            case "NOT_FOUND":
+            case "CONTROL_ASSIGNMENT_NOT_FOUND":
+                return t("control.errors.notFound", {
+                    defaultValue: "اتصال کنترل موردنظر یافت نشد",
+                });
+            case "CONTROL_NOT_FOUND":
+                return t("control.errors.controlNotFound", {
+                    defaultValue: "کنترل انتخاب‌شده یافت نشد",
+                });
+            case "SUB_PROCESS_NOT_FOUND":
+                return t("control.errors.subProcessNotFound", {
+                    defaultValue: "زیر فرآیند انتخاب‌شده یافت نشد",
+                });
+            case "DUPLICATE_ACTIVE_ASSIGNMENT":
+                return t("control.errors.duplicateActiveAssignment", {
+                    defaultValue: "این کنترل قبلاً به‌صورت فعال به این زیر فرآیند متصل شده است",
+                });
+            default:
+                return error.message;
+        }
+    }
+
+    return fallback;
+}
+
+interface SubProcessContext {
+    subProcessId: string;
+    subProcessTitle?: string | null;
+}
+
+function toControlTreeItem(node: ControlStructureNode): ProcessControlTreeItem | null {
+    if (node.nodeType !== "control" || !node.controlAssignmentId) {
+        return null;
+    }
+
+    return {
+        id: node.controlAssignmentId,
+        code: node.code,
+        title: node.title,
+        nodeType: "control",
+        parentId: node.subProcessId ?? node.parentId,
+        status: node.status,
+        sortOrder: node.sortOrder,
+        description: node.description,
+        controlId: node.controlId,
+        controlAssignmentId: node.controlAssignmentId,
+        subProcessId: node.subProcessId ?? node.parentId,
+    };
+}
+
+function resolveSubProcessForControlAction(
+    selectedItem: ProcessControlTreeItem | null,
+    selectedAssignment: ControlDetails | null,
+    items: ProcessControlTreeItem[],
+): SubProcessContext | null {
+    if (!selectedItem) {
+        return null;
+    }
+
+    if (selectedItem.nodeType === "subProcess") {
+        return {
+            subProcessId: selectedItem.id,
+            subProcessTitle: selectedItem.title,
+        };
+    }
+
+    if (selectedItem.nodeType !== "control") {
+        return null;
+    }
+
+    if (selectedAssignment?.parentSubProcessId) {
+        return {
+            subProcessId: selectedAssignment.parentSubProcessId,
+            subProcessTitle: selectedAssignment.parentSubProcessTitle,
+        };
+    }
+
+    const subProcessId = selectedItem.subProcessId ?? selectedItem.parentId;
+    const parentItem = findProcessControlItemById(items, subProcessId);
+
+    if (subProcessId) {
+        return {
+            subProcessId,
+            subProcessTitle: parentItem?.title,
+        };
+    }
+
+    return null;
 }
 
 function resolveUiDir(): UiDir {
@@ -255,9 +371,10 @@ export default function ProcessesFclShellPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
-    const { processId } = useParams();
+    const { processId, controlAssignmentId } = useParams();
 
     const routeMode = useProcessRouteMode();
+    const isControlRoute = Boolean(controlAssignmentId);
     const appDir = useResolvedUiDir();
     const isLargeDialogViewport = useMediaQuery(DIALOG_LARGE_VIEWPORT_QUERY);
 
@@ -268,15 +385,38 @@ export default function ProcessesFclShellPage() {
     const updateNode = useProcessState((state) => state.updateNode);
     const removeNode = useProcessState((state) => state.removeNode);
 
+    const controlStructureNodes = useControlState((state) => state.structureNodes);
+    const controlAssignmentsById = useControlState((state) => state.assignmentsById);
+    const controlLoading = useControlState((state) => state.loading);
+    const refreshControlStructure = useControlState((state) => state.refreshStructure);
+    const loadControlAssignment = useControlState((state) => state.loadAssignment);
+    const createAndAssignControl = useControlState((state) => state.createAndAssign);
+    const attachExistingControl = useControlState((state) => state.attachExisting);
+    const updateControlAssignment = useControlState((state) => state.updateAssignment);
+    const deleteControlAssignment = useControlState((state) => state.deleteAssignment);
+
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
     const [objectError, setObjectError] = useState<string | null>(null);
+    const [controlObjectError, setControlObjectError] = useState<string | null>(null);
+    const [controlDialogError, setControlDialogError] = useState<string | null>(null);
     const [deleteCandidate, setDeleteCandidate] = useState<ProcessNode | null>(null);
+    const [deleteControlCandidate, setDeleteControlCandidate] = useState<ProcessControlTreeItem | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
+    const [createControlContext, setCreateControlContext] = useState<SubProcessContext | null>(null);
+    const [attachControlContext, setAttachControlContext] = useState<SubProcessContext | null>(null);
 
-    const items = useMemo(() => sortProcesses(Object.values(nodesById)), [nodesById]);
+    const processItems = useMemo(() => sortProcesses(Object.values(nodesById)), [nodesById]);
+    const combinedTreeItems = useMemo(() => {
+        const processTreeItems = processItems.map(toProcessControlTreeItem);
+        const controlTreeItems = controlStructureNodes
+            .map(toControlTreeItem)
+            .filter((item): item is ProcessControlTreeItem => item !== null);
+
+        return sortProcessControlItems([...processTreeItems, ...controlTreeItems]);
+    }, [controlStructureNodes, processItems]);
 
     const selectedRouteItem = processId ? nodesById[processId] ?? null : null;
     const selectedTreeItem = selectedTreeId ? nodesById[selectedTreeId] ?? null : null;
@@ -309,9 +449,47 @@ export default function ProcessesFclShellPage() {
         });
     }, [loadChildren, t]);
 
+    useEffect(() => {
+        void refreshControlStructure().catch((error: unknown) => {
+            setPageError(
+                mapControlError(
+                    error,
+                    t("control.errors.loadStructure", {
+                        defaultValue: "خطا در بارگذاری ساختار کنترل‌ها",
+                    }),
+                    t,
+                ),
+            );
+        });
+    }, [refreshControlStructure, t]);
+
+    useEffect(() => {
+        if (!controlAssignmentId) {
+            return;
+        }
+
+        setSelectedTreeId(controlAssignmentId);
+        setTreeExpansionAnchorId(controlAssignmentId);
+        void loadControlAssignment(controlAssignmentId).catch((error: unknown) => {
+            setControlObjectError(
+                mapControlError(
+                    error,
+                    t("control.errors.loadAssignment", {
+                        defaultValue: "خطا در بارگذاری جزئیات اتصال کنترل",
+                    }),
+                    t,
+                ),
+            );
+        });
+    }, [controlAssignmentId, loadControlAssignment, t]);
+
     const treeSelectedId = useMemo(() => {
         if (routeMode === "create") {
             return queryParentId ?? selectedTreeId;
+        }
+
+        if (isControlRoute) {
+            return controlAssignmentId ?? selectedTreeId;
         }
 
         if (routeMode === "view" || routeMode === "edit") {
@@ -319,11 +497,23 @@ export default function ProcessesFclShellPage() {
         }
 
         return selectedTreeId;
-    }, [processId, queryParentId, routeMode, selectedTreeId]);
+    }, [controlAssignmentId, isControlRoute, processId, queryParentId, routeMode, selectedTreeId]);
+
+    const selectedCombinedItem = useMemo(
+        () => findProcessControlItemById(combinedTreeItems, treeSelectedId),
+        [combinedTreeItems, treeSelectedId],
+    );
+    const selectedControlAssignment = controlAssignmentId
+        ? controlAssignmentsById[controlAssignmentId] ?? null
+        : null;
 
     const treeExpansionAnchorIdValue = useMemo(() => {
         if (routeMode === "create") {
             return queryParentId ?? selectedTreeId ?? treeExpansionAnchorId;
+        }
+
+        if (isControlRoute) {
+            return controlAssignmentId ?? selectedTreeId ?? treeExpansionAnchorId;
         }
 
         if (routeMode === "view" || routeMode === "edit") {
@@ -331,22 +521,52 @@ export default function ProcessesFclShellPage() {
         }
 
         return selectedTreeId ?? treeExpansionAnchorId;
-    }, [processId, queryParentId, routeMode, selectedTreeId, treeExpansionAnchorId]);
+    }, [
+        controlAssignmentId,
+        isControlRoute,
+        processId,
+        queryParentId,
+        routeMode,
+        selectedTreeId,
+        treeExpansionAnchorId,
+    ]);
 
-    const handleSelect = useCallback((id: string) => {
-        setSelectedTreeId(id);
-        setTreeExpansionAnchorId(id);
-        setPageError(null);
-    }, []);
+    const handleSelect = useCallback(
+        (id: string) => {
+            const selectedItem = findProcessControlItemById(combinedTreeItems, id);
+            setSelectedTreeId(id);
+            setTreeExpansionAnchorId(id);
+            setPageError(null);
+            setControlObjectError(null);
+
+            if (selectedItem?.nodeType === "control") {
+                navigate(`/processes/control-assignments/${id}`);
+                return;
+            }
+
+            if (isControlRoute) {
+                navigate("/processes");
+            }
+        },
+        [combinedTreeItems, isControlRoute, navigate],
+    );
 
     const handleShow = useCallback(
         (id: string) => {
+            const selectedItem = findProcessControlItemById(combinedTreeItems, id);
             setObjectError(null);
+            setControlObjectError(null);
             setSelectedTreeId(id);
             setTreeExpansionAnchorId(id);
+
+            if (selectedItem?.nodeType === "control") {
+                navigate(`/processes/control-assignments/${id}`);
+                return;
+            }
+
             navigate(`/processes/${id}`);
         },
-        [navigate],
+        [combinedTreeItems, navigate],
     );
 
     const handleCreate = useCallback(
@@ -407,6 +627,13 @@ export default function ProcessesFclShellPage() {
 
     const requestDelete = useCallback(
         (id: string) => {
+            const selectedItem = findProcessControlItemById(combinedTreeItems, id);
+
+            if (selectedItem?.nodeType === "control") {
+                setDeleteControlCandidate(selectedItem);
+                return;
+            }
+
             const target = nodesById[id];
 
             if (!target) {
@@ -416,7 +643,7 @@ export default function ProcessesFclShellPage() {
                 return;
             }
 
-            if (hasChildren(items, id)) {
+            if (hasChildren(processItems, id)) {
                 setPageError(
                     t("process.errors.hasChildren", {
                         defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
@@ -427,7 +654,7 @@ export default function ProcessesFclShellPage() {
 
             setDeleteCandidate(target);
         },
-        [items, nodesById, t],
+        [combinedTreeItems, nodesById, processItems, t],
     );
 
     const handleConfirmDelete = useCallback(async () => {
@@ -467,6 +694,44 @@ export default function ProcessesFclShellPage() {
             setSubmitting(false);
         }
     }, [deleteCandidate, navigate, removeNode, t]);
+
+    const handleConfirmControlDelete = useCallback(async () => {
+        if (!deleteControlCandidate?.controlAssignmentId) {
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            setPageError(null);
+
+            const parentId =
+                deleteControlCandidate.subProcessId ?? deleteControlCandidate.parentId ?? null;
+            await deleteControlAssignment(deleteControlCandidate.controlAssignmentId);
+            setDeleteControlCandidate(null);
+
+            if (parentId) {
+                setSelectedTreeId(parentId);
+                setTreeExpansionAnchorId(parentId);
+            } else {
+                setSelectedTreeId(null);
+                setTreeExpansionAnchorId(null);
+            }
+
+            navigate("/processes");
+        } catch (error) {
+            setPageError(
+                mapControlError(
+                    error,
+                    t("control.errors.delete", {
+                        defaultValue: "خطا در حذف اتصال کنترل",
+                    }),
+                    t,
+                ),
+            );
+        } finally {
+            setSubmitting(false);
+        }
+    }, [deleteControlAssignment, deleteControlCandidate, navigate, t]);
 
     const handleObjectSubmit = useCallback(
         async (payload: ProcessNodeCreate | ProcessNodeUpdate) => {
@@ -508,7 +773,159 @@ export default function ProcessesFclShellPage() {
         [createNode, navigate, processId, routeMode, t, updateNode],
     );
 
-    const showModal = routeMode === "create" || routeMode === "view" || routeMode === "edit";
+    const handleCreateControlAction = useCallback(
+        (action: ControlCreateAction) => {
+            const currentSelectedItem = selectedCombinedItem;
+            const currentAssignment = currentSelectedItem?.nodeType === "control"
+                ? selectedControlAssignment
+                : null;
+            const context = resolveSubProcessForControlAction(
+                currentSelectedItem,
+                currentAssignment,
+                combinedTreeItems,
+            );
+
+            if (!context) {
+                setPageError(
+                    t("control.errors.selectSubProcess", {
+                        defaultValue:
+                            "برای تعریف یا اتصال کنترل، ابتدا یک زیر فرآیند یا کنترل زیر آن را انتخاب کنید.",
+                    }),
+                );
+                return;
+            }
+
+            setPageError(null);
+            setControlDialogError(null);
+
+            if (action === "createNew") {
+                setCreateControlContext(context);
+                return;
+            }
+
+            setAttachControlContext(context);
+        },
+        [combinedTreeItems, selectedCombinedItem, selectedControlAssignment, t],
+    );
+
+    const handleCreateControlSubmit = useCallback(
+        async (payload: CreateControlAndAssignRequest) => {
+            if (!createControlContext) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setControlDialogError(null);
+                const created = await createAndAssignControl(
+                    createControlContext.subProcessId,
+                    payload,
+                );
+                setCreateControlContext(null);
+                setSelectedTreeId(created.controlAssignmentId);
+                setTreeExpansionAnchorId(created.controlAssignmentId);
+                navigate(`/processes/control-assignments/${created.controlAssignmentId}`);
+            } catch (error) {
+                setControlDialogError(
+                    mapControlError(
+                        error,
+                        t("control.errors.save", { defaultValue: "خطا در ذخیره کنترل" }),
+                        t,
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [createAndAssignControl, createControlContext, navigate, t],
+    );
+
+    const handleAttachControlSubmit = useCallback(
+        async (payload: AttachExistingControlRequest) => {
+            if (!attachControlContext) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setControlDialogError(null);
+                const attached = await attachExistingControl(
+                    attachControlContext.subProcessId,
+                    payload,
+                );
+                setAttachControlContext(null);
+                setSelectedTreeId(attached.controlAssignmentId);
+                setTreeExpansionAnchorId(attached.controlAssignmentId);
+                navigate(`/processes/control-assignments/${attached.controlAssignmentId}`);
+            } catch (error) {
+                setControlDialogError(
+                    mapControlError(
+                        error,
+                        t("control.errors.save", { defaultValue: "خطا در ذخیره کنترل" }),
+                        t,
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [attachControlContext, attachExistingControl, navigate, t],
+    );
+
+    const handleControlObjectSubmit = useCallback(
+        async (payload: UpdateControlAssignmentRequest) => {
+            if (!controlAssignmentId) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setControlObjectError(null);
+                await updateControlAssignment(controlAssignmentId, payload);
+                setSelectedTreeId(controlAssignmentId);
+                setTreeExpansionAnchorId(controlAssignmentId);
+                navigate(`/processes/control-assignments/${controlAssignmentId}`);
+            } catch (error) {
+                setControlObjectError(
+                    mapControlError(
+                        error,
+                        t("control.errors.save", { defaultValue: "خطا در ذخیره کنترل" }),
+                        t,
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [controlAssignmentId, navigate, t, updateControlAssignment],
+    );
+
+    const handleCancelControlObject = useCallback(() => {
+        setControlObjectError(null);
+
+        if (routeMode === "edit" && controlAssignmentId) {
+            navigate(`/processes/control-assignments/${controlAssignmentId}`);
+            return;
+        }
+
+        setSelectedTreeId(null);
+        setTreeExpansionAnchorId(null);
+        navigate("/processes");
+    }, [controlAssignmentId, navigate, routeMode]);
+
+    const handleEditControlObject = useCallback(() => {
+        if (!controlAssignmentId) {
+            return;
+        }
+
+        setSelectedTreeId(controlAssignmentId);
+        setTreeExpansionAnchorId(controlAssignmentId);
+        setControlObjectError(null);
+        navigate(`/processes/control-assignments/${controlAssignmentId}/edit`);
+    }, [controlAssignmentId, navigate]);
+
+    const showModal =
+        !isControlRoute && (routeMode === "create" || routeMode === "view" || routeMode === "edit");
 
     const handleObjectDialogClose = useCallback(
         (event: unknown) => {
@@ -524,10 +941,15 @@ export default function ProcessesFclShellPage() {
     const objectMode =
         routeMode === "create" ? "create" : routeMode === "edit" ? "edit" : "view";
 
-    const objectValue = routeMode === "create" ? null : selectedRouteItem;
+    const objectValue = routeMode === "create" || isControlRoute ? null : selectedRouteItem;
 
-    const showInlineSummaryPane = Boolean(selectedTreeItem);
-    const fclLayout: FclLayout = showInlineSummaryPane ? "TwoColumnsStartExpanded" : "OneColumn";
+    const showControlObjectPane = Boolean(controlAssignmentId);
+    const showProcessSummaryPane = Boolean(selectedTreeItem && !showControlObjectPane);
+    const showMidColumn = showControlObjectPane || showProcessSummaryPane;
+    const fclLayout: FclLayout = showMidColumn ? "TwoColumnsStartExpanded" : "OneColumn";
+    const selectedSubProcessControlsCount = selectedTreeItem?.nodeType === "subProcess"
+        ? countSubProcessControls(combinedTreeItems, selectedTreeItem.id)
+        : undefined;
     const createOptions = CREATE_NODE_TYPES;
 
     const slotContainerStyle = useMemo<CSSProperties>(
@@ -583,16 +1005,18 @@ export default function ProcessesFclShellPage() {
         },
         <div style={frameStyle}>
             <ProcessesListReport
-                items={items}
+                items={combinedTreeItems}
+                selectedItem={selectedCombinedItem}
                 selectedId={treeSelectedId}
                 expansionAnchorId={treeExpansionAnchorIdValue}
                 searchText={searchText}
-                busy={loading || submitting}
+                busy={loading || controlLoading || submitting}
                 error={!showModal ? pageError : null}
                 onErrorClose={() => setPageError(null)}
                 createOptions={createOptions}
                 onSearchTextChange={setSearchText}
                 onCreate={handleCreate}
+                onCreateControlAction={handleCreateControlAction}
                 onShow={handleShow}
                 onDelete={requestDelete}
                 onSelect={handleSelect}
@@ -600,18 +1024,47 @@ export default function ProcessesFclShellPage() {
         </div>,
     );
 
-    const inlineSummaryColumn = showInlineSummaryPane
-        ? createElement(
-            "div",
-            {
-                slot: "midColumn",
-                dir: appDir,
-                style: slotContainerStyle,
-            },
-            <div style={frameStyle}>
+    const midColumnContent = (() => {
+        if (showControlObjectPane) {
+            if (selectedControlAssignment) {
+                return (
+                    <ControlObjectPage
+                        key={`${routeMode}:${selectedControlAssignment.controlAssignmentId}`}
+                        mode={routeMode === "edit" ? "edit" : "view"}
+                        value={selectedControlAssignment}
+                        busy={controlLoading || submitting}
+                        error={controlObjectError}
+                        onErrorClose={() => setControlObjectError(null)}
+                        onSubmit={handleControlObjectSubmit}
+                        onCancel={handleCancelControlObject}
+                        onEdit={handleEditControlObject}
+                    />
+                );
+            }
+
+            if (controlObjectError) {
+                return (
+                    <MessageStrip design="Negative" onClose={() => setControlObjectError(null)}>
+                        {controlObjectError}
+                    </MessageStrip>
+                );
+            }
+
+            return (
+                <MessageStrip design="Information" hideCloseButton>
+                    {t("control.object.notFound", {
+                        defaultValue: "اتصال کنترل انتخاب‌شده یافت نشد.",
+                    })}
+                </MessageStrip>
+            );
+        }
+
+        if (selectedTreeItem) {
+            return (
                 <ProcessSummaryPanel
                     value={selectedTreeItem}
-                    busy={loading || submitting}
+                    controlsCount={selectedSubProcessControlsCount}
+                    busy={loading || controlLoading || submitting}
                     error={!showModal ? pageError : null}
                     onErrorClose={() => setPageError(null)}
                     onEdit={handleEdit}
@@ -620,7 +1073,21 @@ export default function ProcessesFclShellPage() {
                         setTreeExpansionAnchorId(null);
                     }}
                 />
-            </div>,
+            );
+        }
+
+        return null;
+    })();
+
+    const midColumn = showMidColumn
+        ? createElement(
+            "div",
+            {
+                slot: "midColumn",
+                dir: appDir,
+                style: slotContainerStyle,
+            },
+            <div style={frameStyle}>{midColumnContent}</div>,
         )
         : null;
 
@@ -641,7 +1108,7 @@ export default function ProcessesFclShellPage() {
                     },
                 },
                 listColumn,
-                inlineSummaryColumn,
+                midColumn,
             )}
 
             <Dialog
@@ -657,7 +1124,7 @@ export default function ProcessesFclShellPage() {
                         <ProcessObjectPage
                             key={`${objectMode}:${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
                             mode={objectMode}
-                            allItems={items}
+                            allItems={processItems}
                             value={objectValue}
                             parent={selectedParentForCreate}
                             requestedNodeType={requestedNodeType}
@@ -678,6 +1145,34 @@ export default function ProcessesFclShellPage() {
                 </div>
             </Dialog>
 
+            {createControlContext ? (
+                <CreateControlDialog
+                    open
+                    busy={controlLoading || submitting}
+                    error={controlDialogError}
+                    onErrorClose={() => setControlDialogError(null)}
+                    onClose={() => {
+                        setCreateControlContext(null);
+                        setControlDialogError(null);
+                    }}
+                    onSubmit={handleCreateControlSubmit}
+                />
+            ) : null}
+
+            {attachControlContext ? (
+                <AttachControlDialog
+                    open
+                    busy={controlLoading || submitting}
+                    error={controlDialogError}
+                    onErrorClose={() => setControlDialogError(null)}
+                    onClose={() => {
+                        setAttachControlContext(null);
+                        setControlDialogError(null);
+                    }}
+                    onSubmit={handleAttachControlSubmit}
+                />
+            ) : null}
+
             <DeleteConfirmDialog
                 open={Boolean(deleteCandidate)}
                 title={t("process.delete.title", { defaultValue: "حذف آیتم فرآیندی" })}
@@ -691,6 +1186,26 @@ export default function ProcessesFclShellPage() {
                 onClose={() => setDeleteCandidate(null)}
                 onConfirm={() => {
                     void handleConfirmDelete();
+                }}
+            />
+
+            <DeleteConfirmDialog
+                open={Boolean(deleteControlCandidate)}
+                title={t("control.delete.title", {
+                    defaultValue: "حذف اتصال کنترل",
+                })}
+                message={t("control.delete.confirm", {
+                    defaultValue: "آیا از حذف اتصال کنترل «{{title}}» مطمئن هستید؟",
+                    title: deleteControlCandidate?.title ?? "",
+                })}
+                confirmText={t("control.actions.deleteAssignment", {
+                    defaultValue: "حذف اتصال کنترل",
+                })}
+                cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+                loading={submitting}
+                onClose={() => setDeleteControlCandidate(null)}
+                onConfirm={() => {
+                    void handleConfirmControlDelete();
                 }}
             />
         </>

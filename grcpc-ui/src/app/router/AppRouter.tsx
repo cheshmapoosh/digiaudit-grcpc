@@ -11,7 +11,6 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import {
     setupRoutes,
     loginRoutes,
-    controlRoutes,
     dashboardRoutes,
     masterDataRoutes,
     organizationRoutes,
@@ -45,7 +44,6 @@ export default function AppRouter() {
             >
                 {dashboardRoutes}
                 {masterDataRoutes}
-                {controlRoutes}
                 {organizationRoutes}
                 {processRoutes}
                 {regulationRoutes}
