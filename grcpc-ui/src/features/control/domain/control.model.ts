@@ -115,3 +115,126 @@ export interface UpdateControlAssignmentRequest {
     testPlan?: string | null;
     assignmentStatus: ControlAssignmentStatus;
 }
+
+export interface ControlStep {
+    id: string;
+    controlAssignmentId: string;
+    title: string;
+    description?: string | null;
+    requiredDocument?: string | null;
+    requiredNote?: string | null;
+    sensitivity?: string | null;
+    sortOrder?: number | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+}
+
+export interface CreateControlStepRequest {
+    title: string;
+    description?: string | null;
+    requiredDocument?: string | null;
+    requiredNote?: string | null;
+    sensitivity?: string | null;
+    sortOrder?: number | null;
+}
+
+export type UpdateControlStepRequest = CreateControlStepRequest;
+
+export interface ControlRegulationLink {
+    id: string;
+    controlAssignmentId: string;
+    regulationId: string;
+    code?: string | null;
+    title?: string | null;
+    description?: string | null;
+    validFrom?: string | null;
+    validTo?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+}
+
+export interface ControlRequirementLink {
+    id: string;
+    controlAssignmentId: string;
+    requirementId: string;
+    regulationId?: string | null;
+    code?: string | null;
+    title?: string | null;
+    description?: string | null;
+    regulationTitle?: string | null;
+    validFrom?: string | null;
+    validTo?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+}
+
+export interface ControlRiskLink {
+    id: string;
+    controlAssignmentId: string;
+    riskId: string;
+    code?: string | null;
+    title?: string | null;
+    description?: string | null;
+    source?: string | null;
+    organizationTitle?: string | null;
+    validFrom?: string | null;
+    validTo?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+}
+
+export interface ControlAccountGroupLink {
+    id: string;
+    controlAssignmentId: string;
+    accountGroupId: string;
+    code?: string | null;
+    title?: string | null;
+    description?: string | null;
+    assertionType?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+}
+
+export interface ControlDocument {
+    id: string;
+    controlAssignmentId: string;
+    name: string;
+    documentType?: string | null;
+    description?: string | null;
+    fileRef?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+}
+
+export interface CreateControlDocumentRequest {
+    name: string;
+    documentType?: string | null;
+    description?: string | null;
+    fileRef?: string | null;
+}
+
+export type UpdateControlDocumentRequest = CreateControlDocumentRequest;
+
+export interface ControlPerformancePlan {
+    id: string;
+    controlAssignmentId: string;
+    title: string;
+    description?: string | null;
+    frequency?: string | null;
+    ownerName?: string | null;
+    plannedDate?: string | null;
+    status?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+}
+
+export interface CreateControlPerformancePlanRequest {
+    title: string;
+    description?: string | null;
+    frequency?: string | null;
+    ownerName?: string | null;
+    plannedDate?: string | null;
+    status?: string | null;
+}
+
+export type UpdateControlPerformancePlanRequest = CreateControlPerformancePlanRequest;

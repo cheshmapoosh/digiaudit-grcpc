@@ -4,7 +4,14 @@
   },
   "common": {
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "select": "Select"
   },
   "control": {
     "list": {
@@ -28,11 +35,19 @@
       "assignmentInfo": "Control Assignment Information"
     },
     "tabs": {
-      "general": "General"
+      "general": "General",
+      "steps": "Steps",
+      "regulations": "Regulations",
+      "requirements": "Requirements",
+      "risks": "Risks",
+      "accountGroups": "Account Groups",
+      "documents": "Documents",
+      "performancePlan": "Performance Plan"
     },
     "fields": {
       "name": "Name",
       "code": "Code",
+      "title": "Title",
       "type": "Type",
       "status": "Control Status",
       "description": "Description",
@@ -54,13 +69,36 @@
       "createdAt": "Created At",
       "updatedAt": "Updated At",
       "assignmentStatus": "Assignment Status",
-      "controlsCount": "Controls Count"
+      "controlsCount": "Controls Count",
+      "requiredDocument": "Required Document",
+      "requiredNote": "Required Note",
+      "sensitivity": "Sensitivity",
+      "documentType": "Document Type",
+      "fileRef": "File Reference",
+      "frequency": "Frequency",
+      "plannedDate": "Planned Date",
+      "referenceId": "Reference ID",
+      "regulation": "Regulation",
+      "requirement": "Requirement",
+      "risk": "Risk",
+      "source": "Source",
+      "organizationTitle": "Organization",
+      "accountGroup": "Account Group",
+      "assertionType": "Assertion Type"
     },
     "actions": {
       "addControl": "+ Control",
       "createNew": "Define New Control",
       "attachExisting": "Attach Existing Control",
-      "deleteAssignment": "Delete Control Assignment"
+      "deleteAssignment": "Delete Control Assignment",
+      "addStep": "Add Step",
+      "addDocument": "Add Document",
+      "addPerformancePlan": "Add Performance Plan",
+      "link": "Link",
+      "linkRegulation": "Link Regulation",
+      "linkRequirement": "Link Requirement",
+      "linkRisk": "Link Risk",
+      "linkAccountGroup": "Link Account Group"
     },
     "create": {
       "title": "Define New Control"
@@ -77,6 +115,50 @@
     "delete": {
       "title": "Delete Control Assignment",
       "confirm": "Delete control assignment \"{{title}}\"?"
+    },
+    "empty": {
+      "steps": "No steps have been defined.",
+      "regulations": "No regulations have been linked.",
+      "requirements": "No requirements have been linked.",
+      "risks": "No risks have been linked.",
+      "accountGroups": "No account groups have been linked.",
+      "documents": "No documents have been defined.",
+      "performancePlans": "No performance plans have been defined.",
+      "regulationCatalog": "No regulations are available.",
+      "requirementCatalog": "No requirements are available.",
+      "riskCatalog": "No risks are available.",
+      "accountGroupCatalog": "No account groups are available."
+    },
+    "steps": {
+      "createTitle": "Add Step",
+      "editTitle": "Edit Step"
+    },
+    "documents": {
+      "createTitle": "Add Document",
+      "editTitle": "Edit Document"
+    },
+    "performancePlan": {
+      "createTitle": "Add Performance Plan",
+      "editTitle": "Edit Performance Plan"
+    },
+    "regulations": {
+      "linkTitle": "Link Regulation"
+    },
+    "requirements": {
+      "linkTitle": "Link Requirement"
+    },
+    "risks": {
+      "linkTitle": "Link Risk"
+    },
+    "accountGroups": {
+      "linkTitle": "Link Account Group"
+    },
+    "links": {
+      "searchRegulations": "Search regulations",
+      "searchRequirements": "Search requirements",
+      "searchRisks": "Search risks",
+      "searchAccountGroups": "Search account groups",
+      "uuidPlaceholder": "Enter reference UUID"
     },
     "nature": {
       "preventive": "Preventive",
@@ -112,7 +194,20 @@
       "controlNotFound": "The selected control was not found.",
       "subProcessNotFound": "The selected sub-process was not found.",
       "duplicateActiveAssignment": "This control is already actively assigned to this sub-process.",
-      "deleteOnlyAssignment": "Only control assignments can be deleted here."
+      "deleteOnlyAssignment": "Only control assignments can be deleted here.",
+      "loadSteps": "Failed to load control steps.",
+      "saveStep": "Failed to save control step.",
+      "deleteStep": "Failed to delete control step.",
+      "loadDocuments": "Failed to load documents.",
+      "saveDocument": "Failed to save document.",
+      "deleteDocument": "Failed to delete document.",
+      "loadPerformancePlans": "Failed to load performance plans.",
+      "savePerformancePlan": "Failed to save performance plan.",
+      "deletePerformancePlan": "Failed to delete performance plan.",
+      "loadLinks": "Failed to load linked items.",
+      "loadCatalog": "Failed to load catalog.",
+      "linkItem": "Failed to link item.",
+      "deleteLink": "Failed to delete link."
     },
     "validation": {
       "codeRequired": "Control code is required.",
@@ -121,7 +216,11 @@
       "controlRequired": "Select a control.",
       "textMaxLength": "Text is too long.",
       "codeMaxLength": "Code cannot be longer than 50 characters.",
-      "nameMaxLength": "Name cannot be longer than 255 characters."
+      "nameMaxLength": "Name cannot be longer than 255 characters.",
+      "stepTitleRequired": "Step title is required.",
+      "documentNameRequired": "Document name is required.",
+      "performancePlanTitleRequired": "Performance plan title is required.",
+      "referenceRequired": "Select or enter a reference."
     }
   }
 }

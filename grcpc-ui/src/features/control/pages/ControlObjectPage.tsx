@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useState, type CSSProperties, type ReactNode } from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -11,6 +11,7 @@ import {
     Select,
     Tab,
     TabContainer,
+    TabSeparator,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
@@ -25,8 +26,36 @@ import {
     formatPersianDateTime,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
+import ControlAccountGroupsTab from "../components/tabs/ControlAccountGroupsTab";
+import ControlDocumentsTab from "../components/tabs/ControlDocumentsTab";
+import ControlPerformancePlanTab from "../components/tabs/ControlPerformancePlanTab";
+import ControlRegulationsTab from "../components/tabs/ControlRegulationsTab";
+import ControlRequirementsTab from "../components/tabs/ControlRequirementsTab";
+import ControlRisksTab from "../components/tabs/ControlRisksTab";
+import ControlStepsTab from "../components/tabs/ControlStepsTab";
 
 export type ControlObjectMode = "view" | "edit";
+
+type ControlTabKey =
+    | "general"
+    | "steps"
+    | "regulations"
+    | "requirements"
+    | "risks"
+    | "accountGroups"
+    | "documents"
+    | "performancePlan";
+
+const CONTROL_TABS: ControlTabKey[] = [
+    "general",
+    "steps",
+    "regulations",
+    "requirements",
+    "risks",
+    "accountGroups",
+    "documents",
+    "performancePlan",
+];
 
 interface ControlAssignmentFormState {
     ownerName: string;
@@ -183,6 +212,16 @@ function readSelectedDataValue(event: unknown, fallback: string): string {
     return selectedOption?.getAttribute?.("data-value") ?? fallback;
 }
 
+function readSelectedTabKey(event: unknown): ControlTabKey | null {
+    const selectedTab = (event as {
+        detail?: {
+            tab?: HTMLElement;
+        };
+    }).detail?.tab;
+
+    return (selectedTab?.getAttribute("data-tab-key") as ControlTabKey | null) ?? null;
+}
+
 function normalizeOptionalText(value: string): string | undefined {
     const trimmed = value.trim();
     return trimmed ? trimmed : undefined;
@@ -269,6 +308,60 @@ function formatValidityRange(validFrom?: string | null, validTo?: string | null)
     return `${formatPersianDate(validFrom)} - ${formatPersianDate(validTo)}`;
 }
 
+function resolveTabLabel(
+    tab: ControlTabKey,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    const labels: Record<ControlTabKey, string> = {
+        general: t("control.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
+        steps: t("control.tabs.steps", { defaultValue: "Ù…Ø±Ø§Ø­Ù„" }),
+        regulations: t("control.tabs.regulations", { defaultValue: "Ù‚ÙˆØ§Ù†ÛŒÙ†" }),
+        requirements: t("control.tabs.requirements", { defaultValue: "Ø§Ù„Ø²Ø§Ù…Ø§Øª" }),
+        risks: t("control.tabs.risks", { defaultValue: "Ø±ÛŒØ³Ú©â€ŒÙ‡Ø§" }),
+        accountGroups: t("control.tabs.accountGroups", { defaultValue: "Ú¯Ø±ÙˆÙ‡ Ø­Ø³Ø§Ø¨â€ŒÙ‡Ø§" }),
+        documents: t("control.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }),
+        performancePlan: t("control.tabs.performancePlan", {
+            defaultValue: "Ø¨Ø±Ù†Ø§Ù…Ù‡ Ø¹Ù…Ù„Ú©Ø±Ø¯",
+        }),
+    };
+
+    return labels[tab];
+}
+
+function ControlTabs({
+    activeTab,
+    onChange,
+}: {
+    activeTab: ControlTabKey;
+    onChange: (tab: ControlTabKey) => void;
+}) {
+    const { t } = useTranslation();
+
+    return (
+        <TabContainer
+            className={CONTROL_TAB_CONTAINER_CLASS}
+            onTabSelect={(event) => {
+                const nextTab = readSelectedTabKey(event);
+                if (nextTab) {
+                    onChange(nextTab);
+                }
+            }}
+            style={TAB_CONTAINER_STYLE}
+        >
+            {CONTROL_TABS.map((tab, index) => (
+                <Fragment key={tab}>
+                    {index === 1 ? <TabSeparator /> : null}
+                    <Tab
+                        text={resolveTabLabel(tab, t)}
+                        selected={activeTab === tab}
+                        data-tab-key={tab}
+                    />
+                </Fragment>
+            ))}
+        </TabContainer>
+    );
+}
+
 export default function ControlObjectPage({
     mode,
     value,
@@ -283,6 +376,7 @@ export default function ControlObjectPage({
     const readOnly = mode === "view";
     const [form, setForm] = useState<ControlAssignmentFormState>(() => toFormState(value));
     const [validationError, setValidationError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<ControlTabKey>("general");
 
     const handleChange = <K extends keyof ControlAssignmentFormState>(
         key: K,
@@ -515,6 +609,67 @@ export default function ControlObjectPage({
         </>
     );
 
+    const renderGeneralTab = () => (
+        <>
+            {mode === "view" ? renderViewContent() : renderEditContent()}
+
+            <div style={FOOTER_STYLE}>
+                {mode === "view" ? (
+                    <Button
+                        design="Emphasized"
+                        disabled={busy || !onEdit}
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={onEdit}
+                    >
+                        {t("common.edit", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´" })}
+                    </Button>
+                ) : (
+                    <Button
+                        design="Emphasized"
+                        disabled={busy}
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={handleSubmit}
+                    >
+                        {t("common.save", { defaultValue: "Ø°Ø®ÛŒØ±Ù‡" })}
+                    </Button>
+                )}
+
+                <Button
+                    design="Transparent"
+                    disabled={busy}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={onCancel}
+                >
+                    {mode === "view"
+                        ? t("common.close", { defaultValue: "Ø¨Ø³ØªÙ†" })
+                        : t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
+                </Button>
+            </div>
+        </>
+    );
+
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case "steps":
+                return <ControlStepsTab controlAssignmentId={value.controlAssignmentId} />;
+            case "regulations":
+                return <ControlRegulationsTab controlAssignmentId={value.controlAssignmentId} />;
+            case "requirements":
+                return <ControlRequirementsTab controlAssignmentId={value.controlAssignmentId} />;
+            case "risks":
+                return <ControlRisksTab controlAssignmentId={value.controlAssignmentId} />;
+            case "accountGroups":
+                return <ControlAccountGroupsTab controlAssignmentId={value.controlAssignmentId} />;
+            case "documents":
+                return <ControlDocumentsTab controlAssignmentId={value.controlAssignmentId} />;
+            case "performancePlan":
+                return <ControlPerformancePlanTab controlAssignmentId={value.controlAssignmentId} />;
+            case "general":
+            default:
+                return renderGeneralTab();
+        }
+    };
+
     return (
         <div style={ROOT_STYLE}>
             <div style={HEADER_STYLE}>
@@ -546,12 +701,7 @@ export default function ControlObjectPage({
                 </div>
             </div>
 
-            <TabContainer className={CONTROL_TAB_CONTAINER_CLASS} style={TAB_CONTAINER_STYLE}>
-                <Tab
-                    text={t("control.tabs.general", { defaultValue: "اطلاعات کلی" })}
-                    selected
-                />
-            </TabContainer>
+            <ControlTabs activeTab={activeTab} onChange={setActiveTab} />
 
             {error ? (
                 <MessageStrip design="Negative" onClose={onErrorClose}>
@@ -565,42 +715,7 @@ export default function ControlObjectPage({
                 </MessageStrip>
             ) : null}
 
-            <div style={BODY_STYLE}>
-                {mode === "view" ? renderViewContent() : renderEditContent()}
-
-                <div style={FOOTER_STYLE}>
-                    {mode === "view" ? (
-                        <Button
-                            design="Emphasized"
-                            disabled={busy || !onEdit}
-                            style={ACTION_BUTTON_STYLE}
-                            onClick={onEdit}
-                        >
-                            {t("common.edit", { defaultValue: "ویرایش" })}
-                        </Button>
-                    ) : (
-                        <Button
-                            design="Emphasized"
-                            disabled={busy}
-                            style={ACTION_BUTTON_STYLE}
-                            onClick={handleSubmit}
-                        >
-                            {t("common.save", { defaultValue: "ذخیره" })}
-                        </Button>
-                    )}
-
-                    <Button
-                        design="Transparent"
-                        disabled={busy}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={onCancel}
-                    >
-                        {mode === "view"
-                            ? t("common.close", { defaultValue: "بستن" })
-                            : t("common.cancel", { defaultValue: "انصراف" })}
-                    </Button>
-                </div>
-            </div>
+            <div style={BODY_STYLE}>{renderTabContent()}</div>
         </div>
     );
 }

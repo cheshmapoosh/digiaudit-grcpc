@@ -194,12 +194,21 @@ function SummaryRow({ label, value }: { label: string; value?: ReactNode }) {
 
 function ControlContextSummary({
     value,
+    items,
     busy,
 }: {
     value: ControlStructureNode;
+    items: ControlStructureNode[];
     busy?: boolean;
 }) {
     const { t } = useTranslation();
+    const controlsCount = value.nodeType === "subProcess"
+        ? items.filter(
+            (item) =>
+                item.nodeType === "control" &&
+                (item.parentId === value.id || item.subProcessId === value.id),
+        ).length
+        : 0;
 
     return (
         <div style={{ display: "grid", gap: "1rem" }}>
@@ -233,7 +242,7 @@ function ControlContextSummary({
                 {value.nodeType === "subProcess" ? (
                     <SummaryRow
                         label={t("control.fields.controlsCount", { defaultValue: "تعداد کنترل‌ها" })}
-                        value="0"
+                        value={String(controlsCount)}
                     />
                 ) : null}
             </div>
@@ -634,7 +643,13 @@ export default function ControlsFclShellPage() {
         }
 
         if (selectedNode) {
-            return <ControlContextSummary value={selectedNode} busy={loading || submitting} />;
+            return (
+                <ControlContextSummary
+                    value={selectedNode}
+                    items={structureNodes}
+                    busy={loading || submitting}
+                />
+            );
         }
 
         return (

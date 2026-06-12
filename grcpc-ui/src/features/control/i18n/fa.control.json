@@ -4,7 +4,14 @@
   },
   "common": {
     "active": "فعال",
-    "inactive": "غیرفعال"
+    "inactive": "غیرفعال",
+    "actions": "عملیات",
+    "edit": "ویرایش",
+    "delete": "حذف",
+    "save": "ذخیره",
+    "cancel": "انصراف",
+    "close": "بستن",
+    "select": "انتخاب"
   },
   "control": {
     "list": {
@@ -28,11 +35,19 @@
       "assignmentInfo": "اطلاعات اتصال کنترل"
     },
     "tabs": {
-      "general": "اطلاعات کلی"
+      "general": "اطلاعات کلی",
+      "steps": "مراحل",
+      "regulations": "قوانین",
+      "requirements": "الزامات",
+      "risks": "ریسک‌ها",
+      "accountGroups": "گروه حساب‌ها",
+      "documents": "مستندات",
+      "performancePlan": "برنامه عملکرد"
     },
     "fields": {
       "name": "نام",
       "code": "کد",
+      "title": "عنوان",
       "type": "نوع",
       "status": "وضعیت کنترل",
       "description": "شرح",
@@ -54,13 +69,36 @@
       "createdAt": "ایجاد",
       "updatedAt": "آخرین بروزرسانی",
       "assignmentStatus": "وضعیت اتصال",
-      "controlsCount": "تعداد کنترل‌ها"
+      "controlsCount": "تعداد کنترل‌ها",
+      "requiredDocument": "مدرک موردنیاز",
+      "requiredNote": "یادداشت موردنیاز",
+      "sensitivity": "حساسیت",
+      "documentType": "نوع سند",
+      "fileRef": "ارجاع فایل",
+      "frequency": "تناوب",
+      "plannedDate": "تاریخ برنامه‌ریزی",
+      "referenceId": "شناسه مرجع",
+      "regulation": "قانون",
+      "requirement": "الزام",
+      "risk": "ریسک",
+      "source": "منبع",
+      "organizationTitle": "سازمان",
+      "accountGroup": "گروه حساب",
+      "assertionType": "نوع ادعا"
     },
     "actions": {
       "addControl": "+ کنترل",
       "createNew": "تعریف کنترل جدید",
       "attachExisting": "اتصال کنترل موجود",
-      "deleteAssignment": "حذف اتصال کنترل"
+      "deleteAssignment": "حذف اتصال کنترل",
+      "addStep": "افزودن مرحله",
+      "addDocument": "افزودن مستند",
+      "addPerformancePlan": "افزودن برنامه عملکرد",
+      "link": "اتصال",
+      "linkRegulation": "اتصال قانون",
+      "linkRequirement": "اتصال الزام",
+      "linkRisk": "اتصال ریسک",
+      "linkAccountGroup": "اتصال گروه حساب"
     },
     "create": {
       "title": "تعریف کنترل جدید"
@@ -77,6 +115,50 @@
     "delete": {
       "title": "حذف اتصال کنترل",
       "confirm": "آیا از حذف اتصال کنترل «{{title}}» مطمئن هستید؟"
+    },
+    "empty": {
+      "steps": "مرحله‌ای تعریف نشده است.",
+      "regulations": "قانونی متصل نشده است.",
+      "requirements": "الزامی متصل نشده است.",
+      "risks": "ریسکی متصل نشده است.",
+      "accountGroups": "گروه حسابی متصل نشده است.",
+      "documents": "مستندی تعریف نشده است.",
+      "performancePlans": "برنامه عملکردی تعریف نشده است.",
+      "regulationCatalog": "قانونی برای اتصال وجود ندارد.",
+      "requirementCatalog": "الزامی برای اتصال وجود ندارد.",
+      "riskCatalog": "ریسکی برای اتصال وجود ندارد.",
+      "accountGroupCatalog": "گروه حسابی برای اتصال وجود ندارد."
+    },
+    "steps": {
+      "createTitle": "افزودن مرحله",
+      "editTitle": "ویرایش مرحله"
+    },
+    "documents": {
+      "createTitle": "افزودن مستند",
+      "editTitle": "ویرایش مستند"
+    },
+    "performancePlan": {
+      "createTitle": "افزودن برنامه عملکرد",
+      "editTitle": "ویرایش برنامه عملکرد"
+    },
+    "regulations": {
+      "linkTitle": "اتصال قانون"
+    },
+    "requirements": {
+      "linkTitle": "اتصال الزام"
+    },
+    "risks": {
+      "linkTitle": "اتصال ریسک"
+    },
+    "accountGroups": {
+      "linkTitle": "اتصال گروه حساب"
+    },
+    "links": {
+      "searchRegulations": "جستجوی قوانین",
+      "searchRequirements": "جستجوی الزامات",
+      "searchRisks": "جستجوی ریسک‌ها",
+      "searchAccountGroups": "جستجوی گروه حساب‌ها",
+      "uuidPlaceholder": "شناسه مرجع را وارد کنید"
     },
     "nature": {
       "preventive": "پیشگیرانه",
@@ -112,7 +194,20 @@
       "controlNotFound": "کنترل انتخاب‌شده یافت نشد.",
       "subProcessNotFound": "زیر فرآیند انتخاب‌شده یافت نشد.",
       "duplicateActiveAssignment": "این کنترل قبلاً به‌صورت فعال به این زیر فرآیند متصل شده است.",
-      "deleteOnlyAssignment": "حذف فقط برای اتصال کنترل امکان‌پذیر است."
+      "deleteOnlyAssignment": "حذف فقط برای اتصال کنترل امکان‌پذیر است.",
+      "loadSteps": "خطا در بارگذاری مراحل کنترل.",
+      "saveStep": "خطا در ذخیره مرحله کنترل.",
+      "deleteStep": "خطا در حذف مرحله کنترل.",
+      "loadDocuments": "خطا در بارگذاری مستندات.",
+      "saveDocument": "خطا در ذخیره مستند.",
+      "deleteDocument": "خطا در حذف مستند.",
+      "loadPerformancePlans": "خطا در بارگذاری برنامه‌های عملکرد.",
+      "savePerformancePlan": "خطا در ذخیره برنامه عملکرد.",
+      "deletePerformancePlan": "خطا در حذف برنامه عملکرد.",
+      "loadLinks": "خطا در بارگذاری موارد متصل.",
+      "loadCatalog": "خطا در بارگذاری کاتالوگ.",
+      "linkItem": "خطا در اتصال مورد انتخاب‌شده.",
+      "deleteLink": "خطا در حذف اتصال."
     },
     "validation": {
       "codeRequired": "کد کنترل الزامی است.",
@@ -121,7 +216,11 @@
       "controlRequired": "انتخاب کنترل الزامی است.",
       "textMaxLength": "متن بیش از حد طولانی است.",
       "codeMaxLength": "کد نمی‌تواند بیش از ۵۰ کاراکتر باشد.",
-      "nameMaxLength": "نام نمی‌تواند بیش از ۲۵۵ کاراکتر باشد."
+      "nameMaxLength": "نام نمی‌تواند بیش از ۲۵۵ کاراکتر باشد.",
+      "stepTitleRequired": "عنوان مرحله الزامی است.",
+      "documentNameRequired": "نام مستند الزامی است.",
+      "performancePlanTitleRequired": "عنوان برنامه عملکرد الزامی است.",
+      "referenceRequired": "یک مرجع را انتخاب یا وارد کنید."
     }
   }
 }
