@@ -1,0 +1,127 @@
+{
+  "nav": {
+    "controls": "Controls"
+  },
+  "common": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "control": {
+    "list": {
+      "title": "Control Center",
+      "empty": "No controls have been registered.",
+      "search": "Search by name, code, or description"
+    },
+    "nodeType": {
+      "process": "Process",
+      "subProcess": "Sub-process",
+      "control": "Control"
+    },
+    "summary": {
+      "title": "Control Structure Summary"
+    },
+    "object": {
+      "selectPrompt": "Select a process, sub-process, or control from the list.",
+      "notFound": "The selected control assignment was not found."
+    },
+    "sections": {
+      "assignmentInfo": "Control Assignment Information"
+    },
+    "tabs": {
+      "general": "General"
+    },
+    "fields": {
+      "name": "Name",
+      "code": "Code",
+      "type": "Type",
+      "status": "Control Status",
+      "description": "Description",
+      "parentProcess": "Parent Process",
+      "parentSubProcess": "Sub-process",
+      "validity": "Validity",
+      "validFrom": "Valid From",
+      "validTo": "Valid To",
+      "ownerName": "Owner",
+      "controlClass": "Control Class",
+      "controlNature": "Control Nature",
+      "automationType": "Automation Type",
+      "importance": "Importance",
+      "objective": "Objective",
+      "sortOrder": "Sort Order",
+      "operationPeriod": "Operation Period",
+      "testMethod": "Test Method",
+      "testPlan": "Test Plan",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "assignmentStatus": "Assignment Status",
+      "controlsCount": "Controls Count"
+    },
+    "actions": {
+      "addControl": "+ Control",
+      "createNew": "Define New Control",
+      "attachExisting": "Attach Existing Control",
+      "deleteAssignment": "Delete Control Assignment"
+    },
+    "create": {
+      "title": "Define New Control"
+    },
+    "attach": {
+      "title": "Attach Existing Control",
+      "searchLabel": "Control Search",
+      "searchPlaceholder": "Control code, name, or description",
+      "empty": "No controls are available to attach."
+    },
+    "edit": {
+      "title": "Edit Control Assignment"
+    },
+    "delete": {
+      "title": "Delete Control Assignment",
+      "confirm": "Delete control assignment \"{{title}}\"?"
+    },
+    "nature": {
+      "preventive": "Preventive",
+      "detective": "Detective"
+    },
+    "automation": {
+      "manual": "Manual",
+      "system": "System",
+      "semiManualSystem": "Semi-manual/System"
+    },
+    "importance": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "assignmentStatus": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "errors": {
+      "loadStructure": "Failed to load controls structure.",
+      "loadControls": "Failed to load controls.",
+      "loadAssignment": "Failed to load control assignment details.",
+      "save": "Failed to save control.",
+      "delete": "Failed to delete control assignment.",
+      "selectSubProcess": "Select a sub-process, or a control under a sub-process, before defining or attaching a control.",
+      "notFound": "The selected control assignment was not found.",
+      "controlNotFound": "The selected control was not found.",
+      "subProcessNotFound": "The selected sub-process was not found.",
+      "duplicateActiveAssignment": "This control is already actively assigned to this sub-process.",
+      "deleteOnlyAssignment": "Only control assignments can be deleted here."
+    },
+    "validation": {
+      "codeRequired": "Control code is required.",
+      "nameRequired": "Control name is required.",
+      "sortOrderInvalid": "Sort order must be a non-negative integer.",
+      "controlRequired": "Select a control.",
+      "textMaxLength": "Text is too long.",
+      "codeMaxLength": "Code cannot be longer than 50 characters.",
+      "nameMaxLength": "Name cannot be longer than 255 characters."
+    }
+  }
+}

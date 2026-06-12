@@ -3,12 +3,14 @@ import { initReactI18next } from "react-i18next";
 
 import faProcess from "../features/process/i18n/fa.process.json";
 import enProcess from "../features/process/i18n/en.process.json";
+import faControl from "../features/control/i18n/fa.control.json";
+import enControl from "../features/control/i18n/en.control.json";
 import fa from "./locales/fa.json";
 import en from "./locales/en.json";
 
 export const resources = {
-    fa: { translation: { ...fa, ...faProcess } },
-    en: { translation: { ...en, ...enProcess } }
+    fa: { translation: { ...fa, ...faProcess, ...faControl } },
+    en: { translation: { ...en, ...enProcess, ...enControl } }
 } as const;
 
 export function initI18n(lang: "fa" | "en") {

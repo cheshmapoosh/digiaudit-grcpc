@@ -1,0 +1,127 @@
+{
+  "nav": {
+    "controls": "کنترل‌ها"
+  },
+  "common": {
+    "active": "فعال",
+    "inactive": "غیرفعال"
+  },
+  "control": {
+    "list": {
+      "title": "مرکز کنترل",
+      "empty": "هیچ کنترلی ثبت نشده است.",
+      "search": "جستجو بر اساس نام، کد یا توضیحات"
+    },
+    "nodeType": {
+      "process": "فرآیند",
+      "subProcess": "زیر فرآیند",
+      "control": "کنترل"
+    },
+    "summary": {
+      "title": "خلاصه ساختار کنترل"
+    },
+    "object": {
+      "selectPrompt": "یک فرآیند، زیر فرآیند یا کنترل را از فهرست انتخاب کنید.",
+      "notFound": "اتصال کنترل انتخاب‌شده یافت نشد."
+    },
+    "sections": {
+      "assignmentInfo": "اطلاعات اتصال کنترل"
+    },
+    "tabs": {
+      "general": "اطلاعات کلی"
+    },
+    "fields": {
+      "name": "نام",
+      "code": "کد",
+      "type": "نوع",
+      "status": "وضعیت کنترل",
+      "description": "شرح",
+      "parentProcess": "فرآیند والد",
+      "parentSubProcess": "زیر فرآیند",
+      "validity": "اعتبار",
+      "validFrom": "اعتبار از",
+      "validTo": "اعتبار تا",
+      "ownerName": "مسئول",
+      "controlClass": "طبقه کنترل",
+      "controlNature": "ماهیت کنترل",
+      "automationType": "نوع اجرا",
+      "importance": "اهمیت",
+      "objective": "هدف",
+      "sortOrder": "ترتیب نمایش",
+      "operationPeriod": "دوره عملیات",
+      "testMethod": "روش آزمون",
+      "testPlan": "برنامه آزمون",
+      "createdAt": "ایجاد",
+      "updatedAt": "آخرین بروزرسانی",
+      "assignmentStatus": "وضعیت اتصال",
+      "controlsCount": "تعداد کنترل‌ها"
+    },
+    "actions": {
+      "addControl": "+ کنترل",
+      "createNew": "تعریف کنترل جدید",
+      "attachExisting": "اتصال کنترل موجود",
+      "deleteAssignment": "حذف اتصال کنترل"
+    },
+    "create": {
+      "title": "تعریف کنترل جدید"
+    },
+    "attach": {
+      "title": "اتصال کنترل موجود",
+      "searchLabel": "جستجوی کنترل",
+      "searchPlaceholder": "کد، نام یا شرح کنترل",
+      "empty": "کنترلی برای اتصال وجود ندارد."
+    },
+    "edit": {
+      "title": "ویرایش اتصال کنترل"
+    },
+    "delete": {
+      "title": "حذف اتصال کنترل",
+      "confirm": "آیا از حذف اتصال کنترل «{{title}}» مطمئن هستید؟"
+    },
+    "nature": {
+      "preventive": "پیشگیرانه",
+      "detective": "کشفی"
+    },
+    "automation": {
+      "manual": "دستی",
+      "system": "سیستمی",
+      "semiManualSystem": "نیمه‌دستی/سیستمی"
+    },
+    "importance": {
+      "low": "کم",
+      "medium": "متوسط",
+      "high": "زیاد",
+      "critical": "بحرانی"
+    },
+    "assignmentStatus": {
+      "active": "فعال",
+      "inactive": "غیرفعال"
+    },
+    "status": {
+      "active": "فعال",
+      "inactive": "غیرفعال"
+    },
+    "errors": {
+      "loadStructure": "خطا در بارگذاری ساختار کنترل‌ها.",
+      "loadControls": "خطا در بارگذاری کنترل‌ها.",
+      "loadAssignment": "خطا در بارگذاری جزئیات اتصال کنترل.",
+      "save": "خطا در ذخیره کنترل.",
+      "delete": "خطا در حذف اتصال کنترل.",
+      "selectSubProcess": "برای تعریف یا اتصال کنترل، ابتدا یک زیر فرآیند یا کنترل زیر آن را انتخاب کنید.",
+      "notFound": "اتصال کنترل انتخاب‌شده یافت نشد.",
+      "controlNotFound": "کنترل انتخاب‌شده یافت نشد.",
+      "subProcessNotFound": "زیر فرآیند انتخاب‌شده یافت نشد.",
+      "duplicateActiveAssignment": "این کنترل قبلاً به‌صورت فعال به این زیر فرآیند متصل شده است.",
+      "deleteOnlyAssignment": "حذف فقط برای اتصال کنترل امکان‌پذیر است."
+    },
+    "validation": {
+      "codeRequired": "کد کنترل الزامی است.",
+      "nameRequired": "نام کنترل الزامی است.",
+      "sortOrderInvalid": "ترتیب نمایش باید عدد صحیح نامنفی باشد.",
+      "controlRequired": "انتخاب کنترل الزامی است.",
+      "textMaxLength": "متن بیش از حد طولانی است.",
+      "codeMaxLength": "کد نمی‌تواند بیش از ۵۰ کاراکتر باشد.",
+      "nameMaxLength": "نام نمی‌تواند بیش از ۲۵۵ کاراکتر باشد."
+    }
+  }
+}

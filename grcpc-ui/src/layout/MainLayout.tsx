@@ -173,6 +173,13 @@ export default function MainLayout() {
             route: "/master-data",
             selected: isPathInPrefixes(selectedPath, MASTER_DATA_PATH_PREFIXES),
         },
+        {
+            key: "controls",
+            text: t("nav.controls", {defaultValue: "کنترل‌ها"}),
+            icon: "validate",
+            route: "/controls",
+            selected: selectedPath.startsWith("/controls"),
+        },
     ];
 
     return (
