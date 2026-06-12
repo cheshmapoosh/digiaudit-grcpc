@@ -10,12 +10,11 @@ import {
 } from "@ui5/webcomponents-react";
 
 import type { ProcessNodeType } from "../domain/process.model";
-import CreateProcessSplitButton from "../components/CreateProcessSplitButton";
+import ProcessCreateMenu, {
+    type ProcessControlCreateAction,
+} from "../components/ProcessCreateMenu";
 import ProcessControlTree from "../components/ProcessControlTree";
 import type { ProcessControlTreeItem } from "../utils/process-control.tree";
-import ControlActionMenu, {
-    type ControlCreateAction,
-} from "@/features/control/components/ControlActionMenu";
 
 export interface ProcessesListReportProps {
     items: ProcessControlTreeItem[];
@@ -29,7 +28,7 @@ export interface ProcessesListReportProps {
     createOptions: ProcessNodeType[];
     onSearchTextChange: (value: string) => void;
     onCreate: (nodeType: ProcessNodeType) => void;
-    onCreateControlAction: (action: ControlCreateAction) => void;
+    onCreateControlAction: (action: ProcessControlCreateAction) => void;
     onShow: (id: string) => void;
     onDelete: (id: string) => void;
     onSelect: (id: string) => void;
@@ -76,7 +75,7 @@ export default function ProcessesListReport({
         [],
     );
 
-    const canCreate = !busy && createOptions.length > 0;
+    const canCreate = !busy;
 
     return (
         <div
@@ -96,16 +95,12 @@ export default function ProcessesListReport({
                 }
                 endContent={
                     <div style={actionGroupStyle}>
-                        <CreateProcessSplitButton
+                        <ProcessCreateMenu
                             disabled={!canCreate}
-                            nodeTypes={createOptions}
-                            onCreate={onCreate}
-                        />
-
-                        <ControlActionMenu
-                            disabled={busy}
                             style={actionButtonStyle}
-                            onAction={onCreateControlAction}
+                            nodeTypes={createOptions}
+                            onCreateProcess={onCreate}
+                            onCreateControl={onCreateControlAction}
                         />
 
                         <Button

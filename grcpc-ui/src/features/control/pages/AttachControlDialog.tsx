@@ -36,6 +36,9 @@ export interface AttachControlDialogProps {
     open: boolean;
     busy?: boolean;
     error?: string | null;
+    subProcessTitle?: string | null;
+    subProcessId?: string | null;
+    excludedControlIds?: string[];
     onErrorClose?: () => void;
     onClose: () => void;
     onSubmit: (payload: AttachExistingControlRequest) => Promise<void> | void;
@@ -89,6 +92,13 @@ function mapLoadError(error: unknown, fallback: string): string {
     return fallback;
 }
 
+function resolveSubProcessLabel(
+    title?: string | null,
+    id?: string | null,
+): string {
+    return title?.trim() || id?.trim() || "-";
+}
+
 function FormField({
     label,
     fullWidth = false,
@@ -116,6 +126,9 @@ export default function AttachControlDialog({
     open,
     busy = false,
     error,
+    subProcessTitle,
+    subProcessId,
+    excludedControlIds = [],
     onErrorClose,
     onClose,
     onSubmit,
@@ -128,6 +141,11 @@ export default function AttachControlDialog({
     const [loadingControls, setLoadingControls] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [validationError, setValidationError] = useState<string | null>(null);
+
+    const excludedControlIdSet = useMemo(
+        () => new Set(excludedControlIds),
+        [excludedControlIds],
+    );
 
     useEffect(() => {
         if (!open) {
@@ -181,6 +199,15 @@ export default function AttachControlDialog({
             setValidationError(
                 t("control.validation.controlRequired", {
                     defaultValue: "انتخاب کنترل الزامی است",
+                }),
+            );
+            return false;
+        }
+
+        if (excludedControlIdSet.has(selectedControlId)) {
+            setValidationError(
+                t("control.validation.duplicateControl", {
+                    defaultValue: "این کنترل قبلاً به این زیر فرآیند متصل شده است.",
                 }),
             );
             return false;
@@ -254,6 +281,19 @@ export default function AttachControlDialog({
                 }}
             >
                 <div style={{ display: "grid", gap: "0.75rem" }}>
+                    <div
+                        style={{
+                            border: "1px solid var(--sapGroup_ContentBorderColor)",
+                            background: "var(--sapGroup_ContentBackground)",
+                            padding: "0.75rem",
+                        }}
+                    >
+                        <Label showColon>
+                            {t("control.fields.parentSubProcess", { defaultValue: "زیر فرآیند" })}
+                        </Label>{" "}
+                        <span>{resolveSubProcessLabel(subProcessTitle, subProcessId)}</span>
+                    </div>
+
                     {error ? (
                         <MessageStrip design="Negative" onClose={onErrorClose}>
                             {error}
@@ -312,12 +352,18 @@ export default function AttachControlDialog({
                         ) : (
                             filteredControls.map((control) => {
                                 const selected = control.id === selectedControlId;
+                                const duplicate = excludedControlIdSet.has(control.id);
 
                                 return (
                                     <ListItemCustom key={control.id}>
                                         <button
                                             type="button"
-                                            onClick={() => setSelectedControlId(control.id)}
+                                            disabled={duplicate}
+                                            onClick={() => {
+                                                if (!duplicate) {
+                                                    setSelectedControlId(control.id);
+                                                }
+                                            }}
                                             style={{
                                                 width: "100%",
                                                 textAlign: "start",
@@ -328,15 +374,24 @@ export default function AttachControlDialog({
                                                 background: selected
                                                     ? "var(--sapList_SelectionBackgroundColor)"
                                                     : "var(--sapGroup_ContentBackground)",
-                                                cursor: "pointer",
+                                                cursor: duplicate ? "not-allowed" : "pointer",
                                                 display: "grid",
                                                 gap: "0.35rem",
                                                 fontFamily: "inherit",
                                                 fontSize: "inherit",
-                                                color: "inherit",
+                                                color: duplicate
+                                                    ? "var(--sapContent_DisabledTextColor)"
+                                                    : "inherit",
                                             }}
                                         >
                                             <strong>{`${control.code} - ${control.name}`}</strong>
+                                            {duplicate ? (
+                                                <span style={{ color: "var(--sapCriticalTextColor)" }}>
+                                                    {t("control.attach.alreadyAttached", {
+                                                        defaultValue: "قبلاً متصل شده است",
+                                                    })}
+                                                </span>
+                                            ) : null}
                                             {control.description ? (
                                                 <span
                                                     style={{

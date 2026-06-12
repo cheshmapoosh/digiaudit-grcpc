@@ -33,7 +33,7 @@ import type {
     UpdateControlAssignmentRequest,
 } from "@/features/control/domain/control.model";
 import { useControlState } from "@/features/control/state/control.state";
-import type { ControlCreateAction } from "@/features/control/components/ControlActionMenu";
+import type { ProcessControlCreateAction } from "../components/ProcessCreateMenu";
 import AttachControlDialog from "@/features/control/pages/AttachControlDialog";
 import ControlObjectPage from "@/features/control/pages/ControlObjectPage";
 import CreateControlDialog from "@/features/control/pages/CreateControlDialog";
@@ -42,6 +42,8 @@ import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import {
     countSubProcessControls,
     findProcessControlItemById,
+    getSubProcessControlIds,
+    hasAttachedControlsInScope,
     sortProcessControlItems,
     toProcessControlTreeItem,
     type ProcessControlTreeItem,
@@ -571,9 +573,21 @@ export default function ProcessesFclShellPage() {
 
     const handleCreate = useCallback(
         (nodeType: ProcessNodeType) => {
-            const selectedId = selectedTreeId ?? processId ?? null;
-            const selectedItem = selectedId ? nodesById[selectedId] ?? null : null;
-            const parentId = resolveCreateParentId(nodeType, selectedItem, nodesById);
+            const selectedId = selectedTreeId ?? processId ?? controlAssignmentId ?? null;
+            const selectedCombined = findProcessControlItemById(combinedTreeItems, selectedId);
+
+            if (selectedCombined?.nodeType === "control") {
+                setPageError(
+                    t("process.errors.createFromControlSelection", {
+                        defaultValue:
+                            "برای ایجاد فرآیند یا زیر فرآیند، ابتدا یک آیتم فرآیندی را انتخاب کنید؛ کنترل فقط برای عملیات کنترل قابل استفاده است.",
+                    }),
+                );
+                return;
+            }
+
+            const selectedProcessItem = selectedId ? nodesById[selectedId] ?? null : null;
+            const parentId = resolveCreateParentId(nodeType, selectedProcessItem, nodesById);
             const parent = parentId ? nodesById[parentId] ?? null : null;
 
             if (parentId === undefined || !canCreateChild(parent?.nodeType ?? null, nodeType)) {
@@ -592,7 +606,7 @@ export default function ProcessesFclShellPage() {
             setTreeExpansionAnchorId(parentId);
             navigate(`/processes/new?${params.toString()}`);
         },
-        [navigate, nodesById, processId, selectedTreeId, t],
+        [combinedTreeItems, controlAssignmentId, navigate, nodesById, processId, selectedTreeId, t],
     );
 
     const handleEdit = useCallback(
@@ -639,6 +653,15 @@ export default function ProcessesFclShellPage() {
             if (!target) {
                 setPageError(
                     t("process.errors.notFound", { defaultValue: "آیتم موردنظر یافت نشد" }),
+                );
+                return;
+            }
+
+            if (selectedItem && hasAttachedControlsInScope(combinedTreeItems, selectedItem)) {
+                setPageError(
+                    t("process.errors.hasAttachedControls", {
+                        defaultValue: "این آیتم دارای کنترل متصل است و قابل حذف نیست.",
+                    }),
                 );
                 return;
             }
@@ -774,7 +797,7 @@ export default function ProcessesFclShellPage() {
     );
 
     const handleCreateControlAction = useCallback(
-        (action: ControlCreateAction) => {
+        (action: ProcessControlCreateAction) => {
             const currentSelectedItem = selectedCombinedItem;
             const currentAssignment = currentSelectedItem?.nodeType === "control"
                 ? selectedControlAssignment
@@ -950,6 +973,13 @@ export default function ProcessesFclShellPage() {
     const selectedSubProcessControlsCount = selectedTreeItem?.nodeType === "subProcess"
         ? countSubProcessControls(combinedTreeItems, selectedTreeItem.id)
         : undefined;
+    const attachExcludedControlIds = useMemo(
+        () =>
+            attachControlContext
+                ? getSubProcessControlIds(combinedTreeItems, attachControlContext.subProcessId)
+                : [],
+        [attachControlContext, combinedTreeItems],
+    );
     const createOptions = CREATE_NODE_TYPES;
 
     const slotContainerStyle = useMemo<CSSProperties>(
@@ -1150,6 +1180,8 @@ export default function ProcessesFclShellPage() {
                     open
                     busy={controlLoading || submitting}
                     error={controlDialogError}
+                    subProcessId={createControlContext.subProcessId}
+                    subProcessTitle={createControlContext.subProcessTitle}
                     onErrorClose={() => setControlDialogError(null)}
                     onClose={() => {
                         setCreateControlContext(null);
@@ -1164,6 +1196,9 @@ export default function ProcessesFclShellPage() {
                     open
                     busy={controlLoading || submitting}
                     error={controlDialogError}
+                    subProcessId={attachControlContext.subProcessId}
+                    subProcessTitle={attachControlContext.subProcessTitle}
+                    excludedControlIds={attachExcludedControlIds}
                     onErrorClose={() => setControlDialogError(null)}
                     onClose={() => {
                         setAttachControlContext(null);

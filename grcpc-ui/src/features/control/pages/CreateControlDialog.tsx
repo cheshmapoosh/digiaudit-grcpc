@@ -43,6 +43,8 @@ export interface CreateControlDialogProps {
     open: boolean;
     busy?: boolean;
     error?: string | null;
+    subProcessTitle?: string | null;
+    subProcessId?: string | null;
     onErrorClose?: () => void;
     onClose: () => void;
     onSubmit: (payload: CreateControlAndAssignRequest) => Promise<void> | void;
@@ -104,6 +106,13 @@ function parseSortOrder(value: string): number | undefined {
     return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
+function resolveSubProcessLabel(
+    title?: string | null,
+    id?: string | null,
+): string {
+    return title?.trim() || id?.trim() || "-";
+}
+
 function FormField({
     label,
     fullWidth = false,
@@ -131,6 +140,8 @@ export default function CreateControlDialog({
     open,
     busy = false,
     error,
+    subProcessTitle,
+    subProcessId,
     onErrorClose,
     onClose,
     onSubmit,
@@ -233,6 +244,19 @@ export default function CreateControlDialog({
                     padding: "0.25rem",
                 }}
             >
+                <div
+                    style={{
+                        border: "1px solid var(--sapGroup_ContentBorderColor)",
+                        background: "var(--sapGroup_ContentBackground)",
+                        padding: "0.75rem",
+                    }}
+                >
+                    <Label showColon>
+                        {t("control.fields.parentSubProcess", { defaultValue: "زیر فرآیند" })}
+                    </Label>{" "}
+                    <span>{resolveSubProcessLabel(subProcessTitle, subProcessId)}</span>
+                </div>
+
                 {error ? (
                     <MessageStrip design="Negative" onClose={onErrorClose}>
                         {error}

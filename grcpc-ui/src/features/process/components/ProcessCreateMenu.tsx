@@ -5,16 +5,24 @@ import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 import type { ProcessNodeType } from "../domain/process.model";
 
+export type ProcessControlCreateAction = "createNew" | "attachExisting";
+
+type CreateMenuAction =
+    | { kind: "process"; nodeType: ProcessNodeType }
+    | { kind: "control"; action: ProcessControlCreateAction };
+
 const DEFAULT_CREATE_NODE_TYPES: ProcessNodeType[] = ["process", "subProcess"];
+
+const CREATE_MENU_ACTIONS: Record<string, CreateMenuAction> = {
+    "process-create-menu-process": { kind: "process", nodeType: "process" },
+    "process-create-menu-sub-process": { kind: "process", nodeType: "subProcess" },
+    "process-create-menu-control-create": { kind: "control", action: "createNew" },
+    "process-create-menu-control-attach": { kind: "control", action: "attachExisting" },
+};
 
 const createMenuItemIdByNodeType: Record<ProcessNodeType, string> = {
     process: "process-create-menu-process",
     subProcess: "process-create-menu-sub-process",
-};
-
-const nodeTypeByCreateMenuItemId: Record<string, ProcessNodeType> = {
-    "process-create-menu-process": "process",
-    "process-create-menu-sub-process": "subProcess",
 };
 
 type MenuItemClickEvent = {
@@ -29,43 +37,35 @@ type ButtonClickEvent = {
     currentTarget?: EventTarget | null;
 };
 
-export interface CreateProcessSplitButtonProps {
+export interface ProcessCreateMenuProps {
     disabled?: boolean;
     style?: CSSProperties;
     nodeTypes?: ProcessNodeType[];
-    onCreate: (nodeType: ProcessNodeType) => void;
+    onCreateProcess: (nodeType: ProcessNodeType) => void;
+    onCreateControl: (action: ProcessControlCreateAction) => void;
 }
 
-function readClickedNodeType(event: unknown): ProcessNodeType | null {
+function readClickedAction(event: unknown): CreateMenuAction | null {
     const itemId = (event as MenuItemClickEvent).detail?.item?.id;
-
-    if (!itemId) {
-        return null;
-    }
-
-    return nodeTypeByCreateMenuItemId[itemId] ?? null;
+    return itemId ? CREATE_MENU_ACTIONS[itemId] ?? null : null;
 }
 
 function readButtonElement(event: unknown): HTMLElement | undefined {
     const currentTarget = (event as ButtonClickEvent).currentTarget;
-
-    if (currentTarget instanceof HTMLElement) {
-        return currentTarget;
-    }
-
-    return undefined;
+    return currentTarget instanceof HTMLElement ? currentTarget : undefined;
 }
 
 function canUsePortal(): boolean {
     return typeof document !== "undefined" && Boolean(document.body);
 }
 
-export default function CreateProcessSplitButton({
-                                                     disabled = false,
-                                                     style,
-                                                     nodeTypes = DEFAULT_CREATE_NODE_TYPES,
-                                                     onCreate,
-                                                 }: CreateProcessSplitButtonProps) {
+export default function ProcessCreateMenu({
+    disabled = false,
+    style,
+    nodeTypes = DEFAULT_CREATE_NODE_TYPES,
+    onCreateProcess,
+    onCreateControl,
+}: ProcessCreateMenuProps) {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const [opener, setOpener] = useState<HTMLElement | undefined>(undefined);
@@ -88,12 +88,19 @@ export default function CreateProcessSplitButton({
             horizontalAlign="End"
             onClose={() => setOpen(false)}
             onItemClick={(event) => {
-                const nodeType = readClickedNodeType(event);
+                const action = readClickedAction(event);
                 setOpen(false);
 
-                if (nodeType) {
-                    onCreate(nodeType);
+                if (!action) {
+                    return;
                 }
+
+                if (action.kind === "process") {
+                    onCreateProcess(action.nodeType);
+                    return;
+                }
+
+                onCreateControl(action.action);
             }}
         >
             {visibleNodeTypes.map((nodeType) => (
@@ -103,6 +110,18 @@ export default function CreateProcessSplitButton({
                     text={labels[nodeType]}
                 />
             ))}
+            <MenuItem
+                id="process-create-menu-control-create"
+                text={t("process.createMenu.controlCreate", {
+                    defaultValue: "کنترل - ایجاد",
+                })}
+            />
+            <MenuItem
+                id="process-create-menu-control-attach"
+                text={t("process.createMenu.controlAttach", {
+                    defaultValue: "کنترل - اتصال",
+                })}
+            />
         </Menu>
     );
 

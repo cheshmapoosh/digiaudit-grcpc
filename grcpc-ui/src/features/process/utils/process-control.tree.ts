@@ -84,3 +84,56 @@ export function countSubProcessControls(
             (item.parentId === subProcessId || item.subProcessId === subProcessId),
     ).length;
 }
+
+export function getSubProcessControlIds(
+    items: ProcessControlTreeItem[],
+    subProcessId: string,
+): string[] {
+    return items
+        .filter(
+            (item) =>
+                item.nodeType === "control" &&
+                (item.parentId === subProcessId || item.subProcessId === subProcessId) &&
+                Boolean(item.controlId),
+        )
+        .map((item) => item.controlId as string);
+}
+
+export function hasAttachedControlsInScope(
+    items: ProcessControlTreeItem[],
+    target: ProcessControlTreeItem,
+): boolean {
+    if (target.nodeType === "control") {
+        return false;
+    }
+
+    if (target.nodeType === "subProcess") {
+        return countSubProcessControls(items, target.id) > 0;
+    }
+
+    const byId = new Map(items.map((item) => [item.id, item]));
+
+    return items.some((item) => {
+        if (item.nodeType !== "control") {
+            return false;
+        }
+
+        let currentId: string | null | undefined = item.subProcessId ?? item.parentId;
+        const visited = new Set<string>();
+
+        while (currentId) {
+            if (currentId === target.id) {
+                return true;
+            }
+
+            if (visited.has(currentId)) {
+                return false;
+            }
+
+            visited.add(currentId);
+            currentId = byId.get(currentId)?.parentId;
+        }
+
+        return false;
+    });
+}
