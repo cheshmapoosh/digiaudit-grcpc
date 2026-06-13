@@ -116,13 +116,43 @@
         "participant": "Participant"
       }
     },
+    "controls": {
+      "title": "Controls",
+      "empty": "No controls are assigned to this sub-process.",
+      "saveFirst": "Save the sub-process first.",
+      "loadError": "Failed to load sub-process controls.",
+      "retry": "Retry",
+      "assign": "Add Control",
+      "assignPlaceholder": "Select control",
+      "assignAccessibleName": "Select control to attach",
+      "noAssignable": "No other control is available to attach.",
+      "mutationError": "Failed to save sub-process control changes.",
+      "duplicate": "This control is already attached to this sub-process.",
+      "show": "View",
+      "remove": "Remove Assignment",
+      "removeTitle": "Remove Control Assignment",
+      "removeConfirm": "Remove control assignment \"{{title}}\"?",
+      "confirmRemove": "Remove Assignment",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Sub-process controls table",
+      "columns": {
+        "code": "Code",
+        "name": "Control Name",
+        "description": "Description",
+        "status": "Status",
+        "owner": "Owner",
+        "validity": "Validity",
+        "actions": "Actions"
+      }
+    },
     "tabs": {
       "general": "General Information",
       "accountGroups": "Account Group",
       "risks": "Risk",
       "rules": "Rules",
       "objectives": "Objectives",
-      "documents": "Documents"
+      "documents": "Documents",
+      "controls": "Controls"
     },
     "tree": {
       "expand": "Expand branch",
@@ -135,6 +165,9 @@
       "modalPlaceholder": "The process modal details will be completed in the next step. This step implements the tree structure, selection, and details panel.",
       "modalTitle": "Process Center",
       "createModalTitle": "Create"
+    },
+    "createMenu": {
+      "control": "Control"
     },
     "create": {
       "title": "Create Process Item"

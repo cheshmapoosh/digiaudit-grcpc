@@ -190,6 +190,7 @@
       "save": "Failed to save control.",
       "delete": "Failed to delete control assignment.",
       "selectSubProcess": "Select a sub-process, or a control under a sub-process, before defining or attaching a control.",
+      "selectSubProcessForCreate": "Select a sub-process, or a control under a sub-process, before creating a control.",
       "notFound": "The selected control assignment was not found.",
       "controlNotFound": "The selected control was not found.",
       "subProcessNotFound": "The selected sub-process was not found.",

@@ -116,13 +116,43 @@
         "participant": "مشارکت‌کننده"
       }
     },
+    "controls": {
+      "title": "کنترل‌ها",
+      "empty": "هیچ کنترلی به این زیر فرآیند متصل نشده است.",
+      "saveFirst": "ابتدا زیر فرآیند را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری کنترل‌های زیر فرآیند.",
+      "retry": "تلاش دوباره",
+      "assign": "افزودن کنترل",
+      "assignPlaceholder": "انتخاب کنترل",
+      "assignAccessibleName": "انتخاب کنترل برای اتصال",
+      "noAssignable": "کنترل قابل اتصال دیگری وجود ندارد.",
+      "mutationError": "خطا در ذخیره تغییرات کنترل‌های زیر فرآیند.",
+      "duplicate": "این کنترل قبلاً به این زیر فرآیند متصل شده است.",
+      "show": "نمایش",
+      "remove": "حذف اتصال",
+      "removeTitle": "حذف اتصال کنترل",
+      "removeConfirm": "آیا از حذف اتصال کنترل «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف اتصال",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول کنترل‌های زیر فرآیند",
+      "columns": {
+        "code": "کد",
+        "name": "نام کنترل",
+        "description": "شرح",
+        "status": "وضعیت",
+        "owner": "مسئول",
+        "validity": "اعتبار",
+        "actions": "عملیات"
+      }
+    },
     "tabs": {
       "general": "اطلاعات کلی",
       "accountGroups": "گروه حساب",
       "risks": "ریسک",
       "rules": "قوانین",
       "objectives": "اهداف",
-      "documents": "مستندات"
+      "documents": "مستندات",
+      "controls": "کنترل‌ها"
     },
     "tree": {
       "expand": "باز کردن شاخه",
@@ -135,6 +165,9 @@
       "modalPlaceholder": "جزئیات مودال فرآیند در قدم بعدی تکمیل می‌شود. در این مرحله ساختار درختی، انتخاب و پنل جزئیات پیاده‌سازی شده است.",
       "modalTitle": "مرکز فرآیند",
       "createModalTitle": "ایجاد"
+    },
+    "createMenu": {
+      "control": "کنترل"
     },
     "create": {
       "title": "ایجاد آیتم فرآیندی"

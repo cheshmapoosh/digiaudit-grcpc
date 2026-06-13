@@ -85,20 +85,6 @@ export function countSubProcessControls(
     ).length;
 }
 
-export function getSubProcessControlIds(
-    items: ProcessControlTreeItem[],
-    subProcessId: string,
-): string[] {
-    return items
-        .filter(
-            (item) =>
-                item.nodeType === "control" &&
-                (item.parentId === subProcessId || item.subProcessId === subProcessId) &&
-                Boolean(item.controlId),
-        )
-        .map((item) => item.controlId as string);
-}
-
 export function hasAttachedControlsInScope(
     items: ProcessControlTreeItem[],
     target: ProcessControlTreeItem,

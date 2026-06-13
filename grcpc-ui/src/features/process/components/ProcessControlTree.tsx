@@ -247,7 +247,7 @@ function ProcessControlTreeNodeItem({
 }: ProcessControlTreeItemProps) {
     const { t } = useTranslation();
     const isSelected = node.id === selectedId;
-    const displayName = node.code?.trim() ? `${node.code} - ${node.title}` : node.title;
+    const displayName = node.title;
 
     return (
         <TreeItemCustom

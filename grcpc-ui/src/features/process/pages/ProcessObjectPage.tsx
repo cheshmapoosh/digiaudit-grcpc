@@ -25,6 +25,7 @@ import type {
 } from "../domain/process.model";
 import ProcessObjectivesTab from "../components/tabs/ProcessObjectivesTab";
 import ProcessAccountGroupsTab from "../components/tabs/ProcessAccountGroupsTab";
+import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
@@ -35,7 +36,8 @@ type ProcessTabKey =
     | "objectives"
     | "accountGroups"
     | "risks"
-    | "documents";
+    | "documents"
+    | "controls";
 
 interface ProcessFormState {
     code: string;
@@ -63,6 +65,8 @@ export interface ProcessObjectPageProps {
     onSubmit: (payload: ProcessNodeCreate | ProcessNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
     onEdit?: () => void;
+    onOpenControlAssignment?: (controlAssignmentId: string) => void;
+    onControlStructureChanged?: () => void | Promise<void>;
 }
 
 const ROOT_STYLE: CSSProperties = {
@@ -319,6 +323,7 @@ function defaultTabs(nodeType: ProcessNodeType): ProcessTabKey[] {
             "accountGroups",
             "risks",
             "documents",
+            "controls",
         ];
     }
 
@@ -333,6 +338,7 @@ function resolveTabLabel(tab: ProcessTabKey, t: ReturnType<typeof useTranslation
         accountGroups: t("process.tabs.accountGroups", { defaultValue: "گروه حساب" }),
         risks: t("process.tabs.risks", { defaultValue: "ریسک" }),
         documents: t("process.tabs.documents", { defaultValue: "مستندات" }),
+        controls: t("process.tabs.controls", { defaultValue: "کنترل‌ها" }),
     };
 
     return labels[tab];
@@ -435,6 +441,8 @@ export default function ProcessObjectPage({
                                               onSubmit,
                                               onCancel,
                                               onEdit,
+                                              onOpenControlAssignment,
+                                              onControlStructureChanged,
                                           }: ProcessObjectPageProps) {
     const { t } = useTranslation();
     const readOnly = mode === "view";
@@ -759,6 +767,22 @@ export default function ProcessObjectPage({
                         t("process.fields.description", { defaultValue: "شرح" }),
                         t("process.fields.source", { defaultValue: "منبع" }),
                     ]}
+                />
+            );
+        }
+
+        if (tab === "controls") {
+            if (form.nodeType !== "subProcess") {
+                return null;
+            }
+
+            return (
+                <ProcessControlsTab
+                    key={currentProcessId ?? "unsaved-sub-process-controls"}
+                    subProcessId={currentProcessId}
+                    subProcessTitle={form.title || value?.title}
+                    onOpenControl={onOpenControlAssignment}
+                    onControlStructureChanged={onControlStructureChanged}
                 />
             );
         }

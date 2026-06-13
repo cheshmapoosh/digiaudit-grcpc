@@ -26,15 +26,12 @@ import ProcessSummaryPanel from "../components/ProcessSummaryPanel";
 import ProcessesListReport from "./ProcessesListReport";
 import ProcessObjectPage from "./ProcessObjectPage";
 import type {
-    AttachExistingControlRequest,
     ControlDetails,
     ControlStructureNode,
     CreateControlAndAssignRequest,
     UpdateControlAssignmentRequest,
 } from "@/features/control/domain/control.model";
 import { useControlState } from "@/features/control/state/control.state";
-import type { ProcessControlCreateAction } from "../components/ProcessCreateMenu";
-import AttachControlDialog from "@/features/control/pages/AttachControlDialog";
 import ControlObjectPage from "@/features/control/pages/ControlObjectPage";
 import CreateControlDialog from "@/features/control/pages/CreateControlDialog";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
@@ -42,7 +39,6 @@ import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import {
     countSubProcessControls,
     findProcessControlItemById,
-    getSubProcessControlIds,
     hasAttachedControlsInScope,
     sortProcessControlItems,
     toProcessControlTreeItem,
@@ -393,7 +389,6 @@ export default function ProcessesFclShellPage() {
     const refreshControlStructure = useControlState((state) => state.refreshStructure);
     const loadControlAssignment = useControlState((state) => state.loadAssignment);
     const createAndAssignControl = useControlState((state) => state.createAndAssign);
-    const attachExistingControl = useControlState((state) => state.attachExisting);
     const updateControlAssignment = useControlState((state) => state.updateAssignment);
     const deleteControlAssignment = useControlState((state) => state.deleteAssignment);
 
@@ -408,7 +403,6 @@ export default function ProcessesFclShellPage() {
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
     const [createControlContext, setCreateControlContext] = useState<SubProcessContext | null>(null);
-    const [attachControlContext, setAttachControlContext] = useState<SubProcessContext | null>(null);
 
     const processItems = useMemo(() => sortProcesses(Object.values(nodesById)), [nodesById]);
     const combinedTreeItems = useMemo(() => {
@@ -796,8 +790,8 @@ export default function ProcessesFclShellPage() {
         [createNode, navigate, processId, routeMode, t, updateNode],
     );
 
-    const handleCreateControlAction = useCallback(
-        (action: ProcessControlCreateAction) => {
+    const handleCreateControl = useCallback(
+        () => {
             const currentSelectedItem = selectedCombinedItem;
             const currentAssignment = currentSelectedItem?.nodeType === "control"
                 ? selectedControlAssignment
@@ -810,9 +804,9 @@ export default function ProcessesFclShellPage() {
 
             if (!context) {
                 setPageError(
-                    t("control.errors.selectSubProcess", {
+                    t("control.errors.selectSubProcessForCreate", {
                         defaultValue:
-                            "برای تعریف یا اتصال کنترل، ابتدا یک زیر فرآیند یا کنترل زیر آن را انتخاب کنید.",
+                            "برای ایجاد کنترل، ابتدا یک زیر فرآیند یا کنترل زیر آن را انتخاب کنید.",
                     }),
                 );
                 return;
@@ -820,13 +814,7 @@ export default function ProcessesFclShellPage() {
 
             setPageError(null);
             setControlDialogError(null);
-
-            if (action === "createNew") {
-                setCreateControlContext(context);
-                return;
-            }
-
-            setAttachControlContext(context);
+            setCreateControlContext(context);
         },
         [combinedTreeItems, selectedCombinedItem, selectedControlAssignment, t],
     );
@@ -861,38 +849,6 @@ export default function ProcessesFclShellPage() {
             }
         },
         [createAndAssignControl, createControlContext, navigate, t],
-    );
-
-    const handleAttachControlSubmit = useCallback(
-        async (payload: AttachExistingControlRequest) => {
-            if (!attachControlContext) {
-                return;
-            }
-
-            try {
-                setSubmitting(true);
-                setControlDialogError(null);
-                const attached = await attachExistingControl(
-                    attachControlContext.subProcessId,
-                    payload,
-                );
-                setAttachControlContext(null);
-                setSelectedTreeId(attached.controlAssignmentId);
-                setTreeExpansionAnchorId(attached.controlAssignmentId);
-                navigate(`/processes/control-assignments/${attached.controlAssignmentId}`);
-            } catch (error) {
-                setControlDialogError(
-                    mapControlError(
-                        error,
-                        t("control.errors.save", { defaultValue: "خطا در ذخیره کنترل" }),
-                        t,
-                    ),
-                );
-            } finally {
-                setSubmitting(false);
-            }
-        },
-        [attachControlContext, attachExistingControl, navigate, t],
     );
 
     const handleControlObjectSubmit = useCallback(
@@ -947,6 +903,33 @@ export default function ProcessesFclShellPage() {
         navigate(`/processes/control-assignments/${controlAssignmentId}/edit`);
     }, [controlAssignmentId, navigate]);
 
+    const handleOpenControlAssignment = useCallback(
+        (targetControlAssignmentId: string) => {
+            setSelectedTreeId(targetControlAssignmentId);
+            setTreeExpansionAnchorId(targetControlAssignmentId);
+            setPageError(null);
+            setControlObjectError(null);
+            navigate(`/processes/control-assignments/${targetControlAssignmentId}`);
+        },
+        [navigate],
+    );
+
+    const handleControlStructureChanged = useCallback(async () => {
+        try {
+            await refreshControlStructure();
+        } catch (error) {
+            setPageError(
+                mapControlError(
+                    error,
+                    t("control.errors.loadStructure", {
+                        defaultValue: "خطا در بارگذاری ساختار کنترل‌ها",
+                    }),
+                    t,
+                ),
+            );
+        }
+    }, [refreshControlStructure, t]);
+
     const showModal =
         !isControlRoute && (routeMode === "create" || routeMode === "view" || routeMode === "edit");
 
@@ -973,13 +956,6 @@ export default function ProcessesFclShellPage() {
     const selectedSubProcessControlsCount = selectedTreeItem?.nodeType === "subProcess"
         ? countSubProcessControls(combinedTreeItems, selectedTreeItem.id)
         : undefined;
-    const attachExcludedControlIds = useMemo(
-        () =>
-            attachControlContext
-                ? getSubProcessControlIds(combinedTreeItems, attachControlContext.subProcessId)
-                : [],
-        [attachControlContext, combinedTreeItems],
-    );
     const createOptions = CREATE_NODE_TYPES;
 
     const slotContainerStyle = useMemo<CSSProperties>(
@@ -1046,7 +1022,7 @@ export default function ProcessesFclShellPage() {
                 createOptions={createOptions}
                 onSearchTextChange={setSearchText}
                 onCreate={handleCreate}
-                onCreateControlAction={handleCreateControlAction}
+                onCreateControl={handleCreateControl}
                 onShow={handleShow}
                 onDelete={requestDelete}
                 onSelect={handleSelect}
@@ -1164,6 +1140,8 @@ export default function ProcessesFclShellPage() {
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
+                            onOpenControlAssignment={handleOpenControlAssignment}
+                            onControlStructureChanged={handleControlStructureChanged}
                         />
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
@@ -1188,23 +1166,6 @@ export default function ProcessesFclShellPage() {
                         setControlDialogError(null);
                     }}
                     onSubmit={handleCreateControlSubmit}
-                />
-            ) : null}
-
-            {attachControlContext ? (
-                <AttachControlDialog
-                    open
-                    busy={controlLoading || submitting}
-                    error={controlDialogError}
-                    subProcessId={attachControlContext.subProcessId}
-                    subProcessTitle={attachControlContext.subProcessTitle}
-                    excludedControlIds={attachExcludedControlIds}
-                    onErrorClose={() => setControlDialogError(null)}
-                    onClose={() => {
-                        setAttachControlContext(null);
-                        setControlDialogError(null);
-                    }}
-                    onSubmit={handleAttachControlSubmit}
                 />
             ) : null}
 

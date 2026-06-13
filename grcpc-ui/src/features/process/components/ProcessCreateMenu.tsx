@@ -1,23 +1,33 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { addCustomCSS } from "@ui5/webcomponents-base/dist/theming/CustomStyle.js";
 import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 import type { ProcessNodeType } from "../domain/process.model";
 
-export type ProcessControlCreateAction = "createNew" | "attachExisting";
-
-type CreateMenuAction =
-    | { kind: "process"; nodeType: ProcessNodeType }
-    | { kind: "control"; action: ProcessControlCreateAction };
+type CreateMenuAction = { kind: "process"; nodeType: ProcessNodeType };
 
 const DEFAULT_CREATE_NODE_TYPES: ProcessNodeType[] = ["process", "subProcess"];
+const PROCESS_CREATE_MENU_BUTTON_CLASS = "process-create-menu-button";
+
+addCustomCSS(
+    "ui5-button",
+    `
+        :host(.${PROCESS_CREATE_MENU_BUTTON_CLASS}) .ui5-button-root {
+            justify-content: flex-start;
+        }
+
+        :host(.${PROCESS_CREATE_MENU_BUTTON_CLASS}) .ui5-button-end-icon {
+            margin-left: 0 !important;
+            margin-inline-start: auto !important;
+        }
+    `,
+);
 
 const CREATE_MENU_ACTIONS: Record<string, CreateMenuAction> = {
     "process-create-menu-process": { kind: "process", nodeType: "process" },
     "process-create-menu-sub-process": { kind: "process", nodeType: "subProcess" },
-    "process-create-menu-control-create": { kind: "control", action: "createNew" },
-    "process-create-menu-control-attach": { kind: "control", action: "attachExisting" },
 };
 
 const createMenuItemIdByNodeType: Record<ProcessNodeType, string> = {
@@ -42,7 +52,6 @@ export interface ProcessCreateMenuProps {
     style?: CSSProperties;
     nodeTypes?: ProcessNodeType[];
     onCreateProcess: (nodeType: ProcessNodeType) => void;
-    onCreateControl: (action: ProcessControlCreateAction) => void;
 }
 
 function readClickedAction(event: unknown): CreateMenuAction | null {
@@ -64,7 +73,6 @@ export default function ProcessCreateMenu({
     style,
     nodeTypes = DEFAULT_CREATE_NODE_TYPES,
     onCreateProcess,
-    onCreateControl,
 }: ProcessCreateMenuProps) {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
@@ -89,18 +97,14 @@ export default function ProcessCreateMenu({
             onClose={() => setOpen(false)}
             onItemClick={(event) => {
                 const action = readClickedAction(event);
-                setOpen(false);
 
                 if (!action) {
                     return;
                 }
 
-                if (action.kind === "process") {
-                    onCreateProcess(action.nodeType);
-                    return;
-                }
+                setOpen(false);
 
-                onCreateControl(action.action);
+                onCreateProcess(action.nodeType);
             }}
         >
             {visibleNodeTypes.map((nodeType) => (
@@ -110,24 +114,13 @@ export default function ProcessCreateMenu({
                     text={labels[nodeType]}
                 />
             ))}
-            <MenuItem
-                id="process-create-menu-control-create"
-                text={t("process.createMenu.controlCreate", {
-                    defaultValue: "کنترل - ایجاد",
-                })}
-            />
-            <MenuItem
-                id="process-create-menu-control-attach"
-                text={t("process.createMenu.controlAttach", {
-                    defaultValue: "کنترل - اتصال",
-                })}
-            />
         </Menu>
     );
 
     return (
         <>
             <Button
+                className={PROCESS_CREATE_MENU_BUTTON_CLASS}
                 design="Emphasized"
                 disabled={disabled}
                 style={style}

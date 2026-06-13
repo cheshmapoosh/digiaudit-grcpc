@@ -10,9 +10,7 @@ import {
 } from "@ui5/webcomponents-react";
 
 import type { ProcessNodeType } from "../domain/process.model";
-import ProcessCreateMenu, {
-    type ProcessControlCreateAction,
-} from "../components/ProcessCreateMenu";
+import ProcessCreateMenu from "../components/ProcessCreateMenu";
 import ProcessControlTree from "../components/ProcessControlTree";
 import type { ProcessControlTreeItem } from "../utils/process-control.tree";
 
@@ -28,7 +26,7 @@ export interface ProcessesListReportProps {
     createOptions: ProcessNodeType[];
     onSearchTextChange: (value: string) => void;
     onCreate: (nodeType: ProcessNodeType) => void;
-    onCreateControlAction: (action: ProcessControlCreateAction) => void;
+    onCreateControl: () => void;
     onShow: (id: string) => void;
     onDelete: (id: string) => void;
     onSelect: (id: string) => void;
@@ -50,7 +48,7 @@ export default function ProcessesListReport({
                                                 createOptions,
                                                 onSearchTextChange,
                                                 onCreate,
-                                                onCreateControlAction,
+                                                onCreateControl,
                                                 onShow,
                                                 onDelete,
                                                 onSelect,
@@ -100,8 +98,16 @@ export default function ProcessesListReport({
                             style={actionButtonStyle}
                             nodeTypes={createOptions}
                             onCreateProcess={onCreate}
-                            onCreateControl={onCreateControlAction}
                         />
+
+                        <Button
+                            design="Emphasized"
+                            disabled={busy}
+                            style={actionButtonStyle}
+                            onClick={onCreateControl}
+                        >
+                            {t("process.createMenu.control", { defaultValue: "کنترل" })}
+                        </Button>
 
                         <Button
                             design="Emphasized"
