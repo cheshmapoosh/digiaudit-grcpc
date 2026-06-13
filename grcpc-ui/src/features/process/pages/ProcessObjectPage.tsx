@@ -319,11 +319,11 @@ function defaultTabs(nodeType: ProcessNodeType): ProcessTabKey[] {
         return [
             "general",
             "rules",
+            "controls",
             "objectives",
             "accountGroups",
             "risks",
             "documents",
-            "controls",
         ];
     }
 

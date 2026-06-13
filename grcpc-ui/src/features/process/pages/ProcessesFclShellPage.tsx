@@ -403,6 +403,8 @@ export default function ProcessesFclShellPage() {
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
     const [createControlContext, setCreateControlContext] = useState<SubProcessContext | null>(null);
+    const [controlModalAssignmentId, setControlModalAssignmentId] = useState<string | null>(null);
+    const [controlModalError, setControlModalError] = useState<string | null>(null);
 
     const processItems = useMemo(() => sortProcesses(Object.values(nodesById)), [nodesById]);
     const combinedTreeItems = useMemo(() => {
@@ -502,6 +504,9 @@ export default function ProcessesFclShellPage() {
     const selectedControlAssignment = controlAssignmentId
         ? controlAssignmentsById[controlAssignmentId] ?? null
         : null;
+    const controlModalAssignment = controlModalAssignmentId
+        ? controlAssignmentsById[controlModalAssignmentId] ?? null
+        : null;
 
     const treeExpansionAnchorIdValue = useMemo(() => {
         if (routeMode === "create") {
@@ -547,6 +552,28 @@ export default function ProcessesFclShellPage() {
         [combinedTreeItems, isControlRoute, navigate],
     );
 
+    const handleOpenControlAssignment = useCallback(
+        async (targetControlAssignmentId: string) => {
+            setControlModalAssignmentId(targetControlAssignmentId);
+            setControlModalError(null);
+
+            try {
+                await loadControlAssignment(targetControlAssignmentId);
+            } catch (error) {
+                setControlModalError(
+                    mapControlError(
+                        error,
+                        t("control.errors.loadAssignment", {
+                            defaultValue: "خطا در بارگذاری جزئیات اتصال کنترل",
+                        }),
+                        t,
+                    ),
+                );
+            }
+        },
+        [loadControlAssignment, t],
+    );
+
     const handleShow = useCallback(
         (id: string) => {
             const selectedItem = findProcessControlItemById(combinedTreeItems, id);
@@ -556,13 +583,13 @@ export default function ProcessesFclShellPage() {
             setTreeExpansionAnchorId(id);
 
             if (selectedItem?.nodeType === "control") {
-                navigate(`/processes/control-assignments/${id}`);
+                void handleOpenControlAssignment(selectedItem.controlAssignmentId ?? selectedItem.id);
                 return;
             }
 
             navigate(`/processes/${id}`);
         },
-        [combinedTreeItems, navigate],
+        [combinedTreeItems, handleOpenControlAssignment, navigate],
     );
 
     const handleCreate = useCallback(
@@ -903,16 +930,12 @@ export default function ProcessesFclShellPage() {
         navigate(`/processes/control-assignments/${controlAssignmentId}/edit`);
     }, [controlAssignmentId, navigate]);
 
-    const handleOpenControlAssignment = useCallback(
-        (targetControlAssignmentId: string) => {
-            setSelectedTreeId(targetControlAssignmentId);
-            setTreeExpansionAnchorId(targetControlAssignmentId);
-            setPageError(null);
-            setControlObjectError(null);
-            navigate(`/processes/control-assignments/${targetControlAssignmentId}`);
-        },
-        [navigate],
-    );
+    const handleControlModalClose = useCallback(() => {
+        setControlModalAssignmentId(null);
+        setControlModalError(null);
+    }, []);
+
+    const handleControlModalSubmit = useCallback(() => undefined, []);
 
     const handleControlStructureChanged = useCallback(async () => {
         try {
@@ -1098,6 +1121,9 @@ export default function ProcessesFclShellPage() {
         : null;
 
     const dialogTitle = resolveDialogTitle(routeMode, t);
+    const controlModalTitle = t("control.object.viewTitle", {
+        defaultValue: "نمایش کنترل",
+    });
 
     return (
         <>
@@ -1152,6 +1178,45 @@ export default function ProcessesFclShellPage() {
                     )}
                 </div>
             </Dialog>
+
+            {controlModalAssignmentId ? (
+                <Dialog
+                    open
+                    accessibleName={controlModalTitle}
+                    className="processControlObjectDialog"
+                    style={dialogStyle}
+                    onClose={handleControlModalClose}
+                >
+                    <ModalDialogHeader
+                        title={controlModalTitle}
+                        onClose={handleControlModalClose}
+                    />
+                    <div style={dialogContentStyle}>
+                        {controlModalAssignment ? (
+                            <ControlObjectPage
+                                key={`modal:${controlModalAssignment.controlAssignmentId}`}
+                                mode="view"
+                                value={controlModalAssignment}
+                                busy={controlLoading || submitting}
+                                error={controlModalError}
+                                onErrorClose={() => setControlModalError(null)}
+                                onSubmit={handleControlModalSubmit}
+                                onCancel={handleControlModalClose}
+                            />
+                        ) : controlModalError ? (
+                            <MessageStrip design="Negative" onClose={() => setControlModalError(null)}>
+                                {controlModalError}
+                            </MessageStrip>
+                        ) : (
+                            <MessageStrip design="Information" hideCloseButton>
+                                {t("control.object.loading", {
+                                    defaultValue: "در حال بارگذاری کنترل...",
+                                })}
+                            </MessageStrip>
+                        )}
+                    </div>
+                </Dialog>
+            ) : null}
 
             {createControlContext ? (
                 <CreateControlDialog

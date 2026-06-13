@@ -129,10 +129,10 @@
       "mutationError": "خطا در ذخیره تغییرات کنترل‌های زیر فرآیند.",
       "duplicate": "این کنترل قبلاً به این زیر فرآیند متصل شده است.",
       "show": "نمایش",
-      "remove": "حذف اتصال",
+      "remove": "حذف",
       "removeTitle": "حذف اتصال کنترل",
       "removeConfirm": "آیا از حذف اتصال کنترل «{{title}}» مطمئن هستید؟",
-      "confirmRemove": "حذف اتصال",
+      "confirmRemove": "حذف",
       "cancelRemove": "انصراف",
       "tableAccessibleName": "جدول کنترل‌های زیر فرآیند",
       "columns": {

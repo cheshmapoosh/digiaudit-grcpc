@@ -550,7 +550,7 @@ export default function ProcessControlsTab({
                                         onClick={() => setRemoveCandidate(control)}
                                     >
                                         {t("process.controls.remove", {
-                                            defaultValue: "حذف اتصال",
+                                            defaultValue: "حذف",
                                         })}
                                     </Button>
                                 </div>
@@ -571,7 +571,7 @@ export default function ProcessControlsTab({
                 })}
                 loading={mutationBusy}
                 confirmText={t("process.controls.confirmRemove", {
-                    defaultValue: "حذف اتصال",
+                    defaultValue: "حذف",
                 })}
                 cancelText={t("process.controls.cancelRemove", {
                     defaultValue: "انصراف",

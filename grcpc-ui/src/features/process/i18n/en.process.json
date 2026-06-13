@@ -129,10 +129,10 @@
       "mutationError": "Failed to save sub-process control changes.",
       "duplicate": "This control is already attached to this sub-process.",
       "show": "View",
-      "remove": "Remove Assignment",
+      "remove": "Delete",
       "removeTitle": "Remove Control Assignment",
       "removeConfirm": "Remove control assignment \"{{title}}\"?",
-      "confirmRemove": "Remove Assignment",
+      "confirmRemove": "Delete",
       "cancelRemove": "Cancel",
       "tableAccessibleName": "Sub-process controls table",
       "columns": {

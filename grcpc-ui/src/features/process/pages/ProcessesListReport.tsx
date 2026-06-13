@@ -98,16 +98,8 @@ export default function ProcessesListReport({
                             style={actionButtonStyle}
                             nodeTypes={createOptions}
                             onCreateProcess={onCreate}
+                            onCreateControl={onCreateControl}
                         />
-
-                        <Button
-                            design="Emphasized"
-                            disabled={busy}
-                            style={actionButtonStyle}
-                            onClick={onCreateControl}
-                        >
-                            {t("process.createMenu.control", { defaultValue: "کنترل" })}
-                        </Button>
 
                         <Button
                             design="Emphasized"

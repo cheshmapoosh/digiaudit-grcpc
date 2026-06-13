@@ -6,7 +6,9 @@ import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 import type { ProcessNodeType } from "../domain/process.model";
 
-type CreateMenuAction = { kind: "process"; nodeType: ProcessNodeType };
+type CreateMenuAction =
+    | { kind: "process"; nodeType: ProcessNodeType }
+    | { kind: "control" };
 
 const DEFAULT_CREATE_NODE_TYPES: ProcessNodeType[] = ["process", "subProcess"];
 const PROCESS_CREATE_MENU_BUTTON_CLASS = "process-create-menu-button";
@@ -28,6 +30,7 @@ addCustomCSS(
 const CREATE_MENU_ACTIONS: Record<string, CreateMenuAction> = {
     "process-create-menu-process": { kind: "process", nodeType: "process" },
     "process-create-menu-sub-process": { kind: "process", nodeType: "subProcess" },
+    "process-create-menu-control": { kind: "control" },
 };
 
 const createMenuItemIdByNodeType: Record<ProcessNodeType, string> = {
@@ -52,6 +55,7 @@ export interface ProcessCreateMenuProps {
     style?: CSSProperties;
     nodeTypes?: ProcessNodeType[];
     onCreateProcess: (nodeType: ProcessNodeType) => void;
+    onCreateControl: () => void;
 }
 
 function readClickedAction(event: unknown): CreateMenuAction | null {
@@ -73,6 +77,7 @@ export default function ProcessCreateMenu({
     style,
     nodeTypes = DEFAULT_CREATE_NODE_TYPES,
     onCreateProcess,
+    onCreateControl,
 }: ProcessCreateMenuProps) {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
@@ -104,7 +109,12 @@ export default function ProcessCreateMenu({
 
                 setOpen(false);
 
-                onCreateProcess(action.nodeType);
+                if (action.kind === "process") {
+                    onCreateProcess(action.nodeType);
+                    return;
+                }
+
+                onCreateControl();
             }}
         >
             {visibleNodeTypes.map((nodeType) => (
@@ -114,6 +124,10 @@ export default function ProcessCreateMenu({
                     text={labels[nodeType]}
                 />
             ))}
+            <MenuItem
+                id="process-create-menu-control"
+                text={t("process.createMenu.control", { defaultValue: "کنترل" })}
+            />
         </Menu>
     );
 

@@ -29,7 +29,9 @@
     },
     "object": {
       "selectPrompt": "Select a process, sub-process, or control from the list.",
-      "notFound": "The selected control assignment was not found."
+      "notFound": "The selected control assignment was not found.",
+      "viewTitle": "View Control",
+      "loading": "Loading control..."
     },
     "sections": {
       "assignmentInfo": "Control Assignment Information"
