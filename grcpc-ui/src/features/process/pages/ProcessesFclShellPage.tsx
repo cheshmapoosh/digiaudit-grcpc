@@ -34,6 +34,7 @@ import type {
 import { useControlState } from "@/features/control/state/control.state";
 import ControlObjectPage, { type ControlObjectMode } from "@/features/control/pages/ControlObjectPage";
 import CreateControlDialog from "@/features/control/pages/CreateControlDialog";
+import { useDocumentAttachmentState } from "@/features/document";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import {
@@ -52,6 +53,8 @@ type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
 const DIALOG_NORMAL_WIDTH = "96vw";
 const DIALOG_LARGE_WIDTH = "92vw";
+const PROCESS_DOCUMENT_TARGET_TYPE = "PROCESS_NODE";
+const CONTROL_DOCUMENT_TARGET_TYPE = "CONTROL_ASSIGNMENT";
 
 function useProcessRouteMode(): RouteMode {
     const { processId, controlAssignmentId } = useParams();
@@ -74,6 +77,14 @@ function useProcessRouteMode(): RouteMode {
 
 function isProcessNodeType(value: string | null): value is ProcessNodeType {
     return value === "process" || value === "subProcess";
+}
+
+function createDocumentTempSessionId(): string {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function mapError(
@@ -391,6 +402,11 @@ export default function ProcessesFclShellPage() {
     const createAndAssignControl = useControlState((state) => state.createAndAssign);
     const updateControlAssignment = useControlState((state) => state.updateAssignment);
     const deleteControlAssignment = useControlState((state) => state.deleteAssignment);
+    const tempDocumentsBySession = useDocumentAttachmentState(
+        (state) => state.tempDocumentsBySession,
+    );
+    const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
+    const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -406,6 +422,15 @@ export default function ProcessesFclShellPage() {
     const [controlModalAssignmentId, setControlModalAssignmentId] = useState<string | null>(null);
     const [controlModalMode, setControlModalMode] = useState<ControlObjectMode>("view");
     const [controlModalError, setControlModalError] = useState<string | null>(null);
+    const [processDocumentTempSessionId, setProcessDocumentTempSessionId] = useState(
+        createDocumentTempSessionId,
+    );
+    const [controlDocumentTempSessionId, setControlDocumentTempSessionId] = useState(
+        createDocumentTempSessionId,
+    );
+    const [controlModalDocumentTempSessionId, setControlModalDocumentTempSessionId] = useState(
+        createDocumentTempSessionId,
+    );
 
     const processItems = useMemo(() => sortProcesses(Object.values(nodesById)), [nodesById]);
     const combinedTreeItems = useMemo(() => {
@@ -434,6 +459,30 @@ export default function ProcessesFclShellPage() {
         return defaultChildType(selectedParentForCreate?.nodeType ?? null);
     }, [queryNodeType, selectedParentForCreate]);
 
+    const processDocumentScopeKey = useMemo(() => {
+        if (isControlRoute) {
+            return "none";
+        }
+
+        if (routeMode === "create") {
+            return `create:${queryParentId ?? "root"}:${requestedNodeType}`;
+        }
+
+        if ((routeMode === "view" || routeMode === "edit") && processId) {
+            return `process:${routeMode}:${processId}`;
+        }
+
+        return "none";
+    }, [isControlRoute, processId, queryParentId, requestedNodeType, routeMode]);
+
+    const controlDocumentScopeKey = useMemo(() => {
+        if (!isControlRoute || !controlAssignmentId) {
+            return "none";
+        }
+
+        return `control:${routeMode}:${controlAssignmentId}`;
+    }, [controlAssignmentId, isControlRoute, routeMode]);
+
     useEffect(() => {
         void loadChildren(ROOT_PARENT).catch((error: unknown) => {
             setPageError(
@@ -447,6 +496,18 @@ export default function ProcessesFclShellPage() {
             );
         });
     }, [loadChildren, t]);
+
+    useEffect(() => {
+        setProcessDocumentTempSessionId(createDocumentTempSessionId());
+    }, [processDocumentScopeKey]);
+
+    useEffect(() => {
+        setControlDocumentTempSessionId(createDocumentTempSessionId());
+    }, [controlDocumentScopeKey]);
+
+    useEffect(() => {
+        setControlModalDocumentTempSessionId(createDocumentTempSessionId());
+    }, [controlModalAssignmentId, controlModalMode]);
 
     useEffect(() => {
         void refreshControlStructure().catch((error: unknown) => {
@@ -779,6 +840,30 @@ export default function ProcessesFclShellPage() {
         }
     }, [deleteControlAssignment, deleteControlCandidate, navigate, t]);
 
+    const commitDocumentTempUploads = useCallback(
+        async (targetType: string, targetId: string, tempSessionId: string) => {
+            const tempDocuments = tempDocumentsBySession[tempSessionId] ?? [];
+            if (tempDocuments.length === 0) {
+                return;
+            }
+
+            await commitTempDocuments({
+                tempSessionId,
+                targetType,
+                targetId,
+                documentIds: tempDocuments.map((documentItem) => documentItem.id),
+                documentTitles: Object.fromEntries(
+                    tempDocuments.map((documentItem) => [
+                        documentItem.id,
+                        documentItem.title || documentItem.originalFileName,
+                    ]),
+                ),
+            });
+            await loadDocumentsForTarget(targetType, targetId);
+        },
+        [commitTempDocuments, loadDocumentsForTarget, tempDocumentsBySession],
+    );
+
     const handleObjectSubmit = useCallback(
         async (payload: ProcessNodeCreate | ProcessNodeUpdate) => {
             try {
@@ -789,6 +874,11 @@ export default function ProcessesFclShellPage() {
                 if (routeMode === "create") {
                     const createPayload = payload as ProcessNodeCreate;
                     const created = await createNode(createPayload.parentId ?? null, createPayload);
+                    await commitDocumentTempUploads(
+                        PROCESS_DOCUMENT_TARGET_TYPE,
+                        created.id,
+                        processDocumentTempSessionId,
+                    );
 
                     setSelectedTreeId(created.id);
                     setTreeExpansionAnchorId(created.id);
@@ -798,6 +888,11 @@ export default function ProcessesFclShellPage() {
 
                 if (routeMode === "edit" && processId) {
                     await updateNode(processId, payload as ProcessNodeUpdate);
+                    await commitDocumentTempUploads(
+                        PROCESS_DOCUMENT_TARGET_TYPE,
+                        processId,
+                        processDocumentTempSessionId,
+                    );
                     setSelectedTreeId(processId);
                     setTreeExpansionAnchorId(processId);
                     navigate("/processes");
@@ -816,7 +911,16 @@ export default function ProcessesFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [createNode, navigate, processId, routeMode, t, updateNode],
+        [
+            commitDocumentTempUploads,
+            createNode,
+            navigate,
+            processDocumentTempSessionId,
+            processId,
+            routeMode,
+            t,
+            updateNode,
+        ],
     );
 
     const handleCreateControl = useCallback(
@@ -890,6 +994,11 @@ export default function ProcessesFclShellPage() {
                 setSubmitting(true);
                 setControlObjectError(null);
                 await updateControlAssignment(controlAssignmentId, payload);
+                await commitDocumentTempUploads(
+                    CONTROL_DOCUMENT_TARGET_TYPE,
+                    controlAssignmentId,
+                    controlDocumentTempSessionId,
+                );
                 setSelectedTreeId(controlAssignmentId);
                 setTreeExpansionAnchorId(controlAssignmentId);
                 navigate(`/processes/control-assignments/${controlAssignmentId}`);
@@ -905,7 +1014,14 @@ export default function ProcessesFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [controlAssignmentId, navigate, t, updateControlAssignment],
+        [
+            commitDocumentTempUploads,
+            controlAssignmentId,
+            controlDocumentTempSessionId,
+            navigate,
+            t,
+            updateControlAssignment,
+        ],
     );
 
     const handleCancelControlObject = useCallback(() => {
@@ -953,6 +1069,11 @@ export default function ProcessesFclShellPage() {
                 setSubmitting(true);
                 setControlModalError(null);
                 await updateControlAssignment(controlModalAssignmentId, payload);
+                await commitDocumentTempUploads(
+                    CONTROL_DOCUMENT_TARGET_TYPE,
+                    controlModalAssignmentId,
+                    controlModalDocumentTempSessionId,
+                );
                 await Promise.all([
                     loadControlAssignment(controlModalAssignmentId),
                     refreshControlStructure(),
@@ -971,7 +1092,9 @@ export default function ProcessesFclShellPage() {
             }
         },
         [
+            commitDocumentTempUploads,
             controlModalAssignmentId,
+            controlModalDocumentTempSessionId,
             loadControlAssignment,
             refreshControlStructure,
             t,
@@ -1136,6 +1259,7 @@ export default function ProcessesFclShellPage() {
                         value={selectedControlAssignment}
                         busy={controlLoading || submitting}
                         error={controlObjectError}
+                        documentTempSessionId={controlDocumentTempSessionId}
                         onErrorClose={() => setControlObjectError(null)}
                         onSubmit={handleControlObjectSubmit}
                         onCancel={handleCancelControlObject}
@@ -1235,6 +1359,7 @@ export default function ProcessesFclShellPage() {
                             requestedNodeType={requestedNodeType}
                             busy={loading || submitting}
                             error={objectError}
+                            documentTempSessionId={processDocumentTempSessionId}
                             onErrorClose={() => setObjectError(null)}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
@@ -1272,6 +1397,7 @@ export default function ProcessesFclShellPage() {
                                 value={controlModalAssignment}
                                 busy={controlLoading || submitting}
                                 error={controlModalError}
+                                documentTempSessionId={controlModalDocumentTempSessionId}
                                 onErrorClose={() => setControlModalError(null)}
                                 onSubmit={handleControlModalSubmit}
                                 onCancel={handleControlModalCancel}

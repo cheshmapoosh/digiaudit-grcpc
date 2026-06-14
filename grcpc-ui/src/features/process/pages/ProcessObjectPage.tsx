@@ -1,4 +1,11 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -28,7 +35,10 @@ import ProcessAccountGroupsTab from "../components/tabs/ProcessAccountGroupsTab"
 import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
 import ProcessRegulationsTab from "../components/tabs/ProcessRegulationsTab";
 import ProcessRisksTab from "../components/tabs/ProcessRisksTab";
-import { DocumentAttachmentsManager } from "@/features/document";
+import {
+    DocumentAttachmentsManager,
+    type DocumentBeforeParentSubmitHandler,
+} from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
@@ -64,6 +74,7 @@ export interface ProcessObjectPageProps {
     requestedNodeType?: ProcessNodeType;
     busy?: boolean;
     error?: string | null;
+    documentTempSessionId?: string;
     onErrorClose?: () => void;
     onSubmit: (payload: ProcessNodeCreate | ProcessNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
@@ -375,6 +386,7 @@ export default function ProcessObjectPage({
                                               requestedNodeType,
                                               busy = false,
                                               error,
+                                              documentTempSessionId,
                                               onErrorClose,
                                               onSubmit,
                                               onCancel,
@@ -396,6 +408,8 @@ export default function ProcessObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(form.nodeType), [form.nodeType]);
     const [activeTab, setActiveTab] = useState<ProcessTabKey>("general");
+    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
+    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? parent ?? null
@@ -448,8 +462,31 @@ export default function ProcessObjectPage({
         return true;
     };
 
+    const handleDocumentBeforeParentSubmitChange = useCallback(
+        (handler: DocumentBeforeParentSubmitHandler | null) => {
+            documentBeforeSubmitRef.current = handler;
+        },
+        [],
+    );
+
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
+            return;
+        }
+
+        if (hasPendingDocumentUploads) {
+            setValidationError(
+                t("document.validation.waitForUpload", {
+                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
+                }),
+            );
+            setActiveTab("documents");
+            return;
+        }
+
+        const documentsReady = await documentBeforeSubmitRef.current?.();
+        if (documentsReady === false) {
+            setActiveTab("documents");
             return;
         }
 
@@ -669,6 +706,7 @@ export default function ProcessObjectPage({
                     key={currentProcessId ?? "unsaved-process-regulations"}
                     processId={currentProcessId}
                     nodeType={form.nodeType}
+                    readOnly={readOnly}
                 />
             );
         }
@@ -678,6 +716,7 @@ export default function ProcessObjectPage({
                 <ProcessObjectivesTab
                     key={currentProcessId ?? "unsaved-process-objectives"}
                     processId={currentProcessId}
+                    readOnly={readOnly}
                 />
             );
         }
@@ -687,6 +726,7 @@ export default function ProcessObjectPage({
                 <ProcessAccountGroupsTab
                     key={currentProcessId ?? "unsaved-process-account-groups"}
                     processId={currentProcessId}
+                    readOnly={readOnly}
                 />
             );
         }
@@ -697,6 +737,7 @@ export default function ProcessObjectPage({
                     key={currentProcessId ?? "unsaved-process-risks"}
                     processId={currentProcessId}
                     nodeType={form.nodeType}
+                    readOnly={readOnly}
                 />
             );
         }
@@ -711,6 +752,7 @@ export default function ProcessObjectPage({
                     key={currentProcessId ?? "unsaved-sub-process-controls"}
                     subProcessId={currentProcessId}
                     subProcessTitle={form.title || value?.title}
+                    readOnly={readOnly}
                     onOpenControl={onOpenControlAssignment}
                     onControlStructureChanged={onControlStructureChanged}
                 />
@@ -723,11 +765,16 @@ export default function ProcessObjectPage({
                 title={t("process.tabs.documents", { defaultValue: "مستندات" })}
                 targetType="PROCESS_NODE"
                 targetId={currentProcessId}
+                tempSessionId={documentTempSessionId}
+                stagingMode="tempUntilParentSave"
                 busy={busy}
+                readOnly={readOnly}
                 saveFirstMessage={t("document.saveFirst.process", {
                     defaultValue:
                         "ابتدا آیتم فرآیندی را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
                 })}
+                onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
+                onPendingUploadsChange={setHasPendingDocumentUploads}
             />
         );
     };

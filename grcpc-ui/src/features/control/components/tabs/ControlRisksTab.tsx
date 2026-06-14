@@ -22,6 +22,7 @@ import { displayDate } from "./ControlTabUtils";
 
 export interface ControlRisksTabProps {
     controlAssignmentId: string;
+    readOnly?: boolean;
 }
 
 type RisksLoadStatus = "loading" | "success" | "error";
@@ -100,7 +101,10 @@ function readSelectedComboBoxDataValue(event: unknown, fallback: string): string
     return selectedItem?.getAttribute?.("data-value") ?? fallback;
 }
 
-export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTabProps) {
+export default function ControlRisksTab({
+    controlAssignmentId,
+    readOnly = false,
+}: ControlRisksTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
     const [retryKey, setRetryKey] = useState(0);
@@ -194,6 +198,7 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
         ? formatLinkOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        !readOnly &&
         !!selectedRiskId &&
         availableRisks.some((risk) => risk.id === selectedRiskId) &&
         !isLoading &&
@@ -202,7 +207,7 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (!selectedRiskId) {
+        if (readOnly || !selectedRiskId) {
             return;
         }
 
@@ -231,7 +236,7 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
     };
 
     const handleRemove = async () => {
-        if (!removeCandidate) {
+        if (readOnly || !removeCandidate) {
             return;
         }
 
@@ -271,53 +276,55 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
         <div style={PANEL_STYLE}>
             <Title level="H5">{t("control.risks.title", { defaultValue: "ریسک‌ها" })}</Title>
 
-            <div style={ADD_TOOLBAR_STYLE}>
-                <ComboBox
-                    accessibleName={t("control.risks.addAccessibleName", {
-                        defaultValue: "انتخاب ریسک برای افزودن",
-                    })}
-                    filter="Contains"
-                    placeholder={t("control.risks.addPlaceholder", {
-                        defaultValue: "انتخاب ریسک",
-                    })}
-                    showClearIcon
-                    style={RISK_COMBOBOX_STYLE}
-                    value={riskComboBoxValue}
-                    disabled={isLoading || mutationBusy || availableRisks.length === 0}
-                    onInput={(event) => {
-                        const nextValue = readInputValue(event);
-                        setSelectedRiskSearchValue(nextValue);
+            {!readOnly ? (
+                <div style={ADD_TOOLBAR_STYLE}>
+                    <ComboBox
+                        accessibleName={t("control.risks.addAccessibleName", {
+                            defaultValue: "انتخاب ریسک برای افزودن",
+                        })}
+                        filter="Contains"
+                        placeholder={t("control.risks.addPlaceholder", {
+                            defaultValue: "انتخاب ریسک",
+                        })}
+                        showClearIcon
+                        style={RISK_COMBOBOX_STYLE}
+                        value={riskComboBoxValue}
+                        disabled={isLoading || mutationBusy || availableRisks.length === 0}
+                        onInput={(event) => {
+                            const nextValue = readInputValue(event);
+                            setSelectedRiskSearchValue(nextValue);
 
-                        const matchedOption = availableRisks.find(
-                            (risk) => formatRiskOption(risk, noneText) === nextValue,
-                        );
-                        setSelectedRiskId(matchedOption?.id ?? "");
-                    }}
-                    onSelectionChange={(event) => {
-                        const nextValue = readSelectedComboBoxDataValue(event, selectedRiskId);
-                        const selectedOption = availableRisks.find(
-                            (risk) => risk.id === nextValue,
-                        );
+                            const matchedOption = availableRisks.find(
+                                (risk) => formatRiskOption(risk, noneText) === nextValue,
+                            );
+                            setSelectedRiskId(matchedOption?.id ?? "");
+                        }}
+                        onSelectionChange={(event) => {
+                            const nextValue = readSelectedComboBoxDataValue(event, selectedRiskId);
+                            const selectedOption = availableRisks.find(
+                                (risk) => risk.id === nextValue,
+                            );
 
-                        setSelectedRiskId(nextValue);
-                        setSelectedRiskSearchValue(
-                            selectedOption ? formatRiskOption(selectedOption, noneText) : "",
-                        );
-                    }}
-                >
-                    {availableRisks.map((risk) => (
-                        <ComboBoxItem
-                            key={risk.id}
-                            data-value={risk.id}
-                            text={formatRiskOption(risk, noneText)}
-                        />
-                    ))}
-                </ComboBox>
+                            setSelectedRiskId(nextValue);
+                            setSelectedRiskSearchValue(
+                                selectedOption ? formatRiskOption(selectedOption, noneText) : "",
+                            );
+                        }}
+                    >
+                        {availableRisks.map((risk) => (
+                            <ComboBoxItem
+                                key={risk.id}
+                                data-value={risk.id}
+                                text={formatRiskOption(risk, noneText)}
+                            />
+                        ))}
+                    </ComboBox>
 
-                <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
-                    {t("control.risks.add", { defaultValue: "افزودن" })}
-                </Button>
-            </div>
+                    <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
+                        {t("control.risks.add", { defaultValue: "افزودن" })}
+                    </Button>
+                </div>
+            ) : null}
 
             {availableRisks.length === 0 && !isLoading ? (
                 <MessageStrip design="Information" hideCloseButton>
@@ -385,13 +392,17 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
                             {`${displayDate(link.validFrom)} - ${displayDate(link.validTo)}`}
                         </TableCell>
                         <TableCell>
-                            <Button
-                                design="Transparent"
-                                disabled={mutationBusy}
-                                onClick={() => setRemoveCandidate(link)}
-                            >
-                                {t("control.risks.remove", { defaultValue: "حذف" })}
-                            </Button>
+                            {!readOnly ? (
+                                <Button
+                                    design="Transparent"
+                                    disabled={mutationBusy}
+                                    onClick={() => setRemoveCandidate(link)}
+                                >
+                                    {t("control.risks.remove", { defaultValue: "حذف" })}
+                                </Button>
+                            ) : (
+                                noneText
+                            )}
                         </TableCell>
                     </TableRow>
                 ))}

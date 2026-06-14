@@ -717,6 +717,7 @@ export default function OrganizationObjectPage({
         Record<OrganizationReferenceType, string>
     >(EMPTY_SELECTED_REFERENCES);
     const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
+    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
     const activeTab = controlledActiveTab ?? internalActiveTab;
 
     const handleActiveTabChange = (tab: OrganizationTabKey) => {
@@ -804,6 +805,14 @@ export default function OrganizationObjectPage({
 
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
+            return;
+        }
+
+        if (hasPendingDocumentUploads) {
+            setValidationError(t("document.validation.waitForUpload", {
+                defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
+            }));
+            handleActiveTabChange("documents");
             return;
         }
 
@@ -1867,6 +1876,10 @@ export default function OrganizationObjectPage({
             uploadPolicy={documentUploadPolicy}
             busy={busy || documentsBusy}
             readOnly={readOnly}
+            uploadRequiresTempSession
+            tempSessionMissingMessage={t("document.errors.missingTempSession", {
+                defaultValue: "نشست موقت بارگذاری مستندات آماده نیست.",
+            })}
             viewHint={t("organization.documents.viewHint", {
                 defaultValue: "مستندات ذخیره‌شده سازمان",
             })}
@@ -1879,6 +1892,7 @@ export default function OrganizationObjectPage({
             onDeleteDocument={onDeleteDocument}
             onDownloadDocument={onDownloadDocument}
             onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
+            onPendingUploadsChange={setHasPendingDocumentUploads}
         />
     );
 

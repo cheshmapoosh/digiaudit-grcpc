@@ -30,6 +30,7 @@
     },
     "status": {
       "uploading": "Uploading {{progress}}%",
+      "success": "Upload complete",
       "error": "Error",
       "temp": "Temporary",
       "active": "Saved"
@@ -49,6 +50,7 @@
       "delete": "Failed to delete document",
       "updateTitle": "Failed to save document title",
       "loadPolicy": "Failed to load document upload settings",
+      "missingTempSession": "The temporary document upload session is not ready.",
       "storageDisabled": "Document storage is not configured. Enable MinIO."
     },
     "delete": {

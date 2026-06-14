@@ -11,6 +11,7 @@ export interface DocumentAttachmentsManagerProps {
     targetType: string;
     targetId: string | null;
     tempSessionId?: string;
+    stagingMode?: "tempUntilParentSave" | "direct";
     readOnly?: boolean;
     busy?: boolean;
     title?: string;
@@ -37,6 +38,7 @@ export default function DocumentAttachmentsManager({
     targetType,
     targetId,
     tempSessionId,
+    stagingMode = "direct",
     readOnly = false,
     busy = false,
     title,
@@ -48,6 +50,7 @@ export default function DocumentAttachmentsManager({
 }: DocumentAttachmentsManagerProps) {
     const { t } = useTranslation();
     const [loadError, setLoadError] = useState<string | null>(null);
+    const useTempUpload = stagingMode === "tempUntilParentSave";
     const documentsByTarget = useDocumentAttachmentState((state) => state.documentsByTarget);
     const tempDocumentsBySession = useDocumentAttachmentState(
         (state) => state.tempDocumentsBySession,
@@ -129,11 +132,20 @@ export default function DocumentAttachmentsManager({
 
     const handleUploadDocument = useCallback(
         async (file: File, onProgress?: (progress: number) => void) => {
-            if (targetId) {
-                await uploadDocument(
+            if (useTempUpload) {
+                if (!tempSessionId) {
+                    throw new Error(
+                        t("document.errors.missingTempSession", {
+                            defaultValue: "نشست موقت بارگذاری مستندات آماده نیست.",
+                        }),
+                    );
+                }
+
+                await uploadTempDocument(
                     {
                         targetType,
-                        targetId,
+                        tempSessionId,
+                        targetId: targetId ?? null,
                         title: file.name,
                         file,
                     },
@@ -142,12 +154,11 @@ export default function DocumentAttachmentsManager({
                 return;
             }
 
-            if (tempSessionId) {
-                await uploadTempDocument(
+            if (targetId) {
+                await uploadDocument(
                     {
                         targetType,
-                        tempSessionId,
-                        targetId: null,
+                        targetId,
                         title: file.name,
                         file,
                     },
@@ -169,6 +180,7 @@ export default function DocumentAttachmentsManager({
             targetId,
             targetType,
             tempSessionId,
+            useTempUpload,
             uploadDocument,
             uploadTempDocument,
         ],
@@ -200,8 +212,12 @@ export default function DocumentAttachmentsManager({
             uploadPolicy={uploadPolicy}
             busy={busy || loading}
             readOnly={readOnly}
+            uploadRequiresTempSession={useTempUpload}
             error={loadError}
             saveFirstMessage={saveFirstMessage}
+            tempSessionMissingMessage={t("document.errors.missingTempSession", {
+                defaultValue: "نشست موقت بارگذاری مستندات آماده نیست.",
+            })}
             viewHint={viewHint}
             editHint={editHint}
             onUploadDocument={handleUploadDocument}

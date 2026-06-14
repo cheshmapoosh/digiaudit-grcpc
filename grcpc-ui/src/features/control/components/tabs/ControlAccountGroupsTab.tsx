@@ -22,6 +22,7 @@ import { controlService } from "../../service/control.service";
 
 export interface ControlAccountGroupsTabProps {
     controlAssignmentId: string;
+    readOnly?: boolean;
 }
 
 type AccountGroupsLoadStatus = "loading" | "success" | "error";
@@ -145,6 +146,7 @@ function formatAssertionType(
 
 export default function ControlAccountGroupsTab({
     controlAssignmentId,
+    readOnly = false,
 }: ControlAccountGroupsTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
@@ -248,6 +250,7 @@ export default function ControlAccountGroupsTab({
         ? formatLinkOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        !readOnly &&
         !!selectedAccountGroupId &&
         availableAccountGroups.some(
             (accountGroup) => accountGroup.id === selectedAccountGroupId,
@@ -258,7 +261,7 @@ export default function ControlAccountGroupsTab({
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (!selectedAccountGroupId) {
+        if (readOnly || !selectedAccountGroupId) {
             return;
         }
 
@@ -292,7 +295,7 @@ export default function ControlAccountGroupsTab({
     };
 
     const handleRemove = async () => {
-        if (!removeCandidate) {
+        if (readOnly || !removeCandidate) {
             return;
         }
 
@@ -341,62 +344,64 @@ export default function ControlAccountGroupsTab({
                 {t("control.accountGroups.title", { defaultValue: "گروه حساب‌ها" })}
             </Title>
 
-            <div style={ADD_TOOLBAR_STYLE}>
-                <ComboBox
-                    accessibleName={t("control.accountGroups.addAccessibleName", {
-                        defaultValue: "انتخاب گروه حساب برای افزودن",
-                    })}
-                    filter="Contains"
-                    placeholder={t("control.accountGroups.addPlaceholder", {
-                        defaultValue: "انتخاب گروه حساب",
-                    })}
-                    showClearIcon
-                    style={ACCOUNT_GROUP_COMBOBOX_STYLE}
-                    value={accountGroupComboBoxValue}
-                    disabled={
-                        isLoading || mutationBusy || availableAccountGroups.length === 0
-                    }
-                    onInput={(event) => {
-                        const nextValue = readInputValue(event);
-                        setSelectedAccountGroupSearchValue(nextValue);
+            {!readOnly ? (
+                <div style={ADD_TOOLBAR_STYLE}>
+                    <ComboBox
+                        accessibleName={t("control.accountGroups.addAccessibleName", {
+                            defaultValue: "انتخاب گروه حساب برای افزودن",
+                        })}
+                        filter="Contains"
+                        placeholder={t("control.accountGroups.addPlaceholder", {
+                            defaultValue: "انتخاب گروه حساب",
+                        })}
+                        showClearIcon
+                        style={ACCOUNT_GROUP_COMBOBOX_STYLE}
+                        value={accountGroupComboBoxValue}
+                        disabled={
+                            isLoading || mutationBusy || availableAccountGroups.length === 0
+                        }
+                        onInput={(event) => {
+                            const nextValue = readInputValue(event);
+                            setSelectedAccountGroupSearchValue(nextValue);
 
-                        const matchedOption = availableAccountGroups.find(
-                            (accountGroup) =>
-                                formatAccountGroupOption(accountGroup, noneText) ===
-                                nextValue,
-                        );
-                        setSelectedAccountGroupId(matchedOption?.id ?? "");
-                    }}
-                    onSelectionChange={(event) => {
-                        const nextValue = readSelectedComboBoxDataValue(
-                            event,
-                            selectedAccountGroupId,
-                        );
-                        const selectedOption = availableAccountGroups.find(
-                            (accountGroup) => accountGroup.id === nextValue,
-                        );
+                            const matchedOption = availableAccountGroups.find(
+                                (accountGroup) =>
+                                    formatAccountGroupOption(accountGroup, noneText) ===
+                                    nextValue,
+                            );
+                            setSelectedAccountGroupId(matchedOption?.id ?? "");
+                        }}
+                        onSelectionChange={(event) => {
+                            const nextValue = readSelectedComboBoxDataValue(
+                                event,
+                                selectedAccountGroupId,
+                            );
+                            const selectedOption = availableAccountGroups.find(
+                                (accountGroup) => accountGroup.id === nextValue,
+                            );
 
-                        setSelectedAccountGroupId(nextValue);
-                        setSelectedAccountGroupSearchValue(
-                            selectedOption
-                                ? formatAccountGroupOption(selectedOption, noneText)
-                                : "",
-                        );
-                    }}
-                >
-                    {availableAccountGroups.map((accountGroup) => (
-                        <ComboBoxItem
-                            key={accountGroup.id}
-                            data-value={accountGroup.id}
-                            text={formatAccountGroupOption(accountGroup, noneText)}
-                        />
-                    ))}
-                </ComboBox>
+                            setSelectedAccountGroupId(nextValue);
+                            setSelectedAccountGroupSearchValue(
+                                selectedOption
+                                    ? formatAccountGroupOption(selectedOption, noneText)
+                                    : "",
+                            );
+                        }}
+                    >
+                        {availableAccountGroups.map((accountGroup) => (
+                            <ComboBoxItem
+                                key={accountGroup.id}
+                                data-value={accountGroup.id}
+                                text={formatAccountGroupOption(accountGroup, noneText)}
+                            />
+                        ))}
+                    </ComboBox>
 
-                <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
-                    {t("control.accountGroups.add", { defaultValue: "افزودن" })}
-                </Button>
-            </div>
+                    <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
+                        {t("control.accountGroups.add", { defaultValue: "افزودن" })}
+                    </Button>
+                </div>
+            ) : null}
 
             {availableAccountGroups.length === 0 && !isLoading ? (
                 <MessageStrip design="Information" hideCloseButton>
@@ -460,13 +465,17 @@ export default function ControlAccountGroupsTab({
                             {formatAssertionType(link.assertionType, noneText, t)}
                         </TableCell>
                         <TableCell>
-                            <Button
-                                design="Transparent"
-                                disabled={mutationBusy}
-                                onClick={() => setRemoveCandidate(link)}
-                            >
-                                {t("control.accountGroups.remove", { defaultValue: "حذف" })}
-                            </Button>
+                            {!readOnly ? (
+                                <Button
+                                    design="Transparent"
+                                    disabled={mutationBusy}
+                                    onClick={() => setRemoveCandidate(link)}
+                                >
+                                    {t("control.accountGroups.remove", { defaultValue: "حذف" })}
+                                </Button>
+                            ) : (
+                                noneText
+                            )}
                         </TableCell>
                     </TableRow>
                 ))}

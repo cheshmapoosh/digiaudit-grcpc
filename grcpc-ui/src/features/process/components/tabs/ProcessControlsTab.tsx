@@ -24,6 +24,7 @@ import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 export interface ProcessControlsTabProps {
     subProcessId: string | null;
     subProcessTitle?: string | null;
+    readOnly?: boolean;
     onOpenControl?: (controlAssignmentId: string) => void;
     onControlStructureChanged?: () => void | Promise<void>;
 }
@@ -164,6 +165,7 @@ function resolveMutationError(
 export default function ProcessControlsTab({
     subProcessId,
     subProcessTitle,
+    readOnly = false,
     onOpenControl,
     onControlStructureChanged,
 }: ProcessControlsTabProps) {
@@ -281,6 +283,7 @@ export default function ProcessControlsTab({
         ? formatAssignedControlOption(removeCandidate, noneText)
         : "";
     const canAssign =
+        !readOnly &&
         !!subProcessId &&
         !!selectedControlId &&
         availableControls.some((control) => control.id === selectedControlId) &&
@@ -294,7 +297,7 @@ export default function ProcessControlsTab({
     };
 
     const handleAssign = async () => {
-        if (!subProcessId || !selectedControlId) {
+        if (readOnly || !subProcessId || !selectedControlId) {
             return;
         }
 
@@ -330,7 +333,7 @@ export default function ProcessControlsTab({
     };
 
     const handleRemove = async () => {
-        if (!removeCandidate) {
+        if (readOnly || !removeCandidate) {
             return;
         }
 
@@ -395,53 +398,55 @@ export default function ProcessControlsTab({
 
             <div style={{ height: "0.75rem" }} />
 
-            <div style={ASSIGNMENT_TOOLBAR_STYLE}>
-                <ComboBox
-                    accessibleName={t("process.controls.assignAccessibleName", {
-                        defaultValue: "انتخاب کنترل برای اتصال",
-                    })}
-                    filter="Contains"
-                    placeholder={t("process.controls.assignPlaceholder", {
-                        defaultValue: "انتخاب کنترل",
-                    })}
-                    showClearIcon
-                    style={CONTROL_COMBOBOX_STYLE}
-                    value={controlComboBoxValue}
-                    disabled={isLoading || mutationBusy || availableControls.length === 0}
-                    onInput={(event) => {
-                        const nextValue = readInputValue(event);
-                        setSelectedControlSearchValue(nextValue);
+            {!readOnly ? (
+                <div style={ASSIGNMENT_TOOLBAR_STYLE}>
+                    <ComboBox
+                        accessibleName={t("process.controls.assignAccessibleName", {
+                            defaultValue: "انتخاب کنترل برای اتصال",
+                        })}
+                        filter="Contains"
+                        placeholder={t("process.controls.assignPlaceholder", {
+                            defaultValue: "انتخاب کنترل",
+                        })}
+                        showClearIcon
+                        style={CONTROL_COMBOBOX_STYLE}
+                        value={controlComboBoxValue}
+                        disabled={isLoading || mutationBusy || availableControls.length === 0}
+                        onInput={(event) => {
+                            const nextValue = readInputValue(event);
+                            setSelectedControlSearchValue(nextValue);
 
-                        const matchedOption = availableControls.find(
-                            (control) => formatControlOption(control, noneText) === nextValue,
-                        );
-                        setSelectedControlId(matchedOption?.id ?? "");
-                    }}
-                    onSelectionChange={(event) => {
-                        const nextValue = readSelectedComboBoxDataValue(event, selectedControlId);
-                        const selectedOption = availableControls.find(
-                            (control) => control.id === nextValue,
-                        );
+                            const matchedOption = availableControls.find(
+                                (control) => formatControlOption(control, noneText) === nextValue,
+                            );
+                            setSelectedControlId(matchedOption?.id ?? "");
+                        }}
+                        onSelectionChange={(event) => {
+                            const nextValue = readSelectedComboBoxDataValue(event, selectedControlId);
+                            const selectedOption = availableControls.find(
+                                (control) => control.id === nextValue,
+                            );
 
-                        setSelectedControlId(nextValue);
-                        setSelectedControlSearchValue(
-                            selectedOption ? formatControlOption(selectedOption, noneText) : "",
-                        );
-                    }}
-                >
-                    {availableControls.map((control) => (
-                        <ComboBoxItem
-                            key={control.id}
-                            data-value={control.id}
-                            text={formatControlOption(control, noneText)}
-                        />
-                    ))}
-                </ComboBox>
+                            setSelectedControlId(nextValue);
+                            setSelectedControlSearchValue(
+                                selectedOption ? formatControlOption(selectedOption, noneText) : "",
+                            );
+                        }}
+                    >
+                        {availableControls.map((control) => (
+                            <ComboBoxItem
+                                key={control.id}
+                                data-value={control.id}
+                                text={formatControlOption(control, noneText)}
+                            />
+                        ))}
+                    </ComboBox>
 
-                <Button design="Emphasized" disabled={!canAssign} onClick={handleAssign}>
-                    {t("process.controls.assign", { defaultValue: "افزودن کنترل" })}
-                </Button>
-            </div>
+                    <Button design="Emphasized" disabled={!canAssign} onClick={handleAssign}>
+                        {t("process.controls.assign", { defaultValue: "افزودن کنترل" })}
+                    </Button>
+                </div>
+            ) : null}
 
             {availableControls.length === 0 && !isLoading ? (
                 <>
@@ -544,15 +549,17 @@ export default function ProcessControlsTab({
                                             defaultValue: "نمایش",
                                         })}
                                     </Button>
-                                    <Button
-                                        design="Transparent"
-                                        disabled={mutationBusy}
-                                        onClick={() => setRemoveCandidate(control)}
-                                    >
-                                        {t("process.controls.remove", {
-                                            defaultValue: "حذف",
-                                        })}
-                                    </Button>
+                                    {!readOnly ? (
+                                        <Button
+                                            design="Transparent"
+                                            disabled={mutationBusy}
+                                            onClick={() => setRemoveCandidate(control)}
+                                        >
+                                            {t("process.controls.remove", {
+                                                defaultValue: "حذف",
+                                            })}
+                                        </Button>
+                                    ) : null}
                                 </div>
                             </TableCell>
                         </TableRow>

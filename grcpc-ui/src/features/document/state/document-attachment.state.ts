@@ -151,10 +151,15 @@ export const useDocumentAttachmentState = create<DocumentAttachmentState>((set, 
         set((state) => {
             const activeKey = targetKey(payload.targetType, payload.targetId);
             const active = state.documentsByTarget[activeKey] ?? [];
-            const committedIds = new Set(committed.map((item) => item.id));
-            const remainingTemp = (
-                state.tempDocumentsBySession[payload.tempSessionId] ?? []
-            ).filter((item) => !committedIds.has(item.id));
+            const currentTemp = state.tempDocumentsBySession[payload.tempSessionId] ?? [];
+            const committedTempIds = new Set(
+                payload.documentIds && payload.documentIds.length > 0
+                    ? payload.documentIds
+                    : currentTemp.map((item) => item.id),
+            );
+            const remainingTemp = currentTemp.filter(
+                (item) => !committedTempIds.has(item.id),
+            );
 
             return {
                 documentsByTarget: {

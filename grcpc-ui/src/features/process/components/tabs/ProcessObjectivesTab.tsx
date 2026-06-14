@@ -24,6 +24,7 @@ import { processObjectiveAssignmentService } from "../../service/process-objecti
 
 interface ProcessObjectivesTabProps {
     processId: string | null;
+    readOnly?: boolean;
 }
 
 type ObjectivesLoadStatus = "idle" | "loading" | "success" | "error";
@@ -138,7 +139,10 @@ function resolveStatusLabel(
     return map[status];
 }
 
-export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTabProps) {
+export default function ProcessObjectivesTab({
+    processId,
+    readOnly = false,
+}: ProcessObjectivesTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
     const [retryKey, setRetryKey] = useState(0);
@@ -235,6 +239,7 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
         ? formatAssignmentOption(removeCandidate, noneText)
         : "";
     const canAssign =
+        !readOnly &&
         !!processId &&
         !!selectedObjectiveId &&
         availableObjectives.some((objective) => objective.id === selectedObjectiveId) &&
@@ -244,7 +249,7 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAssign = async () => {
-        if (!processId || !canAssign) {
+        if (readOnly || !processId || !canAssign) {
             return;
         }
 
@@ -269,7 +274,7 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
     };
 
     const handleRemove = async () => {
-        if (!removeCandidate) {
+        if (readOnly || !removeCandidate) {
             return;
         }
 
@@ -331,49 +336,51 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
 
             <div style={{ height: "0.75rem" }} />
 
-            <div style={ASSIGNMENT_TOOLBAR_STYLE}>
-                <ComboBox
-                    accessibleName={t("process.objectives.assignAccessibleName")}
-                    filter="Contains"
-                    placeholder={t("process.objectives.assignPlaceholder")}
-                    showClearIcon
-                    style={OBJECTIVE_COMBOBOX_STYLE}
-                    value={objectiveComboBoxValue}
-                    disabled={isLoading || mutationBusy || availableObjectives.length === 0}
-                    onInput={(event) => {
-                        const nextValue = readInputValue(event);
-                        setSelectedObjectiveSearchValue(nextValue);
+            {!readOnly ? (
+                <div style={ASSIGNMENT_TOOLBAR_STYLE}>
+                    <ComboBox
+                        accessibleName={t("process.objectives.assignAccessibleName")}
+                        filter="Contains"
+                        placeholder={t("process.objectives.assignPlaceholder")}
+                        showClearIcon
+                        style={OBJECTIVE_COMBOBOX_STYLE}
+                        value={objectiveComboBoxValue}
+                        disabled={isLoading || mutationBusy || availableObjectives.length === 0}
+                        onInput={(event) => {
+                            const nextValue = readInputValue(event);
+                            setSelectedObjectiveSearchValue(nextValue);
 
-                        const matchedOption = availableObjectives.find(
-                            (objective) => formatObjectiveOption(objective, noneText) === nextValue,
-                        );
-                        setSelectedObjectiveId(matchedOption?.id ?? "");
-                    }}
-                    onSelectionChange={(event) => {
-                        const nextValue = readSelectedComboBoxDataValue(event, selectedObjectiveId);
-                        const selectedOption = availableObjectives.find(
-                            (objective) => objective.id === nextValue,
-                        );
+                            const matchedOption = availableObjectives.find(
+                                (objective) => formatObjectiveOption(objective, noneText) === nextValue,
+                            );
+                            setSelectedObjectiveId(matchedOption?.id ?? "");
+                        }}
+                        onSelectionChange={(event) => {
+                            const nextValue = readSelectedComboBoxDataValue(event, selectedObjectiveId);
+                            const selectedOption = availableObjectives.find(
+                                (objective) => objective.id === nextValue,
+                            );
 
-                        setSelectedObjectiveId(nextValue);
-                        setSelectedObjectiveSearchValue(
-                            selectedOption ? formatObjectiveOption(selectedOption, noneText) : "",
-                        );
-                    }}
-                >
-                    {availableObjectives.map((objective) => (
-                        <ComboBoxItem
-                            key={objective.id}
-                            data-value={objective.id}
-                            text={formatObjectiveOption(objective, noneText)}
-                        />
-                    ))}
-                </ComboBox>
+                            setSelectedObjectiveId(nextValue);
+                            setSelectedObjectiveSearchValue(
+                                selectedOption ? formatObjectiveOption(selectedOption, noneText) : "",
+                            );
+                        }}
+                    >
+                        {availableObjectives.map((objective) => (
+                            <ComboBoxItem
+                                key={objective.id}
+                                data-value={objective.id}
+                                text={formatObjectiveOption(objective, noneText)}
+                            />
+                        ))}
+                    </ComboBox>
 
-                <Button design="Emphasized" disabled={!canAssign} onClick={handleAssign}>
-                    {t("process.objectives.assign")}
-                </Button>
-            </div>
+                    <Button design="Emphasized" disabled={!canAssign} onClick={handleAssign}>
+                        {t("process.objectives.assign")}
+                    </Button>
+                </div>
+            ) : null}
 
             {availableObjectives.length === 0 && !isLoading ? (
                 <>
@@ -437,13 +444,17 @@ export default function ProcessObjectivesTab({ processId }: ProcessObjectivesTab
                         </TableCell>
                         <TableCell>{resolveStatusLabel(assignment.status, t)}</TableCell>
                         <TableCell>
-                            <Button
-                                design="Transparent"
-                                disabled={mutationBusy}
-                                onClick={() => setRemoveCandidate(assignment)}
-                            >
-                                {t("process.objectives.remove")}
-                            </Button>
+                            {!readOnly ? (
+                                <Button
+                                    design="Transparent"
+                                    disabled={mutationBusy}
+                                    onClick={() => setRemoveCandidate(assignment)}
+                                >
+                                    {t("process.objectives.remove")}
+                                </Button>
+                            ) : (
+                                noneText
+                            )}
                         </TableCell>
                     </TableRow>
                 ))}

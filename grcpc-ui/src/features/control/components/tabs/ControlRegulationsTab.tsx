@@ -23,6 +23,7 @@ import { displayDate } from "./ControlTabUtils";
 
 export interface ControlRegulationsTabProps {
     controlAssignmentId: string;
+    readOnly?: boolean;
 }
 
 type RegulationsLoadStatus = "loading" | "success" | "error";
@@ -118,6 +119,7 @@ function resolveMutationError(
 
 export default function ControlRegulationsTab({
     controlAssignmentId,
+    readOnly = false,
 }: ControlRegulationsTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
@@ -217,6 +219,7 @@ export default function ControlRegulationsTab({
         ? formatLinkOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        !readOnly &&
         !!selectedLawId &&
         availableLaws.some((law) => law.id === selectedLawId) &&
         !isLoading &&
@@ -225,7 +228,7 @@ export default function ControlRegulationsTab({
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (!selectedLawId) {
+        if (readOnly || !selectedLawId) {
             return;
         }
 
@@ -256,7 +259,7 @@ export default function ControlRegulationsTab({
     };
 
     const handleRemove = async () => {
-        if (!removeCandidate) {
+        if (readOnly || !removeCandidate) {
             return;
         }
 
@@ -305,53 +308,55 @@ export default function ControlRegulationsTab({
                 {t("control.regulations.title", { defaultValue: "قوانین" })}
             </Title>
 
-            <div style={ADD_TOOLBAR_STYLE}>
-                <ComboBox
-                    accessibleName={t("control.regulations.addAccessibleName", {
-                        defaultValue: "انتخاب قانون برای افزودن",
-                    })}
-                    filter="Contains"
-                    placeholder={t("control.regulations.addPlaceholder", {
-                        defaultValue: "انتخاب قانون",
-                    })}
-                    showClearIcon
-                    style={REGULATION_COMBOBOX_STYLE}
-                    value={lawComboBoxValue}
-                    disabled={isLoading || mutationBusy || availableLaws.length === 0}
-                    onInput={(event) => {
-                        const nextValue = readInputValue(event);
-                        setSelectedLawSearchValue(nextValue);
+            {!readOnly ? (
+                <div style={ADD_TOOLBAR_STYLE}>
+                    <ComboBox
+                        accessibleName={t("control.regulations.addAccessibleName", {
+                            defaultValue: "انتخاب قانون برای افزودن",
+                        })}
+                        filter="Contains"
+                        placeholder={t("control.regulations.addPlaceholder", {
+                            defaultValue: "انتخاب قانون",
+                        })}
+                        showClearIcon
+                        style={REGULATION_COMBOBOX_STYLE}
+                        value={lawComboBoxValue}
+                        disabled={isLoading || mutationBusy || availableLaws.length === 0}
+                        onInput={(event) => {
+                            const nextValue = readInputValue(event);
+                            setSelectedLawSearchValue(nextValue);
 
-                        const matchedOption = availableLaws.find(
-                            (law) => formatLawOption(law, noneText) === nextValue,
-                        );
-                        setSelectedLawId(matchedOption?.id ?? "");
-                    }}
-                    onSelectionChange={(event) => {
-                        const nextValue = readSelectedComboBoxDataValue(event, selectedLawId);
-                        const selectedOption = availableLaws.find(
-                            (law) => law.id === nextValue,
-                        );
+                            const matchedOption = availableLaws.find(
+                                (law) => formatLawOption(law, noneText) === nextValue,
+                            );
+                            setSelectedLawId(matchedOption?.id ?? "");
+                        }}
+                        onSelectionChange={(event) => {
+                            const nextValue = readSelectedComboBoxDataValue(event, selectedLawId);
+                            const selectedOption = availableLaws.find(
+                                (law) => law.id === nextValue,
+                            );
 
-                        setSelectedLawId(nextValue);
-                        setSelectedLawSearchValue(
-                            selectedOption ? formatLawOption(selectedOption, noneText) : "",
-                        );
-                    }}
-                >
-                    {availableLaws.map((law) => (
-                        <ComboBoxItem
-                            key={law.id}
-                            data-value={law.id}
-                            text={formatLawOption(law, noneText)}
-                        />
-                    ))}
-                </ComboBox>
+                            setSelectedLawId(nextValue);
+                            setSelectedLawSearchValue(
+                                selectedOption ? formatLawOption(selectedOption, noneText) : "",
+                            );
+                        }}
+                    >
+                        {availableLaws.map((law) => (
+                            <ComboBoxItem
+                                key={law.id}
+                                data-value={law.id}
+                                text={formatLawOption(law, noneText)}
+                            />
+                        ))}
+                    </ComboBox>
 
-                <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
-                    {t("control.regulations.add", { defaultValue: "افزودن" })}
-                </Button>
-            </div>
+                    <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
+                        {t("control.regulations.add", { defaultValue: "افزودن" })}
+                    </Button>
+                </div>
+            ) : null}
 
             {availableLaws.length === 0 && !isLoading ? (
                 <MessageStrip design="Information" hideCloseButton>
@@ -415,13 +420,17 @@ export default function ControlRegulationsTab({
                             {`${displayDate(link.validFrom)} - ${displayDate(link.validTo)}`}
                         </TableCell>
                         <TableCell>
-                            <Button
-                                design="Transparent"
-                                disabled={mutationBusy}
-                                onClick={() => setRemoveCandidate(link)}
-                            >
-                                {t("control.regulations.remove", { defaultValue: "حذف" })}
-                            </Button>
+                            {!readOnly ? (
+                                <Button
+                                    design="Transparent"
+                                    disabled={mutationBusy}
+                                    onClick={() => setRemoveCandidate(link)}
+                                >
+                                    {t("control.regulations.remove", { defaultValue: "حذف" })}
+                                </Button>
+                            ) : (
+                                noneText
+                            )}
                         </TableCell>
                     </TableRow>
                 ))}

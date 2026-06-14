@@ -23,6 +23,7 @@ import { processRiskAssignmentService } from "../../service/process-risk-assignm
 interface ProcessRisksTabProps {
     processId: string | null;
     nodeType: ProcessNodeType;
+    readOnly?: boolean;
 }
 
 type RisksLoadStatus = "idle" | "loading" | "success" | "error";
@@ -146,7 +147,11 @@ function resolveStatusLabel(
         : t("process.status.inactive", { defaultValue: "غیرفعال" });
 }
 
-export default function ProcessRisksTab({ processId, nodeType }: ProcessRisksTabProps) {
+export default function ProcessRisksTab({
+    processId,
+    nodeType,
+    readOnly = false,
+}: ProcessRisksTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
     const [retryKey, setRetryKey] = useState(0);
@@ -251,6 +256,7 @@ export default function ProcessRisksTab({ processId, nodeType }: ProcessRisksTab
         ? formatAssignmentOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        !readOnly &&
         !!processId &&
         !!selectedRiskId &&
         availableRisks.some((risk) => risk.id === selectedRiskId) &&
@@ -268,7 +274,7 @@ export default function ProcessRisksTab({ processId, nodeType }: ProcessRisksTab
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (!processId || !selectedRiskId) {
+        if (readOnly || !processId || !selectedRiskId) {
             return;
         }
 
@@ -302,7 +308,7 @@ export default function ProcessRisksTab({ processId, nodeType }: ProcessRisksTab
     };
 
     const handleRemove = async () => {
-        if (!removeCandidate) {
+        if (readOnly || !removeCandidate) {
             return;
         }
 
@@ -362,53 +368,55 @@ export default function ProcessRisksTab({ processId, nodeType }: ProcessRisksTab
 
             <div style={{ height: "0.75rem" }} />
 
-            <div style={ADD_TOOLBAR_STYLE}>
-                <ComboBox
-                    accessibleName={t("process.risks.addAccessibleName", {
-                        defaultValue: "انتخاب ریسک برای افزودن",
-                    })}
-                    filter="Contains"
-                    placeholder={t("process.risks.addPlaceholder", {
-                        defaultValue: "انتخاب ریسک",
-                    })}
-                    showClearIcon
-                    style={RISK_COMBOBOX_STYLE}
-                    value={riskComboBoxValue}
-                    disabled={isLoading || mutationBusy || availableRisks.length === 0}
-                    onInput={(event) => {
-                        const nextValue = readInputValue(event);
-                        setSelectedRiskSearchValue(nextValue);
+            {!readOnly ? (
+                <div style={ADD_TOOLBAR_STYLE}>
+                    <ComboBox
+                        accessibleName={t("process.risks.addAccessibleName", {
+                            defaultValue: "انتخاب ریسک برای افزودن",
+                        })}
+                        filter="Contains"
+                        placeholder={t("process.risks.addPlaceholder", {
+                            defaultValue: "انتخاب ریسک",
+                        })}
+                        showClearIcon
+                        style={RISK_COMBOBOX_STYLE}
+                        value={riskComboBoxValue}
+                        disabled={isLoading || mutationBusy || availableRisks.length === 0}
+                        onInput={(event) => {
+                            const nextValue = readInputValue(event);
+                            setSelectedRiskSearchValue(nextValue);
 
-                        const matchedOption = availableRisks.find(
-                            (risk) => formatRiskOption(risk, noneText) === nextValue,
-                        );
-                        setSelectedRiskId(matchedOption?.id ?? "");
-                    }}
-                    onSelectionChange={(event) => {
-                        const nextValue = readSelectedComboBoxDataValue(event, selectedRiskId);
-                        const selectedOption = availableRisks.find(
-                            (risk) => risk.id === nextValue,
-                        );
+                            const matchedOption = availableRisks.find(
+                                (risk) => formatRiskOption(risk, noneText) === nextValue,
+                            );
+                            setSelectedRiskId(matchedOption?.id ?? "");
+                        }}
+                        onSelectionChange={(event) => {
+                            const nextValue = readSelectedComboBoxDataValue(event, selectedRiskId);
+                            const selectedOption = availableRisks.find(
+                                (risk) => risk.id === nextValue,
+                            );
 
-                        setSelectedRiskId(nextValue);
-                        setSelectedRiskSearchValue(
-                            selectedOption ? formatRiskOption(selectedOption, noneText) : "",
-                        );
-                    }}
-                >
-                    {availableRisks.map((risk) => (
-                        <ComboBoxItem
-                            key={risk.id}
-                            data-value={risk.id}
-                            text={formatRiskOption(risk, noneText)}
-                        />
-                    ))}
-                </ComboBox>
+                            setSelectedRiskId(nextValue);
+                            setSelectedRiskSearchValue(
+                                selectedOption ? formatRiskOption(selectedOption, noneText) : "",
+                            );
+                        }}
+                    >
+                        {availableRisks.map((risk) => (
+                            <ComboBoxItem
+                                key={risk.id}
+                                data-value={risk.id}
+                                text={formatRiskOption(risk, noneText)}
+                            />
+                        ))}
+                    </ComboBox>
 
-                <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
-                    {t("process.risks.add", { defaultValue: "افزودن" })}
-                </Button>
-            </div>
+                    <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
+                        {t("process.risks.add", { defaultValue: "افزودن" })}
+                    </Button>
+                </div>
+            ) : null}
 
             {availableRisks.length === 0 && !isLoading ? (
                 <>
@@ -482,13 +490,17 @@ export default function ProcessRisksTab({ processId, nodeType }: ProcessRisksTab
                         </TableCell>
                         <TableCell>{resolveStatusLabel(assignment.status, t)}</TableCell>
                         <TableCell>
-                            <Button
-                                design="Transparent"
-                                disabled={mutationBusy}
-                                onClick={() => setRemoveCandidate(assignment)}
-                            >
-                                {t("process.risks.remove", { defaultValue: "حذف" })}
-                            </Button>
+                            {!readOnly ? (
+                                <Button
+                                    design="Transparent"
+                                    disabled={mutationBusy}
+                                    onClick={() => setRemoveCandidate(assignment)}
+                                >
+                                    {t("process.risks.remove", { defaultValue: "حذف" })}
+                                </Button>
+                            ) : (
+                                noneText
+                            )}
                         </TableCell>
                     </TableRow>
                 ))}

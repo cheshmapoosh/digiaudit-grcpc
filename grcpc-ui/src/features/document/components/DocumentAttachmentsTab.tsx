@@ -42,8 +42,10 @@ export interface DocumentAttachmentsTabProps {
     uploadPolicy?: DocumentUploadPolicy;
     busy?: boolean;
     readOnly?: boolean;
+    uploadRequiresTempSession?: boolean;
     error?: string | null;
     saveFirstMessage?: string;
+    tempSessionMissingMessage?: string;
     viewHint?: string;
     editHint?: string;
     onUploadDocument?: (
@@ -60,7 +62,7 @@ export interface DocumentAttachmentsTabProps {
     onPendingUploadsChange?: (hasPendingUploads: boolean) => void;
 }
 
-type UploadItemState = "uploading" | "error";
+type UploadItemState = "uploading" | "success" | "error";
 type DocumentActionMessageDesign = "Positive" | "Negative";
 
 interface DocumentUploadItem {
@@ -158,6 +160,7 @@ const TABLE_SPACER_STYLE: CSSProperties = {
 };
 
 const NONE_TEXT = "-";
+const SUCCESS_UPLOAD_VISIBLE_MS = 1600;
 
 function createUploadRowId(): string {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -224,8 +227,10 @@ export default function DocumentAttachmentsTab({
     uploadPolicy,
     busy = false,
     readOnly = false,
+    uploadRequiresTempSession = false,
     error,
     saveFirstMessage,
+    tempSessionMissingMessage,
     viewHint,
     editHint,
     onUploadDocument,
@@ -238,6 +243,8 @@ export default function DocumentAttachmentsTab({
 }: DocumentAttachmentsTabProps) {
     const { t } = useTranslation();
     const mountedRef = useRef(true);
+    const successTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+    const activeUploadCountRef = useRef(0);
     const [uploadItems, setUploadItems] = useState<DocumentUploadItem[]>([]);
     const [documentTitleDrafts, setDocumentTitleDrafts] = useState<Record<string, string>>({});
     const [savingTitleIds, setSavingTitleIds] = useState<Set<string>>(() => new Set());
@@ -247,6 +254,8 @@ export default function DocumentAttachmentsTab({
 
     useEffect(() => () => {
         mountedRef.current = false;
+        successTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+        successTimeoutsRef.current = [];
     }, []);
 
     const documentTitle = title ?? t("document.title", { defaultValue: "مستندات" });
@@ -269,7 +278,15 @@ export default function DocumentAttachmentsTab({
     const saveFirstText = saveFirstMessage ?? t("document.saveFirst", {
         defaultValue: "ابتدا آیتم را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
     });
-    const canAddressTarget = Boolean(targetId || tempSessionId);
+    const missingTempSessionText = tempSessionMissingMessage ?? t("document.errors.missingTempSession", {
+        defaultValue: "نشست موقت بارگذاری مستندات آماده نیست.",
+    });
+    const targetUnavailableText = uploadRequiresTempSession
+        ? missingTempSessionText
+        : saveFirstText;
+    const canAddressTarget = uploadRequiresTempSession
+        ? Boolean(tempSessionId)
+        : Boolean(targetId || tempSessionId);
     const canUploadDocuments =
         !readOnly &&
         !busy &&
@@ -306,6 +323,29 @@ export default function DocumentAttachmentsTab({
 
         setUploadItems((current) => current.filter((row) => row.id !== rowId));
     }, []);
+
+    const scheduleSuccessfulUploadRemoval = useCallback((rowId: string) => {
+        const timeoutId = setTimeout(() => {
+            successTimeoutsRef.current = successTimeoutsRef.current.filter(
+                (currentTimeoutId) => currentTimeoutId !== timeoutId,
+            );
+            removeUploadItem(rowId);
+        }, SUCCESS_UPLOAD_VISIBLE_MS);
+
+        successTimeoutsRef.current = [...successTimeoutsRef.current, timeoutId];
+    }, [removeUploadItem]);
+
+    const markUploadStarted = useCallback(() => {
+        activeUploadCountRef.current += 1;
+        onPendingUploadsChange?.(true);
+    }, [onPendingUploadsChange]);
+
+    const markUploadSettled = useCallback(() => {
+        activeUploadCountRef.current = Math.max(0, activeUploadCountRef.current - 1);
+        if (activeUploadCountRef.current === 0) {
+            onPendingUploadsChange?.(false);
+        }
+    }, [onPendingUploadsChange]);
 
     const clearDocumentTitleDraft = useCallback((documentId: string) => {
         setDocumentTitleDrafts((current) => {
@@ -405,8 +445,7 @@ export default function DocumentAttachmentsTab({
                 setActionMessage({
                     design: "Negative",
                     text: t("document.validation.waitForUpload", {
-                        defaultValue:
-                            "تا پایان آپلود فایل‌ها صبر کنید و سپس ذخیره را بزنید.",
+                        defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
                     }),
                 });
                 return false;
@@ -437,12 +476,13 @@ export default function DocumentAttachmentsTab({
         if (!onUploadDocument || !canAddressTarget) {
             setActionMessage({
                 design: "Negative",
-                text: saveFirstText,
+                text: targetUnavailableText,
             });
             return;
         }
 
         const rowId = createUploadRowId();
+        markUploadStarted();
         setUploadItems((current) => [
             ...current,
             {
@@ -458,7 +498,10 @@ export default function DocumentAttachmentsTab({
             await onUploadDocument(file, (progress) => {
                 updateUploadItem(rowId, { progress: normalizeProgress(progress) });
             });
-            removeUploadItem(rowId);
+            updateUploadItem(rowId, {
+                state: "success",
+                progress: 100,
+            });
             setActionMessage({
                 design: "Positive",
                 text: t("document.upload.success", {
@@ -466,6 +509,8 @@ export default function DocumentAttachmentsTab({
                     fileName: file.name,
                 }),
             });
+            scheduleSuccessfulUploadRemoval(rowId);
+            markUploadSettled();
         } catch (uploadError) {
             const message =
                 uploadError instanceof HttpError &&
@@ -489,6 +534,7 @@ export default function DocumentAttachmentsTab({
                 progress: 100,
                 error: message,
             });
+            markUploadSettled();
         }
     };
 
@@ -607,6 +653,10 @@ export default function DocumentAttachmentsTab({
     };
 
     const renderUploadStatusText = (item: DocumentUploadItem): string => {
+        if (item.state === "success") {
+            return t("document.status.success", { defaultValue: "بارگذاری کامل شد" });
+        }
+
         if (item.state === "error") {
             return t("document.upload.failed", { defaultValue: "خطا در بارگذاری" });
         }
@@ -642,7 +692,9 @@ export default function DocumentAttachmentsTab({
                     ) : null}
                     {uploadItems.map((item) => {
                         const progress = normalizeProgress(item.progress);
-                        const progressValue = item.state === "error" ? 100 : progress;
+                        const isComplete = item.state === "success" || item.state === "error";
+                        const progressValue = isComplete ? 100 : Math.max(progress, 1);
+                        const hideProgressValue = item.state === "uploading" && progress <= 0;
                         const statusText = renderUploadStatusText(item);
 
                         return (
@@ -670,12 +722,14 @@ export default function DocumentAttachmentsTab({
 
                                 <ProgressIndicator
                                     accessibleName={statusText}
-                                    displayValue={progress > 0 ? `${progress}%` : ""}
-                                    hideValue={progress <= 0 && item.state !== "error"}
+                                    displayValue={hideProgressValue ? "" : statusText}
+                                    hideValue={hideProgressValue}
                                     value={progressValue}
-                                    valueState={
-                                        item.state === "error" ? "Negative" : "Information"
-                                    }
+                                    valueState={item.state === "error"
+                                        ? "Negative"
+                                        : item.state === "success"
+                                          ? "Positive"
+                                          : "Information"}
                                 />
 
                                 <span
@@ -733,7 +787,7 @@ export default function DocumentAttachmentsTab({
                 <>
                     <div style={TABLE_SPACER_STYLE} />
                     <MessageStrip design="Information" hideCloseButton>
-                        {saveFirstText}
+                        {targetUnavailableText}
                     </MessageStrip>
                 </>
             ) : null}

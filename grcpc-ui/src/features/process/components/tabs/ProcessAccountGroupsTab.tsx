@@ -24,6 +24,7 @@ import { processAccountGroupAssignmentService } from "../../service/process-acco
 
 interface ProcessAccountGroupsTabProps {
     processId: string | null;
+    readOnly?: boolean;
 }
 
 type AccountGroupsLoadStatus = "idle" | "loading" | "success" | "error";
@@ -138,7 +139,10 @@ function resolveStatusLabel(
     return map[status];
 }
 
-export default function ProcessAccountGroupsTab({ processId }: ProcessAccountGroupsTabProps) {
+export default function ProcessAccountGroupsTab({
+    processId,
+    readOnly = false,
+}: ProcessAccountGroupsTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
     const [retryKey, setRetryKey] = useState(0);
@@ -240,6 +244,7 @@ export default function ProcessAccountGroupsTab({ processId }: ProcessAccountGro
         ? formatAssignmentOption(removeCandidate, noneText)
         : "";
     const canAssign =
+        !readOnly &&
         !!processId &&
         !!selectedAccountGroupId &&
         availableAccountGroups.some((accountGroup) => accountGroup.id === selectedAccountGroupId) &&
@@ -249,7 +254,7 @@ export default function ProcessAccountGroupsTab({ processId }: ProcessAccountGro
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAssign = async () => {
-        if (!processId || !canAssign) {
+        if (readOnly || !processId || !canAssign) {
             return;
         }
 
@@ -274,7 +279,7 @@ export default function ProcessAccountGroupsTab({ processId }: ProcessAccountGro
     };
 
     const handleRemove = async () => {
-        if (!removeCandidate) {
+        if (readOnly || !removeCandidate) {
             return;
         }
 
@@ -336,55 +341,57 @@ export default function ProcessAccountGroupsTab({ processId }: ProcessAccountGro
 
             <div style={{ height: "0.75rem" }} />
 
-            <div style={ASSIGNMENT_TOOLBAR_STYLE}>
-                <ComboBox
-                    accessibleName={t("process.accountGroups.assignAccessibleName")}
-                    filter="Contains"
-                    placeholder={t("process.accountGroups.assignPlaceholder")}
-                    showClearIcon
-                    style={ACCOUNT_GROUP_COMBOBOX_STYLE}
-                    value={accountGroupComboBoxValue}
-                    disabled={isLoading || mutationBusy || availableAccountGroups.length === 0}
-                    onInput={(event) => {
-                        const nextValue = readInputValue(event);
-                        setSelectedAccountGroupSearchValue(nextValue);
+            {!readOnly ? (
+                <div style={ASSIGNMENT_TOOLBAR_STYLE}>
+                    <ComboBox
+                        accessibleName={t("process.accountGroups.assignAccessibleName")}
+                        filter="Contains"
+                        placeholder={t("process.accountGroups.assignPlaceholder")}
+                        showClearIcon
+                        style={ACCOUNT_GROUP_COMBOBOX_STYLE}
+                        value={accountGroupComboBoxValue}
+                        disabled={isLoading || mutationBusy || availableAccountGroups.length === 0}
+                        onInput={(event) => {
+                            const nextValue = readInputValue(event);
+                            setSelectedAccountGroupSearchValue(nextValue);
 
-                        const matchedOption = availableAccountGroups.find(
-                            (accountGroup) =>
-                                formatAccountGroupOption(accountGroup, noneText) === nextValue,
-                        );
-                        setSelectedAccountGroupId(matchedOption?.id ?? "");
-                    }}
-                    onSelectionChange={(event) => {
-                        const nextValue = readSelectedComboBoxDataValue(
-                            event,
-                            selectedAccountGroupId,
-                        );
-                        const selectedOption = availableAccountGroups.find(
-                            (accountGroup) => accountGroup.id === nextValue,
-                        );
+                            const matchedOption = availableAccountGroups.find(
+                                (accountGroup) =>
+                                    formatAccountGroupOption(accountGroup, noneText) === nextValue,
+                            );
+                            setSelectedAccountGroupId(matchedOption?.id ?? "");
+                        }}
+                        onSelectionChange={(event) => {
+                            const nextValue = readSelectedComboBoxDataValue(
+                                event,
+                                selectedAccountGroupId,
+                            );
+                            const selectedOption = availableAccountGroups.find(
+                                (accountGroup) => accountGroup.id === nextValue,
+                            );
 
-                        setSelectedAccountGroupId(nextValue);
-                        setSelectedAccountGroupSearchValue(
-                            selectedOption
-                                ? formatAccountGroupOption(selectedOption, noneText)
-                                : "",
-                        );
-                    }}
-                >
-                    {availableAccountGroups.map((accountGroup) => (
-                        <ComboBoxItem
-                            key={accountGroup.id}
-                            data-value={accountGroup.id}
-                            text={formatAccountGroupOption(accountGroup, noneText)}
-                        />
-                    ))}
-                </ComboBox>
+                            setSelectedAccountGroupId(nextValue);
+                            setSelectedAccountGroupSearchValue(
+                                selectedOption
+                                    ? formatAccountGroupOption(selectedOption, noneText)
+                                    : "",
+                            );
+                        }}
+                    >
+                        {availableAccountGroups.map((accountGroup) => (
+                            <ComboBoxItem
+                                key={accountGroup.id}
+                                data-value={accountGroup.id}
+                                text={formatAccountGroupOption(accountGroup, noneText)}
+                            />
+                        ))}
+                    </ComboBox>
 
-                <Button design="Emphasized" disabled={!canAssign} onClick={handleAssign}>
-                    {t("process.accountGroups.assign")}
-                </Button>
-            </div>
+                    <Button design="Emphasized" disabled={!canAssign} onClick={handleAssign}>
+                        {t("process.accountGroups.assign")}
+                    </Button>
+                </div>
+            ) : null}
 
             {availableAccountGroups.length === 0 && !isLoading ? (
                 <>
@@ -448,13 +455,17 @@ export default function ProcessAccountGroupsTab({ processId }: ProcessAccountGro
                         </TableCell>
                         <TableCell>{resolveStatusLabel(assignment.status, t)}</TableCell>
                         <TableCell>
-                            <Button
-                                design="Transparent"
-                                disabled={mutationBusy}
-                                onClick={() => setRemoveCandidate(assignment)}
-                            >
-                                {t("process.accountGroups.remove")}
-                            </Button>
+                            {!readOnly ? (
+                                <Button
+                                    design="Transparent"
+                                    disabled={mutationBusy}
+                                    onClick={() => setRemoveCandidate(assignment)}
+                                >
+                                    {t("process.accountGroups.remove")}
+                                </Button>
+                            ) : (
+                                noneText
+                            )}
                         </TableCell>
                     </TableRow>
                 ))}

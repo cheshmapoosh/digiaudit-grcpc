@@ -1,4 +1,11 @@
-import { Fragment, useState, type CSSProperties, type ReactNode } from "react";
+import {
+    Fragment,
+    useCallback,
+    useRef,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -30,6 +37,7 @@ import ControlAccountGroupsTab from "../components/tabs/ControlAccountGroupsTab"
 import ControlDocumentsTab from "../components/tabs/ControlDocumentsTab";
 import ControlRegulationsTab from "../components/tabs/ControlRegulationsTab";
 import ControlRisksTab from "../components/tabs/ControlRisksTab";
+import type { DocumentBeforeParentSubmitHandler } from "@/features/document";
 
 export type ControlObjectMode = "view" | "edit";
 
@@ -64,6 +72,7 @@ export interface ControlObjectPageProps {
     value: ControlDetails;
     busy?: boolean;
     error?: string | null;
+    documentTempSessionId?: string;
     onErrorClose?: () => void;
     onSubmit: (payload: UpdateControlAssignmentRequest) => Promise<void> | void;
     onCancel: () => void;
@@ -353,6 +362,7 @@ export default function ControlObjectPage({
     value,
     busy = false,
     error,
+    documentTempSessionId,
     onErrorClose,
     onSubmit,
     onCancel,
@@ -363,6 +373,8 @@ export default function ControlObjectPage({
     const [form, setForm] = useState<ControlAssignmentFormState>(() => toFormState(value));
     const [validationError, setValidationError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<ControlTabKey>("general");
+    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
+    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
 
     const handleChange = <K extends keyof ControlAssignmentFormState>(
         key: K,
@@ -388,8 +400,31 @@ export default function ControlObjectPage({
         return true;
     };
 
+    const handleDocumentBeforeParentSubmitChange = useCallback(
+        (handler: DocumentBeforeParentSubmitHandler | null) => {
+            documentBeforeSubmitRef.current = handler;
+        },
+        [],
+    );
+
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
+            return;
+        }
+
+        if (hasPendingDocumentUploads) {
+            setValidationError(
+                t("document.validation.waitForUpload", {
+                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
+                }),
+            );
+            setActiveTab("documents");
+            return;
+        }
+
+        const documentsReady = await documentBeforeSubmitRef.current?.();
+        if (documentsReady === false) {
+            setActiveTab("documents");
             return;
         }
 
@@ -637,13 +672,36 @@ export default function ControlObjectPage({
     const renderTabContent = () => {
         switch (activeTab) {
             case "regulations":
-                return <ControlRegulationsTab controlAssignmentId={value.controlAssignmentId} />;
+                return (
+                    <ControlRegulationsTab
+                        controlAssignmentId={value.controlAssignmentId}
+                        readOnly={readOnly}
+                    />
+                );
             case "risks":
-                return <ControlRisksTab controlAssignmentId={value.controlAssignmentId} />;
+                return (
+                    <ControlRisksTab
+                        controlAssignmentId={value.controlAssignmentId}
+                        readOnly={readOnly}
+                    />
+                );
             case "accountGroups":
-                return <ControlAccountGroupsTab controlAssignmentId={value.controlAssignmentId} />;
+                return (
+                    <ControlAccountGroupsTab
+                        controlAssignmentId={value.controlAssignmentId}
+                        readOnly={readOnly}
+                    />
+                );
             case "documents":
-                return <ControlDocumentsTab controlAssignmentId={value.controlAssignmentId} />;
+                return (
+                    <ControlDocumentsTab
+                        controlAssignmentId={value.controlAssignmentId}
+                        tempSessionId={documentTempSessionId}
+                        readOnly={readOnly}
+                        onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
+                        onPendingUploadsChange={setHasPendingDocumentUploads}
+                    />
+                );
             case "general":
             default:
                 return renderGeneralTab();
