@@ -5,6 +5,7 @@ import type {
     DocumentCommitPayload,
     DocumentDownloadUrl,
     DocumentTempUploadPayload,
+    DocumentUploadPayload,
     DocumentUploadPolicy,
 } from "../domain/document.model";
 
@@ -143,6 +144,25 @@ export class DocumentApiRepo {
     uploadPolicy(targetType: string): Promise<DocumentUploadPolicy> {
         return httpClient.get<DocumentUploadPolicy>(
             appendQuery(`${BASE_URL}/upload-policy`, { targetType }),
+        );
+    }
+
+    upload(
+        payload: DocumentUploadPayload,
+        onProgress?: (progress: number) => void,
+    ): Promise<DocumentAttachment> {
+        const formData = new FormData();
+        formData.append("targetType", payload.targetType);
+        formData.append("targetId", payload.targetId);
+        if (payload.title) {
+            formData.append("title", payload.title);
+        }
+        formData.append("file", payload.file);
+
+        return uploadWithProgress<DocumentAttachment>(
+            BASE_URL,
+            formData,
+            onProgress,
         );
     }
 

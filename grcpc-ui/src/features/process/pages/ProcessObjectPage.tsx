@@ -28,6 +28,7 @@ import ProcessAccountGroupsTab from "../components/tabs/ProcessAccountGroupsTab"
 import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
 import ProcessRegulationsTab from "../components/tabs/ProcessRegulationsTab";
 import ProcessRisksTab from "../components/tabs/ProcessRisksTab";
+import { DocumentAttachmentsManager } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
@@ -158,32 +159,6 @@ const FOOTER_STYLE: CSSProperties = {
 
 const ACTION_BUTTON_STYLE: CSSProperties = {
     minWidth: "6rem",
-};
-
-const TABLE_PANEL_STYLE: CSSProperties = {
-    minHeight: "15rem",
-    background: "var(--sapGroup_ContentBackground)",
-    border: "1px solid var(--sapList_BorderColor)",
-    padding: "1rem",
-};
-
-const TABLE_STYLE: CSSProperties = {
-    width: "100%",
-    borderCollapse: "collapse",
-    background: "var(--sapList_Background)",
-};
-
-const TABLE_HEADER_STYLE: CSSProperties = {
-    background: "var(--sapList_HeaderBackground)",
-    border: "1px solid var(--sapList_BorderColor)",
-    padding: "0.5rem",
-    fontWeight: 700,
-};
-
-const TABLE_CELL_STYLE: CSSProperties = {
-    border: "1px solid var(--sapList_BorderColor)",
-    padding: "0.5rem",
-    height: "2rem",
 };
 
 function toFormState(
@@ -389,45 +364,6 @@ function ProcessTabs({
                 return [item];
             })}
         </TabContainer>
-    );
-}
-
-function TablePlaceholder({
-                              title,
-                              columns,
-                          }: {
-    title: string;
-    columns: string[];
-}) {
-    return (
-        <div style={TABLE_PANEL_STYLE}>
-            <Title level="H5">{title}</Title>
-
-            <div style={{ height: "0.75rem" }} />
-
-            <table style={TABLE_STYLE}>
-                <thead>
-                    <tr>
-                        {columns.map((column) => (
-                            <th key={column} style={TABLE_HEADER_STYLE}>
-                                {column}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {[0, 1, 2].map((row) => (
-                        <tr key={row}>
-                            {columns.map((column) => (
-                                <td key={column} style={TABLE_CELL_STYLE}>
-                                    &nbsp;
-                                </td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
     );
 }
 
@@ -782,13 +718,16 @@ export default function ProcessObjectPage({
         }
 
         return (
-            <TablePlaceholder
+            <DocumentAttachmentsManager
+                key={currentProcessId ?? "unsaved-process-documents"}
                 title={t("process.tabs.documents", { defaultValue: "مستندات" })}
-                columns={[
-                    t("process.fields.name", { defaultValue: "نام" }),
-                    t("process.fields.type", { defaultValue: "نوع" }),
-                    t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                ]}
+                targetType="PROCESS_NODE"
+                targetId={currentProcessId}
+                busy={busy}
+                saveFirstMessage={t("document.saveFirst.process", {
+                    defaultValue:
+                        "ابتدا آیتم فرآیندی را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
+                })}
             />
         );
     };

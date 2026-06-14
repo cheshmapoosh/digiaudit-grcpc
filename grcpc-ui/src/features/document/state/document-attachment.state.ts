@@ -4,6 +4,7 @@ import type {
     DocumentAttachment,
     DocumentCommitPayload,
     DocumentTempUploadPayload,
+    DocumentUploadPayload,
     DocumentUploadPolicy,
 } from "../domain/document.model";
 import { DocumentApiRepo } from "../infra/document.api.repo";
@@ -21,6 +22,10 @@ interface DocumentAttachmentState {
     loadUploadPolicy(targetType: string): Promise<DocumentUploadPolicy>;
     uploadTemp(
         payload: DocumentTempUploadPayload,
+        onProgress?: (progress: number) => void,
+    ): Promise<DocumentAttachment>;
+    upload(
+        payload: DocumentUploadPayload,
         onProgress?: (progress: number) => void,
     ): Promise<DocumentAttachment>;
     commitTemp(payload: DocumentCommitPayload): Promise<DocumentAttachment[]>;
@@ -120,6 +125,21 @@ export const useDocumentAttachmentState = create<DocumentAttachmentState>((set, 
                 tempDocumentsBySession: {
                     ...state.tempDocumentsBySession,
                     [payload.tempSessionId]: [uploaded, ...current],
+                },
+            };
+        });
+        return uploaded;
+    },
+
+    async upload(payload, onProgress) {
+        const uploaded = await documentRepo.upload(payload, onProgress);
+        set((state) => {
+            const activeKey = targetKey(payload.targetType, payload.targetId);
+            const current = state.documentsByTarget[activeKey] ?? [];
+            return {
+                documentsByTarget: {
+                    ...state.documentsByTarget,
+                    [activeKey]: [uploaded, ...current],
                 },
             };
         });

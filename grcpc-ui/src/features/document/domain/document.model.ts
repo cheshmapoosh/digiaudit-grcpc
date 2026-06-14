@@ -42,6 +42,13 @@ export interface DocumentCommitPayload {
     documentTitles?: Record<string, string>;
 }
 
+export interface DocumentUploadPayload {
+    targetType: string;
+    targetId: string;
+    title?: string;
+    file: File;
+}
+
 export interface DocumentTempUploadPayload {
     targetType: string;
     tempSessionId: string;
