@@ -17,27 +17,36 @@ import type { RegulationNode } from "@/features/regulation/domain/regulation.mod
 import { regulationService } from "@/features/regulation/service/regulation.service";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { HttpError } from "@/shared/infra/http.client";
-import type { ControlRegulationLink } from "../../domain/control.model";
-import { controlService } from "../../service/control.service";
-import { displayDate } from "./ControlTabUtils";
+import type { ProcessNodeType } from "../../domain/process.model";
+import type { ProcessRegulationAssignment } from "../../domain/process-regulation-assignment.model";
+import { processRegulationAssignmentService } from "../../service/process-regulation-assignment.service";
 
-export interface ControlRegulationsTabProps {
-    controlAssignmentId: string;
+interface ProcessRegulationsTabProps {
+    processId: string | null;
+    nodeType: ProcessNodeType;
 }
 
-type RegulationsLoadStatus = "loading" | "success" | "error";
+type RegulationsLoadStatus = "idle" | "loading" | "success" | "error";
 
 interface RegulationsLoadState {
-    controlAssignmentId: string;
+    processId: string | null;
     retryKey: number;
     status: RegulationsLoadStatus;
-    links: ControlRegulationLink[];
+    assignments: ProcessRegulationAssignment[];
     regulationOptions: RegulationNode[];
 }
 
-const PANEL_STYLE: CSSProperties = {
-    display: "grid",
-    gap: "0.75rem",
+const TABLE_PANEL_STYLE: CSSProperties = {
+    minHeight: "15rem",
+    background: "var(--sapGroup_ContentBackground)",
+    border: "1px solid var(--sapList_BorderColor)",
+    padding: "1rem",
+};
+
+const ERROR_ACTION_STYLE: CSSProperties = {
+    display: "flex",
+    justifyContent: "flex-end",
+    paddingTop: "0.75rem",
 };
 
 const ADD_TOOLBAR_STYLE: CSSProperties = {
@@ -53,15 +62,15 @@ const REGULATION_COMBOBOX_STYLE: CSSProperties = {
     minWidth: "18rem",
 };
 
-const EMPTY_LINKS: ControlRegulationLink[] = [];
+const EMPTY_ASSIGNMENTS: ProcessRegulationAssignment[] = [];
 const EMPTY_REGULATION_OPTIONS: RegulationNode[] = [];
 
-function initialLoadState(controlAssignmentId: string): RegulationsLoadState {
+function initialLoadState(processId: string | null): RegulationsLoadState {
     return {
-        controlAssignmentId,
+        processId,
         retryKey: 0,
-        status: "loading",
-        links: [],
+        status: processId ? "loading" : "idle",
+        assignments: [],
         regulationOptions: [],
     };
 }
@@ -78,9 +87,12 @@ function formatLawOption(law: RegulationNode, fallback: string): string {
     )}`;
 }
 
-function formatLinkOption(link: ControlRegulationLink, fallback: string): string {
-    return `${formatOptionalValue(link.code, fallback)} - ${formatOptionalValue(
-        link.title,
+function formatAssignmentOption(
+    assignment: ProcessRegulationAssignment,
+    fallback: string,
+): string {
+    return `${formatOptionalValue(assignment.code, fallback)} - ${formatOptionalValue(
+        assignment.title,
         fallback,
     )}`;
 }
@@ -101,6 +113,29 @@ function readSelectedComboBoxDataValue(event: unknown, fallback: string): string
     return selectedItem?.getAttribute?.("data-value") ?? fallback;
 }
 
+function formatValidity(
+    assignment: ProcessRegulationAssignment,
+    fallback: string,
+): string {
+    const validFrom = assignment.validFrom?.trim();
+    const validTo = assignment.validTo?.trim();
+
+    if (!validFrom && !validTo) {
+        return fallback;
+    }
+
+    return `${validFrom || fallback} - ${validTo || fallback}`;
+}
+
+function resolveStatusLabel(
+    status: ProcessRegulationAssignment["status"],
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    return status === "active"
+        ? t("common.active", { defaultValue: "فعال" })
+        : t("common.inactive", { defaultValue: "غیرفعال" });
+}
+
 function resolveMutationError(
     error: unknown,
     duplicateMessage: string,
@@ -116,9 +151,10 @@ function resolveMutationError(
     return fallbackMessage;
 }
 
-export default function ControlRegulationsTab({
-    controlAssignmentId,
-}: ControlRegulationsTabProps) {
+export default function ProcessRegulationsTab({
+    processId,
+    nodeType,
+}: ProcessRegulationsTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
     const [retryKey, setRetryKey] = useState(0);
@@ -127,29 +163,37 @@ export default function ControlRegulationsTab({
     const [mutationBusy, setMutationBusy] = useState(false);
     const [mutationError, setMutationError] = useState<string | null>(null);
     const [removeCandidate, setRemoveCandidate] =
-        useState<ControlRegulationLink | null>(null);
+        useState<ProcessRegulationAssignment | null>(null);
     const [loadState, setLoadState] = useState<RegulationsLoadState>(() =>
-        initialLoadState(controlAssignmentId),
+        initialLoadState(processId),
     );
 
     useEffect(() => {
+        if (!processId) {
+            setLoadState(initialLoadState(null));
+            setRemoveCandidate(null);
+            setSelectedLawId("");
+            setSelectedLawSearchValue("");
+            return;
+        }
+
         const requestId = requestSeq.current + 1;
         requestSeq.current = requestId;
 
         Promise.all([
-            controlService.listRegulations(controlAssignmentId),
+            processRegulationAssignmentService.listByProcess(processId),
             regulationService.list(),
         ])
-            .then(([links, regulationOptions]) => {
+            .then(([assignments, regulationOptions]) => {
                 if (requestSeq.current !== requestId) {
                     return;
                 }
 
                 setLoadState({
-                    controlAssignmentId,
+                    processId,
                     retryKey,
                     status: "success",
-                    links,
+                    assignments,
                     regulationOptions: regulationOptions.filter(
                         (regulation) => regulation.nodeType === "law",
                     ),
@@ -163,10 +207,10 @@ export default function ControlRegulationsTab({
                 }
 
                 setLoadState({
-                    controlAssignmentId,
+                    processId,
                     retryKey,
                     status: "error",
-                    links: [],
+                    assignments: [],
                     regulationOptions: [],
                 });
             });
@@ -176,34 +220,46 @@ export default function ControlRegulationsTab({
                 requestSeq.current += 1;
             }
         };
-    }, [controlAssignmentId, retryKey]);
+    }, [processId, retryKey]);
 
     const noneText = t("common.none", { defaultValue: "ندارد" });
-    const duplicateMessage = t("control.regulations.duplicate", {
-        defaultValue: "این قانون قبلاً افزوده شده است.",
+    const regulationsTitle = t("process.regulations.title", {
+        defaultValue: "قوانین",
     });
-    const mutationErrorFallback = t("control.regulations.mutationError", {
+    const duplicateMessage = t("process.regulations.duplicate", {
+        defaultValue: "این قانون قبلاً برای این آیتم افزوده شده است.",
+    });
+    const mutationErrorFallback = t("process.regulations.mutationError", {
         defaultValue: "خطا در ذخیره تغییرات قوانین.",
     });
+    const saveFirstMessage =
+        nodeType === "subProcess"
+            ? t("process.regulations.saveFirst", {
+                  defaultValue: "ابتدا آیتم فرآیندی را ذخیره کنید.",
+              })
+            : t("process.regulations.saveFirst", {
+                  defaultValue: "ابتدا آیتم فرآیندی را ذخیره کنید.",
+              });
     const isCurrentLoad =
-        loadState.controlAssignmentId === controlAssignmentId &&
-        loadState.retryKey === retryKey;
-    const links = isCurrentLoad ? loadState.links : EMPTY_LINKS;
+        loadState.processId === processId && loadState.retryKey === retryKey;
+    const assignments = isCurrentLoad ? loadState.assignments : EMPTY_ASSIGNMENTS;
     const regulationOptions = isCurrentLoad
         ? loadState.regulationOptions
         : EMPTY_REGULATION_OPTIONS;
     const isLoading =
-        loadState.controlAssignmentId !== controlAssignmentId ||
-        loadState.retryKey !== retryKey ||
-        loadState.status === "loading";
+        !!processId &&
+        (loadState.processId !== processId ||
+            loadState.retryKey !== retryKey ||
+            loadState.status === "loading");
     const hasError =
+        !!processId &&
         !isLoading &&
-        loadState.controlAssignmentId === controlAssignmentId &&
+        loadState.processId === processId &&
         loadState.retryKey === retryKey &&
         loadState.status === "error";
     const addedLawIds = useMemo(
-        () => new Set(links.map((link) => link.regulationId)),
-        [links],
+        () => new Set(assignments.map((assignment) => assignment.regulationNodeId)),
+        [assignments],
     );
     const availableLaws = useMemo(
         () => regulationOptions.filter((regulation) => !addedLawIds.has(regulation.id)),
@@ -214,9 +270,10 @@ export default function ControlRegulationsTab({
         ? formatLawOption(selectedLaw, noneText)
         : selectedLawSearchValue;
     const removeCandidateLabel = removeCandidate
-        ? formatLinkOption(removeCandidate, noneText)
+        ? formatAssignmentOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        !!processId &&
         !!selectedLawId &&
         availableLaws.some((law) => law.id === selectedLawId) &&
         !isLoading &&
@@ -225,7 +282,7 @@ export default function ControlRegulationsTab({
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (!selectedLawId) {
+        if (!processId || !selectedLawId) {
             return;
         }
 
@@ -242,7 +299,11 @@ export default function ControlRegulationsTab({
         setMutationError(null);
 
         try {
-            await controlService.linkRegulation(controlAssignmentId, selectedLawId);
+            await processRegulationAssignmentService.create({
+                processNodeId: processId,
+                regulationNodeId: selectedLawId,
+                isActive: true,
+            });
             setSelectedLawId("");
             setSelectedLawSearchValue("");
             refresh();
@@ -264,10 +325,7 @@ export default function ControlRegulationsTab({
         setMutationError(null);
 
         try {
-            await controlService.deleteRegulationLink(
-                controlAssignmentId,
-                removeCandidate.id,
-            );
+            await processRegulationAssignmentService.remove(removeCandidate.assignmentId);
             setRemoveCandidate(null);
             refresh();
         } catch (error) {
@@ -279,20 +337,36 @@ export default function ControlRegulationsTab({
         }
     };
 
+    if (!processId) {
+        return (
+            <div style={TABLE_PANEL_STYLE}>
+                <Title level="H5">{regulationsTitle}</Title>
+
+                <div style={{ height: "0.75rem" }} />
+
+                <MessageStrip design="Information" hideCloseButton>
+                    {saveFirstMessage}
+                </MessageStrip>
+            </div>
+        );
+    }
+
     if (hasError) {
         return (
-            <div style={PANEL_STYLE}>
-                <Title level="H5">
-                    {t("control.regulations.title", { defaultValue: "قوانین" })}
-                </Title>
+            <div style={TABLE_PANEL_STYLE}>
+                <Title level="H5">{regulationsTitle}</Title>
+
+                <div style={{ height: "0.75rem" }} />
+
                 <MessageStrip design="Negative" hideCloseButton>
-                    {t("control.regulations.loadError", {
-                        defaultValue: "خطا در بارگذاری قوانین.",
+                    {t("process.regulations.loadError", {
+                        defaultValue: "خطا در بارگذاری قوانین افزوده‌شده.",
                     })}
                 </MessageStrip>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+
+                <div style={ERROR_ACTION_STYLE}>
                     <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
-                        {t("control.regulations.retry", { defaultValue: "تلاش دوباره" })}
+                        {t("process.regulations.retry", { defaultValue: "تلاش دوباره" })}
                     </Button>
                 </div>
             </div>
@@ -300,18 +374,18 @@ export default function ControlRegulationsTab({
     }
 
     return (
-        <div style={PANEL_STYLE}>
-            <Title level="H5">
-                {t("control.regulations.title", { defaultValue: "قوانین" })}
-            </Title>
+        <div style={TABLE_PANEL_STYLE}>
+            <Title level="H5">{regulationsTitle}</Title>
+
+            <div style={{ height: "0.75rem" }} />
 
             <div style={ADD_TOOLBAR_STYLE}>
                 <ComboBox
-                    accessibleName={t("control.regulations.addAccessibleName", {
+                    accessibleName={t("process.regulations.addAccessibleName", {
                         defaultValue: "انتخاب قانون برای افزودن",
                     })}
                     filter="Contains"
-                    placeholder={t("control.regulations.addPlaceholder", {
+                    placeholder={t("process.regulations.addPlaceholder", {
                         defaultValue: "انتخاب قانون",
                     })}
                     showClearIcon
@@ -349,51 +423,69 @@ export default function ControlRegulationsTab({
                 </ComboBox>
 
                 <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
-                    {t("control.regulations.add", { defaultValue: "افزودن" })}
+                    {t("process.regulations.add", { defaultValue: "افزودن" })}
                 </Button>
             </div>
 
             {availableLaws.length === 0 && !isLoading ? (
-                <MessageStrip design="Information" hideCloseButton>
-                    {t("control.regulations.noAssignable", {
-                        defaultValue: "قانون قابل افزودن دیگری وجود ندارد.",
-                    })}
-                </MessageStrip>
+                <>
+                    <div style={{ height: "0.75rem" }} />
+                    <MessageStrip design="Information" hideCloseButton>
+                        {t("process.regulations.noAssignable", {
+                            defaultValue: "قانون قابل افزودن دیگری وجود ندارد.",
+                        })}
+                    </MessageStrip>
+                </>
             ) : null}
 
             {mutationError ? (
-                <MessageStrip design="Negative" hideCloseButton>
-                    {mutationError}
-                </MessageStrip>
+                <>
+                    <div style={{ height: "0.75rem" }} />
+                    <MessageStrip design="Negative" hideCloseButton>
+                        {mutationError}
+                    </MessageStrip>
+                </>
             ) : null}
 
+            <div style={{ height: "0.75rem" }} />
+
             <Table
-                accessibleName={t("control.regulations.tableAccessibleName", {
-                    defaultValue: "جدول قوانین کنترل",
+                accessibleName={t("process.regulations.tableAccessibleName", {
+                    defaultValue: "جدول قوانین آیتم فرآیندی",
                 })}
                 alternateRowColors
                 headerRow={
                     <TableHeaderRow>
                         <TableHeaderCell width="8rem">
-                            {t("control.regulations.columns.code", { defaultValue: "کد" })}
+                            {t("process.regulations.columns.code", { defaultValue: "کد" })}
                         </TableHeaderCell>
                         <TableHeaderCell minWidth="12rem">
-                            {t("control.regulations.columns.title", {
+                            {t("process.regulations.columns.title", {
                                 defaultValue: "نام قانون",
                             })}
                         </TableHeaderCell>
                         <TableHeaderCell minWidth="14rem">
-                            {t("control.regulations.columns.description", {
+                            {t("process.regulations.columns.description", {
                                 defaultValue: "شرح",
                             })}
                         </TableHeaderCell>
+                        <TableHeaderCell width="11rem">
+                            {t("process.regulations.columns.issuer", {
+                                defaultValue: "صادرکننده",
+                            })}
+                        </TableHeaderCell>
+                        <TableHeaderCell width="8rem">
+                            {t("process.regulations.columns.status", {
+                                defaultValue: "وضعیت",
+                            })}
+                        </TableHeaderCell>
                         <TableHeaderCell width="12rem">
-                            {t("control.regulations.columns.validity", {
+                            {t("process.regulations.columns.validity", {
                                 defaultValue: "اعتبار",
                             })}
                         </TableHeaderCell>
                         <TableHeaderCell width="8rem">
-                            {t("control.regulations.columns.actions", {
+                            {t("process.regulations.columns.actions", {
                                 defaultValue: "عملیات",
                             })}
                         </TableHeaderCell>
@@ -401,26 +493,28 @@ export default function ControlRegulationsTab({
                 }
                 loading={isLoading}
                 loadingDelay={0}
-                noDataText={t("control.regulations.empty", {
-                    defaultValue: "قانونی افزوده نشده است.",
+                noDataText={t("process.regulations.empty", {
+                    defaultValue: "قانونی برای این آیتم افزوده نشده است.",
                 })}
                 overflowMode="Popin"
             >
-                {links.map((link) => (
-                    <TableRow key={link.id} rowKey={link.id}>
-                        <TableCell>{formatOptionalValue(link.code, noneText)}</TableCell>
-                        <TableCell>{formatOptionalValue(link.title, noneText)}</TableCell>
-                        <TableCell>{formatOptionalValue(link.description, noneText)}</TableCell>
+                {assignments.map((assignment) => (
+                    <TableRow key={assignment.assignmentId} rowKey={assignment.assignmentId}>
+                        <TableCell>{formatOptionalValue(assignment.code, noneText)}</TableCell>
+                        <TableCell>{formatOptionalValue(assignment.title, noneText)}</TableCell>
                         <TableCell>
-                            {`${displayDate(link.validFrom)} - ${displayDate(link.validTo)}`}
+                            {formatOptionalValue(assignment.description, noneText)}
                         </TableCell>
+                        <TableCell>{formatOptionalValue(assignment.issuer, noneText)}</TableCell>
+                        <TableCell>{resolveStatusLabel(assignment.status, t)}</TableCell>
+                        <TableCell>{formatValidity(assignment, "-")}</TableCell>
                         <TableCell>
                             <Button
                                 design="Transparent"
                                 disabled={mutationBusy}
-                                onClick={() => setRemoveCandidate(link)}
+                                onClick={() => setRemoveCandidate(assignment)}
                             >
-                                {t("control.regulations.remove", { defaultValue: "حذف" })}
+                                {t("process.regulations.remove", { defaultValue: "حذف" })}
                             </Button>
                         </TableCell>
                     </TableRow>
@@ -429,18 +523,19 @@ export default function ControlRegulationsTab({
 
             <DeleteConfirmDialog
                 open={!!removeCandidate}
-                title={t("control.regulations.removeTitle", {
+                title={t("process.regulations.removeTitle", {
                     defaultValue: "حذف قانون",
                 })}
-                message={t("control.regulations.removeConfirm", {
-                    defaultValue: "آیا از حذف قانون «{{title}}» مطمئن هستید؟",
+                message={t("process.regulations.removeConfirm", {
+                    defaultValue:
+                        "آیا از حذف قانون «{{title}}» از این آیتم مطمئن هستید؟",
                     title: removeCandidateLabel,
                 })}
                 loading={mutationBusy}
-                confirmText={t("control.regulations.confirmRemove", {
+                confirmText={t("process.regulations.confirmRemove", {
                     defaultValue: "حذف",
                 })}
-                cancelText={t("control.regulations.cancelRemove", {
+                cancelText={t("process.regulations.cancelRemove", {
                     defaultValue: "انصراف",
                 })}
                 onClose={() => {

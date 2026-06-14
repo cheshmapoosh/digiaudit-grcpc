@@ -26,6 +26,7 @@ import type {
 import ProcessObjectivesTab from "../components/tabs/ProcessObjectivesTab";
 import ProcessAccountGroupsTab from "../components/tabs/ProcessAccountGroupsTab";
 import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
+import ProcessRegulationsTab from "../components/tabs/ProcessRegulationsTab";
 import ProcessRisksTab from "../components/tabs/ProcessRisksTab";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
@@ -728,15 +729,10 @@ export default function ProcessObjectPage({
 
         if (tab === "rules") {
             return (
-                <TablePlaceholder
-                    title={resolveTabLabel(tab, t)}
-                    columns={[
-                        t("process.fields.requirement", { defaultValue: "الزام" }),
-                        t("process.fields.description", { defaultValue: "شرح" }),
-                        t("process.fields.lawName", { defaultValue: "نام قانون" }),
-                        t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                        t("process.fields.validTo", { defaultValue: "تاریخ اعتبار" }),
-                    ]}
+                <ProcessRegulationsTab
+                    key={currentProcessId ?? "unsaved-process-regulations"}
+                    processId={currentProcessId}
+                    nodeType={form.nodeType}
                 />
             );
         }

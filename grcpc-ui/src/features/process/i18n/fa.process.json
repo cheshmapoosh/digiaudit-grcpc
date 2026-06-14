@@ -46,6 +46,34 @@
       "validTo": "تاریخ اعتبار",
       "lawName": "نام قانون"
     },
+    "regulations": {
+      "title": "قوانین",
+      "empty": "قانونی برای این آیتم افزوده نشده است.",
+      "saveFirst": "ابتدا آیتم فرآیندی را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری قوانین افزوده‌شده.",
+      "retry": "تلاش دوباره",
+      "add": "افزودن",
+      "addPlaceholder": "انتخاب قانون",
+      "addAccessibleName": "انتخاب قانون برای افزودن",
+      "noAssignable": "قانون قابل افزودن دیگری وجود ندارد.",
+      "mutationError": "خطا در ذخیره تغییرات قوانین.",
+      "duplicate": "این قانون قبلاً برای این آیتم افزوده شده است.",
+      "remove": "حذف",
+      "removeTitle": "حذف قانون",
+      "removeConfirm": "آیا از حذف قانون «{{title}}» از این آیتم مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول قوانین آیتم فرآیندی",
+      "columns": {
+        "code": "کد",
+        "title": "نام قانون",
+        "description": "شرح",
+        "issuer": "صادرکننده",
+        "status": "وضعیت",
+        "validity": "اعتبار",
+        "actions": "عملیات"
+      }
+    },
     "objectives": {
       "title": "اهداف",
       "empty": "هیچ هدفی به این آیتم فرآیندی تخصیص داده نشده است.",

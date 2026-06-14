@@ -97,7 +97,7 @@
       "addDocument": "افزودن مستند",
       "addPerformancePlan": "افزودن برنامه عملکرد",
       "link": "اتصال",
-      "linkRegulation": "اتصال قانون",
+      "linkRegulation": "افزودن قانون",
       "linkRequirement": "اتصال الزام",
       "linkRisk": "افزودن ریسک",
       "linkAccountGroup": "اتصال گروه حساب"
@@ -120,13 +120,13 @@
     },
     "empty": {
       "steps": "مرحله‌ای تعریف نشده است.",
-      "regulations": "قانونی متصل نشده است.",
+      "regulations": "قانونی افزوده نشده است.",
       "requirements": "الزامی متصل نشده است.",
       "risks": "ریسکی افزوده نشده است.",
       "accountGroups": "گروه حسابی متصل نشده است.",
       "documents": "مستندی تعریف نشده است.",
       "performancePlans": "برنامه عملکردی تعریف نشده است.",
-      "regulationCatalog": "قانونی برای اتصال وجود ندارد.",
+      "regulationCatalog": "قانون قابل افزودن دیگری وجود ندارد.",
       "requirementCatalog": "الزامی برای اتصال وجود ندارد.",
       "riskCatalog": "ریسک قابل افزودن دیگری وجود ندارد.",
       "accountGroupCatalog": "گروه حسابی برای اتصال وجود ندارد."
@@ -144,7 +144,29 @@
       "editTitle": "ویرایش برنامه عملکرد"
     },
     "regulations": {
-      "linkTitle": "اتصال قانون"
+      "title": "قوانین",
+      "add": "افزودن",
+      "addPlaceholder": "انتخاب قانون",
+      "addAccessibleName": "انتخاب قانون برای افزودن",
+      "empty": "قانونی افزوده نشده است.",
+      "noAssignable": "قانون قابل افزودن دیگری وجود ندارد.",
+      "duplicate": "این قانون قبلاً افزوده شده است.",
+      "mutationError": "خطا در ذخیره تغییرات قوانین.",
+      "loadError": "خطا در بارگذاری قوانین.",
+      "retry": "تلاش دوباره",
+      "remove": "حذف",
+      "removeTitle": "حذف قانون",
+      "removeConfirm": "آیا از حذف قانون «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول قوانین کنترل",
+      "columns": {
+        "code": "کد",
+        "title": "نام قانون",
+        "description": "شرح",
+        "validity": "اعتبار",
+        "actions": "عملیات"
+      }
     },
     "requirements": {
       "linkTitle": "اتصال الزام"

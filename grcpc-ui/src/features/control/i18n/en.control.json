@@ -97,7 +97,7 @@
       "addDocument": "Add Document",
       "addPerformancePlan": "Add Performance Plan",
       "link": "Link",
-      "linkRegulation": "Link Regulation",
+      "linkRegulation": "Add Regulation",
       "linkRequirement": "Link Requirement",
       "linkRisk": "Add Risk",
       "linkAccountGroup": "Link Account Group"
@@ -120,13 +120,13 @@
     },
     "empty": {
       "steps": "No steps have been defined.",
-      "regulations": "No regulations have been linked.",
+      "regulations": "No laws have been added.",
       "requirements": "No requirements have been linked.",
       "risks": "No risks have been added.",
       "accountGroups": "No account groups have been linked.",
       "documents": "No documents have been defined.",
       "performancePlans": "No performance plans have been defined.",
-      "regulationCatalog": "No regulations are available.",
+      "regulationCatalog": "No laws are available to add.",
       "requirementCatalog": "No requirements are available.",
       "riskCatalog": "No risks are available.",
       "accountGroupCatalog": "No account groups are available."
@@ -144,7 +144,29 @@
       "editTitle": "Edit Performance Plan"
     },
     "regulations": {
-      "linkTitle": "Link Regulation"
+      "title": "Regulations",
+      "add": "Add",
+      "addPlaceholder": "Select law",
+      "addAccessibleName": "Select law to add",
+      "empty": "No law has been added.",
+      "noAssignable": "No other law is available to add.",
+      "duplicate": "This law has already been added.",
+      "mutationError": "Failed to save regulation changes.",
+      "loadError": "Failed to load regulations.",
+      "retry": "Retry",
+      "remove": "Delete",
+      "removeTitle": "Delete Law",
+      "removeConfirm": "Delete law \"{{title}}\"?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Control regulations table",
+      "columns": {
+        "code": "Code",
+        "title": "Law Name",
+        "description": "Description",
+        "validity": "Validity",
+        "actions": "Actions"
+      }
     },
     "requirements": {
       "linkTitle": "Link Requirement"

@@ -32,6 +32,12 @@ export type {
 } from "./domain/process-risk-assignment.model";
 
 export type {
+    ProcessRegulationAssignment,
+    ProcessRegulationAssignmentCreate,
+    ProcessRegulationAssignmentStatus,
+} from "./domain/process-regulation-assignment.model";
+
+export type {
     ProcessCreateInput,
     ProcessUpdateInput,
 } from "./domain/process.schema";
@@ -60,5 +66,10 @@ export {
     createProcessRiskAssignmentService,
     processRiskAssignmentService,
 } from "./service/process-risk-assignment.service";
+
+export {
+    createProcessRegulationAssignmentService,
+    processRegulationAssignmentService,
+} from "./service/process-regulation-assignment.service";
 
 export { ROOT_PARENT, useProcessState } from "./state/process.state";

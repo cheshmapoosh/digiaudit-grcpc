@@ -46,6 +46,34 @@
       "validTo": "Valid To",
       "lawName": "Law Name"
     },
+    "regulations": {
+      "title": "Laws",
+      "empty": "No law has been added to this process item.",
+      "saveFirst": "Save the process item first.",
+      "loadError": "Failed to load added laws.",
+      "retry": "Retry",
+      "add": "Add",
+      "addPlaceholder": "Select law",
+      "addAccessibleName": "Select law to add",
+      "noAssignable": "No other law is available to add.",
+      "mutationError": "Failed to save law changes.",
+      "duplicate": "This law has already been added to this item.",
+      "remove": "Delete",
+      "removeTitle": "Delete Law",
+      "removeConfirm": "Delete law \"{{title}}\" from this item?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Process item laws table",
+      "columns": {
+        "code": "Code",
+        "title": "Law Name",
+        "description": "Description",
+        "issuer": "Issuer",
+        "status": "Status",
+        "validity": "Validity",
+        "actions": "Actions"
+      }
+    },
     "objectives": {
       "title": "Objectives",
       "empty": "No objectives are assigned to this process item.",
@@ -186,7 +214,7 @@
       "general": "General Information",
       "accountGroups": "Account Group",
       "risks": "Risks",
-      "rules": "Rules",
+      "rules": "Laws",
       "objectives": "Objectives",
       "documents": "Documents",
       "controls": "Controls"

@@ -10,6 +10,7 @@ import com.digiaudit.grcpc.modules.audit.application.AuditService;
 import com.digiaudit.grcpc.modules.audit.domain.enums.ActionResult;
 import com.digiaudit.grcpc.modules.audit.domain.enums.AuditEventType;
 import com.digiaudit.grcpc.modules.audit.domain.enums.AuditTargetType;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessRegulationAssignmentRepository;
 import com.digiaudit.grcpc.modules.regulation.api.dto.CreateRegulationRequest;
 import com.digiaudit.grcpc.modules.regulation.api.dto.RegulationResponse;
 import com.digiaudit.grcpc.modules.regulation.api.dto.UpdateRegulationRequest;
@@ -36,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RegulationService {
 
     private final RegulationRepository regulationRepository;
+    private final ProcessRegulationAssignmentRepository processRegulationAssignmentRepository;
     private final AuditService auditService;
     private final CurrentUserProvider currentUserProvider;
 
@@ -161,11 +163,11 @@ public class RegulationService {
     @Transactional
     public void delete(UUID id, HttpServletRequest httpRequest) {
         RegulationEntity entity = getEntity(id);
-        if (regulationRepository.existsByParentId(id)) {
+        if (regulationRepository.existsByParentId(id) || processRegulationAssignmentRepository.existsByRegulationNodeId(id)) {
             throw new ConflictException(
                     "MASTER_DATA_HAS_CHILDREN",
                     "error.masterdata.hasChildren",
-                    "Regulation node has children: " + id,
+                    "Regulation node has children or assignments: " + id,
                     id
             );
         }
