@@ -12,6 +12,7 @@
       "inProgress": "Uploading files...",
       "fileInProgress": "Uploading",
       "fileProgress": "Uploading {{progress}}%",
+      "successState": "Upload complete",
       "success": "File \"{{fileName}}\" uploaded successfully.",
       "failed": "Upload failed",
       "removeFailed": "Delete"

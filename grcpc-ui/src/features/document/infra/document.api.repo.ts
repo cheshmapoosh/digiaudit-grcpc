@@ -98,7 +98,12 @@ function uploadWithProgress<T>(
                 return;
             }
 
-            onProgress(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+            if (event.total <= 0) {
+                return;
+            }
+
+            const progress = Math.round((event.loaded / event.total) * 100);
+            onProgress(Math.min(99, Math.max(1, progress)));
         };
 
         xhr.onload = () => {

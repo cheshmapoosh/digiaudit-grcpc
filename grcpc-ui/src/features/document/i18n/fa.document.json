@@ -12,6 +12,7 @@
       "inProgress": "در حال بارگذاری فایل‌ها...",
       "fileInProgress": "در حال بارگذاری",
       "fileProgress": "در حال بارگذاری {{progress}}٪",
+      "successState": "بارگذاری کامل شد",
       "success": "فایل «{{fileName}}» با موفقیت بارگذاری شد.",
       "failed": "خطا در بارگذاری",
       "removeFailed": "حذف"

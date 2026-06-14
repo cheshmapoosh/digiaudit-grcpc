@@ -24,6 +24,7 @@ import { processRegulationAssignmentService } from "../../service/process-regula
 interface ProcessRegulationsTabProps {
     processId: string | null;
     nodeType: ProcessNodeType;
+    readOnly?: boolean;
 }
 
 type RegulationsLoadStatus = "idle" | "loading" | "success" | "error";
@@ -154,6 +155,7 @@ function resolveMutationError(
 export default function ProcessRegulationsTab({
     processId,
     nodeType,
+    readOnly = false,
 }: ProcessRegulationsTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
@@ -273,6 +275,7 @@ export default function ProcessRegulationsTab({
         ? formatAssignmentOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        !readOnly &&
         !!processId &&
         !!selectedLawId &&
         availableLaws.some((law) => law.id === selectedLawId) &&
@@ -282,7 +285,7 @@ export default function ProcessRegulationsTab({
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (!processId || !selectedLawId) {
+        if (readOnly || !processId || !selectedLawId) {
             return;
         }
 
@@ -317,7 +320,7 @@ export default function ProcessRegulationsTab({
     };
 
     const handleRemove = async () => {
-        if (!removeCandidate) {
+        if (readOnly || !removeCandidate) {
             return;
         }
 
@@ -379,53 +382,55 @@ export default function ProcessRegulationsTab({
 
             <div style={{ height: "0.75rem" }} />
 
-            <div style={ADD_TOOLBAR_STYLE}>
-                <ComboBox
-                    accessibleName={t("process.regulations.addAccessibleName", {
-                        defaultValue: "انتخاب قانون برای افزودن",
-                    })}
-                    filter="Contains"
-                    placeholder={t("process.regulations.addPlaceholder", {
-                        defaultValue: "انتخاب قانون",
-                    })}
-                    showClearIcon
-                    style={REGULATION_COMBOBOX_STYLE}
-                    value={lawComboBoxValue}
-                    disabled={isLoading || mutationBusy || availableLaws.length === 0}
-                    onInput={(event) => {
-                        const nextValue = readInputValue(event);
-                        setSelectedLawSearchValue(nextValue);
+            {!readOnly ? (
+                <div style={ADD_TOOLBAR_STYLE}>
+                    <ComboBox
+                        accessibleName={t("process.regulations.addAccessibleName", {
+                            defaultValue: "انتخاب قانون برای افزودن",
+                        })}
+                        filter="Contains"
+                        placeholder={t("process.regulations.addPlaceholder", {
+                            defaultValue: "انتخاب قانون",
+                        })}
+                        showClearIcon
+                        style={REGULATION_COMBOBOX_STYLE}
+                        value={lawComboBoxValue}
+                        disabled={isLoading || mutationBusy || availableLaws.length === 0}
+                        onInput={(event) => {
+                            const nextValue = readInputValue(event);
+                            setSelectedLawSearchValue(nextValue);
 
-                        const matchedOption = availableLaws.find(
-                            (law) => formatLawOption(law, noneText) === nextValue,
-                        );
-                        setSelectedLawId(matchedOption?.id ?? "");
-                    }}
-                    onSelectionChange={(event) => {
-                        const nextValue = readSelectedComboBoxDataValue(event, selectedLawId);
-                        const selectedOption = availableLaws.find(
-                            (law) => law.id === nextValue,
-                        );
+                            const matchedOption = availableLaws.find(
+                                (law) => formatLawOption(law, noneText) === nextValue,
+                            );
+                            setSelectedLawId(matchedOption?.id ?? "");
+                        }}
+                        onSelectionChange={(event) => {
+                            const nextValue = readSelectedComboBoxDataValue(event, selectedLawId);
+                            const selectedOption = availableLaws.find(
+                                (law) => law.id === nextValue,
+                            );
 
-                        setSelectedLawId(nextValue);
-                        setSelectedLawSearchValue(
-                            selectedOption ? formatLawOption(selectedOption, noneText) : "",
-                        );
-                    }}
-                >
-                    {availableLaws.map((law) => (
-                        <ComboBoxItem
-                            key={law.id}
-                            data-value={law.id}
-                            text={formatLawOption(law, noneText)}
-                        />
-                    ))}
-                </ComboBox>
+                            setSelectedLawId(nextValue);
+                            setSelectedLawSearchValue(
+                                selectedOption ? formatLawOption(selectedOption, noneText) : "",
+                            );
+                        }}
+                    >
+                        {availableLaws.map((law) => (
+                            <ComboBoxItem
+                                key={law.id}
+                                data-value={law.id}
+                                text={formatLawOption(law, noneText)}
+                            />
+                        ))}
+                    </ComboBox>
 
-                <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
-                    {t("process.regulations.add", { defaultValue: "افزودن" })}
-                </Button>
-            </div>
+                    <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
+                        {t("process.regulations.add", { defaultValue: "افزودن" })}
+                    </Button>
+                </div>
+            ) : null}
 
             {availableLaws.length === 0 && !isLoading ? (
                 <>
@@ -509,13 +514,17 @@ export default function ProcessRegulationsTab({
                         <TableCell>{resolveStatusLabel(assignment.status, t)}</TableCell>
                         <TableCell>{formatValidity(assignment, "-")}</TableCell>
                         <TableCell>
-                            <Button
-                                design="Transparent"
-                                disabled={mutationBusy}
-                                onClick={() => setRemoveCandidate(assignment)}
-                            >
-                                {t("process.regulations.remove", { defaultValue: "حذف" })}
-                            </Button>
+                            {!readOnly ? (
+                                <Button
+                                    design="Transparent"
+                                    disabled={mutationBusy}
+                                    onClick={() => setRemoveCandidate(assignment)}
+                                >
+                                    {t("process.regulations.remove", { defaultValue: "حذف" })}
+                                </Button>
+                            ) : (
+                                noneText
+                            )}
                         </TableCell>
                     </TableRow>
                 ))}

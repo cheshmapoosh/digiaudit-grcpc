@@ -659,40 +659,42 @@ export default function ProcessObjectPage({
                     />
                 </FormField>
             </div>
+        </>
+    );
 
-            <div style={FOOTER_STYLE}>
-                {mode === "view" ? (
-                    <Button
-                        design="Emphasized"
-                        disabled={busy || !onEdit}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={onEdit}
-                    >
-                        {t("common.edit", { defaultValue: "ویرایش" })}
-                    </Button>
-                ) : (
-                    <Button
-                        design="Emphasized"
-                        disabled={busy}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={handleSubmit}
-                    >
-                        {t("common.save", { defaultValue: "ذخیره" })}
-                    </Button>
-                )}
-
+    const renderFooterActions = () => (
+        <div style={FOOTER_STYLE}>
+            {mode === "view" ? (
                 <Button
-                    design="Transparent"
+                    design="Emphasized"
+                    disabled={busy || !onEdit}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={onEdit}
+                >
+                    {t("common.edit", { defaultValue: "ویرایش" })}
+                </Button>
+            ) : (
+                <Button
+                    design="Emphasized"
                     disabled={busy}
                     style={ACTION_BUTTON_STYLE}
-                    onClick={onCancel}
+                    onClick={handleSubmit}
                 >
-                    {mode === "view"
-                        ? t("common.close", { defaultValue: "بستن" })
-                        : t("common.cancel", { defaultValue: "انصراف" })}
+                    {t("common.save", { defaultValue: "ذخیره" })}
                 </Button>
-            </div>
-        </>
+            )}
+
+            <Button
+                design="Transparent"
+                disabled={busy}
+                style={ACTION_BUTTON_STYLE}
+                onClick={onCancel}
+            >
+                {mode === "view"
+                    ? t("common.close", { defaultValue: "بستن" })
+                    : t("common.cancel", { defaultValue: "انصراف" })}
+            </Button>
+        </div>
     );
 
     const renderTabContent = (tab: ProcessTabKey) => {
@@ -846,6 +848,8 @@ export default function ProcessObjectPage({
             <div style={BODY_STYLE}>
                 {renderTabContent(tabs.includes(activeTab) ? activeTab : "general")}
             </div>
+
+            {renderFooterActions()}
         </div>
     );
 }

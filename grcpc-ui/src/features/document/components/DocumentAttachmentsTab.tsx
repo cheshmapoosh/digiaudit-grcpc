@@ -80,6 +80,11 @@ interface DocumentActionMessage {
     text: string;
 }
 
+interface UploadProgressFallbackTimers {
+    startTimeoutId?: ReturnType<typeof setTimeout>;
+    intervalId?: ReturnType<typeof setInterval>;
+}
+
 const PANEL_STYLE: CSSProperties = {
     minHeight: "15rem",
     background: "var(--sapGroup_ContentBackground)",
@@ -161,6 +166,20 @@ const TABLE_SPACER_STYLE: CSSProperties = {
 
 const NONE_TEXT = "-";
 const SUCCESS_UPLOAD_VISIBLE_MS = 1600;
+const FALLBACK_PROGRESS_DELAY_MS = 250;
+const FALLBACK_PROGRESS_INTERVAL_MS = 300;
+const FALLBACK_PROGRESS_MAX = 90;
+const FALLBACK_PROGRESS_STEP = 5;
+
+function clearUploadProgressFallbackTimers(timers: UploadProgressFallbackTimers) {
+    if (timers.startTimeoutId) {
+        clearTimeout(timers.startTimeoutId);
+    }
+
+    if (timers.intervalId) {
+        clearInterval(timers.intervalId);
+    }
+}
 
 function createUploadRowId(): string {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -218,6 +237,10 @@ function normalizeProgress(progress: number | undefined): number {
     return Math.max(0, Math.min(100, Math.round(progress)));
 }
 
+function normalizeVisibleProgress(progress: number): number {
+    return Math.max(1, normalizeProgress(progress));
+}
+
 export default function DocumentAttachmentsTab({
     title,
     targetId,
@@ -244,6 +267,8 @@ export default function DocumentAttachmentsTab({
     const { t } = useTranslation();
     const mountedRef = useRef(true);
     const successTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+    const progressFallbackTimersRef =
+        useRef<Map<string, UploadProgressFallbackTimers>>(new Map());
     const activeUploadCountRef = useRef(0);
     const [uploadItems, setUploadItems] = useState<DocumentUploadItem[]>([]);
     const [documentTitleDrafts, setDocumentTitleDrafts] = useState<Record<string, string>>({});
@@ -256,6 +281,8 @@ export default function DocumentAttachmentsTab({
         mountedRef.current = false;
         successTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
         successTimeoutsRef.current = [];
+        progressFallbackTimersRef.current.forEach(clearUploadProgressFallbackTimers);
+        progressFallbackTimersRef.current.clear();
     }, []);
 
     const documentTitle = title ?? t("document.title", { defaultValue: "مستندات" });
@@ -323,6 +350,56 @@ export default function DocumentAttachmentsTab({
 
         setUploadItems((current) => current.filter((row) => row.id !== rowId));
     }, []);
+
+    const clearUploadProgressFallback = useCallback((rowId: string) => {
+        const timers = progressFallbackTimersRef.current.get(rowId);
+        if (!timers) {
+            return;
+        }
+
+        clearUploadProgressFallbackTimers(timers);
+        progressFallbackTimersRef.current.delete(rowId);
+    }, []);
+
+    const startUploadProgressFallback = useCallback((rowId: string) => {
+        clearUploadProgressFallback(rowId);
+
+        const timers: UploadProgressFallbackTimers = {};
+        timers.startTimeoutId = setTimeout(() => {
+            timers.startTimeoutId = undefined;
+            timers.intervalId = setInterval(() => {
+                if (!mountedRef.current) {
+                    clearUploadProgressFallback(rowId);
+                    return;
+                }
+
+                setUploadItems((current) =>
+                    current.map((row) => {
+                        if (row.id !== rowId || row.state !== "uploading") {
+                            return row;
+                        }
+
+                        const currentProgress = normalizeProgress(row.progress);
+                        const nextProgress = Math.min(
+                            FALLBACK_PROGRESS_MAX,
+                            Math.max(FALLBACK_PROGRESS_STEP, currentProgress + FALLBACK_PROGRESS_STEP),
+                        );
+
+                        if (nextProgress <= currentProgress) {
+                            return row;
+                        }
+
+                        return {
+                            ...row,
+                            progress: nextProgress,
+                        };
+                    }),
+                );
+            }, FALLBACK_PROGRESS_INTERVAL_MS);
+        }, FALLBACK_PROGRESS_DELAY_MS);
+
+        progressFallbackTimersRef.current.set(rowId, timers);
+    }, [clearUploadProgressFallback]);
 
     const scheduleSuccessfulUploadRemoval = useCallback((rowId: string) => {
         const timeoutId = setTimeout(() => {
@@ -493,25 +570,31 @@ export default function DocumentAttachmentsTab({
                 state: "uploading",
             },
         ]);
+        updateUploadItem(rowId, { progress: 1 });
+        startUploadProgressFallback(rowId);
 
         try {
             await onUploadDocument(file, (progress) => {
-                updateUploadItem(rowId, { progress: normalizeProgress(progress) });
+                clearUploadProgressFallback(rowId);
+                updateUploadItem(rowId, { progress: normalizeVisibleProgress(progress) });
             });
+            clearUploadProgressFallback(rowId);
             updateUploadItem(rowId, {
                 state: "success",
                 progress: 100,
             });
-            setActionMessage({
-                design: "Positive",
-                text: t("document.upload.success", {
-                    defaultValue: "فایل «{{fileName}}» با موفقیت بارگذاری شد.",
-                    fileName: file.name,
-                }),
-            });
-            scheduleSuccessfulUploadRemoval(rowId);
-            markUploadSettled();
+            if (mountedRef.current) {
+                setActionMessage({
+                    design: "Positive",
+                    text: t("document.upload.success", {
+                        defaultValue: "فایل «{{fileName}}» با موفقیت بارگذاری شد.",
+                        fileName: file.name,
+                    }),
+                });
+                scheduleSuccessfulUploadRemoval(rowId);
+            }
         } catch (uploadError) {
+            clearUploadProgressFallback(rowId);
             const message =
                 uploadError instanceof HttpError &&
                 uploadError.code === "DOCUMENT_STORAGE_DISABLED"
@@ -525,15 +608,18 @@ export default function DocumentAttachmentsTab({
                             defaultValue: "آپلود فایل انجام نشد",
                         });
 
-            setActionMessage({
-                design: "Negative",
-                text: message,
-            });
+            if (mountedRef.current) {
+                setActionMessage({
+                    design: "Negative",
+                    text: message,
+                });
+            }
             updateUploadItem(rowId, {
                 state: "error",
                 progress: 100,
                 error: message,
             });
+        } finally {
             markUploadSettled();
         }
     };
@@ -654,7 +740,7 @@ export default function DocumentAttachmentsTab({
 
     const renderUploadStatusText = (item: DocumentUploadItem): string => {
         if (item.state === "success") {
-            return t("document.status.success", { defaultValue: "بارگذاری کامل شد" });
+            return t("document.upload.successState", { defaultValue: "بارگذاری کامل شد" });
         }
 
         if (item.state === "error") {
@@ -691,10 +777,19 @@ export default function DocumentAttachmentsTab({
                         </Text>
                     ) : null}
                     {uploadItems.map((item) => {
-                        const progress = normalizeProgress(item.progress);
+                        const progress = typeof item.progress === "number"
+                            ? normalizeVisibleProgress(item.progress)
+                            : undefined;
                         const isComplete = item.state === "success" || item.state === "error";
-                        const progressValue = isComplete ? 100 : Math.max(progress, 1);
-                        const hideProgressValue = item.state === "uploading" && progress <= 0;
+                        const progressValue = isComplete ? 100 : progress ?? 1;
+                        const hideProgressValue =
+                            item.state === "error" ||
+                            (item.state === "uploading" && progress === undefined);
+                        const displayValue = item.state === "success"
+                            ? "100٪"
+                            : item.state === "uploading" && progress !== undefined
+                              ? `${progress}٪`
+                              : "";
                         const statusText = renderUploadStatusText(item);
 
                         return (
@@ -722,7 +817,7 @@ export default function DocumentAttachmentsTab({
 
                                 <ProgressIndicator
                                     accessibleName={statusText}
-                                    displayValue={hideProgressValue ? "" : statusText}
+                                    displayValue={displayValue}
                                     hideValue={hideProgressValue}
                                     value={progressValue}
                                     valueState={item.state === "error"
