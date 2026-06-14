@@ -312,7 +312,7 @@ export default function ControlLinkTab<TLink extends ControlLinkItem>({
             <Dialog
                 open={dialogOpen}
                 accessibleName={dialogTitle}
-                style={{ width: "42rem", maxWidth: "96vw" }}
+                style={{ width: "90vw", maxWidth: "90vw" }}
                 onClose={() => setDialogOpen(false)}
                 footer={
                     <>

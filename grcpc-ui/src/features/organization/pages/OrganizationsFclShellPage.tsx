@@ -77,9 +77,7 @@ type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 
-const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
-const DIALOG_NORMAL_WIDTH = "96vw";
-const DIALOG_LARGE_WIDTH = "92vw";
+const DIALOG_WIDTH = "90vw";
 const EMPTY_ASSIGNMENTS: OrganizationProcessAssignment[] = [];
 const EMPTY_RISKS: OrganizationRiskAssignment[] = [];
 const EMPTY_REFERENCE_ASSIGNMENTS: OrganizationReferenceAssignment[] = [];
@@ -177,33 +175,6 @@ function useResolvedUiDir(): UiDir {
     }, []);
 
     return dir;
-}
-
-function resolveMediaQuery(query: string): boolean {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-        return false;
-    }
-
-    return window.matchMedia(query).matches;
-}
-
-function useMediaQuery(query: string): boolean {
-    const [matches, setMatches] = useState(() => resolveMediaQuery(query));
-
-    useEffect(() => {
-        if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-            return;
-        }
-
-        const mediaQueryList = window.matchMedia(query);
-        const handleChange = (event: MediaQueryListEvent) => setMatches(event.matches);
-
-        mediaQueryList.addEventListener("change", handleChange);
-
-        return () => mediaQueryList.removeEventListener("change", handleChange);
-    }, [query]);
-
-    return matches;
 }
 
 function isOwnDialogCloseEvent(event: unknown): boolean {
@@ -475,8 +446,6 @@ export default function OrganizationsFclShellPage() {
 
     const routeMode = useOrganizationRouteMode();
     const appDir = useResolvedUiDir();
-    const isLargeDialogViewport = useMediaQuery(DIALOG_LARGE_VIEWPORT_QUERY);
-
     const nodesById = useOrganizationState((state) => state.nodesById);
     const loading = useOrganizationState((state) => state.loading);
     const loadChildren = useOrganizationState((state) => state.loadChildren);
@@ -1598,14 +1567,14 @@ export default function OrganizationsFclShellPage() {
     );
 
     const dialogStyle = useMemo<CSSProperties>(() => {
-        const width = isLargeDialogViewport ? DIALOG_LARGE_WIDTH : DIALOG_NORMAL_WIDTH;
+        const width = DIALOG_WIDTH;
 
         return {
             width,
             maxWidth: width,
             maxHeight: "calc(100vh - 2rem)",
         };
-    }, [isLargeDialogViewport]);
+    }, []);
 
     const listColumn = createElement(
         "div",

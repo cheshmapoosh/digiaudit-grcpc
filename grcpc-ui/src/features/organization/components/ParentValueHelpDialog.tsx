@@ -63,6 +63,7 @@ export default function ParentValueHelpDialog({
         <Dialog
             open={open}
             accessibleName={dialogTitle}
+            style={{ width: "90vw", maxWidth: "90vw" }}
             onClose={onClose}
         >
             <ModalDialogHeader title={dialogTitle} onClose={onClose} />

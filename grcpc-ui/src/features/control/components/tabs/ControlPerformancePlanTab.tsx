@@ -332,7 +332,7 @@ export default function ControlPerformancePlanTab({
                               defaultValue: "Add Performance Plan",
                           })
                 }
-                style={{ width: "44rem", maxWidth: "96vw" }}
+                style={{ width: "90vw", maxWidth: "90vw" }}
                 onClose={() => setDialogOpen(false)}
                 footer={
                     <>

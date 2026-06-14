@@ -28,9 +28,7 @@ import { useDocumentAttachmentState } from "@/features/document";
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 
-const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
-const DIALOG_NORMAL_WIDTH = "90vw";
-const DIALOG_LARGE_WIDTH = "60vw";
+const DIALOG_WIDTH = "90vw";
 const REGULATION_DOCUMENT_TARGET_TYPE = "REGULATION_NODE";
 
 function useRegulationRouteMode(): RouteMode {
@@ -142,33 +140,6 @@ function useResolvedUiDir(): UiDir {
     return dir;
 }
 
-function resolveMediaQuery(query: string): boolean {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-        return false;
-    }
-
-    return window.matchMedia(query).matches;
-}
-
-function useMediaQuery(query: string): boolean {
-    const [matches, setMatches] = useState(() => resolveMediaQuery(query));
-
-    useEffect(() => {
-        if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-            return;
-        }
-
-        const mediaQueryList = window.matchMedia(query);
-        const handleChange = (event: MediaQueryListEvent) => setMatches(event.matches);
-
-        mediaQueryList.addEventListener("change", handleChange);
-
-        return () => mediaQueryList.removeEventListener("change", handleChange);
-    }, [query]);
-
-    return matches;
-}
-
 function isOwnDialogCloseEvent(event: unknown): boolean {
     const closeEvent = event as {
         target?: EventTarget | null;
@@ -275,8 +246,6 @@ export default function RegulationsFclShellPage() {
 
     const routeMode = useRegulationRouteMode();
     const appDir = useResolvedUiDir();
-    const isLargeDialogViewport = useMediaQuery(DIALOG_LARGE_VIEWPORT_QUERY);
-
     const nodesById = useRegulationState((state) => state.nodesById);
     const loading = useRegulationState((state) => state.loading);
     const loadChildren = useRegulationState((state) => state.loadChildren);
@@ -708,13 +677,13 @@ export default function RegulationsFclShellPage() {
     );
 
     const dialogStyle = useMemo<CSSProperties>(() => {
-        const width = isLargeDialogViewport ? DIALOG_LARGE_WIDTH : DIALOG_NORMAL_WIDTH;
+        const width = DIALOG_WIDTH;
 
         return {
             width,
             maxWidth: width,
         };
-    }, [isLargeDialogViewport]);
+    }, []);
 
     const listColumn = (
         <div key="list" dir={appDir} style={columnContainerStyle}>

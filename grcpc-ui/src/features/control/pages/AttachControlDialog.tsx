@@ -248,7 +248,7 @@ export default function AttachControlDialog({
         <Dialog
             open={open}
             accessibleName={t("control.attach.title", { defaultValue: "اتصال کنترل موجود" })}
-            style={{ width: "64rem", maxWidth: "96vw" }}
+            style={{ width: "90vw", maxWidth: "90vw" }}
             onClose={onClose}
             footer={
                 <>

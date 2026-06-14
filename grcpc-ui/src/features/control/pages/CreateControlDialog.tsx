@@ -217,7 +217,7 @@ export default function CreateControlDialog({
         <Dialog
             open={open}
             accessibleName={t("control.create.title", { defaultValue: "تعریف کنترل جدید" })}
-            style={{ width: "64rem", maxWidth: "96vw" }}
+            style={{ width: "90vw", maxWidth: "90vw" }}
             onClose={onClose}
             footer={
                 <>

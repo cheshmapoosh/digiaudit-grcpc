@@ -321,7 +321,7 @@ export default function ControlStepsTab({ controlAssignmentId }: ControlStepsTab
                         ? t("control.steps.editTitle", { defaultValue: "Edit Step" })
                         : t("control.steps.createTitle", { defaultValue: "Add Step" })
                 }
-                style={{ width: "44rem", maxWidth: "96vw" }}
+                style={{ width: "90vw", maxWidth: "90vw" }}
                 onClose={() => setDialogOpen(false)}
                 footer={
                     <>
