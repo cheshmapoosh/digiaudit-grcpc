@@ -42,6 +42,9 @@
       "organizationUnits": "Organization Unit",
       "documents": "Documents"
     },
+    "documents": {
+      "saveFirst": "Save the objective first, then upload documents."
+    },
     "tree": {
       "expand": "Expand branch",
       "collapse": "Collapse branch"

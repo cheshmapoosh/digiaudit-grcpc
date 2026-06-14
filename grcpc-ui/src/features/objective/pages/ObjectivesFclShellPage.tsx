@@ -32,6 +32,7 @@ import ObjectivesListReport from "./ObjectivesListReport";
 import ObjectiveObjectPage from "./ObjectiveObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import { useDocumentAttachmentState } from "@/features/document";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -40,6 +41,7 @@ type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
 const DIALOG_NORMAL_WIDTH = "90vw";
 const DIALOG_LARGE_WIDTH = "60vw";
+const OBJECTIVE_DOCUMENT_TARGET_TYPE = "OBJECTIVE_NODE";
 const CREATE_NODE_TYPES: ObjectiveNodeType[] = ["objective"];
 
 function useObjectiveRouteMode(): RouteMode {
@@ -63,6 +65,14 @@ function useObjectiveRouteMode(): RouteMode {
 
 function isObjectiveNodeType(value: string | null): value is ObjectiveNodeType {
     return value === "objective";
+}
+
+function createDocumentTempSessionId(): string {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function mapError(
@@ -220,15 +230,24 @@ export default function ObjectivesFclShellPage() {
     const createNode = useObjectiveState((state) => state.createNode);
     const updateNode = useObjectiveState((state) => state.updateNode);
     const removeNode = useObjectiveState((state) => state.removeNode);
+    const tempDocumentsBySession = useDocumentAttachmentState(
+        (state) => state.tempDocumentsBySession,
+    );
+    const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
+    const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
+    const [objectError, setObjectError] = useState<string | null>(null);
     const [deleteCandidate, setDeleteCandidate] = useState<ObjectiveNode | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
     const [manualExpandedIds, setManualExpandedIds] = useState<Set<string>>(() => new Set());
     const [manualCollapsedIds, setManualCollapsedIds] = useState<Set<string>>(() => new Set());
+    const [objectiveDocumentTempSessionId, setObjectiveDocumentTempSessionId] = useState(
+        createDocumentTempSessionId,
+    );
 
     const items = useMemo(() => sortObjectives(Object.values(nodesById)), [nodesById]);
 
@@ -249,6 +268,18 @@ export default function ObjectivesFclShellPage() {
         return defaultChildType(selectedParentForCreate?.nodeType ?? null);
     }, [queryNodeType, selectedParentForCreate]);
 
+    const documentScopeKey = useMemo(() => {
+        if (routeMode === "create") {
+            return `create:${queryParentId ?? "root"}:${requestedNodeType}`;
+        }
+
+        if ((routeMode === "view" || routeMode === "edit") && objectiveId) {
+            return `objective:${objectiveId}`;
+        }
+
+        return "none";
+    }, [objectiveId, queryParentId, requestedNodeType, routeMode]);
+
     useEffect(() => {
         void loadChildren(ROOT_PARENT).catch((error: unknown) => {
             setPageError(
@@ -262,6 +293,30 @@ export default function ObjectivesFclShellPage() {
             );
         });
     }, [loadChildren, t]);
+
+    useEffect(() => {
+        setObjectiveDocumentTempSessionId(createDocumentTempSessionId());
+    }, [documentScopeKey]);
+
+    useEffect(() => {
+        if (!objectiveId) {
+            return;
+        }
+
+        void loadDocumentsForTarget(OBJECTIVE_DOCUMENT_TARGET_TYPE, objectiveId).catch(
+            (error: unknown) => {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("document.errors.load", {
+                            defaultValue: "خطا در بارگذاری مستندات",
+                        }),
+                        t,
+                    ),
+                );
+            },
+        );
+    }, [loadDocumentsForTarget, objectiveId, t]);
 
     const treeSelectedId = useMemo(() => {
         if (routeMode === "create") {
@@ -291,12 +346,15 @@ export default function ObjectivesFclShellPage() {
         setSelectedTreeId(id);
         setTreeExpansionAnchorId(id);
         setPageError(null);
+        setObjectError(null);
     }, []);
 
     const handleShow = useCallback(
         (id: string) => {
             setSelectedTreeId(id);
             setTreeExpansionAnchorId(id);
+            setPageError(null);
+            setObjectError(null);
             navigate(`/objectives/${id}`);
         },
         [navigate],
@@ -304,6 +362,8 @@ export default function ObjectivesFclShellPage() {
 
     const handleCreate = useCallback(
         (nodeType: ObjectiveNodeType) => {
+            setPageError(null);
+            setObjectError(null);
             const selectedId = selectedTreeId ?? objectiveId ?? null;
             const selectedItem = selectedId ? nodesById[selectedId] ?? null : null;
             const parentId = resolveCreateParentId(selectedItem);
@@ -341,12 +401,15 @@ export default function ObjectivesFclShellPage() {
 
             setSelectedTreeId(targetId);
             setTreeExpansionAnchorId(targetId);
+            setPageError(null);
+            setObjectError(null);
             navigate(`/objectives/${targetId}/edit`);
         },
         [navigate, objectiveId, selectedTreeId],
     );
 
     const handleCancel = useCallback(() => {
+        setObjectError(null);
         const currentAnchorId =
             routeMode === "create" ? queryParentId ?? selectedTreeId : objectiveId ?? selectedTreeId;
 
@@ -357,6 +420,37 @@ export default function ObjectivesFclShellPage() {
 
         navigate("/objectives");
     }, [navigate, objectiveId, queryParentId, routeMode, selectedTreeId]);
+
+    const commitObjectiveTempDocuments = useCallback(
+        async (targetId: string) => {
+            const tempDocuments =
+                tempDocumentsBySession[objectiveDocumentTempSessionId] ?? [];
+
+            if (tempDocuments.length === 0) {
+                return;
+            }
+
+            await commitTempDocuments({
+                tempSessionId: objectiveDocumentTempSessionId,
+                targetType: OBJECTIVE_DOCUMENT_TARGET_TYPE,
+                targetId,
+                documentIds: tempDocuments.map((documentItem) => documentItem.id),
+                documentTitles: Object.fromEntries(
+                    tempDocuments.map((documentItem) => [
+                        documentItem.id,
+                        documentItem.title || documentItem.originalFileName,
+                    ]),
+                ),
+            });
+            await loadDocumentsForTarget(OBJECTIVE_DOCUMENT_TARGET_TYPE, targetId);
+        },
+        [
+            commitTempDocuments,
+            loadDocumentsForTarget,
+            objectiveDocumentTempSessionId,
+            tempDocumentsBySession,
+        ],
+    );
 
     const requestDelete = useCallback(
         (id: string) => {
@@ -426,25 +520,28 @@ export default function ObjectivesFclShellPage() {
             try {
                 setSubmitting(true);
                 setPageError(null);
+                setObjectError(null);
 
                 if (routeMode === "create") {
                     const createPayload = payload as ObjectiveNodeCreate;
                     const created = await createNode(createPayload.parentId ?? null, createPayload);
+                    await commitObjectiveTempDocuments(created.id);
 
                     setSelectedTreeId(created.id);
                     setTreeExpansionAnchorId(created.id);
-                    navigate("/objectives");
+                    navigate(`/objectives/${created.id}`);
                     return;
                 }
 
                 if (routeMode === "edit" && objectiveId) {
                     await updateNode(objectiveId, payload as ObjectiveNodeUpdate);
+                    await commitObjectiveTempDocuments(objectiveId);
                     setSelectedTreeId(objectiveId);
                     setTreeExpansionAnchorId(objectiveId);
-                    navigate("/objectives");
+                    navigate(`/objectives/${objectiveId}`);
                 }
             } catch (error) {
-                setPageError(
+                setObjectError(
                     mapError(
                         error,
                         t("objective.errors.save", {
@@ -457,7 +554,15 @@ export default function ObjectivesFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [createNode, navigate, objectiveId, routeMode, t, updateNode],
+        [
+            commitObjectiveTempDocuments,
+            createNode,
+            navigate,
+            objectiveId,
+            routeMode,
+            t,
+            updateNode,
+        ],
     );
 
     const showModal = routeMode === "create" || routeMode === "view" || routeMode === "edit";
@@ -616,7 +721,9 @@ export default function ObjectivesFclShellPage() {
                             parent={selectedParentForCreate}
                             requestedNodeType={requestedNodeType}
                             busy={loading || submitting}
-                            error={pageError}
+                            error={objectError}
+                            documentTempSessionId={objectiveDocumentTempSessionId}
+                            onErrorClose={() => setObjectError(null)}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}

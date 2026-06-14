@@ -1,4 +1,11 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -28,6 +35,10 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
+import {
+    DocumentAttachmentsManager,
+    type DocumentBeforeParentSubmitHandler,
+} from "@/features/document";
 
 export type ObjectiveObjectMode = "create" | "edit" | "view";
 
@@ -57,6 +68,8 @@ export interface ObjectiveObjectPageProps {
     requestedNodeType?: ObjectiveNodeType;
     busy?: boolean;
     error?: string | null;
+    documentTempSessionId?: string;
+    onErrorClose?: () => void;
     onSubmit: (payload: ObjectiveNodeCreate | ObjectiveNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
     onEdit?: () => void;
@@ -412,6 +425,8 @@ export default function ObjectiveObjectPage({
     requestedNodeType,
     busy = false,
     error,
+    documentTempSessionId,
+    onErrorClose,
     onSubmit,
     onCancel,
     onEdit,
@@ -426,6 +441,8 @@ export default function ObjectiveObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(), []);
     const [activeTab, setActiveTab] = useState<ObjectiveTabKey>("general");
+    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
+    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? parent ?? null
@@ -437,6 +454,7 @@ export default function ObjectiveObjectPage({
         : t("common.none", { defaultValue: "ندارد" });
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerType = resolveObjectiveTypeLabel(form.objectiveType, t);
+    const currentObjectiveId = value?.id ?? null;
 
     const handleChange = <K extends keyof ObjectiveFormState>(
         key: K,
@@ -476,8 +494,31 @@ export default function ObjectiveObjectPage({
         return true;
     };
 
+    const handleDocumentBeforeParentSubmitChange = useCallback(
+        (handler: DocumentBeforeParentSubmitHandler | null) => {
+            documentBeforeSubmitRef.current = handler;
+        },
+        [],
+    );
+
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
+            return;
+        }
+
+        if (hasPendingDocumentUploads) {
+            setValidationError(
+                t("document.validation.waitForUpload", {
+                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
+                }),
+            );
+            setActiveTab("documents");
+            return;
+        }
+
+        const documentsReady = await documentBeforeSubmitRef.current?.();
+        if (documentsReady === false) {
+            setActiveTab("documents");
             return;
         }
 
@@ -684,12 +725,12 @@ export default function ObjectiveObjectPage({
         </>
     );
 
-    const renderTabContent = () => {
-        if (activeTab === "general") {
+    const renderTabContent = (tab: ObjectiveTabKey) => {
+        if (tab === "general") {
             return renderGeneralTab();
         }
 
-        if (activeTab === "organizationUnits") {
+        if (tab === "organizationUnits") {
             return (
                 <TablePlaceholder
                     title={t("objective.tabs.organizationUnits", { defaultValue: "واحد سازمانی" })}
@@ -702,14 +743,21 @@ export default function ObjectiveObjectPage({
         }
 
         return (
-            <TablePlaceholder
+            <DocumentAttachmentsManager
+                key={currentObjectiveId ?? "unsaved-objective-documents"}
                 title={t("objective.tabs.documents", { defaultValue: "مستندات" })}
-                columns={[
-                    t("objective.fields.name", { defaultValue: "نام" }),
-                    t("objective.fields.description", { defaultValue: "شرح" }),
-                    t("objective.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                    t("objective.fields.validUntil", { defaultValue: "تاریخ اعتبار" }),
-                ]}
+                targetType="OBJECTIVE_NODE"
+                targetId={currentObjectiveId}
+                tempSessionId={documentTempSessionId}
+                stagingMode="tempUntilParentSave"
+                busy={busy}
+                readOnly={readOnly}
+                saveFirstMessage={t("objective.documents.saveFirst", {
+                    defaultValue:
+                        "ابتدا هدف را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
+                })}
+                onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
+                onPendingUploadsChange={setHasPendingDocumentUploads}
             />
         );
     };
@@ -742,10 +790,14 @@ export default function ObjectiveObjectPage({
                 style={ACTION_BUTTON_STYLE}
                 onClick={onCancel}
             >
-                {t("common.cancel", { defaultValue: "انصراف" })}
+                {mode === "view"
+                    ? t("common.close", { defaultValue: "بستن" })
+                    : t("common.cancel", { defaultValue: "انصراف" })}
             </Button>
         </div>
     );
+
+    const resolvedActiveTab = tabs.includes(activeTab) ? activeTab : "general";
 
     return (
         <div style={ROOT_STYLE}>
@@ -795,12 +847,12 @@ export default function ObjectiveObjectPage({
 
             <ObjectiveTabs
                 tabs={tabs}
-                activeTab={tabs.includes(activeTab) ? activeTab : "general"}
+                activeTab={resolvedActiveTab}
                 onChange={setActiveTab}
             />
 
             {error ? (
-                <MessageStrip design="Negative" hideCloseButton>
+                <MessageStrip design="Negative" onClose={onErrorClose}>
                     {error}
                 </MessageStrip>
             ) : null}
@@ -811,7 +863,7 @@ export default function ObjectiveObjectPage({
                 </MessageStrip>
             ) : null}
 
-            <div style={BODY_STYLE}>{renderTabContent()}</div>
+            <div style={BODY_STYLE}>{renderTabContent(resolvedActiveTab)}</div>
 
             {renderFooterActions()}
         </div>

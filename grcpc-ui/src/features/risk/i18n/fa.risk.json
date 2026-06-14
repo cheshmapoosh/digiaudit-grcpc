@@ -29,6 +29,9 @@
       "responsePattern": "الگوی پاسخ",
       "controlCenter": "مرکز کنترل"
     },
+    "documents": {
+      "saveFirst": "ابتدا آیتم ریسک را ذخیره کنید، سپس مستندات را بارگذاری کنید."
+    },
     "fields": {
       "code": "کد",
       "identifier": "شناسه",
