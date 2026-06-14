@@ -19,6 +19,7 @@ import com.digiaudit.grcpc.modules.masterdata.control.domain.repository.ControlA
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessAccountGroupAssignmentRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessNodeRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessObjectiveAssignmentRepository;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessRiskAssignmentRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -43,6 +44,7 @@ public class ProcessService {
     private final ControlAssignmentRepository controlAssignmentRepository;
     private final ProcessObjectiveAssignmentRepository objectiveAssignmentRepository;
     private final ProcessAccountGroupAssignmentRepository accountGroupAssignmentRepository;
+    private final ProcessRiskAssignmentRepository riskAssignmentRepository;
     private final ProcessMapper mapper;
     private final AuditService auditService;
     private final CurrentUserProvider currentUserProvider;
@@ -143,7 +145,8 @@ public class ProcessService {
         if (processNodeRepository.existsByParentId(id)
                 || controlAssignmentRepository.existsBySubProcessId(id)
                 || objectiveAssignmentRepository.existsByProcessNodeId(id)
-                || accountGroupAssignmentRepository.existsByProcessNodeId(id)) {
+                || accountGroupAssignmentRepository.existsByProcessNodeId(id)
+                || riskAssignmentRepository.existsByProcessNodeId(id)) {
             throw new ConflictException("MASTER_DATA_HAS_CHILDREN", "error.masterdata.hasChildren", "Process node has children or assignments: " + id);
         }
 

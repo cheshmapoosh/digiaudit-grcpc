@@ -99,7 +99,7 @@
       "link": "اتصال",
       "linkRegulation": "اتصال قانون",
       "linkRequirement": "اتصال الزام",
-      "linkRisk": "اتصال ریسک",
+      "linkRisk": "افزودن ریسک",
       "linkAccountGroup": "اتصال گروه حساب"
     },
     "create": {
@@ -122,13 +122,13 @@
       "steps": "مرحله‌ای تعریف نشده است.",
       "regulations": "قانونی متصل نشده است.",
       "requirements": "الزامی متصل نشده است.",
-      "risks": "ریسکی متصل نشده است.",
+      "risks": "ریسکی افزوده نشده است.",
       "accountGroups": "گروه حسابی متصل نشده است.",
       "documents": "مستندی تعریف نشده است.",
       "performancePlans": "برنامه عملکردی تعریف نشده است.",
       "regulationCatalog": "قانونی برای اتصال وجود ندارد.",
       "requirementCatalog": "الزامی برای اتصال وجود ندارد.",
-      "riskCatalog": "ریسکی برای اتصال وجود ندارد.",
+      "riskCatalog": "ریسک قابل افزودن دیگری وجود ندارد.",
       "accountGroupCatalog": "گروه حسابی برای اتصال وجود ندارد."
     },
     "steps": {
@@ -150,7 +150,31 @@
       "linkTitle": "اتصال الزام"
     },
     "risks": {
-      "linkTitle": "اتصال ریسک"
+      "title": "ریسک‌ها",
+      "add": "افزودن",
+      "addPlaceholder": "انتخاب ریسک",
+      "addAccessibleName": "انتخاب ریسک برای افزودن",
+      "empty": "ریسکی افزوده نشده است.",
+      "noAssignable": "ریسک قابل افزودن دیگری وجود ندارد.",
+      "duplicate": "این ریسک قبلاً افزوده شده است.",
+      "mutationError": "خطا در ذخیره تغییرات ریسک‌ها.",
+      "loadError": "خطا در بارگذاری ریسک‌ها.",
+      "retry": "تلاش دوباره",
+      "remove": "حذف",
+      "removeTitle": "حذف ریسک",
+      "removeConfirm": "آیا از حذف ریسک «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول ریسک‌های کنترل",
+      "columns": {
+        "code": "کد",
+        "title": "نام ریسک",
+        "description": "شرح",
+        "source": "منبع",
+        "organizationTitle": "سازمان",
+        "validity": "اعتبار",
+        "actions": "عملیات"
+      }
     },
     "accountGroups": {
       "linkTitle": "اتصال گروه حساب"

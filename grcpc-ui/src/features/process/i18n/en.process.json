@@ -116,6 +116,43 @@
         "participant": "Participant"
       }
     },
+    "risks": {
+      "title": "Risks",
+      "empty": "No risks have been added to this process item.",
+      "saveFirst": "Save the process item first.",
+      "loadError": "Failed to load added risks.",
+      "retry": "Retry",
+      "add": "Add",
+      "addPlaceholder": "Select risk",
+      "addAccessibleName": "Select risk to add",
+      "noAssignable": "No other risk is available to add.",
+      "mutationError": "Failed to save risk changes.",
+      "duplicate": "This risk has already been added to this item.",
+      "remove": "Delete",
+      "removeTitle": "Delete Risk",
+      "removeConfirm": "Delete risk \"{{title}}\" from this item?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Process item risks table",
+      "columns": {
+        "code": "Code",
+        "title": "Risk Name",
+        "description": "Description",
+        "type": "Type",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "riskTypes": {
+        "operational": "Operational",
+        "financial": "Financial",
+        "strategic": "Strategic",
+        "compliance": "Compliance",
+        "technology": "Technology",
+        "reputation": "Reputation",
+        "safety": "Safety",
+        "other": "Other"
+      }
+    },
     "controls": {
       "title": "Controls",
       "empty": "No controls are assigned to this sub-process.",
@@ -148,7 +185,7 @@
     "tabs": {
       "general": "General Information",
       "accountGroups": "Account Group",
-      "risks": "Risk",
+      "risks": "Risks",
       "rules": "Rules",
       "objectives": "Objectives",
       "documents": "Documents",

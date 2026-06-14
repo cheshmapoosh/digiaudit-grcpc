@@ -99,7 +99,7 @@
       "link": "Link",
       "linkRegulation": "Link Regulation",
       "linkRequirement": "Link Requirement",
-      "linkRisk": "Link Risk",
+      "linkRisk": "Add Risk",
       "linkAccountGroup": "Link Account Group"
     },
     "create": {
@@ -122,7 +122,7 @@
       "steps": "No steps have been defined.",
       "regulations": "No regulations have been linked.",
       "requirements": "No requirements have been linked.",
-      "risks": "No risks have been linked.",
+      "risks": "No risks have been added.",
       "accountGroups": "No account groups have been linked.",
       "documents": "No documents have been defined.",
       "performancePlans": "No performance plans have been defined.",
@@ -150,7 +150,31 @@
       "linkTitle": "Link Requirement"
     },
     "risks": {
-      "linkTitle": "Link Risk"
+      "title": "Risks",
+      "add": "Add",
+      "addPlaceholder": "Select risk",
+      "addAccessibleName": "Select risk to add",
+      "empty": "No risks have been added.",
+      "noAssignable": "No other risk is available to add.",
+      "duplicate": "This risk has already been added.",
+      "mutationError": "Failed to save risk changes.",
+      "loadError": "Failed to load risks.",
+      "retry": "Retry",
+      "remove": "Delete",
+      "removeTitle": "Delete Risk",
+      "removeConfirm": "Delete risk \"{{title}}\"?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Control risks table",
+      "columns": {
+        "code": "Code",
+        "title": "Risk Name",
+        "description": "Description",
+        "source": "Source",
+        "organizationTitle": "Organization",
+        "validity": "Validity",
+        "actions": "Actions"
+      }
     },
     "accountGroups": {
       "linkTitle": "Link Account Group"

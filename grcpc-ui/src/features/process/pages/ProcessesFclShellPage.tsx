@@ -32,7 +32,7 @@ import type {
     UpdateControlAssignmentRequest,
 } from "@/features/control/domain/control.model";
 import { useControlState } from "@/features/control/state/control.state";
-import ControlObjectPage from "@/features/control/pages/ControlObjectPage";
+import ControlObjectPage, { type ControlObjectMode } from "@/features/control/pages/ControlObjectPage";
 import CreateControlDialog from "@/features/control/pages/CreateControlDialog";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
@@ -404,6 +404,7 @@ export default function ProcessesFclShellPage() {
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
     const [createControlContext, setCreateControlContext] = useState<SubProcessContext | null>(null);
     const [controlModalAssignmentId, setControlModalAssignmentId] = useState<string | null>(null);
+    const [controlModalMode, setControlModalMode] = useState<ControlObjectMode>("view");
     const [controlModalError, setControlModalError] = useState<string | null>(null);
 
     const processItems = useMemo(() => sortProcesses(Object.values(nodesById)), [nodesById]);
@@ -555,6 +556,7 @@ export default function ProcessesFclShellPage() {
     const handleOpenControlAssignment = useCallback(
         async (targetControlAssignmentId: string) => {
             setControlModalAssignmentId(targetControlAssignmentId);
+            setControlModalMode("view");
             setControlModalError(null);
 
             try {
@@ -932,10 +934,81 @@ export default function ProcessesFclShellPage() {
 
     const handleControlModalClose = useCallback(() => {
         setControlModalAssignmentId(null);
+        setControlModalMode("view");
         setControlModalError(null);
     }, []);
 
-    const handleControlModalSubmit = useCallback(() => undefined, []);
+    const handleControlModalEdit = useCallback(() => {
+        setControlModalError(null);
+        setControlModalMode("edit");
+    }, []);
+
+    const handleControlModalSubmit = useCallback(
+        async (payload: UpdateControlAssignmentRequest) => {
+            if (!controlModalAssignmentId) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setControlModalError(null);
+                await updateControlAssignment(controlModalAssignmentId, payload);
+                await Promise.all([
+                    loadControlAssignment(controlModalAssignmentId),
+                    refreshControlStructure(),
+                ]);
+                setControlModalMode("view");
+            } catch (error) {
+                setControlModalError(
+                    mapControlError(
+                        error,
+                        t("control.errors.save", { defaultValue: "خطا در ذخیره کنترل" }),
+                        t,
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [
+            controlModalAssignmentId,
+            loadControlAssignment,
+            refreshControlStructure,
+            t,
+            updateControlAssignment,
+        ],
+    );
+
+    const handleControlModalCancel = useCallback(() => {
+        if (controlModalMode === "edit") {
+            setControlModalError(null);
+            setControlModalMode("view");
+
+            if (controlModalAssignmentId) {
+                void loadControlAssignment(controlModalAssignmentId).catch((error: unknown) => {
+                    setControlModalError(
+                        mapControlError(
+                            error,
+                            t("control.errors.loadAssignment", {
+                                defaultValue: "خطا در بارگذاری جزئیات اتصال کنترل",
+                            }),
+                            t,
+                        ),
+                    );
+                });
+            }
+
+            return;
+        }
+
+        handleControlModalClose();
+    }, [
+        controlModalAssignmentId,
+        controlModalMode,
+        handleControlModalClose,
+        loadControlAssignment,
+        t,
+    ]);
 
     const handleControlStructureChanged = useCallback(async () => {
         try {
@@ -1194,14 +1267,15 @@ export default function ProcessesFclShellPage() {
                     <div style={dialogContentStyle}>
                         {controlModalAssignment ? (
                             <ControlObjectPage
-                                key={`modal:${controlModalAssignment.controlAssignmentId}`}
-                                mode="view"
+                                key={`modal:${controlModalMode}:${controlModalAssignment.controlAssignmentId}`}
+                                mode={controlModalMode}
                                 value={controlModalAssignment}
                                 busy={controlLoading || submitting}
                                 error={controlModalError}
                                 onErrorClose={() => setControlModalError(null)}
                                 onSubmit={handleControlModalSubmit}
-                                onCancel={handleControlModalClose}
+                                onCancel={handleControlModalCancel}
+                                onEdit={handleControlModalEdit}
                             />
                         ) : controlModalError ? (
                             <MessageStrip design="Negative" onClose={() => setControlModalError(null)}>

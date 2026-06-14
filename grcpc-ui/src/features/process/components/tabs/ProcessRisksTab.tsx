@@ -16,27 +16,36 @@ import {
 import type { RiskNode } from "@/features/risk/domain/risk.model";
 import { riskService } from "@/features/risk/service/risk.service";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
-import type { ControlRiskLink } from "../../domain/control.model";
-import { controlService } from "../../service/control.service";
-import { displayDate } from "./ControlTabUtils";
+import type { ProcessNodeType } from "../../domain/process.model";
+import type { ProcessRiskAssignment } from "../../domain/process-risk-assignment.model";
+import { processRiskAssignmentService } from "../../service/process-risk-assignment.service";
 
-export interface ControlRisksTabProps {
-    controlAssignmentId: string;
+interface ProcessRisksTabProps {
+    processId: string | null;
+    nodeType: ProcessNodeType;
 }
 
-type RisksLoadStatus = "loading" | "success" | "error";
+type RisksLoadStatus = "idle" | "loading" | "success" | "error";
 
 interface RisksLoadState {
-    controlAssignmentId: string;
+    processId: string | null;
     retryKey: number;
     status: RisksLoadStatus;
-    links: ControlRiskLink[];
+    assignments: ProcessRiskAssignment[];
     riskOptions: RiskNode[];
 }
 
-const PANEL_STYLE: CSSProperties = {
-    display: "grid",
-    gap: "0.75rem",
+const TABLE_PANEL_STYLE: CSSProperties = {
+    minHeight: "15rem",
+    background: "var(--sapGroup_ContentBackground)",
+    border: "1px solid var(--sapList_BorderColor)",
+    padding: "1rem",
+};
+
+const ERROR_ACTION_STYLE: CSSProperties = {
+    display: "flex",
+    justifyContent: "flex-end",
+    paddingTop: "0.75rem",
 };
 
 const ADD_TOOLBAR_STYLE: CSSProperties = {
@@ -52,15 +61,15 @@ const RISK_COMBOBOX_STYLE: CSSProperties = {
     minWidth: "18rem",
 };
 
-const EMPTY_LINKS: ControlRiskLink[] = [];
+const EMPTY_ASSIGNMENTS: ProcessRiskAssignment[] = [];
 const EMPTY_RISK_OPTIONS: RiskNode[] = [];
 
-function initialLoadState(controlAssignmentId: string): RisksLoadState {
+function initialLoadState(processId: string | null): RisksLoadState {
     return {
-        controlAssignmentId,
+        processId,
         retryKey: 0,
-        status: "loading",
-        links: [],
+        status: processId ? "loading" : "idle",
+        assignments: [],
         riskOptions: [],
     };
 }
@@ -77,9 +86,12 @@ function formatRiskOption(risk: RiskNode, fallback: string): string {
     )}`;
 }
 
-function formatLinkOption(link: ControlRiskLink, fallback: string): string {
-    return `${formatOptionalValue(link.code, fallback)} - ${formatOptionalValue(
-        link.title,
+function formatAssignmentOption(
+    assignment: ProcessRiskAssignment,
+    fallback: string,
+): string {
+    return `${formatOptionalValue(assignment.code, fallback)} - ${formatOptionalValue(
+        assignment.title,
         fallback,
     )}`;
 }
@@ -100,7 +112,41 @@ function readSelectedComboBoxDataValue(event: unknown, fallback: string): string
     return selectedItem?.getAttribute?.("data-value") ?? fallback;
 }
 
-export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTabProps) {
+function resolveRiskTypeLabel(
+    riskType: string | null | undefined,
+    fallback: string,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    const normalized = riskType?.trim();
+
+    if (!normalized) {
+        return fallback;
+    }
+
+    const labels: Record<string, string> = {
+        operational: t("process.risks.riskTypes.operational", { defaultValue: "عملیاتی" }),
+        financial: t("process.risks.riskTypes.financial", { defaultValue: "مالی" }),
+        strategic: t("process.risks.riskTypes.strategic", { defaultValue: "راهبردی" }),
+        compliance: t("process.risks.riskTypes.compliance", { defaultValue: "انطباق" }),
+        technology: t("process.risks.riskTypes.technology", { defaultValue: "فناوری" }),
+        reputation: t("process.risks.riskTypes.reputation", { defaultValue: "شهرت" }),
+        safety: t("process.risks.riskTypes.safety", { defaultValue: "ایمنی" }),
+        other: t("process.risks.riskTypes.other", { defaultValue: "سایر" }),
+    };
+
+    return labels[normalized] ?? normalized;
+}
+
+function resolveStatusLabel(
+    status: ProcessRiskAssignment["status"],
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    return status === "active"
+        ? t("process.status.active", { defaultValue: "فعال" })
+        : t("process.status.inactive", { defaultValue: "غیرفعال" });
+}
+
+export default function ProcessRisksTab({ processId, nodeType }: ProcessRisksTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
     const [retryKey, setRetryKey] = useState(0);
@@ -108,29 +154,38 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
     const [selectedRiskSearchValue, setSelectedRiskSearchValue] = useState("");
     const [mutationBusy, setMutationBusy] = useState(false);
     const [mutationError, setMutationError] = useState<string | null>(null);
-    const [removeCandidate, setRemoveCandidate] = useState<ControlRiskLink | null>(null);
+    const [removeCandidate, setRemoveCandidate] =
+        useState<ProcessRiskAssignment | null>(null);
     const [loadState, setLoadState] = useState<RisksLoadState>(() =>
-        initialLoadState(controlAssignmentId),
+        initialLoadState(processId),
     );
 
     useEffect(() => {
+        if (!processId) {
+            setLoadState(initialLoadState(null));
+            setRemoveCandidate(null);
+            setSelectedRiskId("");
+            setSelectedRiskSearchValue("");
+            return;
+        }
+
         const requestId = requestSeq.current + 1;
         requestSeq.current = requestId;
 
         Promise.all([
-            controlService.listRisks(controlAssignmentId),
+            processRiskAssignmentService.listByProcess(processId),
             riskService.list(),
         ])
-            .then(([links, riskOptions]) => {
+            .then(([assignments, riskOptions]) => {
                 if (requestSeq.current !== requestId) {
                     return;
                 }
 
                 setLoadState({
-                    controlAssignmentId,
+                    processId,
                     retryKey,
                     status: "success",
-                    links,
+                    assignments,
                     riskOptions: riskOptions.filter((risk) => risk.nodeType === "riskTemplate"),
                 });
                 setRemoveCandidate(null);
@@ -142,10 +197,10 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
                 }
 
                 setLoadState({
-                    controlAssignmentId,
+                    processId,
                     retryKey,
                     status: "error",
-                    links: [],
+                    assignments: [],
                     riskOptions: [],
                 });
             });
@@ -155,32 +210,34 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
                 requestSeq.current += 1;
             }
         };
-    }, [controlAssignmentId, retryKey]);
+    }, [processId, retryKey]);
 
     const noneText = t("common.none", { defaultValue: "ندارد" });
-    const duplicateMessage = t("control.risks.duplicate", {
-        defaultValue: "این ریسک قبلاً افزوده شده است.",
+    const risksTitle = t("process.risks.title", { defaultValue: "ریسک‌ها" });
+    const duplicateMessage = t("process.risks.duplicate", {
+        defaultValue: "این ریسک قبلاً برای این آیتم افزوده شده است.",
     });
-    const mutationErrorFallback = t("control.risks.mutationError", {
+    const mutationErrorFallback = t("process.risks.mutationError", {
         defaultValue: "خطا در ذخیره تغییرات ریسک‌ها.",
     });
     const isCurrentLoad =
-        loadState.controlAssignmentId === controlAssignmentId &&
-        loadState.retryKey === retryKey;
-    const links = isCurrentLoad ? loadState.links : EMPTY_LINKS;
+        loadState.processId === processId && loadState.retryKey === retryKey;
+    const assignments = isCurrentLoad ? loadState.assignments : EMPTY_ASSIGNMENTS;
     const riskOptions = isCurrentLoad ? loadState.riskOptions : EMPTY_RISK_OPTIONS;
     const isLoading =
-        loadState.controlAssignmentId !== controlAssignmentId ||
-        loadState.retryKey !== retryKey ||
-        loadState.status === "loading";
+        !!processId &&
+        (loadState.processId !== processId ||
+            loadState.retryKey !== retryKey ||
+            loadState.status === "loading");
     const hasError =
+        !!processId &&
         !isLoading &&
-        loadState.controlAssignmentId === controlAssignmentId &&
+        loadState.processId === processId &&
         loadState.retryKey === retryKey &&
         loadState.status === "error";
     const addedRiskIds = useMemo(
-        () => new Set(links.map((link) => link.riskId)),
-        [links],
+        () => new Set(assignments.map((assignment) => assignment.riskNodeId)),
+        [assignments],
     );
     const availableRisks = useMemo(
         () => riskOptions.filter((risk) => !addedRiskIds.has(risk.id)),
@@ -191,18 +248,27 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
         ? formatRiskOption(selectedRisk, noneText)
         : selectedRiskSearchValue;
     const removeCandidateLabel = removeCandidate
-        ? formatLinkOption(removeCandidate, noneText)
+        ? formatAssignmentOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        !!processId &&
         !!selectedRiskId &&
         availableRisks.some((risk) => risk.id === selectedRiskId) &&
         !isLoading &&
         !mutationBusy;
+    const saveFirstMessage =
+        nodeType === "subProcess"
+            ? t("process.risks.saveFirst", {
+                  defaultValue: "ابتدا آیتم فرآیندی را ذخیره کنید.",
+              })
+            : t("process.risks.saveFirst", {
+                  defaultValue: "ابتدا آیتم فرآیندی را ذخیره کنید.",
+              });
 
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (!selectedRiskId) {
+        if (!processId || !selectedRiskId) {
             return;
         }
 
@@ -219,7 +285,12 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
         setMutationError(null);
 
         try {
-            await controlService.linkRisk(controlAssignmentId, selectedRiskId);
+            await processRiskAssignmentService.create({
+                processNodeId: processId,
+                riskNodeId: selectedRiskId,
+                assignmentType: "scope",
+                isActive: true,
+            });
             setSelectedRiskId("");
             setSelectedRiskSearchValue("");
             refresh();
@@ -239,7 +310,7 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
         setMutationError(null);
 
         try {
-            await controlService.deleteRiskLink(controlAssignmentId, removeCandidate.id);
+            await processRiskAssignmentService.remove(removeCandidate.assignmentId);
             setRemoveCandidate(null);
             refresh();
         } catch {
@@ -249,18 +320,36 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
         }
     };
 
+    if (!processId) {
+        return (
+            <div style={TABLE_PANEL_STYLE}>
+                <Title level="H5">{risksTitle}</Title>
+
+                <div style={{ height: "0.75rem" }} />
+
+                <MessageStrip design="Information" hideCloseButton>
+                    {saveFirstMessage}
+                </MessageStrip>
+            </div>
+        );
+    }
+
     if (hasError) {
         return (
-            <div style={PANEL_STYLE}>
-                <Title level="H5">{t("control.risks.title", { defaultValue: "ریسک‌ها" })}</Title>
+            <div style={TABLE_PANEL_STYLE}>
+                <Title level="H5">{risksTitle}</Title>
+
+                <div style={{ height: "0.75rem" }} />
+
                 <MessageStrip design="Negative" hideCloseButton>
-                    {t("control.risks.loadError", {
-                        defaultValue: "خطا در بارگذاری ریسک‌ها.",
+                    {t("process.risks.loadError", {
+                        defaultValue: "خطا در بارگذاری ریسک‌های افزوده‌شده.",
                     })}
                 </MessageStrip>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+
+                <div style={ERROR_ACTION_STYLE}>
                     <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
-                        {t("control.risks.retry", { defaultValue: "تلاش دوباره" })}
+                        {t("process.risks.retry", { defaultValue: "تلاش دوباره" })}
                     </Button>
                 </div>
             </div>
@@ -268,16 +357,18 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
     }
 
     return (
-        <div style={PANEL_STYLE}>
-            <Title level="H5">{t("control.risks.title", { defaultValue: "ریسک‌ها" })}</Title>
+        <div style={TABLE_PANEL_STYLE}>
+            <Title level="H5">{risksTitle}</Title>
+
+            <div style={{ height: "0.75rem" }} />
 
             <div style={ADD_TOOLBAR_STYLE}>
                 <ComboBox
-                    accessibleName={t("control.risks.addAccessibleName", {
+                    accessibleName={t("process.risks.addAccessibleName", {
                         defaultValue: "انتخاب ریسک برای افزودن",
                     })}
                     filter="Contains"
-                    placeholder={t("control.risks.addPlaceholder", {
+                    placeholder={t("process.risks.addPlaceholder", {
                         defaultValue: "انتخاب ریسک",
                     })}
                     showClearIcon
@@ -315,82 +406,88 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
                 </ComboBox>
 
                 <Button design="Emphasized" disabled={!canAdd} onClick={handleAdd}>
-                    {t("control.risks.add", { defaultValue: "افزودن" })}
+                    {t("process.risks.add", { defaultValue: "افزودن" })}
                 </Button>
             </div>
 
             {availableRisks.length === 0 && !isLoading ? (
-                <MessageStrip design="Information" hideCloseButton>
-                    {t("control.risks.noAssignable", {
-                        defaultValue: "ریسک قابل افزودن دیگری وجود ندارد.",
-                    })}
-                </MessageStrip>
+                <>
+                    <div style={{ height: "0.75rem" }} />
+                    <MessageStrip design="Information" hideCloseButton>
+                        {t("process.risks.noAssignable", {
+                            defaultValue: "ریسک قابل افزودن دیگری وجود ندارد.",
+                        })}
+                    </MessageStrip>
+                </>
             ) : null}
 
             {mutationError ? (
-                <MessageStrip design="Negative" hideCloseButton>
-                    {mutationError}
-                </MessageStrip>
+                <>
+                    <div style={{ height: "0.75rem" }} />
+                    <MessageStrip design="Negative" hideCloseButton>
+                        {mutationError}
+                    </MessageStrip>
+                </>
             ) : null}
 
+            <div style={{ height: "0.75rem" }} />
+
             <Table
-                accessibleName={t("control.risks.tableAccessibleName", {
-                    defaultValue: "جدول ریسک‌های کنترل",
+                accessibleName={t("process.risks.tableAccessibleName", {
+                    defaultValue: "جدول ریسک‌های آیتم فرآیندی",
                 })}
                 alternateRowColors
                 headerRow={
                     <TableHeaderRow>
                         <TableHeaderCell width="8rem">
-                            {t("control.risks.columns.code", { defaultValue: "کد" })}
+                            {t("process.risks.columns.code", { defaultValue: "کد" })}
                         </TableHeaderCell>
                         <TableHeaderCell minWidth="12rem">
-                            {t("control.risks.columns.title", { defaultValue: "نام ریسک" })}
-                        </TableHeaderCell>
-                        <TableHeaderCell minWidth="14rem">
-                            {t("control.risks.columns.description", { defaultValue: "شرح" })}
-                        </TableHeaderCell>
-                        <TableHeaderCell width="9rem">
-                            {t("control.risks.columns.source", { defaultValue: "منبع" })}
-                        </TableHeaderCell>
-                        <TableHeaderCell width="10rem">
-                            {t("control.risks.columns.organizationTitle", {
-                                defaultValue: "سازمان",
+                            {t("process.risks.columns.title", {
+                                defaultValue: "نام ریسک",
                             })}
                         </TableHeaderCell>
-                        <TableHeaderCell width="12rem">
-                            {t("control.risks.columns.validity", { defaultValue: "اعتبار" })}
+                        <TableHeaderCell minWidth="14rem">
+                            {t("process.risks.columns.description", {
+                                defaultValue: "شرح",
+                            })}
                         </TableHeaderCell>
                         <TableHeaderCell width="8rem">
-                            {t("control.risks.columns.actions", { defaultValue: "عملیات" })}
+                            {t("process.risks.columns.type", { defaultValue: "نوع" })}
+                        </TableHeaderCell>
+                        <TableHeaderCell width="8rem">
+                            {t("process.risks.columns.status", { defaultValue: "وضعیت" })}
+                        </TableHeaderCell>
+                        <TableHeaderCell width="8rem">
+                            {t("process.risks.columns.actions", { defaultValue: "عملیات" })}
                         </TableHeaderCell>
                     </TableHeaderRow>
                 }
                 loading={isLoading}
                 loadingDelay={0}
-                noDataText={t("control.risks.empty", {
-                    defaultValue: "ریسکی افزوده نشده است.",
+                noDataText={t("process.risks.empty", {
+                    defaultValue: "ریسکی برای این آیتم افزوده نشده است.",
                 })}
                 overflowMode="Popin"
             >
-                {links.map((link) => (
-                    <TableRow key={link.id} rowKey={link.id}>
-                        <TableCell>{formatOptionalValue(link.code, noneText)}</TableCell>
-                        <TableCell>{formatOptionalValue(link.title, noneText)}</TableCell>
-                        <TableCell>{formatOptionalValue(link.description, noneText)}</TableCell>
-                        <TableCell>{formatOptionalValue(link.source, noneText)}</TableCell>
+                {assignments.map((assignment) => (
+                    <TableRow key={assignment.assignmentId} rowKey={assignment.assignmentId}>
+                        <TableCell>{formatOptionalValue(assignment.code, noneText)}</TableCell>
+                        <TableCell>{formatOptionalValue(assignment.title, noneText)}</TableCell>
                         <TableCell>
-                            {formatOptionalValue(link.organizationTitle, noneText)}
+                            {formatOptionalValue(assignment.description, noneText)}
                         </TableCell>
                         <TableCell>
-                            {`${displayDate(link.validFrom)} - ${displayDate(link.validTo)}`}
+                            {resolveRiskTypeLabel(assignment.riskType, noneText, t)}
                         </TableCell>
+                        <TableCell>{resolveStatusLabel(assignment.status, t)}</TableCell>
                         <TableCell>
                             <Button
                                 design="Transparent"
                                 disabled={mutationBusy}
-                                onClick={() => setRemoveCandidate(link)}
+                                onClick={() => setRemoveCandidate(assignment)}
                             >
-                                {t("control.risks.remove", { defaultValue: "حذف" })}
+                                {t("process.risks.remove", { defaultValue: "حذف" })}
                             </Button>
                         </TableCell>
                     </TableRow>
@@ -399,14 +496,14 @@ export default function ControlRisksTab({ controlAssignmentId }: ControlRisksTab
 
             <DeleteConfirmDialog
                 open={!!removeCandidate}
-                title={t("control.risks.removeTitle", { defaultValue: "حذف ریسک" })}
-                message={t("control.risks.removeConfirm", {
-                    defaultValue: "آیا از حذف ریسک «{{title}}» مطمئن هستید؟",
+                title={t("process.risks.removeTitle", { defaultValue: "حذف ریسک" })}
+                message={t("process.risks.removeConfirm", {
+                    defaultValue: "آیا از حذف ریسک «{{title}}» از این آیتم مطمئن هستید؟",
                     title: removeCandidateLabel,
                 })}
                 loading={mutationBusy}
-                confirmText={t("control.risks.confirmRemove", { defaultValue: "حذف" })}
-                cancelText={t("control.risks.cancelRemove", { defaultValue: "انصراف" })}
+                confirmText={t("process.risks.confirmRemove", { defaultValue: "حذف" })}
+                cancelText={t("process.risks.cancelRemove", { defaultValue: "انصراف" })}
                 onClose={() => {
                     if (!mutationBusy) {
                         setRemoveCandidate(null);

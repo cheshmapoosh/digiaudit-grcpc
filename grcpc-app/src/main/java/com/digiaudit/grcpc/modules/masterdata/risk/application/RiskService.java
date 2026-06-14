@@ -15,6 +15,7 @@ import com.digiaudit.grcpc.modules.masterdata.risk.api.dto.RiskNodeResponse;
 import com.digiaudit.grcpc.modules.masterdata.risk.api.mapper.RiskMapper;
 import com.digiaudit.grcpc.modules.masterdata.risk.domain.entity.RiskNodeEntity;
 import com.digiaudit.grcpc.modules.masterdata.risk.domain.repository.RiskNodeRepository;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessRiskAssignmentRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.util.*;
@@ -30,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RiskService {
 
     private final RiskNodeRepository repository;
+    private final ProcessRiskAssignmentRepository processRiskAssignmentRepository;
     private final RiskMapper mapper;
     private final AuditService auditService;
     private final CurrentUserProvider currentUserProvider;
@@ -82,8 +84,8 @@ public class RiskService {
     @Transactional
     public void delete(UUID id, HttpServletRequest httpRequest) {
         RiskNodeEntity entity = get(id);
-        if (repository.existsByParentId(id)) {
-            throw new ConflictException("MASTER_DATA_HAS_CHILDREN", "error.masterdata.hasChildren", "Risk node has children: " + id);
+        if (repository.existsByParentId(id) || processRiskAssignmentRepository.existsByRiskNodeId(id)) {
+            throw new ConflictException("MASTER_DATA_HAS_CHILDREN", "error.masterdata.hasChildren", "Risk node has children or assignments: " + id);
         }
         repository.delete(entity);
         audit("RISK_DELETED", id, httpRequest, Map.of("code", entity.getCode()));

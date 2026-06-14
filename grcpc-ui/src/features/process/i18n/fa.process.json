@@ -116,6 +116,43 @@
         "participant": "مشارکت‌کننده"
       }
     },
+    "risks": {
+      "title": "ریسک‌ها",
+      "empty": "ریسکی برای این آیتم افزوده نشده است.",
+      "saveFirst": "ابتدا آیتم فرآیندی را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری ریسک‌های افزوده‌شده.",
+      "retry": "تلاش دوباره",
+      "add": "افزودن",
+      "addPlaceholder": "انتخاب ریسک",
+      "addAccessibleName": "انتخاب ریسک برای افزودن",
+      "noAssignable": "ریسک قابل افزودن دیگری وجود ندارد.",
+      "mutationError": "خطا در ذخیره تغییرات ریسک‌ها.",
+      "duplicate": "این ریسک قبلاً برای این آیتم افزوده شده است.",
+      "remove": "حذف",
+      "removeTitle": "حذف ریسک",
+      "removeConfirm": "آیا از حذف ریسک «{{title}}» از این آیتم مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول ریسک‌های آیتم فرآیندی",
+      "columns": {
+        "code": "کد",
+        "title": "نام ریسک",
+        "description": "شرح",
+        "type": "نوع",
+        "status": "وضعیت",
+        "actions": "عملیات"
+      },
+      "riskTypes": {
+        "operational": "عملیاتی",
+        "financial": "مالی",
+        "strategic": "راهبردی",
+        "compliance": "انطباق",
+        "technology": "فناوری",
+        "reputation": "شهرت",
+        "safety": "ایمنی",
+        "other": "سایر"
+      }
+    },
     "controls": {
       "title": "کنترل‌ها",
       "empty": "هیچ کنترلی به این زیر فرآیند متصل نشده است.",
@@ -148,7 +185,7 @@
     "tabs": {
       "general": "اطلاعات کلی",
       "accountGroups": "گروه حساب",
-      "risks": "ریسک",
+      "risks": "ریسک‌ها",
       "rules": "قوانین",
       "objectives": "اهداف",
       "documents": "مستندات",
