@@ -100,7 +100,7 @@
       "linkRegulation": "Add Regulation",
       "linkRequirement": "Link Requirement",
       "linkRisk": "Add Risk",
-      "linkAccountGroup": "Link Account Group"
+      "linkAccountGroup": "Add Account Group"
     },
     "create": {
       "title": "Define New Control"
@@ -123,13 +123,13 @@
       "regulations": "No laws have been added.",
       "requirements": "No requirements have been linked.",
       "risks": "No risks have been added.",
-      "accountGroups": "No account groups have been linked.",
+      "accountGroups": "No account groups have been added.",
       "documents": "No documents have been defined.",
       "performancePlans": "No performance plans have been defined.",
       "regulationCatalog": "No laws are available to add.",
       "requirementCatalog": "No requirements are available.",
       "riskCatalog": "No risks are available.",
-      "accountGroupCatalog": "No account groups are available."
+      "accountGroupCatalog": "No other account group is available to add."
     },
     "steps": {
       "createTitle": "Add Step",
@@ -199,7 +199,29 @@
       }
     },
     "accountGroups": {
-      "linkTitle": "Link Account Group"
+      "title": "Account Groups",
+      "add": "Add",
+      "addPlaceholder": "Select account group",
+      "addAccessibleName": "Select account group to add",
+      "empty": "No account group has been added.",
+      "noAssignable": "No other account group is available to add.",
+      "duplicate": "This account group has already been added.",
+      "mutationError": "Failed to save account group changes.",
+      "loadError": "Failed to load account groups.",
+      "retry": "Retry",
+      "remove": "Delete",
+      "removeTitle": "Delete Account Group",
+      "removeConfirm": "Delete account group \"{{title}}\"?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Control account groups table",
+      "columns": {
+        "code": "Code",
+        "title": "Account Group Name",
+        "description": "Description",
+        "assertionType": "Assertion Type",
+        "actions": "Actions"
+      }
     },
     "links": {
       "searchRegulations": "Search regulations",

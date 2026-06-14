@@ -100,7 +100,7 @@
       "linkRegulation": "افزودن قانون",
       "linkRequirement": "اتصال الزام",
       "linkRisk": "افزودن ریسک",
-      "linkAccountGroup": "اتصال گروه حساب"
+      "linkAccountGroup": "افزودن گروه حساب"
     },
     "create": {
       "title": "تعریف کنترل جدید"
@@ -123,13 +123,13 @@
       "regulations": "قانونی افزوده نشده است.",
       "requirements": "الزامی متصل نشده است.",
       "risks": "ریسکی افزوده نشده است.",
-      "accountGroups": "گروه حسابی متصل نشده است.",
+      "accountGroups": "گروه حسابی افزوده نشده است.",
       "documents": "مستندی تعریف نشده است.",
       "performancePlans": "برنامه عملکردی تعریف نشده است.",
       "regulationCatalog": "قانون قابل افزودن دیگری وجود ندارد.",
       "requirementCatalog": "الزامی برای اتصال وجود ندارد.",
       "riskCatalog": "ریسک قابل افزودن دیگری وجود ندارد.",
-      "accountGroupCatalog": "گروه حسابی برای اتصال وجود ندارد."
+      "accountGroupCatalog": "گروه حساب قابل افزودن دیگری وجود ندارد."
     },
     "steps": {
       "createTitle": "افزودن مرحله",
@@ -199,7 +199,29 @@
       }
     },
     "accountGroups": {
-      "linkTitle": "اتصال گروه حساب"
+      "title": "گروه حساب‌ها",
+      "add": "افزودن",
+      "addPlaceholder": "انتخاب گروه حساب",
+      "addAccessibleName": "انتخاب گروه حساب برای افزودن",
+      "empty": "گروه حسابی افزوده نشده است.",
+      "noAssignable": "گروه حساب قابل افزودن دیگری وجود ندارد.",
+      "duplicate": "این گروه حساب قبلاً افزوده شده است.",
+      "mutationError": "خطا در ذخیره تغییرات گروه حساب‌ها.",
+      "loadError": "خطا در بارگذاری گروه حساب‌ها.",
+      "retry": "تلاش دوباره",
+      "remove": "حذف",
+      "removeTitle": "حذف گروه حساب",
+      "removeConfirm": "آیا از حذف گروه حساب «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول گروه حساب‌های کنترل",
+      "columns": {
+        "code": "کد",
+        "title": "نام گروه حساب",
+        "description": "شرح",
+        "assertionType": "نوع ادعا",
+        "actions": "عملیات"
+      }
     },
     "links": {
       "searchRegulations": "جستجوی قوانین",

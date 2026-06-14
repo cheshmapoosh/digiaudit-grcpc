@@ -28,33 +28,24 @@ import {
 } from "@/shared/utils/date.utils";
 import ControlAccountGroupsTab from "../components/tabs/ControlAccountGroupsTab";
 import ControlDocumentsTab from "../components/tabs/ControlDocumentsTab";
-import ControlPerformancePlanTab from "../components/tabs/ControlPerformancePlanTab";
 import ControlRegulationsTab from "../components/tabs/ControlRegulationsTab";
-import ControlRequirementsTab from "../components/tabs/ControlRequirementsTab";
 import ControlRisksTab from "../components/tabs/ControlRisksTab";
-import ControlStepsTab from "../components/tabs/ControlStepsTab";
 
 export type ControlObjectMode = "view" | "edit";
 
 type ControlTabKey =
     | "general"
-    | "steps"
     | "regulations"
-    | "requirements"
     | "risks"
     | "accountGroups"
-    | "documents"
-    | "performancePlan";
+    | "documents";
 
 const CONTROL_TABS: ControlTabKey[] = [
     "general",
-    "steps",
     "regulations",
-    "requirements",
     "risks",
     "accountGroups",
     "documents",
-    "performancePlan",
 ];
 
 interface ControlAssignmentFormState {
@@ -314,15 +305,10 @@ function resolveTabLabel(
 ): string {
     const labels: Record<ControlTabKey, string> = {
         general: t("control.tabs.general", { defaultValue: "اطلاعات کلی" }),
-        steps: t("control.tabs.steps", { defaultValue: "مراحل" }),
         regulations: t("control.tabs.regulations", { defaultValue: "قوانین" }),
-        requirements: t("control.tabs.requirements", { defaultValue: "الزامات" }),
         risks: t("control.tabs.risks", { defaultValue: "ریسک‌ها" }),
         accountGroups: t("control.tabs.accountGroups", { defaultValue: "گروه حساب‌ها" }),
         documents: t("control.tabs.documents", { defaultValue: "مستندات" }),
-        performancePlan: t("control.tabs.performancePlan", {
-            defaultValue: "برنامه عملکرد",
-        }),
     };
 
     return labels[tab];
@@ -650,20 +636,14 @@ export default function ControlObjectPage({
 
     const renderTabContent = () => {
         switch (activeTab) {
-            case "steps":
-                return <ControlStepsTab controlAssignmentId={value.controlAssignmentId} />;
             case "regulations":
                 return <ControlRegulationsTab controlAssignmentId={value.controlAssignmentId} />;
-            case "requirements":
-                return <ControlRequirementsTab controlAssignmentId={value.controlAssignmentId} />;
             case "risks":
                 return <ControlRisksTab controlAssignmentId={value.controlAssignmentId} />;
             case "accountGroups":
                 return <ControlAccountGroupsTab controlAssignmentId={value.controlAssignmentId} />;
             case "documents":
                 return <ControlDocumentsTab controlAssignmentId={value.controlAssignmentId} />;
-            case "performancePlan":
-                return <ControlPerformancePlanTab controlAssignmentId={value.controlAssignmentId} />;
             case "general":
             default:
                 return renderGeneralTab();
