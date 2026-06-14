@@ -882,7 +882,7 @@ export default function ProcessesFclShellPage() {
 
                     setSelectedTreeId(created.id);
                     setTreeExpansionAnchorId(created.id);
-                    navigate("/processes");
+                    navigate(`/processes/${created.id}`);
                     return;
                 }
 
@@ -895,7 +895,7 @@ export default function ProcessesFclShellPage() {
                     );
                     setSelectedTreeId(processId);
                     setTreeExpansionAnchorId(processId);
-                    navigate("/processes");
+                    navigate(`/processes/${processId}`);
                 }
             } catch (error) {
                 setObjectError(
@@ -999,6 +999,10 @@ export default function ProcessesFclShellPage() {
                     controlAssignmentId,
                     controlDocumentTempSessionId,
                 );
+                await Promise.all([
+                    loadControlAssignment(controlAssignmentId),
+                    refreshControlStructure(),
+                ]);
                 setSelectedTreeId(controlAssignmentId);
                 setTreeExpansionAnchorId(controlAssignmentId);
                 navigate(`/processes/control-assignments/${controlAssignmentId}`);
@@ -1018,7 +1022,9 @@ export default function ProcessesFclShellPage() {
             commitDocumentTempUploads,
             controlAssignmentId,
             controlDocumentTempSessionId,
+            loadControlAssignment,
             navigate,
+            refreshControlStructure,
             t,
             updateControlAssignment,
         ],

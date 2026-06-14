@@ -1,4 +1,12 @@
-import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+    Fragment,
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,6 +20,11 @@ import {
     Tab,
     TabContainer,
     TabSeparator,
+    Table,
+    TableCell,
+    TableHeaderCell,
+    TableHeaderRow,
+    TableRow,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
@@ -27,6 +40,11 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
+import {
+    DocumentAttachmentsManager,
+    type DocumentBeforeParentSubmitHandler,
+} from "@/features/document";
+import { sortRegulations } from "../utils/regulation.tree";
 
 export type RegulationObjectMode = "create" | "edit" | "view";
 
@@ -54,9 +72,14 @@ export interface RegulationObjectPageProps {
     requestedNodeType?: RegulationNodeType;
     busy?: boolean;
     error?: string | null;
+    documentTempSessionId?: string;
     onSubmit: (payload: RegulationNodeCreate | RegulationNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
     onEdit?: () => void;
+    onCreateRequirement?: (lawId: string) => void;
+    onShowRequirement?: (requirementId: string) => void;
+    onEditRequirement?: (requirementId: string) => void;
+    onDeleteRequirement?: (requirementId: string) => void;
 }
 
 const ROOT_STYLE: CSSProperties = {
@@ -158,23 +181,18 @@ const TABLE_PANEL_STYLE: CSSProperties = {
     padding: "1rem",
 };
 
-const TABLE_STYLE: CSSProperties = {
-    width: "100%",
-    borderCollapse: "collapse",
-    background: "var(--sapList_Background)",
+const REQUIREMENTS_HEADER_STYLE: CSSProperties = {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "1rem",
+    alignItems: "center",
+    flexWrap: "wrap",
 };
 
-const TABLE_HEADER_STYLE: CSSProperties = {
-    background: "var(--sapList_HeaderBackground)",
-    border: "1px solid var(--sapList_BorderColor)",
-    padding: "0.5rem",
-    fontWeight: 700,
-};
-
-const TABLE_CELL_STYLE: CSSProperties = {
-    border: "1px solid var(--sapList_BorderColor)",
-    padding: "0.5rem",
-    height: "2rem",
+const REQUIREMENTS_ACTIONS_STYLE: CSSProperties = {
+    display: "inline-flex",
+    gap: "0.5rem",
+    flexWrap: "wrap",
 };
 
 function toFormState(
@@ -356,39 +374,6 @@ function RegulationTabs({
     );
 }
 
-function TablePlaceholder({ title, columns }: { title: string; columns: string[] }) {
-    return (
-        <div style={TABLE_PANEL_STYLE}>
-            <Title level="H5">{title}</Title>
-
-            <div style={{ height: "0.75rem" }} />
-
-            <table style={TABLE_STYLE}>
-                <thead>
-                    <tr>
-                        {columns.map((column) => (
-                            <th key={column} style={TABLE_HEADER_STYLE}>
-                                {column}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {[0, 1, 2].map((row) => (
-                        <tr key={row}>
-                            {columns.map((column) => (
-                                <td key={column} style={TABLE_CELL_STYLE}>
-                                    &nbsp;
-                                </td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-}
-
 function resolveParentLabel(
     nodeType: RegulationNodeType,
     t: ReturnType<typeof useTranslation>["t"],
@@ -412,9 +397,14 @@ export default function RegulationObjectPage({
     requestedNodeType,
     busy = false,
     error,
+    documentTempSessionId,
     onSubmit,
     onCancel,
     onEdit,
+    onCreateRequirement,
+    onShowRequirement,
+    onEditRequirement,
+    onDeleteRequirement,
 }: RegulationObjectPageProps) {
     const { t } = useTranslation();
     const readOnly = mode === "view";
@@ -426,11 +416,28 @@ export default function RegulationObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(form.nodeType), [form.nodeType]);
     const [activeTab, setActiveTab] = useState<RegulationTabKey>("general");
+    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
+    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
     const effectiveActiveTab = tabs.includes(activeTab) ? activeTab : "general";
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? parent ?? null
         : null;
+
+    const currentRegulationId = value?.id ?? null;
+    const directRequirements = useMemo(
+        () =>
+            sortRegulations(
+                currentRegulationId && form.nodeType === "law"
+                    ? allItems.filter(
+                          (item) =>
+                              item.parentId === currentRegulationId &&
+                              item.nodeType === "lawRequirement",
+                      )
+                    : [],
+            ),
+        [allItems, currentRegulationId, form.nodeType],
+    );
 
     const headerTitle = form.title || value?.title || "";
     const headerParent = selectedParent
@@ -478,8 +485,31 @@ export default function RegulationObjectPage({
         return true;
     };
 
+    const handleDocumentBeforeParentSubmitChange = useCallback(
+        (handler: DocumentBeforeParentSubmitHandler | null) => {
+            documentBeforeSubmitRef.current = handler;
+        },
+        [],
+    );
+
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
+            return;
+        }
+
+        if (hasPendingDocumentUploads) {
+            setValidationError(
+                t("document.validation.waitForUpload", {
+                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
+                }),
+            );
+            setActiveTab("documents");
+            return;
+        }
+
+        const documentsReady = await documentBeforeSubmitRef.current?.();
+        if (documentsReady === false) {
+            setActiveTab("documents");
             return;
         }
 
@@ -621,39 +651,197 @@ export default function RegulationObjectPage({
                 </FormField>
             </div>
 
-            <div style={FOOTER_STYLE}>
-                {mode === "view" ? (
+        </>
+    );
+
+    const renderRequirementActions = (requirement: RegulationNode) => {
+        const canShow = Boolean(onShowRequirement);
+        const canEdit = mode === "edit" && Boolean(onEditRequirement);
+        const canDelete = mode === "edit" && Boolean(onDeleteRequirement);
+
+        if (!canShow && !canEdit && !canDelete) {
+            return "-";
+        }
+
+        return (
+            <div style={REQUIREMENTS_ACTIONS_STYLE}>
+                {canShow ? (
                     <Button
-                        design="Emphasized"
-                        disabled={busy || !onEdit}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={onEdit}
+                        design="Transparent"
+                        disabled={busy}
+                        onClick={() => onShowRequirement?.(requirement.id)}
+                    >
+                        {t("common.view", { defaultValue: "نمایش" })}
+                    </Button>
+                ) : null}
+                {canEdit ? (
+                    <Button
+                        design="Transparent"
+                        disabled={busy}
+                        onClick={() => onEditRequirement?.(requirement.id)}
                     >
                         {t("common.edit", { defaultValue: "ویرایش" })}
                     </Button>
-                ) : (
+                ) : null}
+                {canDelete ? (
                     <Button
-                        design="Emphasized"
+                        design="Transparent"
                         disabled={busy}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={handleSubmit}
+                        onClick={() => onDeleteRequirement?.(requirement.id)}
                     >
-                        {t("common.save", { defaultValue: "ذخیره" })}
+                        {t("common.delete", { defaultValue: "حذف" })}
                     </Button>
-                )}
+                ) : null}
+            </div>
+        );
+    };
 
+    const renderRequirementsTab = () => {
+        const canAddRequirement =
+            mode === "edit" &&
+            Boolean(currentRegulationId) &&
+            Boolean(onCreateRequirement);
+
+        return (
+            <div style={TABLE_PANEL_STYLE}>
+                <div style={REQUIREMENTS_HEADER_STYLE}>
+                    <Title level="H5">
+                        {t("regulation.requirements.title", {
+                            defaultValue: "الزامات قانون",
+                        })}
+                    </Title>
+
+                    {mode === "edit" ? (
+                        <Button
+                            design="Emphasized"
+                            disabled={!canAddRequirement || busy}
+                            onClick={() => {
+                                if (currentRegulationId) {
+                                    onCreateRequirement?.(currentRegulationId);
+                                }
+                            }}
+                        >
+                            {t("regulation.requirements.add", {
+                                defaultValue: "افزودن الزام",
+                            })}
+                        </Button>
+                    ) : null}
+                </div>
+
+                {!currentRegulationId && !readOnly ? (
+                    <>
+                        <div style={{ height: "0.75rem" }} />
+                        <MessageStrip design="Information" hideCloseButton>
+                            {t("regulation.requirements.saveFirst", {
+                                defaultValue:
+                                    "ابتدا قانون را ذخیره کنید، سپس الزام اضافه کنید.",
+                            })}
+                        </MessageStrip>
+                    </>
+                ) : null}
+
+                <div style={{ height: "0.75rem" }} />
+
+                <Table
+                    accessibleName={t("regulation.requirements.title", {
+                        defaultValue: "الزامات قانون",
+                    })}
+                    alternateRowColors
+                    headerRow={
+                        <TableHeaderRow>
+                            <TableHeaderCell width="8rem">
+                                {t("regulation.requirements.columns.code", {
+                                    defaultValue: "شناسه",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell minWidth="12rem">
+                                {t("regulation.requirements.columns.title", {
+                                    defaultValue: "نام الزام",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell minWidth="14rem">
+                                {t("regulation.requirements.columns.description", {
+                                    defaultValue: "شرح",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell width="8rem">
+                                {t("regulation.requirements.columns.status", {
+                                    defaultValue: "وضعیت",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell width="10rem">
+                                {t("regulation.requirements.columns.effectiveDate", {
+                                    defaultValue: "تاریخ ایجاد",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell width="10rem">
+                                {t("regulation.requirements.columns.validTo", {
+                                    defaultValue: "تاریخ اعتبار",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell width="12rem">
+                                {t("regulation.requirements.columns.actions", {
+                                    defaultValue: "عملیات",
+                                })}
+                            </TableHeaderCell>
+                        </TableHeaderRow>
+                    }
+                    loading={busy}
+                    loadingDelay={0}
+                    noDataText={t("regulation.requirements.empty", {
+                        defaultValue: "الزامی برای این قانون ثبت نشده است.",
+                    })}
+                    overflowMode="Popin"
+                >
+                    {directRequirements.map((requirement) => (
+                        <TableRow key={requirement.id} rowKey={requirement.id}>
+                            <TableCell>{requirement.code || "-"}</TableCell>
+                            <TableCell>{requirement.title || "-"}</TableCell>
+                            <TableCell>{requirement.description || "-"}</TableCell>
+                            <TableCell>{resolveStatusLabel(requirement.status, t)}</TableCell>
+                            <TableCell>{formatPersianDate(requirement.effectiveDate)}</TableCell>
+                            <TableCell>{formatPersianDate(requirement.validTo)}</TableCell>
+                            <TableCell>{renderRequirementActions(requirement)}</TableCell>
+                        </TableRow>
+                    ))}
+                </Table>
+            </div>
+        );
+    };
+
+    const renderFooterActions = () => (
+        <div style={FOOTER_STYLE}>
+            {mode === "view" ? (
                 <Button
-                    design="Transparent"
+                    design="Emphasized"
+                    disabled={busy || !onEdit}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={onEdit}
+                >
+                    {t("common.edit", { defaultValue: "ویرایش" })}
+                </Button>
+            ) : (
+                <Button
+                    design="Emphasized"
                     disabled={busy}
                     style={ACTION_BUTTON_STYLE}
-                    onClick={onCancel}
+                    onClick={handleSubmit}
                 >
-                    {mode === "view"
-                        ? t("common.close", { defaultValue: "بستن" })
-                        : t("common.cancel", { defaultValue: "انصراف" })}
+                    {t("common.save", { defaultValue: "ذخیره" })}
                 </Button>
-            </div>
-        </>
+            )}
+
+            <Button
+                design="Transparent"
+                disabled={busy}
+                style={ACTION_BUTTON_STYLE}
+                onClick={onCancel}
+            >
+                {mode === "view"
+                    ? t("common.close", { defaultValue: "بستن" })
+                    : t("common.cancel", { defaultValue: "انصراف" })}
+            </Button>
+        </div>
     );
 
     const renderTabContent = () => {
@@ -662,28 +850,24 @@ export default function RegulationObjectPage({
         }
 
         if (effectiveActiveTab === "requirements") {
-            return (
-                <TablePlaceholder
-                    title={t("regulation.tabs.requirements", { defaultValue: "الزامات" })}
-                    columns={[
-                        t("regulation.fields.requirement", { defaultValue: "الزامات" }),
-                        t("regulation.fields.description", { defaultValue: "شرح" }),
-                        t("regulation.fields.lawName", { defaultValue: "نام قانون" }),
-                        t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" }),
-                        t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" }),
-                    ]}
-                />
-            );
+            return renderRequirementsTab();
         }
 
         return (
-            <TablePlaceholder
+            <DocumentAttachmentsManager
                 title={t("regulation.tabs.documents", { defaultValue: "مستندات" })}
-                columns={[
-                    t("regulation.fields.name", { defaultValue: "نام" }),
-                    t("regulation.fields.type", { defaultValue: "نوع" }),
-                    t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" }),
-                ]}
+                targetType="REGULATION_NODE"
+                targetId={currentRegulationId}
+                tempSessionId={documentTempSessionId}
+                stagingMode="tempUntilParentSave"
+                busy={busy}
+                readOnly={readOnly}
+                saveFirstMessage={t("regulation.documents.saveFirst", {
+                    defaultValue:
+                        "ابتدا آیتم قانون را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
+                })}
+                onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
+                onPendingUploadsChange={setHasPendingDocumentUploads}
             />
         );
     };
@@ -751,6 +935,8 @@ export default function RegulationObjectPage({
             ) : null}
 
             <div style={BODY_STYLE}>{renderTabContent()}</div>
+
+            {renderFooterActions()}
         </div>
     );
 }
