@@ -563,7 +563,7 @@ export default function AccountGroupsFclShellPage() {
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <AccountGroupObjectPage
-                            key={`${objectMode}:${objectValue?.id ?? "new"}:${queryParentId ?? "root"}`}
+                            key={`${objectValue?.id ?? "new"}:${queryParentId ?? "root"}`}
                             mode={objectMode}
                             allItems={items}
                             value={objectValue}

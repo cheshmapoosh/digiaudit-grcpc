@@ -609,7 +609,7 @@ export default function ObjectivesFclShellPage() {
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <ObjectiveObjectPage
-                            key={`${objectMode}:${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
+                            key={`${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
                             mode={objectMode}
                             allItems={items}
                             value={objectValue}

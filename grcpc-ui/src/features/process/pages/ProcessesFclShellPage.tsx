@@ -1254,7 +1254,7 @@ export default function ProcessesFclShellPage() {
             if (selectedControlAssignment) {
                 return (
                     <ControlObjectPage
-                        key={`${routeMode}:${selectedControlAssignment.controlAssignmentId}`}
+                        key={selectedControlAssignment.controlAssignmentId}
                         mode={routeMode === "edit" ? "edit" : "view"}
                         value={selectedControlAssignment}
                         busy={controlLoading || submitting}
@@ -1351,7 +1351,7 @@ export default function ProcessesFclShellPage() {
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <ProcessObjectPage
-                            key={`${objectMode}:${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
+                            key={`${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
                             mode={objectMode}
                             allItems={processItems}
                             value={objectValue}
@@ -1392,7 +1392,7 @@ export default function ProcessesFclShellPage() {
                     <div style={dialogContentStyle}>
                         {controlModalAssignment ? (
                             <ControlObjectPage
-                                key={`modal:${controlModalMode}:${controlModalAssignment.controlAssignmentId}`}
+                                key={`modal:${controlModalAssignment.controlAssignmentId}`}
                                 mode={controlModalMode}
                                 value={controlModalAssignment}
                                 busy={controlLoading || submitting}

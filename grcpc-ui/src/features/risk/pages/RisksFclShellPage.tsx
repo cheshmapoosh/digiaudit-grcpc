@@ -700,7 +700,7 @@ export default function RisksFclShellPage() {
         <div style={dialogContentStyle}>
           {objectMode === "create" || objectValue ? (
             <RiskObjectPage
-              key={`${objectMode}:${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
+              key={`${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
               mode={objectMode}
               allItems={items}
               value={objectValue}

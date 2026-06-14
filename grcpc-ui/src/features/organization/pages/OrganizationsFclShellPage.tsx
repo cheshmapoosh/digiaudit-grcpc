@@ -1687,7 +1687,7 @@ export default function OrganizationsFclShellPage() {
                 <div style={dialogContentStyle}>
                     {objectValue ? (
                         <OrganizationObjectPage
-                            key={`${objectMode}:${objectValue.id || "new"}:${queryParentId ?? objectValue.parentId ?? "root"}`}
+                            key={`${objectValue.id || "new"}:${queryParentId ?? objectValue.parentId ?? "root"}`}
                             mode={objectMode}
                             allItems={items}
                             value={objectValue}
