@@ -1,14 +1,17 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import {
+    useCallback,
+    useRef,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
-import "@ui5/webcomponents-fiori/dist/UploadCollection.js";
-import "@ui5/webcomponents-fiori/dist/UploadCollectionItem.js";
 import {
     Button,
     ComboBox,
     ComboBoxItem,
     DatePicker,
-    FileUploader,
     Input,
     Label,
     MessageStrip,
@@ -22,11 +25,8 @@ import {
     TableRow,
     TabContainer,
     TabSeparator,
-    Text,
     TextArea,
     Title,
-    UploadCollection,
-    UploadCollectionItem,
 } from "@ui5/webcomponents-react";
 
 import type {
@@ -47,8 +47,10 @@ import type {
     OrganizationSubProcessView,
 } from "../domain/organization-process-assignment.model";
 import type { DocumentAttachment, DocumentUploadPolicy } from "@/features/document";
-import { HttpError } from "@/shared/infra/http.client";
-import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import {
+    DocumentAttachmentsTab,
+    type DocumentBeforeParentSubmitHandler,
+} from "@/features/document";
 import ParentValueHelpDialog from "../components/ParentValueHelpDialog";
 import {
     formatPersianDate,
@@ -82,15 +84,6 @@ interface OrganizationFormState {
     validFrom: string;
     validTo: string;
     location: string;
-}
-
-interface DocumentUploadRow {
-    id: string;
-    fileName: string;
-    sizeBytes: number;
-    progress: number;
-    uploadState: "Uploading" | "Error";
-    error?: string;
 }
 
 export interface OrganizationObjectPageProps {
@@ -325,62 +318,6 @@ const TABLE_INLINE_META_STYLE: CSSProperties = {
     fontSize: "0.8125rem",
 };
 
-const DOCUMENT_HEADER_STYLE: CSSProperties = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "0.75rem",
-    flexWrap: "wrap",
-};
-
-const DOCUMENT_HEADER_TEXT_STYLE: CSSProperties = {
-    display: "grid",
-    gap: "0.25rem",
-    minWidth: 0,
-};
-
-const DOCUMENT_ACTIONS_STYLE: CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
-    flexWrap: "wrap",
-};
-
-const DOCUMENT_COLLECTION_STYLE: CSSProperties = {
-    border: "1px solid var(--sapList_BorderColor)",
-    minHeight: "12rem",
-};
-
-const DOCUMENT_EMPTY_STATE_STYLE: CSSProperties = {
-    display: "grid",
-    gap: "0.35rem",
-    alignContent: "center",
-    justifyItems: "center",
-    minHeight: "12rem",
-    border: "1px solid var(--sapList_BorderColor)",
-    background: "var(--sapGroup_ContentBackground)",
-    padding: "1rem",
-    textAlign: "center",
-};
-
-const DOCUMENT_ITEM_TEXT_STYLE: CSSProperties = {
-    display: "grid",
-    gap: "0.2rem",
-    fontSize: "0.8125rem",
-    color: "var(--sapContent_LabelColor)",
-};
-
-const DOCUMENT_TITLE_FIELD_STYLE: CSSProperties = {
-    display: "grid",
-    gap: "0.25rem",
-    maxWidth: "26rem",
-};
-
-const DOCUMENT_TITLE_TEXT_STYLE: CSSProperties = {
-    fontWeight: 600,
-    color: "var(--sapTextColor)",
-};
-
 const TAB_SEQUENCE: readonly OrganizationTabKey[] = [
     "general",
     "subProcesses",
@@ -577,45 +514,6 @@ function formatReferenceOption(option: OrganizationReferenceOption): string {
         : "";
 
     return `${option.code} - ${option.title}${parentTitle}`;
-}
-
-function createUploadRowId(): string {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-        return crypto.randomUUID();
-    }
-
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function formatFileSize(sizeBytes?: number): string {
-    if (!sizeBytes || sizeBytes <= 0) {
-        return "-";
-    }
-
-    const units = ["B", "KB", "MB", "GB"];
-    let size = sizeBytes;
-    let unitIndex = 0;
-
-    while (size >= 1024 && unitIndex < units.length - 1) {
-        size /= 1024;
-        unitIndex += 1;
-    }
-
-    const precision = unitIndex === 0 ? 0 : 1;
-    return `${size.toFixed(precision)} ${units[unitIndex]}`;
-}
-
-function formatDocumentUploadedAt(value?: string): string {
-    return value ? formatPersianDate(value) : "-";
-}
-
-function resolveDocumentTitle(documentItem: DocumentAttachment): string {
-    return documentItem.title?.trim() || documentItem.originalFileName;
-}
-
-function normalizeDocumentTitleInput(value: string, fallback: string): string {
-    const normalized = value.trim();
-    return normalized || fallback;
 }
 
 function formatOptionalValue(value?: string): string {
@@ -818,10 +716,8 @@ export default function OrganizationObjectPage({
     const [selectedReferenceSearchValues, setSelectedReferenceSearchValues] = useState<
         Record<OrganizationReferenceType, string>
     >(EMPTY_SELECTED_REFERENCES);
-    const [documentUploadRows, setDocumentUploadRows] = useState<DocumentUploadRow[]>([]);
-    const [documentTitleDrafts, setDocumentTitleDrafts] = useState<Record<string, string>>({});
-    const [documentDeleteCandidate, setDocumentDeleteCandidate] =
-        useState<DocumentAttachment | null>(null);
+    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
+    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
     const activeTab = controlledActiveTab ?? internalActiveTab;
 
     const handleActiveTabChange = (tab: OrganizationTabKey) => {
@@ -831,6 +727,13 @@ export default function OrganizationObjectPage({
 
         onActiveTabChange?.(tab);
     };
+
+    const handleDocumentBeforeParentSubmitChange = useCallback(
+        (handler: DocumentBeforeParentSubmitHandler | null) => {
+            documentBeforeSubmitRef.current = handler;
+        },
+        [],
+    );
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? null
@@ -847,7 +750,7 @@ export default function OrganizationObjectPage({
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerType = resolveTypeLabel(form.type, t);
     const headerLocation = form.location || value?.location || "";
-    const headerDocumentsCount = documents.length + tempDocuments.length + documentUploadRows.length;
+    const headerDocumentsCount = documents.length + tempDocuments.length;
 
     const handleChange = <K extends keyof OrganizationFormState>(
         key: K,
@@ -905,21 +808,17 @@ export default function OrganizationObjectPage({
             return;
         }
 
-        const hasPendingDocumentUploads = documentUploadRows.some(
-            (row) => row.uploadState === "Uploading",
-        );
         if (hasPendingDocumentUploads) {
-            setValidationError(
-                t("organization.documents.validation.waitForUpload", {
-                    defaultValue: "تا پایان آپلود فایل‌ها صبر کنید و سپس ذخیره را بزنید.",
-                }),
-            );
+            setValidationError(t("document.validation.waitForUpload", {
+                defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
+            }));
             handleActiveTabChange("documents");
             return;
         }
 
-        const titlesPersisted = await persistPendingDocumentTitles();
-        if (!titlesPersisted) {
+        const documentsReady = await documentBeforeSubmitRef.current?.();
+        if (documentsReady === false) {
+            handleActiveTabChange("documents");
             return;
         }
 
@@ -1072,182 +971,6 @@ export default function OrganizationObjectPage({
 
         await onAssignReference(referenceType, targetId);
         setReferenceSelection(referenceType, "", "");
-    };
-
-    const updateDocumentUploadRow = (
-        rowId: string,
-        patch: Partial<DocumentUploadRow>,
-    ) => {
-        setDocumentUploadRows((current) =>
-            current.map((row) => (row.id === rowId ? { ...row, ...patch } : row)),
-        );
-    };
-
-    const removeDocumentUploadRow = (rowId: string) => {
-        setDocumentUploadRows((current) => current.filter((row) => row.id !== rowId));
-    };
-
-    const getDocumentTitleValue = (documentItem: DocumentAttachment) =>
-        documentTitleDrafts[documentItem.id] ?? resolveDocumentTitle(documentItem);
-
-    const handleDocumentTitleInput = (
-        documentItem: DocumentAttachment,
-        title: string,
-    ) => {
-        setDocumentTitleDrafts((current) => ({
-            ...current,
-            [documentItem.id]: title,
-        }));
-    };
-
-    const clearDocumentTitleDraft = (documentId: string) => {
-        setDocumentTitleDrafts((current) => {
-            const nextDrafts = { ...current };
-            delete nextDrafts[documentId];
-            return nextDrafts;
-        });
-    };
-
-    const persistDocumentTitle = async (
-        documentItem: DocumentAttachment,
-    ): Promise<boolean> => {
-        if (readOnly || !onUpdateDocumentTitle) {
-            return true;
-        }
-
-        const draftTitle = documentTitleDrafts[documentItem.id];
-        if (draftTitle === undefined) {
-            return true;
-        }
-
-        const nextTitle = normalizeDocumentTitleInput(
-            draftTitle,
-            documentItem.originalFileName,
-        );
-        const currentTitle = resolveDocumentTitle(documentItem);
-        if (nextTitle === currentTitle) {
-            clearDocumentTitleDraft(documentItem.id);
-            return true;
-        }
-
-        try {
-            await onUpdateDocumentTitle(documentItem.id, nextTitle);
-            clearDocumentTitleDraft(documentItem.id);
-            return true;
-        } catch (titleError) {
-            setValidationError(
-                titleError instanceof Error && titleError.message
-                    ? titleError.message
-                    : t("organization.documents.errors.updateTitle", {
-                          defaultValue: "خطا در ثبت عنوان مستند",
-                      }),
-            );
-            handleActiveTabChange("documents");
-            return false;
-        }
-    };
-
-    const persistPendingDocumentTitles = async (): Promise<boolean> => {
-        const documentItems = [...tempDocuments, ...documents];
-        for (const documentItem of documentItems) {
-            const saved = await persistDocumentTitle(documentItem);
-            if (!saved) {
-                return false;
-            }
-        }
-
-        return true;
-    };
-
-    const confirmDocumentDelete = async () => {
-        if (!documentDeleteCandidate || !onDeleteDocument) {
-            return;
-        }
-
-        try {
-            await onDeleteDocument(documentDeleteCandidate.id);
-            clearDocumentTitleDraft(documentDeleteCandidate.id);
-            setDocumentDeleteCandidate(null);
-        } catch (deleteError) {
-            setValidationError(
-                deleteError instanceof Error && deleteError.message
-                    ? deleteError.message
-                    : t("organization.documents.errors.delete", {
-                          defaultValue: "خطا در حذف مستند",
-                      }),
-            );
-            handleActiveTabChange("documents");
-        }
-    };
-
-    const uploadDocumentFile = async (file: File) => {
-        const maxFileSizeBytes = documentUploadPolicy?.maxFileSizeBytes;
-        if (maxFileSizeBytes && file.size > maxFileSizeBytes) {
-            setValidationError(
-                t("organization.documents.validation.fileTooLarge", {
-                    defaultValue: "اندازه فایل از سقف مجاز آپلود بیشتر است",
-                }),
-            );
-            return;
-        }
-
-        if (!onUploadDocument || !documentTempSessionId) {
-            return;
-        }
-
-        const rowId = createUploadRowId();
-        setDocumentUploadRows((current) => [
-            ...current,
-            {
-                id: rowId,
-                fileName: file.name,
-                sizeBytes: file.size,
-                progress: 0,
-                uploadState: "Uploading",
-            },
-        ]);
-
-        try {
-            await onUploadDocument(file, (progress) => {
-                updateDocumentUploadRow(rowId, { progress });
-            });
-            removeDocumentUploadRow(rowId);
-        } catch (uploadError) {
-            const message =
-                uploadError instanceof HttpError &&
-                uploadError.code === "DOCUMENT_STORAGE_DISABLED"
-                    ? t("organization.documents.errors.storageDisabled", {
-                          defaultValue:
-                              "زیرساخت نگهداری مستندات پیکربندی نشده است. MinIO را فعال کنید.",
-                      })
-                    : uploadError instanceof Error && uploadError.message
-                      ? uploadError.message
-                      : t("organization.documents.errors.upload", {
-                            defaultValue: "آپلود فایل انجام نشد",
-                        });
-            setValidationError(message);
-            handleActiveTabChange("documents");
-            updateDocumentUploadRow(rowId, {
-                uploadState: "Error",
-                progress: 100,
-                error: message,
-            });
-        }
-    };
-
-    const handleDocumentFilesChange = (event: unknown) => {
-        const changeEvent = event as {
-            detail?: { files?: FileList | null };
-            target?: { value?: string };
-        };
-        const files = Array.from(changeEvent.detail?.files ?? []);
-        if (changeEvent.target) {
-            changeEvent.target.value = "";
-        }
-
-        files.forEach((file) => {
-            void uploadDocumentFile(file);
-        });
     };
 
     const handleAssignSubProcess = async () => {
@@ -2142,245 +1865,36 @@ export default function OrganizationObjectPage({
             }),
         });
 
-    const renderDocumentTitleControl = (documentItem: DocumentAttachment) => {
-        const titleValue = getDocumentTitleValue(documentItem);
-
-        if (readOnly || !onUpdateDocumentTitle) {
-            return <span style={DOCUMENT_TITLE_TEXT_STYLE}>{titleValue}</span>;
-        }
-
-        return (
-            <div style={DOCUMENT_TITLE_FIELD_STYLE}>
-                <Label>
-                    {t("organization.documents.fields.title", {
-                        defaultValue: "عنوان فایل",
-                    })}
-                </Label>
-                <Input
-                    value={titleValue}
-                    maxlength={500}
-                    disabled={busy || documentsBusy}
-                    onInput={(event) =>
-                        handleDocumentTitleInput(documentItem, readInputValue(event))
-                    }
-                    onChange={() => {
-                        void persistDocumentTitle(documentItem);
-                    }}
-                />
-            </div>
-        );
-    };
-
-    const renderDocumentsTab = () => {
-        const canUploadDocuments =
-            !readOnly &&
-            !busy &&
-            !documentsBusy &&
-            Boolean(onUploadDocument) &&
-            Boolean(documentTempSessionId);
-        const maxFileSizeText = documentUploadPolicy?.maxFileSizeMb
-            ? t("organization.documents.maxFileSize", {
-                  defaultValue: "حداکثر حجم هر فایل: {{size}} مگابایت",
-                  size: documentUploadPolicy.maxFileSizeMb,
-              })
-            : t("organization.documents.maxFileSizeUnknown", {
-                  defaultValue: "حداکثر حجم فایل از تنظیمات backend خوانده می‌شود",
-              });
-        const noDataText = t("organization.documents.noData", {
-            defaultValue: "مستندی برای این سازمان ثبت نشده است.",
-        });
-        const noDataDescription = readOnly
-            ? t("organization.documents.noDataViewDescription", {
-                  defaultValue: "در حالت نمایش فقط فایل‌های ذخیره‌شده دیده می‌شوند.",
-              })
-            : t("organization.documents.noDataEditDescription", {
-                  defaultValue: "برای افزودن مستند، فایل را انتخاب کنید.",
-              });
-        const hasDocumentItems =
-            documentUploadRows.length + tempDocuments.length + documents.length > 0;
-
-        return (
-            <div style={TABLE_PANEL_STYLE}>
-                <div style={DOCUMENT_HEADER_STYLE}>
-                    <div style={DOCUMENT_HEADER_TEXT_STYLE}>
-                        <Title level="H5">
-                            {t("organization.tabs.documents", { defaultValue: "مستندات" })}
-                        </Title>
-                        <Text style={TABLE_HINT_STYLE}>
-                            {readOnly
-                                ? t("organization.documents.viewHint", {
-                                      defaultValue: "مستندات ذخیره‌شده سازمان",
-                                  })
-                                : t("organization.documents.editHint", {
-                                      defaultValue:
-                                          "فایل‌ها تا زمان ذخیره فرم به صورت موقت نگهداری می‌شوند.",
-                                  })}
-                        </Text>
-                        <Text style={TABLE_HINT_STYLE}>{maxFileSizeText}</Text>
-                    </div>
-
-                    {!readOnly ? (
-                        <div style={DOCUMENT_ACTIONS_STYLE}>
-                            <FileUploader
-                                hideInput
-                                multiple
-                                disabled={!canUploadDocuments}
-                                maxFileSize={documentUploadPolicy?.maxFileSizeMb}
-                                onChange={handleDocumentFilesChange}
-                                onFileSizeExceed={() => {
-                                    setValidationError(
-                                        t("organization.documents.validation.fileTooLarge", {
-                                            defaultValue:
-                                                "اندازه فایل از سقف مجاز آپلود بیشتر است",
-                                        }),
-                                    );
-                                }}
-                            >
-                                <Button design="Emphasized" disabled={!canUploadDocuments}>
-                                    {t("organization.documents.actions.upload", {
-                                        defaultValue: "انتخاب فایل",
-                                    })}
-                                </Button>
-                            </FileUploader>
-                        </div>
-                    ) : null}
-                </div>
-
-                {hasDocumentItems ? (
-                    <UploadCollection
-                        style={DOCUMENT_COLLECTION_STYLE}
-                        noDataText={noDataText}
-                        noDataDescription={noDataDescription}
-                    >
-                        {documentUploadRows.map((row) => (
-                        <UploadCollectionItem
-                            key={row.id}
-                            fileName={row.fileName}
-                            uploadState={row.uploadState}
-                            progress={row.progress}
-                            hideTerminateButton
-                            hideRetryButton
-                            hideDeleteButton={row.uploadState !== "Error"}
-                            deleteButton={
-                                row.uploadState === "Error" ? (
-                                    <Button
-                                        design="Transparent"
-                                        onClick={() => removeDocumentUploadRow(row.id)}
-                                    >
-                                        {t("organization.actions.delete", {
-                                            defaultValue: "حذف",
-                                        })}
-                                    </Button>
-                                ) : undefined
-                            }
-                        >
-                            <div style={DOCUMENT_ITEM_TEXT_STYLE}>
-                                <span>{formatFileSize(row.sizeBytes)}</span>
-                                {row.error ? <span>{row.error}</span> : null}
-                            </div>
-                        </UploadCollectionItem>
-                        ))}
-
-                        {tempDocuments.map((documentItem) => (
-                        <UploadCollectionItem
-                            key={documentItem.id}
-                            fileName={getDocumentTitleValue(documentItem)}
-                            uploadState="Complete"
-                            progress={100}
-                            hideRetryButton
-                            hideTerminateButton
-                            hideDeleteButton={readOnly || !onDeleteDocument}
-                            deleteButton={
-                                !readOnly && onDeleteDocument ? (
-                                    <Button
-                                        design="Transparent"
-                                        disabled={busy || documentsBusy}
-                                        onClick={() => {
-                                            setDocumentDeleteCandidate(documentItem);
-                                        }}
-                                    >
-                                        {t("organization.actions.delete", {
-                                            defaultValue: "حذف",
-                                        })}
-                                    </Button>
-                                ) : undefined
-                            }
-                        >
-                            <div style={DOCUMENT_ITEM_TEXT_STYLE}>
-                                {renderDocumentTitleControl(documentItem)}
-                                <span>
-                                    {t("organization.documents.tempStatus", {
-                                        defaultValue: "موقت - پس از ذخیره فرم نهایی می‌شود",
-                                    })}
-                                </span>
-                                <span>
-                                    {t("organization.documents.originalFileName", {
-                                        defaultValue: "نام فایل: {{fileName}}",
-                                        fileName: documentItem.originalFileName,
-                                    })}
-                                </span>
-                                <span>{formatFileSize(documentItem.sizeBytes)}</span>
-                            </div>
-                        </UploadCollectionItem>
-                        ))}
-
-                        {documents.map((documentItem) => (
-                        <UploadCollectionItem
-                            key={documentItem.id}
-                            fileName={getDocumentTitleValue(documentItem)}
-                            fileNameClickable={Boolean(onDownloadDocument)}
-                            uploadState="Complete"
-                            progress={100}
-                            hideRetryButton
-                            hideTerminateButton
-                            hideDeleteButton={readOnly || !onDeleteDocument}
-                            onFileNameClick={() => {
-                                void onDownloadDocument?.(documentItem.id);
-                            }}
-                            deleteButton={
-                                !readOnly && onDeleteDocument ? (
-                                    <Button
-                                        design="Transparent"
-                                        disabled={busy || documentsBusy}
-                                        onClick={() => {
-                                            setDocumentDeleteCandidate(documentItem);
-                                        }}
-                                    >
-                                        {t("organization.actions.delete", {
-                                            defaultValue: "حذف",
-                                        })}
-                                    </Button>
-                                ) : undefined
-                            }
-                        >
-                            <div style={DOCUMENT_ITEM_TEXT_STYLE}>
-                                {renderDocumentTitleControl(documentItem)}
-                                <span>
-                                    {t("organization.documents.originalFileName", {
-                                        defaultValue: "نام فایل: {{fileName}}",
-                                        fileName: documentItem.originalFileName,
-                                    })}
-                                </span>
-                                <span>{formatFileSize(documentItem.sizeBytes)}</span>
-                                <span>
-                                    {t("organization.documents.uploadedAt", {
-                                        defaultValue: "بارگذاری: {{date}}",
-                                        date: formatDocumentUploadedAt(documentItem.uploadedAt),
-                                    })}
-                                </span>
-                            </div>
-                        </UploadCollectionItem>
-                        ))}
-                    </UploadCollection>
-                ) : (
-                    <div style={DOCUMENT_EMPTY_STATE_STYLE}>
-                        <Title level="H5">{noDataText}</Title>
-                        <Text style={TABLE_HINT_STYLE}>{noDataDescription}</Text>
-                    </div>
-                )}
-            </div>
-        );
-    };
+    const renderDocumentsTab = () => (
+        <DocumentAttachmentsTab
+            title={t("organization.tabs.documents", { defaultValue: "مستندات" })}
+            targetType="ORGANIZATION"
+            targetId={value?.id ?? null}
+            tempSessionId={documentTempSessionId}
+            documents={documents}
+            tempDocuments={tempDocuments}
+            uploadPolicy={documentUploadPolicy}
+            busy={busy || documentsBusy}
+            readOnly={readOnly}
+            uploadRequiresTempSession
+            tempSessionMissingMessage={t("document.errors.missingTempSession", {
+                defaultValue: "نشست موقت بارگذاری مستندات آماده نیست.",
+            })}
+            viewHint={t("organization.documents.viewHint", {
+                defaultValue: "مستندات ذخیره‌شده سازمان",
+            })}
+            editHint={t("organization.documents.editHint", {
+                defaultValue:
+                    "فایل‌ها تا زمان ذخیره فرم به صورت موقت نگهداری می‌شوند.",
+            })}
+            onUploadDocument={onUploadDocument}
+            onUpdateDocumentTitle={onUpdateDocumentTitle}
+            onDeleteDocument={onDeleteDocument}
+            onDownloadDocument={onDownloadDocument}
+            onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
+            onPendingUploadsChange={setHasPendingDocumentUploads}
+        />
+    );
 
     const renderTabContent = () => {
         if (activeTab === "general") {
@@ -2566,26 +2080,6 @@ export default function OrganizationObjectPage({
             <div style={BODY_STYLE}>{renderTabContent()}</div>
 
             <div style={FOOTER_STYLE}>{renderFooterActions()}</div>
-
-            <DeleteConfirmDialog
-                open={Boolean(documentDeleteCandidate)}
-                title={t("organization.documents.delete.title", {
-                    defaultValue: "حذف مستند",
-                })}
-                message={t("organization.documents.delete.confirm", {
-                    defaultValue: 'آیا از حذف فایل "{{title}}" مطمئن هستید؟',
-                    title: documentDeleteCandidate
-                        ? getDocumentTitleValue(documentDeleteCandidate)
-                        : "",
-                })}
-                confirmText={t("common.delete", { defaultValue: "حذف" })}
-                cancelText={t("common.cancel", { defaultValue: "انصراف" })}
-                loading={busy || documentsBusy}
-                onClose={() => setDocumentDeleteCandidate(null)}
-                onConfirm={() => {
-                    void confirmDocumentDelete();
-                }}
-            />
 
             <ParentValueHelpDialog
                 open={parentDialogOpen}

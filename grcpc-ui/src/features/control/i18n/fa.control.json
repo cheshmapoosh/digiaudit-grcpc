@@ -1,0 +1,297 @@
+{
+  "nav": {
+    "controls": "کنترل‌ها"
+  },
+  "common": {
+    "active": "فعال",
+    "inactive": "غیرفعال",
+    "actions": "عملیات",
+    "edit": "ویرایش",
+    "delete": "حذف",
+    "save": "ذخیره",
+    "cancel": "انصراف",
+    "close": "بستن",
+    "select": "انتخاب"
+  },
+  "control": {
+    "list": {
+      "title": "مرکز کنترل",
+      "empty": "هیچ کنترلی ثبت نشده است.",
+      "search": "جستجو بر اساس نام، کد یا توضیحات"
+    },
+    "nodeType": {
+      "process": "فرآیند",
+      "subProcess": "زیر فرآیند",
+      "control": "کنترل"
+    },
+    "summary": {
+      "title": "خلاصه ساختار کنترل"
+    },
+    "object": {
+      "selectPrompt": "یک فرآیند، زیر فرآیند یا کنترل را از فهرست انتخاب کنید.",
+      "notFound": "اتصال کنترل انتخاب‌شده یافت نشد.",
+      "viewTitle": "نمایش کنترل",
+      "loading": "در حال بارگذاری کنترل..."
+    },
+    "sections": {
+      "assignmentInfo": "اطلاعات اتصال کنترل"
+    },
+    "tabs": {
+      "general": "اطلاعات کلی",
+      "steps": "مراحل",
+      "regulations": "قوانین",
+      "requirements": "الزامات",
+      "risks": "ریسک‌ها",
+      "accountGroups": "گروه حساب‌ها",
+      "documents": "مستندات",
+      "performancePlan": "برنامه عملکرد"
+    },
+    "fields": {
+      "name": "نام",
+      "code": "کد",
+      "title": "عنوان",
+      "type": "نوع",
+      "status": "وضعیت کنترل",
+      "description": "شرح",
+      "parentProcess": "فرآیند والد",
+      "parentSubProcess": "زیر فرآیند",
+      "validity": "اعتبار",
+      "validFrom": "اعتبار از",
+      "validTo": "اعتبار تا",
+      "ownerName": "مسئول",
+      "controlClass": "طبقه کنترل",
+      "controlNature": "ماهیت کنترل",
+      "automationType": "نوع اجرا",
+      "importance": "اهمیت",
+      "objective": "هدف",
+      "sortOrder": "ترتیب نمایش",
+      "operationPeriod": "دوره عملیات",
+      "testMethod": "روش آزمون",
+      "testPlan": "برنامه آزمون",
+      "createdAt": "ایجاد",
+      "updatedAt": "آخرین بروزرسانی",
+      "assignmentStatus": "وضعیت اتصال",
+      "controlsCount": "تعداد کنترل‌ها",
+      "requiredDocument": "مدرک موردنیاز",
+      "requiredNote": "یادداشت موردنیاز",
+      "sensitivity": "حساسیت",
+      "documentType": "نوع سند",
+      "fileRef": "ارجاع فایل",
+      "frequency": "تناوب",
+      "plannedDate": "تاریخ برنامه‌ریزی",
+      "referenceId": "شناسه مرجع",
+      "regulation": "قانون",
+      "requirement": "الزام",
+      "risk": "ریسک",
+      "source": "منبع",
+      "organizationTitle": "سازمان",
+      "accountGroup": "گروه حساب",
+      "assertionType": "نوع ادعا"
+    },
+    "actions": {
+      "addControl": "+ کنترل",
+      "createNew": "تعریف کنترل جدید",
+      "attachExisting": "اتصال کنترل موجود",
+      "deleteAssignment": "حذف",
+      "addStep": "افزودن مرحله",
+      "addDocument": "افزودن مستند",
+      "addPerformancePlan": "افزودن برنامه عملکرد",
+      "link": "اتصال",
+      "linkRegulation": "افزودن قانون",
+      "linkRequirement": "اتصال الزام",
+      "linkRisk": "افزودن ریسک",
+      "linkAccountGroup": "افزودن گروه حساب"
+    },
+    "create": {
+      "title": "تعریف کنترل جدید"
+    },
+    "attach": {
+      "title": "اتصال کنترل موجود",
+      "searchLabel": "جستجوی کنترل",
+      "searchPlaceholder": "کد، نام یا شرح کنترل",
+      "empty": "کنترلی برای اتصال وجود ندارد."
+    },
+    "edit": {
+      "title": "ویرایش اتصال کنترل"
+    },
+    "delete": {
+      "title": "حذف اتصال کنترل",
+      "confirm": "آیا از حذف اتصال کنترل «{{title}}» مطمئن هستید؟"
+    },
+    "empty": {
+      "steps": "مرحله‌ای تعریف نشده است.",
+      "regulations": "قانونی افزوده نشده است.",
+      "requirements": "الزامی متصل نشده است.",
+      "risks": "ریسکی افزوده نشده است.",
+      "accountGroups": "گروه حسابی افزوده نشده است.",
+      "documents": "مستندی تعریف نشده است.",
+      "performancePlans": "برنامه عملکردی تعریف نشده است.",
+      "regulationCatalog": "قانون قابل افزودن دیگری وجود ندارد.",
+      "requirementCatalog": "الزامی برای اتصال وجود ندارد.",
+      "riskCatalog": "ریسک قابل افزودن دیگری وجود ندارد.",
+      "accountGroupCatalog": "گروه حساب قابل افزودن دیگری وجود ندارد."
+    },
+    "steps": {
+      "createTitle": "افزودن مرحله",
+      "editTitle": "ویرایش مرحله"
+    },
+    "documents": {
+      "createTitle": "افزودن مستند",
+      "editTitle": "ویرایش مستند"
+    },
+    "performancePlan": {
+      "createTitle": "افزودن برنامه عملکرد",
+      "editTitle": "ویرایش برنامه عملکرد"
+    },
+    "regulations": {
+      "title": "قوانین",
+      "add": "افزودن",
+      "addPlaceholder": "انتخاب قانون",
+      "addAccessibleName": "انتخاب قانون برای افزودن",
+      "empty": "قانونی افزوده نشده است.",
+      "noAssignable": "قانون قابل افزودن دیگری وجود ندارد.",
+      "duplicate": "این قانون قبلاً افزوده شده است.",
+      "mutationError": "خطا در ذخیره تغییرات قوانین.",
+      "loadError": "خطا در بارگذاری قوانین.",
+      "retry": "تلاش دوباره",
+      "remove": "حذف",
+      "removeTitle": "حذف قانون",
+      "removeConfirm": "آیا از حذف قانون «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول قوانین کنترل",
+      "columns": {
+        "code": "کد",
+        "title": "نام قانون",
+        "description": "شرح",
+        "validity": "اعتبار",
+        "actions": "عملیات"
+      }
+    },
+    "requirements": {
+      "linkTitle": "اتصال الزام"
+    },
+    "risks": {
+      "title": "ریسک‌ها",
+      "add": "افزودن",
+      "addPlaceholder": "انتخاب ریسک",
+      "addAccessibleName": "انتخاب ریسک برای افزودن",
+      "empty": "ریسکی افزوده نشده است.",
+      "noAssignable": "ریسک قابل افزودن دیگری وجود ندارد.",
+      "duplicate": "این ریسک قبلاً افزوده شده است.",
+      "mutationError": "خطا در ذخیره تغییرات ریسک‌ها.",
+      "loadError": "خطا در بارگذاری ریسک‌ها.",
+      "retry": "تلاش دوباره",
+      "remove": "حذف",
+      "removeTitle": "حذف ریسک",
+      "removeConfirm": "آیا از حذف ریسک «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول ریسک‌های کنترل",
+      "columns": {
+        "code": "کد",
+        "title": "نام ریسک",
+        "description": "شرح",
+        "source": "منبع",
+        "organizationTitle": "سازمان",
+        "validity": "اعتبار",
+        "actions": "عملیات"
+      }
+    },
+    "accountGroups": {
+      "title": "گروه حساب‌ها",
+      "add": "افزودن",
+      "addPlaceholder": "انتخاب گروه حساب",
+      "addAccessibleName": "انتخاب گروه حساب برای افزودن",
+      "empty": "گروه حسابی افزوده نشده است.",
+      "noAssignable": "گروه حساب قابل افزودن دیگری وجود ندارد.",
+      "duplicate": "این گروه حساب قبلاً افزوده شده است.",
+      "mutationError": "خطا در ذخیره تغییرات گروه حساب‌ها.",
+      "loadError": "خطا در بارگذاری گروه حساب‌ها.",
+      "retry": "تلاش دوباره",
+      "remove": "حذف",
+      "removeTitle": "حذف گروه حساب",
+      "removeConfirm": "آیا از حذف گروه حساب «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول گروه حساب‌های کنترل",
+      "columns": {
+        "code": "کد",
+        "title": "نام گروه حساب",
+        "description": "شرح",
+        "assertionType": "نوع ادعا",
+        "actions": "عملیات"
+      }
+    },
+    "links": {
+      "searchRegulations": "جستجوی قوانین",
+      "searchRequirements": "جستجوی الزامات",
+      "searchRisks": "جستجوی ریسک‌ها",
+      "searchAccountGroups": "جستجوی گروه حساب‌ها",
+      "uuidPlaceholder": "شناسه مرجع را وارد کنید"
+    },
+    "nature": {
+      "preventive": "پیشگیرانه",
+      "detective": "کشفی"
+    },
+    "automation": {
+      "manual": "دستی",
+      "system": "سیستمی",
+      "semiManualSystem": "نیمه‌دستی/سیستمی"
+    },
+    "importance": {
+      "low": "کم",
+      "medium": "متوسط",
+      "high": "زیاد",
+      "critical": "بحرانی"
+    },
+    "assignmentStatus": {
+      "active": "فعال",
+      "inactive": "غیرفعال"
+    },
+    "status": {
+      "active": "فعال",
+      "inactive": "غیرفعال"
+    },
+    "errors": {
+      "loadStructure": "خطا در بارگذاری ساختار کنترل‌ها.",
+      "loadControls": "خطا در بارگذاری کنترل‌ها.",
+      "loadAssignment": "خطا در بارگذاری جزئیات اتصال کنترل.",
+      "save": "خطا در ذخیره کنترل.",
+      "delete": "خطا در حذف اتصال کنترل.",
+      "selectSubProcess": "برای تعریف یا اتصال کنترل، ابتدا یک زیر فرآیند یا کنترل زیر آن را انتخاب کنید.",
+      "selectSubProcessForCreate": "برای ایجاد کنترل، ابتدا یک زیر فرآیند یا کنترل زیر آن را انتخاب کنید.",
+      "notFound": "اتصال کنترل انتخاب‌شده یافت نشد.",
+      "controlNotFound": "کنترل انتخاب‌شده یافت نشد.",
+      "subProcessNotFound": "زیر فرآیند انتخاب‌شده یافت نشد.",
+      "duplicateActiveAssignment": "این کنترل قبلاً به‌صورت فعال به این زیر فرآیند متصل شده است.",
+      "deleteOnlyAssignment": "حذف فقط برای اتصال کنترل امکان‌پذیر است.",
+      "loadSteps": "خطا در بارگذاری مراحل کنترل.",
+      "saveStep": "خطا در ذخیره مرحله کنترل.",
+      "deleteStep": "خطا در حذف مرحله کنترل.",
+      "loadDocuments": "خطا در بارگذاری مستندات.",
+      "saveDocument": "خطا در ذخیره مستند.",
+      "deleteDocument": "خطا در حذف مستند.",
+      "loadPerformancePlans": "خطا در بارگذاری برنامه‌های عملکرد.",
+      "savePerformancePlan": "خطا در ذخیره برنامه عملکرد.",
+      "deletePerformancePlan": "خطا در حذف برنامه عملکرد.",
+      "loadLinks": "خطا در بارگذاری موارد متصل.",
+      "loadCatalog": "خطا در بارگذاری کاتالوگ.",
+      "linkItem": "خطا در اتصال مورد انتخاب‌شده.",
+      "deleteLink": "خطا در حذف اتصال."
+    },
+    "validation": {
+      "codeRequired": "کد کنترل الزامی است.",
+      "nameRequired": "نام کنترل الزامی است.",
+      "sortOrderInvalid": "ترتیب نمایش باید عدد صحیح نامنفی باشد.",
+      "controlRequired": "انتخاب کنترل الزامی است.",
+      "textMaxLength": "متن بیش از حد طولانی است.",
+      "codeMaxLength": "کد نمی‌تواند بیش از ۵۰ کاراکتر باشد.",
+      "nameMaxLength": "نام نمی‌تواند بیش از ۲۵۵ کاراکتر باشد.",
+      "stepTitleRequired": "عنوان مرحله الزامی است.",
+      "documentNameRequired": "نام مستند الزامی است.",
+      "performancePlanTitleRequired": "عنوان برنامه عملکرد الزامی است.",
+      "referenceRequired": "یک مرجع را انتخاب یا وارد کنید."
+    }
+  }
+}

@@ -23,13 +23,13 @@ import RegulationsListReport from "./RegulationsListReport";
 import RegulationObjectPage from "./RegulationObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import { useDocumentAttachmentState } from "@/features/document";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 
-const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
-const DIALOG_NORMAL_WIDTH = "90vw";
-const DIALOG_LARGE_WIDTH = "60vw";
+const DIALOG_WIDTH = "90vw";
+const REGULATION_DOCUMENT_TARGET_TYPE = "REGULATION_NODE";
 
 function useRegulationRouteMode(): RouteMode {
     const { regulationId } = useParams();
@@ -52,6 +52,14 @@ function useRegulationRouteMode(): RouteMode {
 
 function isRegulationNodeType(value: string | null): value is RegulationNodeType {
     return value === "lawGroup" || value === "law" || value === "lawRequirement";
+}
+
+function createDocumentTempSessionId(): string {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function mapError(
@@ -130,33 +138,6 @@ function useResolvedUiDir(): UiDir {
     }, []);
 
     return dir;
-}
-
-function resolveMediaQuery(query: string): boolean {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-        return false;
-    }
-
-    return window.matchMedia(query).matches;
-}
-
-function useMediaQuery(query: string): boolean {
-    const [matches, setMatches] = useState(() => resolveMediaQuery(query));
-
-    useEffect(() => {
-        if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-            return;
-        }
-
-        const mediaQueryList = window.matchMedia(query);
-        const handleChange = (event: MediaQueryListEvent) => setMatches(event.matches);
-
-        mediaQueryList.addEventListener("change", handleChange);
-
-        return () => mediaQueryList.removeEventListener("change", handleChange);
-    }, [query]);
-
-    return matches;
 }
 
 function isOwnDialogCloseEvent(event: unknown): boolean {
@@ -265,14 +246,17 @@ export default function RegulationsFclShellPage() {
 
     const routeMode = useRegulationRouteMode();
     const appDir = useResolvedUiDir();
-    const isLargeDialogViewport = useMediaQuery(DIALOG_LARGE_VIEWPORT_QUERY);
-
     const nodesById = useRegulationState((state) => state.nodesById);
     const loading = useRegulationState((state) => state.loading);
     const loadChildren = useRegulationState((state) => state.loadChildren);
     const createNode = useRegulationState((state) => state.createNode);
     const updateNode = useRegulationState((state) => state.updateNode);
     const removeNode = useRegulationState((state) => state.removeNode);
+    const tempDocumentsBySession = useDocumentAttachmentState(
+        (state) => state.tempDocumentsBySession,
+    );
+    const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
+    const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -281,6 +265,9 @@ export default function RegulationsFclShellPage() {
     const [submitting, setSubmitting] = useState(false);
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
+    const [regulationDocumentTempSessionId, setRegulationDocumentTempSessionId] = useState(
+        createDocumentTempSessionId,
+    );
 
     const items = useMemo(() => sortRegulations(Object.values(nodesById)), [nodesById]);
 
@@ -301,6 +288,18 @@ export default function RegulationsFclShellPage() {
         return defaultChildType(selectedParentForCreate?.nodeType ?? null);
     }, [queryNodeType, selectedParentForCreate]);
 
+    const documentScopeKey = useMemo(() => {
+        if (routeMode === "create") {
+            return `create:${queryParentId ?? "root"}:${requestedNodeType}`;
+        }
+
+        if ((routeMode === "view" || routeMode === "edit") && regulationId) {
+            return `regulation:${regulationId}`;
+        }
+
+        return "none";
+    }, [queryParentId, regulationId, requestedNodeType, routeMode]);
+
     useEffect(() => {
         void loadChildren(ROOT_PARENT).catch((error: unknown) => {
             setPageError(
@@ -314,6 +313,30 @@ export default function RegulationsFclShellPage() {
             );
         });
     }, [loadChildren, t]);
+
+    useEffect(() => {
+        setRegulationDocumentTempSessionId(createDocumentTempSessionId());
+    }, [documentScopeKey]);
+
+    useEffect(() => {
+        if (!regulationId) {
+            return;
+        }
+
+        void loadDocumentsForTarget(REGULATION_DOCUMENT_TARGET_TYPE, regulationId).catch(
+            (error: unknown) => {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("document.errors.load", {
+                            defaultValue: "خطا در بارگذاری مستندات",
+                        }),
+                        t,
+                    ),
+                );
+            },
+        );
+    }, [loadDocumentsForTarget, regulationId, t]);
 
     const treeSelectedId = useMemo(() => {
         if (routeMode === "create") {
@@ -443,6 +466,37 @@ export default function RegulationsFclShellPage() {
         [items, nodesById, t],
     );
 
+    const commitRegulationTempDocuments = useCallback(
+        async (targetId: string) => {
+            const tempDocuments =
+                tempDocumentsBySession[regulationDocumentTempSessionId] ?? [];
+
+            if (tempDocuments.length === 0) {
+                return;
+            }
+
+            await commitTempDocuments({
+                tempSessionId: regulationDocumentTempSessionId,
+                targetType: REGULATION_DOCUMENT_TARGET_TYPE,
+                targetId,
+                documentIds: tempDocuments.map((documentItem) => documentItem.id),
+                documentTitles: Object.fromEntries(
+                    tempDocuments.map((documentItem) => [
+                        documentItem.id,
+                        documentItem.title || documentItem.originalFileName,
+                    ]),
+                ),
+            });
+            await loadDocumentsForTarget(REGULATION_DOCUMENT_TARGET_TYPE, targetId);
+        },
+        [
+            commitTempDocuments,
+            loadDocumentsForTarget,
+            regulationDocumentTempSessionId,
+            tempDocumentsBySession,
+        ],
+    );
+
     const handleConfirmDelete = useCallback(async () => {
         if (!deleteCandidate) {
             return;
@@ -492,18 +546,20 @@ export default function RegulationsFclShellPage() {
                 if (routeMode === "create") {
                     const createPayload = payload as RegulationNodeCreate;
                     const created = await createNode(createPayload.parentId ?? null, createPayload);
+                    await commitRegulationTempDocuments(created.id);
 
                     setSelectedTreeId(created.id);
                     setTreeExpansionAnchorId(created.id);
-                    navigate("/regulations");
+                    navigate(`/regulations/${created.id}`);
                     return;
                 }
 
                 if (routeMode === "edit" && regulationId) {
                     await updateNode(regulationId, payload as RegulationNodeUpdate);
+                    await commitRegulationTempDocuments(regulationId);
                     setSelectedTreeId(regulationId);
                     setTreeExpansionAnchorId(regulationId);
-                    navigate("/regulations");
+                    navigate(`/regulations/${regulationId}`);
                 }
             } catch (error) {
                 setObjectError(
@@ -519,7 +575,29 @@ export default function RegulationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [createNode, navigate, regulationId, routeMode, t, updateNode],
+        [
+            commitRegulationTempDocuments,
+            createNode,
+            navigate,
+            regulationId,
+            routeMode,
+            t,
+            updateNode,
+        ],
+    );
+
+    const handleCreateRequirement = useCallback(
+        (lawId: string) => {
+            const params = new URLSearchParams();
+            params.set("parentId", lawId);
+            params.set("nodeType", "lawRequirement");
+            setSelectedTreeId(lawId);
+            setTreeExpansionAnchorId(lawId);
+            setPageError(null);
+            setObjectError(null);
+            navigate(`/regulations/new?${params.toString()}`);
+        },
+        [navigate],
     );
 
     const showModal = routeMode === "create" || routeMode === "view" || routeMode === "edit";
@@ -599,13 +677,13 @@ export default function RegulationsFclShellPage() {
     );
 
     const dialogStyle = useMemo<CSSProperties>(() => {
-        const width = isLargeDialogViewport ? DIALOG_LARGE_WIDTH : DIALOG_NORMAL_WIDTH;
+        const width = DIALOG_WIDTH;
 
         return {
             width,
             maxWidth: width,
         };
-    }, [isLargeDialogViewport]);
+    }, []);
 
     const listColumn = (
         <div key="list" dir={appDir} style={columnContainerStyle}>
@@ -672,7 +750,7 @@ export default function RegulationsFclShellPage() {
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <RegulationObjectPage
-                            key={`${objectMode}:${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
+                            key={`${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
                             mode={objectMode}
                             allItems={items}
                             value={objectValue}
@@ -680,9 +758,14 @@ export default function RegulationsFclShellPage() {
                             requestedNodeType={requestedNodeType}
                             busy={loading || submitting}
                             error={objectError}
+                            documentTempSessionId={regulationDocumentTempSessionId}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
+                            onCreateRequirement={handleCreateRequirement}
+                            onShowRequirement={handleShow}
+                            onEditRequirement={handleEdit}
+                            onDeleteRequirement={requestDelete}
                         />
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>

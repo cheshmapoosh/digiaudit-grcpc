@@ -57,6 +57,7 @@ import {
     ROOT_PARENT as OBJECTIVE_ROOT_PARENT,
     useObjectiveState,
 } from "@/features/objective";
+import { controlService, type ControlSummary } from "@/features/control";
 import type { DocumentAttachment, DocumentUploadPolicy } from "@/features/document";
 import { useDocumentAttachmentState } from "@/features/document";
 
@@ -76,9 +77,7 @@ type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 
-const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
-const DIALOG_NORMAL_WIDTH = "96vw";
-const DIALOG_LARGE_WIDTH = "92vw";
+const DIALOG_WIDTH = "90vw";
 const EMPTY_ASSIGNMENTS: OrganizationProcessAssignment[] = [];
 const EMPTY_RISKS: OrganizationRiskAssignment[] = [];
 const EMPTY_REFERENCE_ASSIGNMENTS: OrganizationReferenceAssignment[] = [];
@@ -176,33 +175,6 @@ function useResolvedUiDir(): UiDir {
     }, []);
 
     return dir;
-}
-
-function resolveMediaQuery(query: string): boolean {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-        return false;
-    }
-
-    return window.matchMedia(query).matches;
-}
-
-function useMediaQuery(query: string): boolean {
-    const [matches, setMatches] = useState(() => resolveMediaQuery(query));
-
-    useEffect(() => {
-        if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-            return;
-        }
-
-        const mediaQueryList = window.matchMedia(query);
-        const handleChange = (event: MediaQueryListEvent) => setMatches(event.matches);
-
-        mediaQueryList.addEventListener("change", handleChange);
-
-        return () => mediaQueryList.removeEventListener("change", handleChange);
-    }, [query]);
-
-    return matches;
 }
 
 function isOwnDialogCloseEvent(event: unknown): boolean {
@@ -320,22 +292,17 @@ function toRiskOption(risk: RiskNode): OrganizationRiskOption {
     };
 }
 
-function toControlReferenceOption(
-    control: ProcessNode,
-    nodesById: Record<string, ProcessNode>,
-): OrganizationReferenceOption {
-    const parent = control.parentId ? nodesById[control.parentId] : null;
-
+function toControlReferenceOption(control: ControlSummary): OrganizationReferenceOption {
     return {
         referenceId: control.id,
         code: control.code,
-        title: control.title,
-        description: control.description,
+        title: control.name,
+        description: control.description ?? undefined,
         status: control.status,
-        ownerName: control.controlOwner ?? control.ownerName,
-        typeLabel: control.controlClassification,
-        parentCode: parent?.code,
-        parentTitle: parent?.title,
+        ownerName: undefined,
+        typeLabel: control.controlClass ?? control.automationType ?? control.controlNature ?? undefined,
+        validFrom: undefined,
+        validTo: undefined,
     };
 }
 
@@ -381,27 +348,10 @@ function toObjectiveReferenceOption(objective: ObjectiveNode): OrganizationRefer
     };
 }
 
-function countControlsBySubProcess(nodes: ProcessNode[]): Map<string, number> {
-    const counts = new Map<string, number>();
-
-    nodes.forEach((node) => {
-        if (node.nodeType !== "control" || !node.parentId) {
-            return;
-        }
-
-        counts.set(node.parentId, (counts.get(node.parentId) ?? 0) + 1);
-    });
-
-    return counts;
-}
-
 function buildOrganizationSubProcessViews(
     assignments: OrganizationProcessAssignment[],
     nodesById: Record<string, ProcessNode>,
 ): OrganizationSubProcessView[] {
-    const processNodes = Object.values(nodesById);
-    const controlCounts = countControlsBySubProcess(processNodes);
-
     return assignments
         .map((assignment): OrganizationSubProcessView | null => {
             const subProcess = nodesById[assignment.processNodeId];
@@ -419,7 +369,7 @@ function buildOrganizationSubProcessViews(
                 validTo: assignment.validTo,
                 isActive: assignment.isActive,
                 description: subProcess.description,
-                controlsCount: controlCounts.get(subProcess.id) ?? 0,
+                controlsCount: 0,
             };
 
             return view;
@@ -496,8 +446,6 @@ export default function OrganizationsFclShellPage() {
 
     const routeMode = useOrganizationRouteMode();
     const appDir = useResolvedUiDir();
-    const isLargeDialogViewport = useMediaQuery(DIALOG_LARGE_VIEWPORT_QUERY);
-
     const nodesById = useOrganizationState((state) => state.nodesById);
     const loading = useOrganizationState((state) => state.loading);
     const loadChildren = useOrganizationState((state) => state.loadChildren);
@@ -605,6 +553,8 @@ export default function OrganizationsFclShellPage() {
     const [documentTempSessionId, setDocumentTempSessionId] = useState(
         createDocumentTempSessionId,
     );
+    const [controlItems, setControlItems] = useState<ControlSummary[]>([]);
+    const [controlLoading, setControlLoading] = useState(false);
 
     const items = useMemo(() => sortOrganizations(Object.values(nodesById)), [nodesById]);
     const processItems = useMemo(
@@ -642,11 +592,8 @@ export default function OrganizationsFclShellPage() {
         [riskItems],
     );
     const availableControlReferences = useMemo(
-        () =>
-            processItems
-                .filter((item) => item.nodeType === "control")
-                .map((item) => toControlReferenceOption(item, processNodesById)),
-        [processItems, processNodesById],
+        () => controlItems.map(toControlReferenceOption),
+        [controlItems],
     );
     const availableRegulationReferences = useMemo(
         () =>
@@ -726,6 +673,40 @@ export default function OrganizationsFclShellPage() {
             );
         });
     }, [loadRiskChildren, t]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        setControlLoading(true);
+
+        void controlService.list()
+            .then((items) => {
+                if (!cancelled) {
+                    setControlItems(items);
+                }
+            })
+            .catch((error: unknown) => {
+                if (!cancelled) {
+                    setPageError(
+                        mapError(
+                            error,
+                            t("control.errors.loadList", {
+                                defaultValue: "خطا در بارگذاری کنترل‌ها",
+                            }),
+                        ),
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setControlLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [t]);
 
     useEffect(() => {
         void Promise.all([
@@ -1586,14 +1567,14 @@ export default function OrganizationsFclShellPage() {
     );
 
     const dialogStyle = useMemo<CSSProperties>(() => {
-        const width = isLargeDialogViewport ? DIALOG_LARGE_WIDTH : DIALOG_NORMAL_WIDTH;
+        const width = DIALOG_WIDTH;
 
         return {
             width,
             maxWidth: width,
             maxHeight: "calc(100vh - 2rem)",
         };
-    }, [isLargeDialogViewport]);
+    }, []);
 
     const listColumn = createElement(
         "div",
@@ -1675,7 +1656,7 @@ export default function OrganizationsFclShellPage() {
                 <div style={dialogContentStyle}>
                     {objectValue ? (
                         <OrganizationObjectPage
-                            key={`${objectMode}:${objectValue.id || "new"}:${queryParentId ?? objectValue.parentId ?? "root"}`}
+                            key={`${objectValue.id || "new"}:${queryParentId ?? objectValue.parentId ?? "root"}`}
                             mode={objectMode}
                             allItems={items}
                             value={objectValue}
@@ -1700,10 +1681,10 @@ export default function OrganizationsFclShellPage() {
                             relationshipsBusy={relationshipsLoading || riskLoading}
                             referencesBusy={
                                 referenceAssignmentsLoading ||
-                                processLoading ||
+                                controlLoading ||
                                 regulationLoading ||
-                                    policyLoading ||
-                                    objectiveLoading
+                                policyLoading ||
+                                objectiveLoading
                             }
                             documentsBusy={documentsLoading}
                             busy={loading || submitting}

@@ -1,4 +1,11 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,8 +23,6 @@ import {
 } from "@ui5/webcomponents-react";
 
 import type {
-    ControlAutomation,
-    ControlImportance,
     ProcessCategory,
     ProcessNode,
     ProcessNodeCreate,
@@ -25,19 +30,27 @@ import type {
     ProcessNodeUpdate,
     ProcessStatus,
 } from "../domain/process.model";
+import ProcessObjectivesTab from "../components/tabs/ProcessObjectivesTab";
+import ProcessAccountGroupsTab from "../components/tabs/ProcessAccountGroupsTab";
+import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
+import ProcessRegulationsTab from "../components/tabs/ProcessRegulationsTab";
+import ProcessRisksTab from "../components/tabs/ProcessRisksTab";
+import {
+    DocumentAttachmentsManager,
+    type DocumentBeforeParentSubmitHandler,
+} from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
 
 type ProcessTabKey =
     | "general"
-    | "controls"
     | "rules"
-    | "requirements"
     | "objectives"
     | "accountGroups"
     | "risks"
-    | "documents";
+    | "documents"
+    | "controls";
 
 interface ProcessFormState {
     code: string;
@@ -51,14 +64,6 @@ interface ProcessFormState {
     ownerName: string;
     objective: string;
     operationCycle: string;
-    controlAutomation: ControlAutomation;
-    controlFrequency: string;
-    controlClassification: string;
-    controlOwner: string;
-    testDirection: string;
-    testType: string;
-    testProgram: string;
-    importance: ControlImportance;
 }
 
 export interface ProcessObjectPageProps {
@@ -69,10 +74,13 @@ export interface ProcessObjectPageProps {
     requestedNodeType?: ProcessNodeType;
     busy?: boolean;
     error?: string | null;
+    documentTempSessionId?: string;
     onErrorClose?: () => void;
     onSubmit: (payload: ProcessNodeCreate | ProcessNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
     onEdit?: () => void;
+    onOpenControlAssignment?: (controlAssignmentId: string) => void;
+    onControlStructureChanged?: () => void | Promise<void>;
 }
 
 const ROOT_STYLE: CSSProperties = {
@@ -164,32 +172,6 @@ const ACTION_BUTTON_STYLE: CSSProperties = {
     minWidth: "6rem",
 };
 
-const TABLE_PANEL_STYLE: CSSProperties = {
-    minHeight: "15rem",
-    background: "var(--sapGroup_ContentBackground)",
-    border: "1px solid var(--sapList_BorderColor)",
-    padding: "1rem",
-};
-
-const TABLE_STYLE: CSSProperties = {
-    width: "100%",
-    borderCollapse: "collapse",
-    background: "var(--sapList_Background)",
-};
-
-const TABLE_HEADER_STYLE: CSSProperties = {
-    background: "var(--sapList_HeaderBackground)",
-    border: "1px solid var(--sapList_BorderColor)",
-    padding: "0.5rem",
-    fontWeight: 700,
-};
-
-const TABLE_CELL_STYLE: CSSProperties = {
-    border: "1px solid var(--sapList_BorderColor)",
-    padding: "0.5rem",
-    height: "2rem",
-};
-
 function toFormState(
     value: ProcessNode | null,
     parent: ProcessNode | null | undefined,
@@ -207,14 +189,6 @@ function toFormState(
         ownerName: value?.ownerName ?? "",
         objective: value?.objective ?? "",
         operationCycle: value?.operationCycle ?? "",
-        controlAutomation: value?.controlAutomation ?? "manual",
-        controlFrequency: value?.controlFrequency ?? "",
-        controlClassification: value?.controlClassification ?? "",
-        controlOwner: value?.controlOwner ?? "",
-        testDirection: value?.testDirection ?? "",
-        testType: value?.testType ?? "",
-        testProgram: value?.testProgram ?? "",
-        importance: value?.importance ?? "medium",
     };
 }
 
@@ -297,7 +271,6 @@ function resolveNodeTypeLabel(
     const map: Record<ProcessNodeType, string> = {
         process: t("process.nodeType.process", { defaultValue: "فرآیند" }),
         subProcess: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
-        control: t("process.nodeType.control", { defaultValue: "کنترل" }),
     };
 
     return map[nodeType];
@@ -329,45 +302,12 @@ function resolveCategoryLabel(
     return map[category];
 }
 
-function resolveAutomationLabel(
-    automation: ControlAutomation,
-    t: ReturnType<typeof useTranslation>["t"],
-): string {
-    const map: Record<ControlAutomation, string> = {
-        manual: t("process.controlAutomation.manual", { defaultValue: "دستی" }),
-        automated: t("process.controlAutomation.automated", { defaultValue: "خودکار" }),
-        semiAutomated: t("process.controlAutomation.semiAutomated", {
-            defaultValue: "نیمه‌خودکار",
-        }),
-    };
-
-    return map[automation];
-}
-
-function resolveImportanceLabel(
-    importance: ControlImportance,
-    t: ReturnType<typeof useTranslation>["t"],
-): string {
-    const map: Record<ControlImportance, string> = {
-        low: t("process.importance.low", { defaultValue: "کم" }),
-        medium: t("process.importance.medium", { defaultValue: "متوسط" }),
-        high: t("process.importance.high", { defaultValue: "زیاد" }),
-        critical: t("process.importance.critical", { defaultValue: "بحرانی" }),
-    };
-
-    return map[importance];
-}
-
 function defaultTabs(nodeType: ProcessNodeType): ProcessTabKey[] {
-    if (nodeType === "control") {
-        return ["general", "requirements", "risks"];
-    }
-
     if (nodeType === "subProcess") {
         return [
             "general",
-            "controls",
             "rules",
+            "controls",
             "objectives",
             "accountGroups",
             "risks",
@@ -381,13 +321,12 @@ function defaultTabs(nodeType: ProcessNodeType): ProcessTabKey[] {
 function resolveTabLabel(tab: ProcessTabKey, t: ReturnType<typeof useTranslation>["t"]): string {
     const labels: Record<ProcessTabKey, string> = {
         general: t("process.tabs.general", { defaultValue: "اطلاعات کلی" }),
-        controls: t("process.tabs.controls", { defaultValue: "کنترل‌ها" }),
         rules: t("process.tabs.rules", { defaultValue: "قوانین" }),
-        requirements: t("process.tabs.requirements", { defaultValue: "الزامات" }),
         objectives: t("process.tabs.objectives", { defaultValue: "اهداف" }),
         accountGroups: t("process.tabs.accountGroups", { defaultValue: "گروه حساب" }),
         risks: t("process.tabs.risks", { defaultValue: "ریسک" }),
         documents: t("process.tabs.documents", { defaultValue: "مستندات" }),
+        controls: t("process.tabs.controls", { defaultValue: "کنترل‌ها" }),
     };
 
     return labels[tab];
@@ -439,45 +378,6 @@ function ProcessTabs({
     );
 }
 
-function TablePlaceholder({
-                              title,
-                              columns,
-                          }: {
-    title: string;
-    columns: string[];
-}) {
-    return (
-        <div style={TABLE_PANEL_STYLE}>
-            <Title level="H5">{title}</Title>
-
-            <div style={{ height: "0.75rem" }} />
-
-            <table style={TABLE_STYLE}>
-                <thead>
-                    <tr>
-                        {columns.map((column) => (
-                            <th key={column} style={TABLE_HEADER_STYLE}>
-                                {column}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {[0, 1, 2].map((row) => (
-                        <tr key={row}>
-                            {columns.map((column) => (
-                                <td key={column} style={TABLE_CELL_STYLE}>
-                                    &nbsp;
-                                </td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-}
-
 export default function ProcessObjectPage({
                                               mode,
                                               allItems,
@@ -486,10 +386,13 @@ export default function ProcessObjectPage({
                                               requestedNodeType,
                                               busy = false,
                                               error,
+                                              documentTempSessionId,
                                               onErrorClose,
                                               onSubmit,
                                               onCancel,
                                               onEdit,
+                                              onOpenControlAssignment,
+                                              onControlStructureChanged,
                                           }: ProcessObjectPageProps) {
     const { t } = useTranslation();
     const readOnly = mode === "view";
@@ -505,11 +408,14 @@ export default function ProcessObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(form.nodeType), [form.nodeType]);
     const [activeTab, setActiveTab] = useState<ProcessTabKey>("general");
+    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
+    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? parent ?? null
         : null;
 
+    const currentProcessId = value?.id ?? null;
     const headerTitle = form.title || value?.title || "";
     const headerParent = selectedParent
         ? `${selectedParent.code} - ${selectedParent.title}`
@@ -556,8 +462,31 @@ export default function ProcessObjectPage({
         return true;
     };
 
+    const handleDocumentBeforeParentSubmitChange = useCallback(
+        (handler: DocumentBeforeParentSubmitHandler | null) => {
+            documentBeforeSubmitRef.current = handler;
+        },
+        [],
+    );
+
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
+            return;
+        }
+
+        if (hasPendingDocumentUploads) {
+            setValidationError(
+                t("document.validation.waitForUpload", {
+                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
+                }),
+            );
+            setActiveTab("documents");
+            return;
+        }
+
+        const documentsReady = await documentBeforeSubmitRef.current?.();
+        if (documentsReady === false) {
+            setActiveTab("documents");
             return;
         }
 
@@ -573,24 +502,11 @@ export default function ProcessObjectPage({
             ownerName: normalizeOptionalText(form.ownerName),
         };
 
-        const payload: ProcessNodeCreate | ProcessNodeUpdate =
-            form.nodeType === "control"
-                ? {
-                      ...basePayload,
-                      controlAutomation: form.controlAutomation,
-                      controlFrequency: normalizeOptionalText(form.controlFrequency),
-                      controlClassification: normalizeOptionalText(form.controlClassification),
-                      controlOwner: normalizeOptionalText(form.controlOwner),
-                      testDirection: normalizeOptionalText(form.testDirection),
-                      testType: normalizeOptionalText(form.testType),
-                      testProgram: normalizeOptionalText(form.testProgram),
-                      importance: form.importance,
-                  }
-                : {
-                      ...basePayload,
-                      objective: normalizeOptionalText(form.objective),
-                      operationCycle: normalizeOptionalText(form.operationCycle),
-                  };
+        const payload: ProcessNodeCreate | ProcessNodeUpdate = {
+            ...basePayload,
+            objective: normalizeOptionalText(form.objective),
+            operationCycle: normalizeOptionalText(form.operationCycle),
+        };
 
         await onSubmit(payload);
     };
@@ -705,191 +621,31 @@ export default function ProcessObjectPage({
                     />
                 </FormField>
 
-                {form.nodeType !== "control" ? (
-                    <>
-                        <FormField
-                            label={t("process.fields.operationCycle", {
-                                defaultValue: "دوره عملیاتی",
-                            })}
-                        >
-                            <Input
-                                value={form.operationCycle}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("operationCycle", readInputValue(event))
-                                }
-                            />
-                        </FormField>
+                <FormField
+                    label={t("process.fields.operationCycle", {
+                        defaultValue: "دوره عملیاتی",
+                    })}
+                >
+                    <Input
+                        value={form.operationCycle}
+                        disabled={readOnly || busy}
+                        onInput={(event) =>
+                            handleChange("operationCycle", readInputValue(event))
+                        }
+                    />
+                </FormField>
 
-                        <FormField
-                            label={t("process.fields.objective", { defaultValue: "هدف" })}
-                            fullWidth
-                        >
-                            <TextArea
-                                rows={3}
-                                value={form.objective}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("objective", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-                    </>
-                ) : (
-                    <>
-                        <FormField
-                            label={t("process.fields.controlAutomation", {
-                                defaultValue: "ماهیت کنترل",
-                            })}
-                        >
-                            <Select
-                                disabled={readOnly || busy}
-                                onChange={(event) => {
-                                    const nextValue = readSelectedDataValue(
-                                        event,
-                                        form.controlAutomation,
-                                    );
-                                    handleChange(
-                                        "controlAutomation",
-                                        nextValue as ControlAutomation,
-                                    );
-                                }}
-                            >
-                                <Option
-                                    data-value="manual"
-                                    selected={form.controlAutomation === "manual"}
-                                >
-                                    {resolveAutomationLabel("manual", t)}
-                                </Option>
-                                <Option
-                                    data-value="automated"
-                                    selected={form.controlAutomation === "automated"}
-                                >
-                                    {resolveAutomationLabel("automated", t)}
-                                </Option>
-                                <Option
-                                    data-value="semiAutomated"
-                                    selected={form.controlAutomation === "semiAutomated"}
-                                >
-                                    {resolveAutomationLabel("semiAutomated", t)}
-                                </Option>
-                            </Select>
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.controlFrequency", {
-                                defaultValue: "تناوب کنترل",
-                            })}
-                        >
-                            <Input
-                                value={form.controlFrequency}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("controlFrequency", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.controlClassification", {
-                                defaultValue: "طبقه‌بندی کنترل",
-                            })}
-                        >
-                            <Input
-                                value={form.controlClassification}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("controlClassification", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.controlOwner", {
-                                defaultValue: "مسئول کنترل",
-                            })}
-                        >
-                            <Input
-                                value={form.controlOwner}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("controlOwner", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.importance", { defaultValue: "اهمیت" })}
-                        >
-                            <Select
-                                disabled={readOnly || busy}
-                                onChange={(event) => {
-                                    const nextValue = readSelectedDataValue(event, form.importance);
-                                    handleChange("importance", nextValue as ControlImportance);
-                                }}
-                            >
-                                <Option data-value="low" selected={form.importance === "low"}>
-                                    {resolveImportanceLabel("low", t)}
-                                </Option>
-                                <Option
-                                    data-value="medium"
-                                    selected={form.importance === "medium"}
-                                >
-                                    {resolveImportanceLabel("medium", t)}
-                                </Option>
-                                <Option data-value="high" selected={form.importance === "high"}>
-                                    {resolveImportanceLabel("high", t)}
-                                </Option>
-                                <Option
-                                    data-value="critical"
-                                    selected={form.importance === "critical"}
-                                >
-                                    {resolveImportanceLabel("critical", t)}
-                                </Option>
-                            </Select>
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.testDirection", {
-                                defaultValue: "جهت آزمون",
-                            })}
-                        >
-                            <Input
-                                value={form.testDirection}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("testDirection", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.testType", { defaultValue: "نوع آزمون" })}
-                        >
-                            <Input
-                                value={form.testType}
-                                disabled={readOnly || busy}
-                                onInput={(event) => handleChange("testType", readInputValue(event))}
-                            />
-                        </FormField>
-
-                        <FormField
-                            label={t("process.fields.testProgram", {
-                                defaultValue: "برنامه آزمون",
-                            })}
-                            fullWidth
-                        >
-                            <TextArea
-                                rows={3}
-                                value={form.testProgram}
-                                disabled={readOnly || busy}
-                                onInput={(event) =>
-                                    handleChange("testProgram", readInputValue(event))
-                                }
-                            />
-                        </FormField>
-                    </>
-                )}
+                <FormField
+                    label={t("process.fields.objective", { defaultValue: "هدف" })}
+                    fullWidth
+                >
+                    <TextArea
+                        rows={3}
+                        value={form.objective}
+                        disabled={readOnly || busy}
+                        onInput={(event) => handleChange("objective", readInputValue(event))}
+                    />
+                </FormField>
 
                 <FormField
                     label={t("process.fields.description", { defaultValue: "شرح" })}
@@ -903,120 +659,124 @@ export default function ProcessObjectPage({
                     />
                 </FormField>
             </div>
-
-            <div style={FOOTER_STYLE}>
-                {mode === "view" ? (
-                    <Button
-                        design="Emphasized"
-                        disabled={busy || !onEdit}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={onEdit}
-                    >
-                        {t("common.edit", { defaultValue: "ویرایش" })}
-                    </Button>
-                ) : (
-                    <Button
-                        design="Emphasized"
-                        disabled={busy}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={handleSubmit}
-                    >
-                        {t("common.save", { defaultValue: "ذخیره" })}
-                    </Button>
-                )}
-
-                <Button
-                    design="Transparent"
-                    disabled={busy}
-                    style={ACTION_BUTTON_STYLE}
-                    onClick={onCancel}
-                >
-                    {mode === "view"
-                        ? t("common.close", { defaultValue: "بستن" })
-                        : t("common.cancel", { defaultValue: "انصراف" })}
-                </Button>
-            </div>
         </>
     );
 
-    const renderTabContent = () => {
-        if (activeTab === "general") {
+    const renderFooterActions = () => (
+        <div style={FOOTER_STYLE}>
+            {mode === "view" ? (
+                <Button
+                    design="Emphasized"
+                    disabled={busy || !onEdit}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={onEdit}
+                >
+                    {t("common.edit", { defaultValue: "ویرایش" })}
+                </Button>
+            ) : (
+                <Button
+                    design="Emphasized"
+                    disabled={busy}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={handleSubmit}
+                >
+                    {t("common.save", { defaultValue: "ذخیره" })}
+                </Button>
+            )}
+
+            <Button
+                design="Transparent"
+                disabled={busy}
+                style={ACTION_BUTTON_STYLE}
+                onClick={onCancel}
+            >
+                {mode === "view"
+                    ? t("common.close", { defaultValue: "بستن" })
+                    : t("common.cancel", { defaultValue: "انصراف" })}
+            </Button>
+        </div>
+    );
+
+    const renderTabContent = (tab: ProcessTabKey) => {
+        if (tab === "general") {
             return renderGeneralTab();
         }
 
-        if (activeTab === "controls") {
+        if (tab === "rules") {
             return (
-                <TablePlaceholder
-                    title={t("process.tabs.controls", { defaultValue: "کنترل‌ها" })}
-                    columns={[
-                        t("process.fields.name", { defaultValue: "نام" }),
-                        t("process.fields.description", { defaultValue: "شرح" }),
-                        t("process.fields.type", { defaultValue: "نوع" }),
-                    ]}
+                <ProcessRegulationsTab
+                    key={currentProcessId ?? "unsaved-process-regulations"}
+                    processId={currentProcessId}
+                    nodeType={form.nodeType}
+                    readOnly={readOnly}
                 />
             );
         }
 
-        if (activeTab === "rules" || activeTab === "requirements") {
+        if (tab === "objectives") {
             return (
-                <TablePlaceholder
-                    title={resolveTabLabel(activeTab, t)}
-                    columns={[
-                        t("process.fields.requirement", { defaultValue: "الزام" }),
-                        t("process.fields.description", { defaultValue: "شرح" }),
-                        t("process.fields.lawName", { defaultValue: "نام قانون" }),
-                        t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                        t("process.fields.validTo", { defaultValue: "تاریخ اعتبار" }),
-                    ]}
+                <ProcessObjectivesTab
+                    key={currentProcessId ?? "unsaved-process-objectives"}
+                    processId={currentProcessId}
+                    readOnly={readOnly}
                 />
             );
         }
 
-        if (activeTab === "objectives") {
+        if (tab === "accountGroups") {
             return (
-                <TablePlaceholder
-                    title={t("process.tabs.objectives", { defaultValue: "اهداف" })}
-                    columns={[
-                        t("process.fields.name", { defaultValue: "نام" }),
-                        t("process.fields.description", { defaultValue: "شرح" }),
-                    ]}
+                <ProcessAccountGroupsTab
+                    key={currentProcessId ?? "unsaved-process-account-groups"}
+                    processId={currentProcessId}
+                    readOnly={readOnly}
                 />
             );
         }
 
-        if (activeTab === "accountGroups") {
+        if (tab === "risks") {
             return (
-                <TablePlaceholder
-                    title={t("process.tabs.accountGroups", { defaultValue: "گروه حساب" })}
-                    columns={[
-                        t("process.fields.name", { defaultValue: "نام" }),
-                        t("process.fields.description", { defaultValue: "شرح" }),
-                    ]}
+                <ProcessRisksTab
+                    key={currentProcessId ?? "unsaved-process-risks"}
+                    processId={currentProcessId}
+                    nodeType={form.nodeType}
+                    readOnly={readOnly}
                 />
             );
         }
 
-        if (activeTab === "risks") {
+        if (tab === "controls") {
+            if (form.nodeType !== "subProcess") {
+                return null;
+            }
+
             return (
-                <TablePlaceholder
-                    title={t("process.tabs.risks", { defaultValue: "ریسک" })}
-                    columns={[
-                        t("process.fields.name", { defaultValue: "نام" }),
-                        t("process.fields.description", { defaultValue: "شرح" }),
-                        t("process.fields.source", { defaultValue: "منبع" }),
-                    ]}
+                <ProcessControlsTab
+                    key={currentProcessId ?? "unsaved-sub-process-controls"}
+                    subProcessId={currentProcessId}
+                    subProcessTitle={form.title || value?.title}
+                    readOnly={readOnly}
+                    onOpenControl={onOpenControlAssignment}
+                    onControlStructureChanged={onControlStructureChanged}
                 />
             );
         }
 
         return (
-            <TablePlaceholder
+            <DocumentAttachmentsManager
+                key={currentProcessId ?? "unsaved-process-documents"}
                 title={t("process.tabs.documents", { defaultValue: "مستندات" })}
-                columns={[
-                    t("process.fields.name", { defaultValue: "نام" }),
-                    t("process.fields.type", { defaultValue: "نوع" }),
-                    t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                ]}
+                targetType="PROCESS_NODE"
+                targetId={currentProcessId}
+                tempSessionId={documentTempSessionId}
+                stagingMode="tempUntilParentSave"
+                busy={busy}
+                readOnly={readOnly}
+                saveFirstMessage={t("document.saveFirst.process", {
+                    defaultValue:
+                        "ابتدا آیتم فرآیندی را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
+                })}
+                onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
+                onPendingUploadsChange={setHasPendingDocumentUploads}
             />
         );
     };
@@ -1085,7 +845,11 @@ export default function ProcessObjectPage({
                 </MessageStrip>
             ) : null}
 
-            <div style={BODY_STYLE}>{renderTabContent()}</div>
+            <div style={BODY_STYLE}>
+                {renderTabContent(tabs.includes(activeTab) ? activeTab : "general")}
+            </div>
+
+            {renderFooterActions()}
         </div>
     );
 }

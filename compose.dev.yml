@@ -1,39 +1,67 @@
-name: grcpc-dev
+name: grcpc-test
 
 services:
   oracle:
     image: ${ORACLE_IMAGE:-gvenzl/oracle-free:23-slim}
+    container_name: grcpc-test-oracle
     restart: unless-stopped
     environment:
+      TZ: ${TZ:-UTC}
       ORACLE_PASSWORD: ${ORACLE_SYS_PASSWORD:-oracle}
       APP_USER: ${DB_USERNAME:-GRCPC}
       APP_USER_PASSWORD: ${DB_PASSWORD:-grcpc}
     ports:
       - "${ORACLE_PORT:-1521}:1521"
     volumes:
+      # Keep Oracle data in a Docker named volume, not a Windows bind mount.
+      # This is more stable for Oracle datafiles on Docker Desktop/Windows.
       - oracle_data:/opt/oracle/oradata
     healthcheck:
       test: ["CMD-SHELL", "healthcheck.sh"]
       interval: 10s
       timeout: 5s
-      retries: 30
-      start_period: 60s
+      retries: 60
+      start_period: 90s
 
   minio:
-    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-09-07T16-13-09Z}
+    image: ${MINIO_IMAGE:-minio/minio:latest}
+    container_name: grcpc-test-minio
     restart: unless-stopped
-    command: server ${MINIO_DATA_DIR:-/var/lib/minio/data} --console-address ":9001"
+    command: server /data --console-address ":9001"
     environment:
+      TZ: ${TZ:-UTC}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
       - "${MINIO_API_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
-      - minio_data:${MINIO_DATA_DIR:-/var/lib/minio/data}
+      # MinIO data is safe to keep as a local project folder.
+      - type: bind
+        source: ./data/minio
+        target: /data
+
+  minio-init:
+    image: ${MINIO_MC_IMAGE:-minio/mc:latest}
+    container_name: grcpc-test-minio-init
+    depends_on:
+      - minio
+    environment:
+      TZ: ${TZ:-UTC}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-grcpc-documents}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do
+        echo 'Waiting for MinIO...';
+        sleep 2;
+      done;
+      mc mb -p local/$${MINIO_BUCKET} || true;
+      exit 0;
+      "
+    restart: "no"
 
 volumes:
   oracle_data:
-    name: ${ORACLE_VOLUME:-grcpc_dev_oradata}
-  minio_data:
-    name: ${MINIO_VOLUME:-grcpc_dev_minio}
+    name: ${ORACLE_VOLUME:-grcpc_test_oradata}

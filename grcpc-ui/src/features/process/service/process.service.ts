@@ -104,6 +104,7 @@ function assertUpdateHierarchy(
 export interface ProcessService {
     list(): Promise<ProcessNode[]>;
     getById(id: string): Promise<ProcessNode | null>;
+    getChildren(parentId: string | null): Promise<ProcessNode[]>;
     create(payload: ProcessNodeCreate): Promise<ProcessNode>;
     update(id: string, payload: ProcessNodeUpdate): Promise<ProcessNode>;
     remove(id: string): Promise<void>;
@@ -119,6 +120,11 @@ export function createProcessService(repo: ProcessRepo): ProcessService {
 
         async getById(id) {
             return repo.getById(id);
+        },
+
+        async getChildren(parentId) {
+            const items = await repo.getChildren(parentId);
+            return sortProcesses(items);
         },
 
         async create(payload) {

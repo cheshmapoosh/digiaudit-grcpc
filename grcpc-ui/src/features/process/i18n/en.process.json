@@ -7,8 +7,7 @@
     },
     "nodeType": {
       "process": "Process",
-      "subProcess": "Sub-process",
-      "control": "Control"
+      "subProcess": "Sub-process"
     },
     "category": {
       "operational": "Operational",
@@ -19,16 +18,9 @@
       "support": "Support",
       "strategic": "Strategic"
     },
-    "controlAutomation": {
-      "manual": "Manual",
-      "automated": "Automated",
-      "semiAutomated": "Semi-automated"
-    },
-    "importance": {
-      "low": "Low",
-      "medium": "Medium",
-      "high": "High",
-      "critical": "Critical"
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
     },
     "fields": {
       "name": "Name",
@@ -41,15 +33,8 @@
       "processCategory": "Process Type",
       "owner": "Owner",
       "documents": "Documents",
-      "controlAutomation": "Automated Control",
       "operationCycle": "Operation Cycle",
       "objective": "Objective",
-      "importance": "Importance",
-      "controlClassification": "Control Classification",
-      "controlOwner": "Owner",
-      "testDirection": "Test Direction",
-      "testType": "Test Type",
-      "testProgram": "Test Program",
       "requirement": "Requirement",
       "regulationName": "Regulation Name",
       "effectiveDate": "Effective Date",
@@ -58,21 +43,181 @@
       "parentProcess": "Parent Process",
       "nodeType": "Item Type",
       "sortOrder": "Sort Order",
-      "controlFrequency": "Control Frequency",
       "validTo": "Valid To",
       "lawName": "Law Name"
     },
+    "regulations": {
+      "title": "Laws",
+      "empty": "No law has been added to this process item.",
+      "saveFirst": "Save the process item first.",
+      "loadError": "Failed to load added laws.",
+      "retry": "Retry",
+      "add": "Add",
+      "addPlaceholder": "Select law",
+      "addAccessibleName": "Select law to add",
+      "noAssignable": "No other law is available to add.",
+      "mutationError": "Failed to save law changes.",
+      "duplicate": "This law has already been added to this item.",
+      "remove": "Delete",
+      "removeTitle": "Delete Law",
+      "removeConfirm": "Delete law \"{{title}}\" from this item?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Process item laws table",
+      "columns": {
+        "code": "Code",
+        "title": "Law Name",
+        "description": "Description",
+        "issuer": "Issuer",
+        "status": "Status",
+        "validity": "Validity",
+        "actions": "Actions"
+      }
+    },
+    "objectives": {
+      "title": "Objectives",
+      "empty": "No objectives are assigned to this process item.",
+      "saveFirst": "Save the process item first to view objectives.",
+      "loadError": "Failed to load assigned objectives.",
+      "retry": "Retry",
+      "assign": "Assign Objective",
+      "assignPlaceholder": "Select objective",
+      "assignAccessibleName": "Select objective to assign",
+      "noAssignable": "No other objective is available to assign.",
+      "mutationError": "Failed to save objective assignment changes.",
+      "remove": "Remove",
+      "removeTitle": "Remove Objective Assignment",
+      "removeConfirm": "Remove assignment for \"{{title}}\"?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Process objectives table",
+      "columns": {
+        "code": "Code",
+        "title": "Title",
+        "description": "Description",
+        "assignmentType": "Assignment Type",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "assignmentTypes": {
+        "scope": "Scope",
+        "owner": "Owner",
+        "participant": "Participant"
+      },
+      "types": {
+        "operational": "Operational",
+        "compliance": "Compliance",
+        "strategic": "Strategic",
+        "financial": "Financial",
+        "reporting": "Reporting",
+        "market": "Market"
+      }
+    },
+    "accountGroups": {
+      "title": "Account Groups",
+      "empty": "No account groups are assigned to this process item.",
+      "saveFirst": "Save the process item first to view account groups.",
+      "loadError": "Failed to load assigned account groups.",
+      "retry": "Retry",
+      "assign": "Assign Account Group",
+      "assignPlaceholder": "Select account group",
+      "assignAccessibleName": "Select account group to assign",
+      "noAssignable": "No other account group is available to assign.",
+      "mutationError": "Failed to save account group assignment changes.",
+      "remove": "Remove",
+      "removeTitle": "Remove Account Group Assignment",
+      "removeConfirm": "Remove assignment for \"{{title}}\"?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Process account groups table",
+      "columns": {
+        "code": "Code",
+        "title": "Title",
+        "description": "Description",
+        "assignmentType": "Assignment Type",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "assignmentTypes": {
+        "scope": "Scope",
+        "owner": "Owner",
+        "participant": "Participant"
+      }
+    },
+    "risks": {
+      "title": "Risks",
+      "empty": "No risks have been added to this process item.",
+      "saveFirst": "Save the process item first.",
+      "loadError": "Failed to load added risks.",
+      "retry": "Retry",
+      "add": "Add",
+      "addPlaceholder": "Select risk",
+      "addAccessibleName": "Select risk to add",
+      "noAssignable": "No other risk is available to add.",
+      "mutationError": "Failed to save risk changes.",
+      "duplicate": "This risk has already been added to this item.",
+      "remove": "Delete",
+      "removeTitle": "Delete Risk",
+      "removeConfirm": "Delete risk \"{{title}}\" from this item?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Process item risks table",
+      "columns": {
+        "code": "Code",
+        "title": "Risk Name",
+        "description": "Description",
+        "type": "Type",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "riskTypes": {
+        "operational": "Operational",
+        "financial": "Financial",
+        "strategic": "Strategic",
+        "compliance": "Compliance",
+        "technology": "Technology",
+        "reputation": "Reputation",
+        "safety": "Safety",
+        "other": "Other"
+      }
+    },
+    "controls": {
+      "title": "Controls",
+      "empty": "No controls are assigned to this sub-process.",
+      "saveFirst": "Save the sub-process first.",
+      "loadError": "Failed to load sub-process controls.",
+      "retry": "Retry",
+      "assign": "Add Control",
+      "assignPlaceholder": "Select control",
+      "assignAccessibleName": "Select control to attach",
+      "noAssignable": "No other control is available to attach.",
+      "mutationError": "Failed to save sub-process control changes.",
+      "duplicate": "This control is already attached to this sub-process.",
+      "show": "View",
+      "remove": "Delete",
+      "removeTitle": "Remove Control Assignment",
+      "removeConfirm": "Remove control assignment \"{{title}}\"?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Sub-process controls table",
+      "columns": {
+        "code": "Code",
+        "name": "Control Name",
+        "description": "Description",
+        "status": "Status",
+        "owner": "Owner",
+        "validity": "Validity",
+        "actions": "Actions"
+      }
+    },
     "tabs": {
       "general": "General Information",
-      "controlObjectives": "Control Objectives",
       "accountGroups": "Account Group",
-      "regulations": "Regulations",
-      "risks": "Risk",
-      "controls": "Controls",
-      "rules": "Rules",
-      "requirements": "Requirements",
+      "risks": "Risks",
+      "rules": "Laws",
       "objectives": "Objectives",
-      "documents": "Documents"
+      "documents": "Documents",
+      "controls": "Controls"
     },
     "tree": {
       "expand": "Expand branch",
@@ -85,6 +230,9 @@
       "modalPlaceholder": "The process modal details will be completed in the next step. This step implements the tree structure, selection, and details panel.",
       "modalTitle": "Process Center",
       "createModalTitle": "Create"
+    },
+    "createMenu": {
+      "control": "Control"
     },
     "create": {
       "title": "Create Process Item"
@@ -105,11 +253,9 @@
       "parentNotFound": "The selected parent was not found",
       "hasChildren": "You cannot delete an item that has children",
       "invalidHierarchy": "The selected process structure is not valid",
-      "controlCannotHaveChildren": "A control cannot have child items",
       "delete": "Failed to delete process item",
       "save": "Failed to save process item",
-      "selectProcessParent": "To create a subprocess, select a process or a subprocess with the same parent first.",
-      "selectSubProcessParent": "To create a control, select a subprocess or a control with the same parent first."
+      "selectProcessParent": "To create a subprocess, select a process or a subprocess with the same parent first."
     },
     "validation": {
       "codeRequired": "Code is required",

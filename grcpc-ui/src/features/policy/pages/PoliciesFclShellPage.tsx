@@ -27,14 +27,14 @@ import PoliciesListReport from "./PoliciesListReport";
 import PolicyObjectPage from "./PolicyObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import { useDocumentAttachmentState } from "@/features/document";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 
-const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
-const DIALOG_NORMAL_WIDTH = "90vw";
-const DIALOG_LARGE_WIDTH = "60vw";
+const DIALOG_WIDTH = "90vw";
+const POLICY_DOCUMENT_TARGET_TYPE = "POLICY_NODE";
 
 function usePolicyRouteMode(): RouteMode {
     const { policyId } = useParams();
@@ -57,6 +57,14 @@ function usePolicyRouteMode(): RouteMode {
 
 function isPolicyNodeType(value: string | null): value is PolicyNodeType {
     return value === "policyGroup" || value === "policy";
+}
+
+function createDocumentTempSessionId(): string {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function mapError(
@@ -131,33 +139,6 @@ function useResolvedUiDir(): UiDir {
     }, []);
 
     return dir;
-}
-
-function resolveMediaQuery(query: string): boolean {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-        return false;
-    }
-
-    return window.matchMedia(query).matches;
-}
-
-function useMediaQuery(query: string): boolean {
-    const [matches, setMatches] = useState(() => resolveMediaQuery(query));
-
-    useEffect(() => {
-        if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-            return;
-        }
-
-        const mediaQueryList = window.matchMedia(query);
-        const handleChange = (event: MediaQueryListEvent) => setMatches(event.matches);
-
-        mediaQueryList.addEventListener("change", handleChange);
-
-        return () => mediaQueryList.removeEventListener("change", handleChange);
-    }, [query]);
-
-    return matches;
 }
 
 function isOwnDialogCloseEvent(event: unknown): boolean {
@@ -255,21 +236,28 @@ export default function PoliciesFclShellPage() {
 
     const routeMode = usePolicyRouteMode();
     const appDir = useResolvedUiDir();
-    const isLargeDialogViewport = useMediaQuery(DIALOG_LARGE_VIEWPORT_QUERY);
-
     const nodesById = usePolicyState((state) => state.nodesById);
     const loading = usePolicyState((state) => state.loading);
     const loadChildren = usePolicyState((state) => state.loadChildren);
     const createNode = usePolicyState((state) => state.createNode);
     const updateNode = usePolicyState((state) => state.updateNode);
     const removeNode = usePolicyState((state) => state.removeNode);
+    const tempDocumentsBySession = useDocumentAttachmentState(
+        (state) => state.tempDocumentsBySession,
+    );
+    const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
+    const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
+    const [objectError, setObjectError] = useState<string | null>(null);
     const [deleteCandidate, setDeleteCandidate] = useState<PolicyNode | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
+    const [policyDocumentTempSessionId, setPolicyDocumentTempSessionId] = useState(
+        createDocumentTempSessionId,
+    );
 
     const items = useMemo(() => sortPolicies(Object.values(nodesById)), [nodesById]);
 
@@ -290,6 +278,18 @@ export default function PoliciesFclShellPage() {
         return defaultChildType(selectedParentForCreate?.nodeType ?? null);
     }, [queryNodeType, selectedParentForCreate]);
 
+    const documentScopeKey = useMemo(() => {
+        if (routeMode === "create") {
+            return `create:${queryParentId ?? "root"}:${requestedNodeType}`;
+        }
+
+        if ((routeMode === "view" || routeMode === "edit") && policyId) {
+            return `policy:${policyId}`;
+        }
+
+        return "none";
+    }, [policyId, queryParentId, requestedNodeType, routeMode]);
+
     useEffect(() => {
         void loadChildren(ROOT_PARENT).catch((error: unknown) => {
             setPageError(
@@ -303,6 +303,30 @@ export default function PoliciesFclShellPage() {
             );
         });
     }, [loadChildren, t]);
+
+    useEffect(() => {
+        setPolicyDocumentTempSessionId(createDocumentTempSessionId());
+    }, [documentScopeKey]);
+
+    useEffect(() => {
+        if (!policyId) {
+            return;
+        }
+
+        void loadDocumentsForTarget(POLICY_DOCUMENT_TARGET_TYPE, policyId).catch(
+            (error: unknown) => {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("document.errors.load", {
+                            defaultValue: "خطا در بارگذاری مستندات",
+                        }),
+                        t,
+                    ),
+                );
+            },
+        );
+    }, [loadDocumentsForTarget, policyId, t]);
 
     const treeSelectedId = useMemo(() => {
         if (routeMode === "create") {
@@ -332,12 +356,15 @@ export default function PoliciesFclShellPage() {
         setSelectedTreeId(id);
         setTreeExpansionAnchorId(id);
         setPageError(null);
+        setObjectError(null);
     }, []);
 
     const handleShow = useCallback(
         (id: string) => {
             setSelectedTreeId(id);
             setTreeExpansionAnchorId(id);
+            setPageError(null);
+            setObjectError(null);
             navigate(`/policies/${id}`);
         },
         [navigate],
@@ -345,6 +372,8 @@ export default function PoliciesFclShellPage() {
 
     const handleCreate = useCallback(
         (nodeType: PolicyNodeType) => {
+            setPageError(null);
+            setObjectError(null);
             const selectedId = selectedTreeId ?? policyId ?? null;
             const selectedItem = selectedId ? nodesById[selectedId] ?? null : null;
             const parentId = resolveCreateParentId(nodeType, selectedItem, nodesById);
@@ -378,12 +407,15 @@ export default function PoliciesFclShellPage() {
 
             setSelectedTreeId(targetId);
             setTreeExpansionAnchorId(targetId);
+            setPageError(null);
+            setObjectError(null);
             navigate(`/policies/${targetId}/edit`);
         },
         [navigate, policyId, selectedTreeId],
     );
 
     const handleCancel = useCallback(() => {
+        setObjectError(null);
         const currentAnchorId =
             routeMode === "create" ? queryParentId ?? selectedTreeId : policyId ?? selectedTreeId;
 
@@ -394,6 +426,36 @@ export default function PoliciesFclShellPage() {
 
         navigate("/policies");
     }, [navigate, policyId, queryParentId, routeMode, selectedTreeId]);
+
+    const commitPolicyTempDocuments = useCallback(
+        async (targetId: string) => {
+            const tempDocuments = tempDocumentsBySession[policyDocumentTempSessionId] ?? [];
+
+            if (tempDocuments.length === 0) {
+                return;
+            }
+
+            await commitTempDocuments({
+                tempSessionId: policyDocumentTempSessionId,
+                targetType: POLICY_DOCUMENT_TARGET_TYPE,
+                targetId,
+                documentIds: tempDocuments.map((documentItem) => documentItem.id),
+                documentTitles: Object.fromEntries(
+                    tempDocuments.map((documentItem) => [
+                        documentItem.id,
+                        documentItem.title || documentItem.originalFileName,
+                    ]),
+                ),
+            });
+            await loadDocumentsForTarget(POLICY_DOCUMENT_TARGET_TYPE, targetId);
+        },
+        [
+            commitTempDocuments,
+            loadDocumentsForTarget,
+            policyDocumentTempSessionId,
+            tempDocumentsBySession,
+        ],
+    );
 
     const requestDelete = useCallback(
         (id: string) => {
@@ -463,25 +525,28 @@ export default function PoliciesFclShellPage() {
             try {
                 setSubmitting(true);
                 setPageError(null);
+                setObjectError(null);
 
                 if (routeMode === "create") {
                     const createPayload = payload as PolicyNodeCreate;
                     const created = await createNode(createPayload.parentId ?? null, createPayload);
+                    await commitPolicyTempDocuments(created.id);
 
                     setSelectedTreeId(created.id);
                     setTreeExpansionAnchorId(created.id);
-                    navigate("/policies");
+                    navigate(`/policies/${created.id}`);
                     return;
                 }
 
                 if (routeMode === "edit" && policyId) {
                     await updateNode(policyId, payload as PolicyNodeUpdate);
+                    await commitPolicyTempDocuments(policyId);
                     setSelectedTreeId(policyId);
                     setTreeExpansionAnchorId(policyId);
-                    navigate("/policies");
+                    navigate(`/policies/${policyId}`);
                 }
             } catch (error) {
-                setPageError(
+                setObjectError(
                     mapError(
                         error,
                         t("policy.errors.save", {
@@ -494,7 +559,15 @@ export default function PoliciesFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [createNode, navigate, policyId, routeMode, t, updateNode],
+        [
+            commitPolicyTempDocuments,
+            createNode,
+            navigate,
+            policyId,
+            routeMode,
+            t,
+            updateNode,
+        ],
     );
 
     const showModal = routeMode === "create" || routeMode === "view" || routeMode === "edit";
@@ -555,13 +628,13 @@ export default function PoliciesFclShellPage() {
     );
 
     const dialogStyle = useMemo<CSSProperties>(() => {
-        const width = isLargeDialogViewport ? DIALOG_LARGE_WIDTH : DIALOG_NORMAL_WIDTH;
+        const width = DIALOG_WIDTH;
 
         return {
             width,
             maxWidth: width,
         };
-    }, [isLargeDialogViewport]);
+    }, []);
 
     const listColumn = createElement(
         "div",
@@ -642,14 +715,16 @@ export default function PoliciesFclShellPage() {
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <PolicyObjectPage
-                            key={`${objectMode}:${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
+                            key={`${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
                             mode={objectMode}
                             allItems={items}
                             value={objectValue}
                             parent={selectedParentForCreate}
                             requestedNodeType={requestedNodeType}
                             busy={loading || submitting}
-                            error={pageError}
+                            error={objectError}
+                            documentTempSessionId={policyDocumentTempSessionId}
+                            onErrorClose={() => setObjectError(null)}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}

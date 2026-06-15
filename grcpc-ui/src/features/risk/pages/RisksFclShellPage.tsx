@@ -29,12 +29,12 @@ import RisksListReport from "./RisksListReport";
 import RiskObjectPage from "./RiskObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import { useDocumentAttachmentState } from "@/features/document";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
-const DIALOG_LARGE_VIEWPORT_QUERY = "(min-width: 1600px)";
-const DIALOG_NORMAL_WIDTH = "90vw";
-const DIALOG_LARGE_WIDTH = "60vw";
+const DIALOG_WIDTH = "90vw";
+const RISK_DOCUMENT_TARGET_TYPE = "RISK_NODE";
 
 function useRiskRouteMode(): RouteMode {
   const { riskId } = useParams();
@@ -57,6 +57,14 @@ function useRiskRouteMode(): RouteMode {
 
 function isRiskNodeType(value: string | null): value is RiskNodeType {
   return value === "riskCategory" || value === "riskTemplate";
+}
+
+function createDocumentTempSessionId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function mapError(
@@ -135,40 +143,6 @@ function useResolvedUiDir(): UiDir {
   }, []);
 
   return dir;
-}
-
-function resolveMediaQuery(query: string): boolean {
-  if (
-    typeof window === "undefined" ||
-    typeof window.matchMedia !== "function"
-  ) {
-    return false;
-  }
-
-  return window.matchMedia(query).matches;
-}
-
-function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() => resolveMediaQuery(query));
-
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return;
-    }
-
-    const mediaQueryList = window.matchMedia(query);
-    const handleChange = (event: MediaQueryListEvent) =>
-      setMatches(event.matches);
-
-    mediaQueryList.addEventListener("change", handleChange);
-
-    return () => mediaQueryList.removeEventListener("change", handleChange);
-  }, [query]);
-
-  return matches;
 }
 
 function isOwnDialogCloseEvent(event: unknown): boolean {
@@ -282,14 +256,17 @@ export default function RisksFclShellPage() {
 
   const routeMode = useRiskRouteMode();
   const appDir = useResolvedUiDir();
-  const isLargeDialogViewport = useMediaQuery(DIALOG_LARGE_VIEWPORT_QUERY);
-
   const nodesById = useRiskState((state) => state.nodesById);
   const loading = useRiskState((state) => state.loading);
   const loadChildren = useRiskState((state) => state.loadChildren);
   const createNode = useRiskState((state) => state.createNode);
   const updateNode = useRiskState((state) => state.updateNode);
   const removeNode = useRiskState((state) => state.removeNode);
+  const tempDocumentsBySession = useDocumentAttachmentState(
+    (state) => state.tempDocumentsBySession,
+  );
+  const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
+  const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
   const [searchText, setSearchText] = useState("");
   const [pageError, setPageError] = useState<string | null>(null);
@@ -300,6 +277,9 @@ export default function RisksFclShellPage() {
   const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<
     string | null
   >(null);
+  const [riskDocumentTempSessionId, setRiskDocumentTempSessionId] = useState(
+    createDocumentTempSessionId,
+  );
 
   const items = useMemo(() => sortRisks(Object.values(nodesById)), [nodesById]);
 
@@ -327,6 +307,18 @@ export default function RisksFclShellPage() {
     return defaultChildType(selectedParentForCreate?.nodeType ?? null);
   }, [queryNodeType, selectedParentForCreate]);
 
+  const documentScopeKey = useMemo(() => {
+    if (routeMode === "create") {
+      return `create:${queryParentId ?? "root"}:${requestedNodeType}`;
+    }
+
+    if ((routeMode === "view" || routeMode === "edit") && riskId) {
+      return `risk:${riskId}`;
+    }
+
+    return "none";
+  }, [queryParentId, requestedNodeType, riskId, routeMode]);
+
   useEffect(() => {
     void loadChildren(ROOT_PARENT).catch((error: unknown) => {
       setPageError(
@@ -340,6 +332,30 @@ export default function RisksFclShellPage() {
       );
     });
   }, [loadChildren, t]);
+
+  useEffect(() => {
+    setRiskDocumentTempSessionId(createDocumentTempSessionId());
+  }, [documentScopeKey]);
+
+  useEffect(() => {
+    if (!riskId) {
+      return;
+    }
+
+    void loadDocumentsForTarget(RISK_DOCUMENT_TARGET_TYPE, riskId).catch(
+      (error: unknown) => {
+        setObjectError(
+          mapError(
+            error,
+            t("document.errors.load", {
+              defaultValue: "خطا در بارگذاری مستندات",
+            }),
+            t,
+          ),
+        );
+      },
+    );
+  }, [loadDocumentsForTarget, riskId, t]);
 
   const treeSelectedId = useMemo(() => {
     if (routeMode === "create") {
@@ -369,6 +385,7 @@ export default function RisksFclShellPage() {
     setSelectedTreeId(id);
     setTreeExpansionAnchorId(id);
     setPageError(null);
+    setObjectError(null);
   }, []);
 
   const handleShow = useCallback(
@@ -446,6 +463,36 @@ export default function RisksFclShellPage() {
     navigate("/risks");
   }, [navigate, riskId, queryParentId, routeMode, selectedTreeId]);
 
+  const commitRiskTempDocuments = useCallback(
+    async (targetId: string) => {
+      const tempDocuments = tempDocumentsBySession[riskDocumentTempSessionId] ?? [];
+
+      if (tempDocuments.length === 0) {
+        return;
+      }
+
+      await commitTempDocuments({
+        tempSessionId: riskDocumentTempSessionId,
+        targetType: RISK_DOCUMENT_TARGET_TYPE,
+        targetId,
+        documentIds: tempDocuments.map((documentItem) => documentItem.id),
+        documentTitles: Object.fromEntries(
+          tempDocuments.map((documentItem) => [
+            documentItem.id,
+            documentItem.title || documentItem.originalFileName,
+          ]),
+        ),
+      });
+      await loadDocumentsForTarget(RISK_DOCUMENT_TARGET_TYPE, targetId);
+    },
+    [
+      commitTempDocuments,
+      loadDocumentsForTarget,
+      riskDocumentTempSessionId,
+      tempDocumentsBySession,
+    ],
+  );
+
   const requestDelete = useCallback(
     (id: string) => {
       const target = nodesById[id];
@@ -522,18 +569,20 @@ export default function RisksFclShellPage() {
             createPayload.parentId ?? null,
             createPayload,
           );
+          await commitRiskTempDocuments(created.id);
 
           setSelectedTreeId(created.id);
           setTreeExpansionAnchorId(created.id);
-          navigate("/risks");
+          navigate(`/risks/${created.id}`);
           return;
         }
 
         if (routeMode === "edit" && riskId) {
           await updateNode(riskId, payload as RiskNodeUpdate);
+          await commitRiskTempDocuments(riskId);
           setSelectedTreeId(riskId);
           setTreeExpansionAnchorId(riskId);
-          navigate("/risks");
+          navigate(`/risks/${riskId}`);
         }
       } catch (error) {
         setObjectError(
@@ -549,7 +598,15 @@ export default function RisksFclShellPage() {
         setSubmitting(false);
       }
     },
-    [createNode, navigate, riskId, routeMode, t, updateNode],
+    [
+      commitRiskTempDocuments,
+      createNode,
+      navigate,
+      riskId,
+      routeMode,
+      t,
+      updateNode,
+    ],
   );
 
   const showModal =
@@ -610,15 +667,13 @@ export default function RisksFclShellPage() {
   );
 
   const dialogStyle = useMemo<CSSProperties>(() => {
-    const width = isLargeDialogViewport
-      ? DIALOG_LARGE_WIDTH
-      : DIALOG_NORMAL_WIDTH;
+    const width = DIALOG_WIDTH;
 
     return {
       width,
       maxWidth: width,
     };
-  }, [isLargeDialogViewport]);
+  }, []);
 
   const pageGridStyle = useMemo<CSSProperties>(
     () => ({
@@ -700,7 +755,7 @@ export default function RisksFclShellPage() {
         <div style={dialogContentStyle}>
           {objectMode === "create" || objectValue ? (
             <RiskObjectPage
-              key={`${objectMode}:${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
+              key={`${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
               mode={objectMode}
               allItems={items}
               value={objectValue}
@@ -708,6 +763,8 @@ export default function RisksFclShellPage() {
               requestedNodeType={requestedNodeType}
               busy={loading || submitting}
               error={objectError}
+              documentTempSessionId={riskDocumentTempSessionId}
+              onErrorClose={() => setObjectError(null)}
               onSubmit={handleObjectSubmit}
               onCancel={handleCancel}
               onEdit={() => handleEdit()}

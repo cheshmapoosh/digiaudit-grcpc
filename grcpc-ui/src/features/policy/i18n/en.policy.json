@@ -86,13 +86,16 @@
     },
     "tabs": {
       "general": "General Information",
-      "documents": "Policy Document",
+      "documents": "Documents",
       "scope": "Policy Scope",
       "risks": "Risks",
       "controls": "Controls",
       "sources": "Policy Sources",
       "roles": "Roles",
       "reviewApproval": "Review and Approval"
+    },
+    "documents": {
+      "saveFirst": "Save the policy item first, then upload documents."
     },
     "tree": {
       "expand": "Expand branch",

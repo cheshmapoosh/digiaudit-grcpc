@@ -4,6 +4,7 @@ import type {
     DocumentAttachment,
     DocumentCommitPayload,
     DocumentTempUploadPayload,
+    DocumentUploadPayload,
     DocumentUploadPolicy,
 } from "../domain/document.model";
 import { DocumentApiRepo } from "../infra/document.api.repo";
@@ -21,6 +22,10 @@ interface DocumentAttachmentState {
     loadUploadPolicy(targetType: string): Promise<DocumentUploadPolicy>;
     uploadTemp(
         payload: DocumentTempUploadPayload,
+        onProgress?: (progress: number) => void,
+    ): Promise<DocumentAttachment>;
+    upload(
+        payload: DocumentUploadPayload,
         onProgress?: (progress: number) => void,
     ): Promise<DocumentAttachment>;
     commitTemp(payload: DocumentCommitPayload): Promise<DocumentAttachment[]>;
@@ -126,15 +131,35 @@ export const useDocumentAttachmentState = create<DocumentAttachmentState>((set, 
         return uploaded;
     },
 
+    async upload(payload, onProgress) {
+        const uploaded = await documentRepo.upload(payload, onProgress);
+        set((state) => {
+            const activeKey = targetKey(payload.targetType, payload.targetId);
+            const current = state.documentsByTarget[activeKey] ?? [];
+            return {
+                documentsByTarget: {
+                    ...state.documentsByTarget,
+                    [activeKey]: [uploaded, ...current],
+                },
+            };
+        });
+        return uploaded;
+    },
+
     async commitTemp(payload) {
         const committed = await documentRepo.commitTemp(payload);
         set((state) => {
             const activeKey = targetKey(payload.targetType, payload.targetId);
             const active = state.documentsByTarget[activeKey] ?? [];
-            const committedIds = new Set(committed.map((item) => item.id));
-            const remainingTemp = (
-                state.tempDocumentsBySession[payload.tempSessionId] ?? []
-            ).filter((item) => !committedIds.has(item.id));
+            const currentTemp = state.tempDocumentsBySession[payload.tempSessionId] ?? [];
+            const committedTempIds = new Set(
+                payload.documentIds && payload.documentIds.length > 0
+                    ? payload.documentIds
+                    : currentTemp.map((item) => item.id),
+            );
+            const remainingTemp = currentTemp.filter(
+                (item) => !committedTempIds.has(item.id),
+            );
 
             return {
                 documentsByTarget: {

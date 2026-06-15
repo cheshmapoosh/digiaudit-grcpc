@@ -1,4 +1,11 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -30,6 +37,10 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
+import {
+    DocumentAttachmentsManager,
+    type DocumentBeforeParentSubmitHandler,
+} from "@/features/document";
 
 export type PolicyObjectMode = "create" | "edit" | "view";
 
@@ -76,6 +87,8 @@ export interface PolicyObjectPageProps {
     requestedNodeType?: PolicyNodeType;
     busy?: boolean;
     error?: string | null;
+    documentTempSessionId?: string;
+    onErrorClose?: () => void;
     onSubmit: (payload: PolicyNodeCreate | PolicyNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
     onEdit?: () => void;
@@ -410,7 +423,7 @@ function defaultTabs(nodeType: PolicyNodeType): PolicyTabKey[] {
 function resolveTabLabel(tab: PolicyTabKey, t: ReturnType<typeof useTranslation>["t"]): string {
     const labels: Record<PolicyTabKey, string> = {
         general: t("policy.tabs.general", { defaultValue: "اطلاعات کلی" }),
-        documents: t("policy.tabs.documents", { defaultValue: "مستند سیاست" }),
+        documents: t("policy.tabs.documents", { defaultValue: "مستندات" }),
         scope: t("policy.tabs.scope", { defaultValue: "دامنه سیاست" }),
         risks: t("policy.tabs.risks", { defaultValue: "ریسک‌ها" }),
         controls: t("policy.tabs.controls", { defaultValue: "کنترل‌ها" }),
@@ -517,6 +530,8 @@ export default function PolicyObjectPage({
     requestedNodeType,
     busy = false,
     error,
+    documentTempSessionId,
+    onErrorClose,
     onSubmit,
     onCancel,
     onEdit,
@@ -531,6 +546,8 @@ export default function PolicyObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(form.nodeType), [form.nodeType]);
     const [activeTab, setActiveTab] = useState<PolicyTabKey>("general");
+    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
+    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? parent ?? null
@@ -544,6 +561,7 @@ export default function PolicyObjectPage({
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerCategory = resolveCategoryLabel(form.policyCategory, t);
     const headerCommunication = resolveCommunicationMethodLabel(form.communicationMethod, t);
+    const currentPolicyId = value?.id ?? null;
 
     const handleChange = <K extends keyof PolicyFormState>(
         key: K,
@@ -630,8 +648,31 @@ export default function PolicyObjectPage({
         };
     };
 
+    const handleDocumentBeforeParentSubmitChange = useCallback(
+        (handler: DocumentBeforeParentSubmitHandler | null) => {
+            documentBeforeSubmitRef.current = handler;
+        },
+        [],
+    );
+
     const handleSubmit = async (statusOverride?: PolicyStatus) => {
         if (readOnly || !validate()) {
+            return;
+        }
+
+        if (hasPendingDocumentUploads) {
+            setValidationError(
+                t("document.validation.waitForUpload", {
+                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
+                }),
+            );
+            setActiveTab("documents");
+            return;
+        }
+
+        const documentsReady = await documentBeforeSubmitRef.current?.();
+        if (documentsReady === false) {
+            setActiveTab("documents");
             return;
         }
 
@@ -1008,8 +1049,6 @@ export default function PolicyObjectPage({
                     />
                 </FormField>
             </div>
-
-            <div style={FOOTER_STYLE}>{renderFooterActions()}</div>
         </>
     );
 
@@ -1114,30 +1153,33 @@ export default function PolicyObjectPage({
         </>
     );
 
-    const renderTabContent = () => {
-        if (activeTab === "general") {
+    const renderTabContent = (tab: PolicyTabKey) => {
+        if (tab === "general") {
             return renderGeneralTab();
         }
 
-        if (activeTab === "documents") {
+        if (tab === "documents") {
             return (
-                <TablePlaceholder
-                    title={t("policy.tabs.documents", { defaultValue: "مستند سیاست" })}
-                    actions={tableActionButtons()}
-                    columns={[
-                        t("policy.fields.documentType", { defaultValue: "نوع" }),
-                        t("policy.fields.title", { defaultValue: "عنوان" }),
-                        t("policy.fields.version", { defaultValue: "نسخه" }),
-                        t("policy.fields.fileSize", { defaultValue: "اندازه فایل" }),
-                        t("policy.fields.fileType", { defaultValue: "نوع فایل" }),
-                        t("policy.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                        t("policy.fields.creatorName", { defaultValue: "ایجاد کننده" }),
-                    ]}
+                <DocumentAttachmentsManager
+                    key={currentPolicyId ?? "unsaved-policy-documents"}
+                    title={t("policy.tabs.documents", { defaultValue: "مستندات" })}
+                    targetType="POLICY_NODE"
+                    targetId={currentPolicyId}
+                    tempSessionId={documentTempSessionId}
+                    stagingMode="tempUntilParentSave"
+                    busy={busy}
+                    readOnly={readOnly}
+                    saveFirstMessage={t("policy.documents.saveFirst", {
+                        defaultValue:
+                            "ابتدا آیتم سیاست را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
+                    })}
+                    onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
+                    onPendingUploadsChange={setHasPendingDocumentUploads}
                 />
             );
         }
 
-        if (activeTab === "scope") {
+        if (tab === "scope") {
             return (
                 <TablePlaceholder
                     title={t("policy.tabs.scope", { defaultValue: "دامنه سیاست" })}
@@ -1153,7 +1195,7 @@ export default function PolicyObjectPage({
             );
         }
 
-        if (activeTab === "risks") {
+        if (tab === "risks") {
             return (
                 <TablePlaceholder
                     title={t("policy.tabs.risks", { defaultValue: "ریسک‌ها" })}
@@ -1168,7 +1210,7 @@ export default function PolicyObjectPage({
             );
         }
 
-        if (activeTab === "controls") {
+        if (tab === "controls") {
             return (
                 <TablePlaceholder
                     title={t("policy.tabs.controls", { defaultValue: "کنترل‌ها" })}
@@ -1187,7 +1229,7 @@ export default function PolicyObjectPage({
             );
         }
 
-        if (activeTab === "sources") {
+        if (tab === "sources") {
             return (
                 <TablePlaceholder
                     title={t("policy.tabs.sources", { defaultValue: "منابع سیاست" })}
@@ -1202,7 +1244,7 @@ export default function PolicyObjectPage({
             );
         }
 
-        if (activeTab === "roles") {
+        if (tab === "roles") {
             return (
                 <TablePlaceholder
                     title={t("policy.tabs.roles", { defaultValue: "نقش‌ها" })}
@@ -1229,6 +1271,8 @@ export default function PolicyObjectPage({
             />
         );
     };
+
+    const resolvedActiveTab = tabs.includes(activeTab) ? activeTab : "general";
 
     return (
         <div style={ROOT_STYLE}>
@@ -1288,12 +1332,12 @@ export default function PolicyObjectPage({
 
             <PolicyTabs
                 tabs={tabs}
-                activeTab={tabs.includes(activeTab) ? activeTab : "general"}
+                activeTab={resolvedActiveTab}
                 onChange={setActiveTab}
             />
 
             {error ? (
-                <MessageStrip design="Negative" hideCloseButton>
+                <MessageStrip design="Negative" onClose={onErrorClose}>
                     {error}
                 </MessageStrip>
             ) : null}
@@ -1304,7 +1348,9 @@ export default function PolicyObjectPage({
                 </MessageStrip>
             ) : null}
 
-            <div style={BODY_STYLE}>{renderTabContent()}</div>
+            <div style={BODY_STYLE}>{renderTabContent(resolvedActiveTab)}</div>
+
+            <div style={FOOTER_STYLE}>{renderFooterActions()}</div>
         </div>
     );
 }

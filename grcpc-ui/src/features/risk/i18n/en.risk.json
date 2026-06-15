@@ -29,6 +29,9 @@
       "responsePattern": "Response pattern",
       "controlCenter": "Control center"
     },
+    "documents": {
+      "saveFirst": "Save the risk item first, then upload documents."
+    },
     "fields": {
       "code": "Code",
       "identifier": "Identifier",

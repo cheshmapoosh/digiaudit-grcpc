@@ -1,4 +1,11 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -29,6 +36,10 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
+import {
+    DocumentAttachmentsManager,
+    type DocumentBeforeParentSubmitHandler,
+} from "@/features/document";
 
 export type RiskObjectMode = "create" | "edit" | "view";
 
@@ -68,6 +79,8 @@ export interface RiskObjectPageProps {
     requestedNodeType?: RiskNodeType;
     busy?: boolean;
     error?: string | null;
+    documentTempSessionId?: string;
+    onErrorClose?: () => void;
     onSubmit: (payload: RiskNodeCreate | RiskNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
     onEdit?: () => void;
@@ -459,6 +472,8 @@ export default function RiskObjectPage({
                                            requestedNodeType,
                                            busy = false,
                                            error,
+                                           documentTempSessionId,
+                                           onErrorClose,
                                            onSubmit,
                                            onCancel,
                                            onEdit,
@@ -473,6 +488,8 @@ export default function RiskObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(form.nodeType), [form.nodeType]);
     const [activeTab, setActiveTab] = useState<RiskTabKey>("general");
+    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
+    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? parent ?? null
@@ -484,6 +501,7 @@ export default function RiskObjectPage({
         : t("common.none", { defaultValue: "ندارد" });
     const headerType = resolveNodeTypeLabel(form.nodeType, t);
     const headerStatus = resolveStatusLabel(form.status, t);
+    const currentRiskId = value?.id ?? null;
 
     const handleChange = <K extends keyof RiskFormState>(
         key: K,
@@ -523,8 +541,31 @@ export default function RiskObjectPage({
         return true;
     };
 
+    const handleDocumentBeforeParentSubmitChange = useCallback(
+        (handler: DocumentBeforeParentSubmitHandler | null) => {
+            documentBeforeSubmitRef.current = handler;
+        },
+        [],
+    );
+
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
+            return;
+        }
+
+        if (hasPendingDocumentUploads) {
+            setValidationError(
+                t("document.validation.waitForUpload", {
+                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
+                }),
+            );
+            setActiveTab("documents");
+            return;
+        }
+
+        const documentsReady = await documentBeforeSubmitRef.current?.();
+        if (documentsReady === false) {
+            setActiveTab("documents");
             return;
         }
 
@@ -743,47 +784,50 @@ export default function RiskObjectPage({
                 </FormField>
             </div>
 
-            <div style={FOOTER_STYLE}>
-                {mode === "view" ? (
-                    <Button
-                        design="Emphasized"
-                        disabled={busy || !onEdit}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={onEdit}
-                    >
-                        {t("common.edit", { defaultValue: "ویرایش" })}
-                    </Button>
-                ) : (
-                    <Button
-                        design="Emphasized"
-                        disabled={busy}
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={handleSubmit}
-                    >
-                        {t("common.save", { defaultValue: "ذخیره" })}
-                    </Button>
-                )}
-
-                <Button
-                    design="Transparent"
-                    disabled={busy}
-                    style={ACTION_BUTTON_STYLE}
-                    onClick={onCancel}
-                >
-                    {mode === "view"
-                        ? t("common.close", { defaultValue: "بستن" })
-                        : t("common.cancel", { defaultValue: "انصراف" })}
-                </Button>
-            </div>
         </>
     );
 
-    const renderTabContent = () => {
-        if (activeTab === "general") {
+    const renderFooterActions = () => (
+        <div style={FOOTER_STYLE}>
+            {mode === "view" ? (
+                <Button
+                    design="Emphasized"
+                    disabled={busy || !onEdit}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={onEdit}
+                >
+                    {t("common.edit", { defaultValue: "ویرایش" })}
+                </Button>
+            ) : (
+                <Button
+                    design="Emphasized"
+                    disabled={busy}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={handleSubmit}
+                >
+                    {t("common.save", { defaultValue: "ذخیره" })}
+                </Button>
+            )}
+
+            <Button
+                design="Transparent"
+                disabled={busy}
+                style={ACTION_BUTTON_STYLE}
+                onClick={onCancel}
+            >
+                {mode === "view"
+                    ? t("common.close", { defaultValue: "بستن" })
+                    : t("common.cancel", { defaultValue: "انصراف" })}
+            </Button>
+        </div>
+    );
+
+    const renderTabContent = (tab: RiskTabKey) => {
+        if (tab === "general") {
             return renderGeneralTab();
         }
 
-        if (activeTab === "impacts") {
+        if (tab === "impacts") {
             return (
                 <TablePlaceholder
                     title={t("risk.tabs.impacts", { defaultValue: "محرک‌ها و اثرات" })}
@@ -796,7 +840,7 @@ export default function RiskObjectPage({
             );
         }
 
-        if (activeTab === "existingRisks") {
+        if (tab === "existingRisks") {
             return (
                 <TablePlaceholder
                     title={t("risk.tabs.existingRisks", { defaultValue: "ریسک موجود" })}
@@ -812,7 +856,7 @@ export default function RiskObjectPage({
             );
         }
 
-        if (activeTab === "responsePattern") {
+        if (tab === "responsePattern") {
             return (
                 <TablePlaceholder
                     title={t("risk.tabs.responsePattern", { defaultValue: "الگوی پاسخ" })}
@@ -827,7 +871,7 @@ export default function RiskObjectPage({
             );
         }
 
-        if (activeTab === "controlCenter") {
+        if (tab === "controlCenter") {
             return (
                 <TablePlaceholder
                     title={t("risk.tabs.controlCenter", { defaultValue: "مرکز کنترل" })}
@@ -840,7 +884,7 @@ export default function RiskObjectPage({
             );
         }
 
-        if (activeTab === "riskSummary") {
+        if (tab === "riskSummary") {
             return (
                 <TablePlaceholder
                     title={t("risk.tabs.riskSummary", { defaultValue: "خلاصه ریسک" })}
@@ -852,7 +896,7 @@ export default function RiskObjectPage({
             );
         }
 
-        if (activeTab === "kriTemplate") {
+        if (tab === "kriTemplate") {
             return (
                 <TablePlaceholder
                     title={t("risk.tabs.kriTemplate", { defaultValue: "قالب KRI" })}
@@ -866,16 +910,26 @@ export default function RiskObjectPage({
         }
 
         return (
-            <TablePlaceholder
+            <DocumentAttachmentsManager
+                key={currentRiskId ?? "unsaved-risk-documents"}
                 title={t("risk.tabs.documents", { defaultValue: "مستندات" })}
-                columns={[
-                    t("risk.fields.name", { defaultValue: "نام" }),
-                    t("risk.fields.type", { defaultValue: "نوع" }),
-                    t("risk.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                ]}
+                targetType="RISK_NODE"
+                targetId={currentRiskId}
+                tempSessionId={documentTempSessionId}
+                stagingMode="tempUntilParentSave"
+                busy={busy}
+                readOnly={readOnly}
+                saveFirstMessage={t("risk.documents.saveFirst", {
+                    defaultValue:
+                        "ابتدا آیتم ریسک را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
+                })}
+                onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
+                onPendingUploadsChange={setHasPendingDocumentUploads}
             />
         );
     };
+
+    const resolvedActiveTab = tabs.includes(activeTab) ? activeTab : "general";
 
     return (
         <div style={ROOT_STYLE}>
@@ -923,12 +977,12 @@ export default function RiskObjectPage({
 
             <RiskTabs
                 tabs={tabs}
-                activeTab={tabs.includes(activeTab) ? activeTab : "general"}
+                activeTab={resolvedActiveTab}
                 onChange={setActiveTab}
             />
 
             {error ? (
-                <MessageStrip design="Negative" hideCloseButton>
+                <MessageStrip design="Negative" onClose={onErrorClose}>
                     {error}
                 </MessageStrip>
             ) : null}
@@ -939,7 +993,9 @@ export default function RiskObjectPage({
                 </MessageStrip>
             ) : null}
 
-            <div style={BODY_STYLE}>{renderTabContent()}</div>
+            <div style={BODY_STYLE}>{renderTabContent(resolvedActiveTab)}</div>
+
+            {renderFooterActions()}
         </div>
     );
 }

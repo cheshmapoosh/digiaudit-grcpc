@@ -1,0 +1,62 @@
+{
+  "document": {
+    "title": "Documents",
+    "editHint": "Select a file to add a document.",
+    "actions": {
+      "upload": "Select File",
+      "saveTitle": "Save",
+      "download": "Download",
+      "delete": "Delete"
+    },
+    "upload": {
+      "inProgress": "Uploading files...",
+      "fileInProgress": "Uploading",
+      "fileProgress": "Uploading {{progress}}%",
+      "successState": "Upload complete",
+      "success": "File \"{{fileName}}\" uploaded successfully.",
+      "failed": "Upload failed",
+      "removeFailed": "Delete"
+    },
+    "titleSave": {
+      "success": "Document title saved successfully."
+    },
+    "fields": {
+      "title": "Title",
+      "originalFileName": "File Name",
+      "contentType": "File Type",
+      "size": "Size",
+      "status": "Status",
+      "uploadedAt": "Uploaded At",
+      "actions": "Actions"
+    },
+    "status": {
+      "uploading": "Uploading {{progress}}%",
+      "success": "Upload complete",
+      "error": "Error",
+      "temp": "Temporary",
+      "active": "Saved"
+    },
+    "empty": "No document has been added.",
+    "saveFirst": "Save the item first, then upload documents.",
+    "saveFirst.process": "Save the process item first, then upload documents.",
+    "maxFileSize": "Maximum size per file: {{size}} MB",
+    "maxFileSizeUnknown": "Maximum file size is read from system settings.",
+    "validation": {
+      "fileTooLarge": "The file exceeds the maximum upload size.",
+      "waitForUpload": "Wait for file uploads to finish, then save."
+    },
+    "errors": {
+      "load": "Failed to load documents",
+      "upload": "File upload failed",
+      "delete": "Failed to delete document",
+      "updateTitle": "Failed to save document title",
+      "loadPolicy": "Failed to load document upload settings",
+      "missingTempSession": "The temporary document upload session is not ready.",
+      "storageDisabled": "Document storage is not configured. Enable MinIO."
+    },
+    "delete": {
+      "title": "Delete Document",
+      "confirm": "Delete document \"{{title}}\"?"
+    }
+  }
+}

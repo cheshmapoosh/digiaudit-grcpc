@@ -2,7 +2,7 @@ import type { AuditFields } from "@/shared/domain/audit.model";
 
 export type ProcessStatus = "active" | "inactive";
 
-export type ProcessNodeType = "process" | "subProcess" | "control";
+export type ProcessNodeType = "process" | "subProcess";
 
 export type ProcessCategory =
     | "operational"
@@ -12,10 +12,6 @@ export type ProcessCategory =
     | "compliance"
     | "it"
     | "other";
-
-export type ControlImportance = "low" | "medium" | "high" | "critical";
-
-export type ControlAutomation = "manual" | "automated" | "semiAutomated";
 
 export interface ProcessNode extends AuditFields {
     id: string;
@@ -34,15 +30,6 @@ export interface ProcessNode extends AuditFields {
 
     objective?: string;
     operationCycle?: string;
-
-    controlAutomation?: ControlAutomation;
-    controlFrequency?: string;
-    controlClassification?: string;
-    controlOwner?: string;
-    testDirection?: string;
-    testType?: string;
-    testProgram?: string;
-    importance?: ControlImportance;
 }
 
 export type ProcessReadonlyKeys =

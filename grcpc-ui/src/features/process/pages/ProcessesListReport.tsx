@@ -9,12 +9,14 @@ import {
     Title,
 } from "@ui5/webcomponents-react";
 
-import type { ProcessNode, ProcessNodeType } from "../domain/process.model";
-import CreateProcessSplitButton from "../components/CreateProcessSplitButton";
-import ProcessTree from "../components/ProcessTree";
+import type { ProcessNodeType } from "../domain/process.model";
+import ProcessCreateMenu from "../components/ProcessCreateMenu";
+import ProcessControlTree from "../components/ProcessControlTree";
+import type { ProcessControlTreeItem } from "../utils/process-control.tree";
 
 export interface ProcessesListReportProps {
-    items: ProcessNode[];
+    items: ProcessControlTreeItem[];
+    selectedItem?: ProcessControlTreeItem | null;
     selectedId?: string | null;
     expansionAnchorId?: string | null;
     searchText: string;
@@ -24,6 +26,7 @@ export interface ProcessesListReportProps {
     createOptions: ProcessNodeType[];
     onSearchTextChange: (value: string) => void;
     onCreate: (nodeType: ProcessNodeType) => void;
+    onCreateControl: () => void;
     onShow: (id: string) => void;
     onDelete: (id: string) => void;
     onSelect: (id: string) => void;
@@ -35,6 +38,7 @@ function readInputValue(event: unknown): string {
 
 export default function ProcessesListReport({
                                                 items,
+                                                selectedItem,
                                                 selectedId,
                                                 expansionAnchorId,
                                                 searchText,
@@ -44,6 +48,7 @@ export default function ProcessesListReport({
                                                 createOptions,
                                                 onSearchTextChange,
                                                 onCreate,
+                                                onCreateControl,
                                                 onShow,
                                                 onDelete,
                                                 onSelect,
@@ -68,7 +73,7 @@ export default function ProcessesListReport({
         [],
     );
 
-    const canCreate = !busy && createOptions.length > 0;
+    const canCreate = !busy;
 
     return (
         <div
@@ -88,10 +93,12 @@ export default function ProcessesListReport({
                 }
                 endContent={
                     <div style={actionGroupStyle}>
-                        <CreateProcessSplitButton
+                        <ProcessCreateMenu
                             disabled={!canCreate}
-                            nodeTypes={["process", "subProcess", "control"]}
-                            onCreate={onCreate}
+                            style={actionButtonStyle}
+                            nodeTypes={createOptions}
+                            onCreateProcess={onCreate}
+                            onCreateControl={onCreateControl}
                         />
 
                         <Button
@@ -109,7 +116,11 @@ export default function ProcessesListReport({
                             style={actionButtonStyle}
                             onClick={() => selectedId && onDelete(selectedId)}
                         >
-                            {t("common.delete", { defaultValue: "حذف" })}
+                            {selectedItem?.nodeType === "control"
+                                ? t("control.actions.deleteAssignment", {
+                                    defaultValue: "حذف اتصال کنترل",
+                                })
+                                : t("common.delete", { defaultValue: "حذف" })}
                         </Button>
                     </div>
                 }
@@ -144,7 +155,7 @@ export default function ProcessesListReport({
             >
                 {busy ? <BusyIndicator active /> : null}
 
-                <ProcessTree
+                <ProcessControlTree
                     items={items}
                     selectedId={selectedId}
                     expansionAnchorId={expansionAnchorId}

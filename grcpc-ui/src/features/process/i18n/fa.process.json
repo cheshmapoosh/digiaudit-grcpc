@@ -7,8 +7,7 @@
     },
     "nodeType": {
       "process": "فرآیند",
-      "subProcess": "زیر فرآیند",
-      "control": "کنترل"
+      "subProcess": "زیر فرآیند"
     },
     "category": {
       "operational": "عملیاتی",
@@ -19,16 +18,9 @@
       "support": "پشتیبانی",
       "strategic": "استراتژیک"
     },
-    "controlAutomation": {
-      "manual": "دستی",
-      "automated": "خودکار",
-      "semiAutomated": "نیمه‌خودکار"
-    },
-    "importance": {
-      "low": "کم",
-      "medium": "متوسط",
-      "high": "زیاد",
-      "critical": "بحرانی"
+    "status": {
+      "active": "فعال",
+      "inactive": "غیرفعال"
     },
     "fields": {
       "name": "نام",
@@ -41,15 +33,8 @@
       "processCategory": "نوع فرآیند",
       "owner": "مالک",
       "documents": "مستندات",
-      "controlAutomation": "کنترل سیستمی",
       "operationCycle": "دوره عملیاتی",
       "objective": "هدف",
-      "importance": "اهمیت",
-      "controlClassification": "طبقه بندی کنترل",
-      "controlOwner": "مالک",
-      "testDirection": "جهت آزمون",
-      "testType": "نوع آزمون",
-      "testProgram": "برنامه آزمون",
       "requirement": "الزام",
       "regulationName": "نام قانون",
       "effectiveDate": "تاریخ اعتبار",
@@ -58,21 +43,181 @@
       "parentProcess": "والد فرآیند",
       "nodeType": "نوع آیتم",
       "sortOrder": "ترتیب نمایش",
-      "controlFrequency": "تناوب کنترل",
       "validTo": "تاریخ اعتبار",
       "lawName": "نام قانون"
     },
+    "regulations": {
+      "title": "قوانین",
+      "empty": "قانونی برای این آیتم افزوده نشده است.",
+      "saveFirst": "ابتدا آیتم فرآیندی را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری قوانین افزوده‌شده.",
+      "retry": "تلاش دوباره",
+      "add": "افزودن",
+      "addPlaceholder": "انتخاب قانون",
+      "addAccessibleName": "انتخاب قانون برای افزودن",
+      "noAssignable": "قانون قابل افزودن دیگری وجود ندارد.",
+      "mutationError": "خطا در ذخیره تغییرات قوانین.",
+      "duplicate": "این قانون قبلاً برای این آیتم افزوده شده است.",
+      "remove": "حذف",
+      "removeTitle": "حذف قانون",
+      "removeConfirm": "آیا از حذف قانون «{{title}}» از این آیتم مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول قوانین آیتم فرآیندی",
+      "columns": {
+        "code": "کد",
+        "title": "نام قانون",
+        "description": "شرح",
+        "issuer": "صادرکننده",
+        "status": "وضعیت",
+        "validity": "اعتبار",
+        "actions": "عملیات"
+      }
+    },
+    "objectives": {
+      "title": "اهداف",
+      "empty": "هیچ هدفی به این آیتم فرآیندی تخصیص داده نشده است.",
+      "saveFirst": "برای مشاهده اهداف، ابتدا آیتم فرآیندی را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری اهداف تخصیص‌یافته.",
+      "retry": "تلاش دوباره",
+      "assign": "تخصیص هدف",
+      "assignPlaceholder": "انتخاب هدف",
+      "assignAccessibleName": "انتخاب هدف برای تخصیص",
+      "noAssignable": "هدف قابل تخصیص دیگری وجود ندارد.",
+      "mutationError": "خطا در ذخیره تغییرات اهداف فرآیند.",
+      "remove": "حذف",
+      "removeTitle": "حذف تخصیص هدف",
+      "removeConfirm": "آیا از حذف تخصیص هدف «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول اهداف فرآیند",
+      "columns": {
+        "code": "کد",
+        "title": "عنوان",
+        "description": "شرح",
+        "assignmentType": "نوع تخصیص",
+        "status": "وضعیت",
+        "actions": "عملیات"
+      },
+      "assignmentTypes": {
+        "scope": "دامنه",
+        "owner": "مالک",
+        "participant": "مشارکت‌کننده"
+      },
+      "types": {
+        "operational": "عملیاتی",
+        "compliance": "انطباق",
+        "strategic": "استراتژیک",
+        "financial": "مالی",
+        "reporting": "گزارشگری",
+        "market": "بازار"
+      }
+    },
+    "accountGroups": {
+      "title": "گروه‌های حساب",
+      "empty": "هیچ گروه حسابی به این آیتم فرآیندی تخصیص داده نشده است.",
+      "saveFirst": "برای مشاهده گروه‌های حساب، ابتدا آیتم فرآیندی را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری گروه‌های حساب تخصیص‌یافته.",
+      "retry": "تلاش دوباره",
+      "assign": "تخصیص گروه حساب",
+      "assignPlaceholder": "انتخاب گروه حساب",
+      "assignAccessibleName": "انتخاب گروه حساب برای تخصیص",
+      "noAssignable": "گروه حساب قابل تخصیص دیگری وجود ندارد.",
+      "mutationError": "خطا در ذخیره تغییرات گروه‌های حساب فرآیند.",
+      "remove": "حذف",
+      "removeTitle": "حذف تخصیص گروه حساب",
+      "removeConfirm": "آیا از حذف تخصیص گروه حساب «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول گروه‌های حساب فرآیند",
+      "columns": {
+        "code": "کد",
+        "title": "عنوان",
+        "description": "شرح",
+        "assignmentType": "نوع تخصیص",
+        "status": "وضعیت",
+        "actions": "عملیات"
+      },
+      "assignmentTypes": {
+        "scope": "دامنه",
+        "owner": "مالک",
+        "participant": "مشارکت‌کننده"
+      }
+    },
+    "risks": {
+      "title": "ریسک‌ها",
+      "empty": "ریسکی برای این آیتم افزوده نشده است.",
+      "saveFirst": "ابتدا آیتم فرآیندی را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری ریسک‌های افزوده‌شده.",
+      "retry": "تلاش دوباره",
+      "add": "افزودن",
+      "addPlaceholder": "انتخاب ریسک",
+      "addAccessibleName": "انتخاب ریسک برای افزودن",
+      "noAssignable": "ریسک قابل افزودن دیگری وجود ندارد.",
+      "mutationError": "خطا در ذخیره تغییرات ریسک‌ها.",
+      "duplicate": "این ریسک قبلاً برای این آیتم افزوده شده است.",
+      "remove": "حذف",
+      "removeTitle": "حذف ریسک",
+      "removeConfirm": "آیا از حذف ریسک «{{title}}» از این آیتم مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول ریسک‌های آیتم فرآیندی",
+      "columns": {
+        "code": "کد",
+        "title": "نام ریسک",
+        "description": "شرح",
+        "type": "نوع",
+        "status": "وضعیت",
+        "actions": "عملیات"
+      },
+      "riskTypes": {
+        "operational": "عملیاتی",
+        "financial": "مالی",
+        "strategic": "راهبردی",
+        "compliance": "انطباق",
+        "technology": "فناوری",
+        "reputation": "شهرت",
+        "safety": "ایمنی",
+        "other": "سایر"
+      }
+    },
+    "controls": {
+      "title": "کنترل‌ها",
+      "empty": "هیچ کنترلی به این زیر فرآیند متصل نشده است.",
+      "saveFirst": "ابتدا زیر فرآیند را ذخیره کنید.",
+      "loadError": "خطا در بارگذاری کنترل‌های زیر فرآیند.",
+      "retry": "تلاش دوباره",
+      "assign": "افزودن کنترل",
+      "assignPlaceholder": "انتخاب کنترل",
+      "assignAccessibleName": "انتخاب کنترل برای اتصال",
+      "noAssignable": "کنترل قابل اتصال دیگری وجود ندارد.",
+      "mutationError": "خطا در ذخیره تغییرات کنترل‌های زیر فرآیند.",
+      "duplicate": "این کنترل قبلاً به این زیر فرآیند متصل شده است.",
+      "show": "نمایش",
+      "remove": "حذف",
+      "removeTitle": "حذف اتصال کنترل",
+      "removeConfirm": "آیا از حذف اتصال کنترل «{{title}}» مطمئن هستید؟",
+      "confirmRemove": "حذف",
+      "cancelRemove": "انصراف",
+      "tableAccessibleName": "جدول کنترل‌های زیر فرآیند",
+      "columns": {
+        "code": "کد",
+        "name": "نام کنترل",
+        "description": "شرح",
+        "status": "وضعیت",
+        "owner": "مسئول",
+        "validity": "اعتبار",
+        "actions": "عملیات"
+      }
+    },
     "tabs": {
       "general": "اطلاعات کلی",
-      "controlObjectives": "اهداف کنترلی",
       "accountGroups": "گروه حساب",
-      "regulations": "الزامات",
-      "risks": "ریسک",
-      "controls": "کنترل‌ها",
+      "risks": "ریسک‌ها",
       "rules": "قوانین",
-      "requirements": "الزامات",
       "objectives": "اهداف",
-      "documents": "مستندات"
+      "documents": "مستندات",
+      "controls": "کنترل‌ها"
     },
     "tree": {
       "expand": "باز کردن شاخه",
@@ -85,6 +230,9 @@
       "modalPlaceholder": "جزئیات مودال فرآیند در قدم بعدی تکمیل می‌شود. در این مرحله ساختار درختی، انتخاب و پنل جزئیات پیاده‌سازی شده است.",
       "modalTitle": "مرکز فرآیند",
       "createModalTitle": "ایجاد"
+    },
+    "createMenu": {
+      "control": "کنترل"
     },
     "create": {
       "title": "ایجاد آیتم فرآیندی"
@@ -105,11 +253,9 @@
       "parentNotFound": "والد انتخاب‌شده یافت نشد",
       "hasChildren": "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
       "invalidHierarchy": "ساختار انتخاب‌شده برای فرآیند معتبر نیست",
-      "controlCannotHaveChildren": "کنترل زیرشاخه ندارد و امکان ایجاد آیتم زیر کنترل وجود ندارد",
       "delete": "خطا در حذف آیتم فرآیندی",
       "save": "خطا در ذخیره آیتم فرآیندی",
-      "selectProcessParent": "برای ایجاد زیر فرآیند، ابتدا یک فرآیند یا زیر فرآیند همان والد را انتخاب کنید.",
-      "selectSubProcessParent": "برای ایجاد کنترل، ابتدا یک زیر فرآیند یا کنترل همان والد را انتخاب کنید."
+      "selectProcessParent": "برای ایجاد زیر فرآیند، ابتدا یک فرآیند یا زیر فرآیند همان والد را انتخاب کنید."
     },
     "validation": {
       "codeRequired": "کد الزامی است",

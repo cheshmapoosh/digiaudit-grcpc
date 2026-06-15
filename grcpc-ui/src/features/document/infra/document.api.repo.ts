@@ -5,6 +5,7 @@ import type {
     DocumentCommitPayload,
     DocumentDownloadUrl,
     DocumentTempUploadPayload,
+    DocumentUploadPayload,
     DocumentUploadPolicy,
 } from "../domain/document.model";
 
@@ -97,7 +98,12 @@ function uploadWithProgress<T>(
                 return;
             }
 
-            onProgress(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+            if (event.total <= 0) {
+                return;
+            }
+
+            const progress = Math.round((event.loaded / event.total) * 100);
+            onProgress(Math.min(99, Math.max(1, progress)));
         };
 
         xhr.onload = () => {
@@ -143,6 +149,25 @@ export class DocumentApiRepo {
     uploadPolicy(targetType: string): Promise<DocumentUploadPolicy> {
         return httpClient.get<DocumentUploadPolicy>(
             appendQuery(`${BASE_URL}/upload-policy`, { targetType }),
+        );
+    }
+
+    upload(
+        payload: DocumentUploadPayload,
+        onProgress?: (progress: number) => void,
+    ): Promise<DocumentAttachment> {
+        const formData = new FormData();
+        formData.append("targetType", payload.targetType);
+        formData.append("targetId", payload.targetId);
+        if (payload.title) {
+            formData.append("title", payload.title);
+        }
+        formData.append("file", payload.file);
+
+        return uploadWithProgress<DocumentAttachment>(
+            BASE_URL,
+            formData,
+            onProgress,
         );
     }
 

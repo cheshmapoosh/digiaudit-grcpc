@@ -5,7 +5,7 @@ export type DocumentStatus = "ACTIVE" | "TEMP" | "DELETED" | "QUARANTINED";
 export interface DocumentAttachment extends AuditFields {
     id: string;
     targetType: string;
-    targetId: string;
+    targetId: string | null;
     bucketName: string;
     objectKey: string;
     originalFileName: string;
@@ -40,6 +40,13 @@ export interface DocumentCommitPayload {
     targetId: string;
     documentIds?: string[];
     documentTitles?: Record<string, string>;
+}
+
+export interface DocumentUploadPayload {
+    targetType: string;
+    targetId: string;
+    title?: string;
+    file: File;
 }
 
 export interface DocumentTempUploadPayload {

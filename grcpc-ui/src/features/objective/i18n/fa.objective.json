@@ -42,6 +42,9 @@
       "organizationUnits": "واحد سازمانی",
       "documents": "مستندات"
     },
+    "documents": {
+      "saveFirst": "ابتدا هدف را ذخیره کنید، سپس مستندات را بارگذاری کنید."
+    },
     "tree": {
       "expand": "باز کردن شاخه",
       "collapse": "بستن شاخه"

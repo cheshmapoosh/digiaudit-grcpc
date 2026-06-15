@@ -282,7 +282,7 @@ function getTabs(
         },
         {
             key: "documents",
-            label: t("policy.tabs.documents", { defaultValue: "مستند سیاست" }),
+            label: t("policy.tabs.documents", { defaultValue: "مستندات" }),
         },
         {
             key: "scope",

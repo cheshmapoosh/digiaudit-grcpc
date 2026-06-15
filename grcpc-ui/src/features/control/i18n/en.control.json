@@ -1,0 +1,297 @@
+{
+  "nav": {
+    "controls": "Controls"
+  },
+  "common": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "select": "Select"
+  },
+  "control": {
+    "list": {
+      "title": "Control Center",
+      "empty": "No controls have been registered.",
+      "search": "Search by name, code, or description"
+    },
+    "nodeType": {
+      "process": "Process",
+      "subProcess": "Sub-process",
+      "control": "Control"
+    },
+    "summary": {
+      "title": "Control Structure Summary"
+    },
+    "object": {
+      "selectPrompt": "Select a process, sub-process, or control from the list.",
+      "notFound": "The selected control assignment was not found.",
+      "viewTitle": "View Control",
+      "loading": "Loading control..."
+    },
+    "sections": {
+      "assignmentInfo": "Control Assignment Information"
+    },
+    "tabs": {
+      "general": "General",
+      "steps": "Steps",
+      "regulations": "Regulations",
+      "requirements": "Requirements",
+      "risks": "Risks",
+      "accountGroups": "Account Groups",
+      "documents": "Documents",
+      "performancePlan": "Performance Plan"
+    },
+    "fields": {
+      "name": "Name",
+      "code": "Code",
+      "title": "Title",
+      "type": "Type",
+      "status": "Control Status",
+      "description": "Description",
+      "parentProcess": "Parent Process",
+      "parentSubProcess": "Sub-process",
+      "validity": "Validity",
+      "validFrom": "Valid From",
+      "validTo": "Valid To",
+      "ownerName": "Owner",
+      "controlClass": "Control Class",
+      "controlNature": "Control Nature",
+      "automationType": "Automation Type",
+      "importance": "Importance",
+      "objective": "Objective",
+      "sortOrder": "Sort Order",
+      "operationPeriod": "Operation Period",
+      "testMethod": "Test Method",
+      "testPlan": "Test Plan",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "assignmentStatus": "Assignment Status",
+      "controlsCount": "Controls Count",
+      "requiredDocument": "Required Document",
+      "requiredNote": "Required Note",
+      "sensitivity": "Sensitivity",
+      "documentType": "Document Type",
+      "fileRef": "File Reference",
+      "frequency": "Frequency",
+      "plannedDate": "Planned Date",
+      "referenceId": "Reference ID",
+      "regulation": "Regulation",
+      "requirement": "Requirement",
+      "risk": "Risk",
+      "source": "Source",
+      "organizationTitle": "Organization",
+      "accountGroup": "Account Group",
+      "assertionType": "Assertion Type"
+    },
+    "actions": {
+      "addControl": "+ Control",
+      "createNew": "Define New Control",
+      "attachExisting": "Attach Existing Control",
+      "deleteAssignment": "Delete Control Assignment",
+      "addStep": "Add Step",
+      "addDocument": "Add Document",
+      "addPerformancePlan": "Add Performance Plan",
+      "link": "Link",
+      "linkRegulation": "Add Regulation",
+      "linkRequirement": "Link Requirement",
+      "linkRisk": "Add Risk",
+      "linkAccountGroup": "Add Account Group"
+    },
+    "create": {
+      "title": "Define New Control"
+    },
+    "attach": {
+      "title": "Attach Existing Control",
+      "searchLabel": "Control Search",
+      "searchPlaceholder": "Control code, name, or description",
+      "empty": "No controls are available to attach."
+    },
+    "edit": {
+      "title": "Edit Control Assignment"
+    },
+    "delete": {
+      "title": "Delete Control Assignment",
+      "confirm": "Delete control assignment \"{{title}}\"?"
+    },
+    "empty": {
+      "steps": "No steps have been defined.",
+      "regulations": "No laws have been added.",
+      "requirements": "No requirements have been linked.",
+      "risks": "No risks have been added.",
+      "accountGroups": "No account groups have been added.",
+      "documents": "No documents have been defined.",
+      "performancePlans": "No performance plans have been defined.",
+      "regulationCatalog": "No laws are available to add.",
+      "requirementCatalog": "No requirements are available.",
+      "riskCatalog": "No risks are available.",
+      "accountGroupCatalog": "No other account group is available to add."
+    },
+    "steps": {
+      "createTitle": "Add Step",
+      "editTitle": "Edit Step"
+    },
+    "documents": {
+      "createTitle": "Add Document",
+      "editTitle": "Edit Document"
+    },
+    "performancePlan": {
+      "createTitle": "Add Performance Plan",
+      "editTitle": "Edit Performance Plan"
+    },
+    "regulations": {
+      "title": "Regulations",
+      "add": "Add",
+      "addPlaceholder": "Select law",
+      "addAccessibleName": "Select law to add",
+      "empty": "No law has been added.",
+      "noAssignable": "No other law is available to add.",
+      "duplicate": "This law has already been added.",
+      "mutationError": "Failed to save regulation changes.",
+      "loadError": "Failed to load regulations.",
+      "retry": "Retry",
+      "remove": "Delete",
+      "removeTitle": "Delete Law",
+      "removeConfirm": "Delete law \"{{title}}\"?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Control regulations table",
+      "columns": {
+        "code": "Code",
+        "title": "Law Name",
+        "description": "Description",
+        "validity": "Validity",
+        "actions": "Actions"
+      }
+    },
+    "requirements": {
+      "linkTitle": "Link Requirement"
+    },
+    "risks": {
+      "title": "Risks",
+      "add": "Add",
+      "addPlaceholder": "Select risk",
+      "addAccessibleName": "Select risk to add",
+      "empty": "No risks have been added.",
+      "noAssignable": "No other risk is available to add.",
+      "duplicate": "This risk has already been added.",
+      "mutationError": "Failed to save risk changes.",
+      "loadError": "Failed to load risks.",
+      "retry": "Retry",
+      "remove": "Delete",
+      "removeTitle": "Delete Risk",
+      "removeConfirm": "Delete risk \"{{title}}\"?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Control risks table",
+      "columns": {
+        "code": "Code",
+        "title": "Risk Name",
+        "description": "Description",
+        "source": "Source",
+        "organizationTitle": "Organization",
+        "validity": "Validity",
+        "actions": "Actions"
+      }
+    },
+    "accountGroups": {
+      "title": "Account Groups",
+      "add": "Add",
+      "addPlaceholder": "Select account group",
+      "addAccessibleName": "Select account group to add",
+      "empty": "No account group has been added.",
+      "noAssignable": "No other account group is available to add.",
+      "duplicate": "This account group has already been added.",
+      "mutationError": "Failed to save account group changes.",
+      "loadError": "Failed to load account groups.",
+      "retry": "Retry",
+      "remove": "Delete",
+      "removeTitle": "Delete Account Group",
+      "removeConfirm": "Delete account group \"{{title}}\"?",
+      "confirmRemove": "Delete",
+      "cancelRemove": "Cancel",
+      "tableAccessibleName": "Control account groups table",
+      "columns": {
+        "code": "Code",
+        "title": "Account Group Name",
+        "description": "Description",
+        "assertionType": "Assertion Type",
+        "actions": "Actions"
+      }
+    },
+    "links": {
+      "searchRegulations": "Search regulations",
+      "searchRequirements": "Search requirements",
+      "searchRisks": "Search risks",
+      "searchAccountGroups": "Search account groups",
+      "uuidPlaceholder": "Enter reference UUID"
+    },
+    "nature": {
+      "preventive": "Preventive",
+      "detective": "Detective"
+    },
+    "automation": {
+      "manual": "Manual",
+      "system": "System",
+      "semiManualSystem": "Semi-manual/System"
+    },
+    "importance": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "assignmentStatus": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "errors": {
+      "loadStructure": "Failed to load controls structure.",
+      "loadControls": "Failed to load controls.",
+      "loadAssignment": "Failed to load control assignment details.",
+      "save": "Failed to save control.",
+      "delete": "Failed to delete control assignment.",
+      "selectSubProcess": "Select a sub-process, or a control under a sub-process, before defining or attaching a control.",
+      "selectSubProcessForCreate": "Select a sub-process, or a control under a sub-process, before creating a control.",
+      "notFound": "The selected control assignment was not found.",
+      "controlNotFound": "The selected control was not found.",
+      "subProcessNotFound": "The selected sub-process was not found.",
+      "duplicateActiveAssignment": "This control is already actively assigned to this sub-process.",
+      "deleteOnlyAssignment": "Only control assignments can be deleted here.",
+      "loadSteps": "Failed to load control steps.",
+      "saveStep": "Failed to save control step.",
+      "deleteStep": "Failed to delete control step.",
+      "loadDocuments": "Failed to load documents.",
+      "saveDocument": "Failed to save document.",
+      "deleteDocument": "Failed to delete document.",
+      "loadPerformancePlans": "Failed to load performance plans.",
+      "savePerformancePlan": "Failed to save performance plan.",
+      "deletePerformancePlan": "Failed to delete performance plan.",
+      "loadLinks": "Failed to load linked items.",
+      "loadCatalog": "Failed to load catalog.",
+      "linkItem": "Failed to link item.",
+      "deleteLink": "Failed to delete link."
+    },
+    "validation": {
+      "codeRequired": "Control code is required.",
+      "nameRequired": "Control name is required.",
+      "sortOrderInvalid": "Sort order must be a non-negative integer.",
+      "controlRequired": "Select a control.",
+      "textMaxLength": "Text is too long.",
+      "codeMaxLength": "Code cannot be longer than 50 characters.",
+      "nameMaxLength": "Name cannot be longer than 255 characters.",
+      "stepTitleRequired": "Step title is required.",
+      "documentNameRequired": "Document name is required.",
+      "performancePlanTitleRequired": "Performance plan title is required.",
+      "referenceRequired": "Select or enter a reference."
+    }
+  }
+}

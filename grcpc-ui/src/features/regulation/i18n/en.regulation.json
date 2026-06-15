@@ -81,6 +81,24 @@
       "textMaxLength": "Text cannot be longer than 2000 characters",
       "updateAtLeastOneField": "At least one field is required for update",
       "sortOrderInvalid": "Sort order must be a non-negative integer"
+    },
+    "requirements": {
+      "title": "Law Requirements",
+      "add": "Add Requirement",
+      "empty": "No requirement has been registered for this law.",
+      "saveFirst": "Save the law first, then add requirements.",
+      "columns": {
+        "code": "Identifier",
+        "title": "Requirement Name",
+        "description": "Description",
+        "status": "Status",
+        "effectiveDate": "Effective Date",
+        "validTo": "Valid To",
+        "actions": "Actions"
+      }
+    },
+    "documents": {
+      "saveFirst": "Save the regulation item first, then upload documents."
     }
   }
 }

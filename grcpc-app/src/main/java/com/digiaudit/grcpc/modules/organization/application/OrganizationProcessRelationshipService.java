@@ -10,11 +10,12 @@ import com.digiaudit.grcpc.modules.audit.application.AuditService;
 import com.digiaudit.grcpc.modules.audit.domain.enums.ActionResult;
 import com.digiaudit.grcpc.modules.audit.domain.enums.AuditEventType;
 import com.digiaudit.grcpc.modules.audit.domain.enums.AuditTargetType;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ControlEntity;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ProcessControlAssignmentEntity;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.entity.ControlAssignmentEntity;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.entity.ControlEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ProcessNodeEntity;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ControlRepository;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessControlAssignmentRepository;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlAssignmentStatus;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.repository.ControlAssignmentRepository;
+import com.digiaudit.grcpc.modules.masterdata.control.domain.repository.ControlRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessNodeRepository;
 import com.digiaudit.grcpc.modules.masterdata.risk.domain.entity.RiskNodeEntity;
 import com.digiaudit.grcpc.modules.masterdata.risk.domain.repository.RiskNodeRepository;
@@ -46,7 +47,7 @@ public class OrganizationProcessRelationshipService {
     private final OrganizationProcessAssignmentRepository processAssignmentRepository;
     private final OrganizationProcessRiskAssignmentRepository riskAssignmentRepository;
     private final ProcessNodeRepository processNodeRepository;
-    private final ProcessControlAssignmentRepository processControlAssignmentRepository;
+    private final ControlAssignmentRepository controlAssignmentRepository;
     private final ControlRepository controlRepository;
     private final RiskNodeRepository riskNodeRepository;
     private final AuditService auditService;
@@ -68,10 +69,10 @@ public class OrganizationProcessRelationshipService {
         Map<UUID, ProcessNodeEntity> subProcesses = processNodeRepository.findAllById(subProcessIds)
                 .stream()
                 .collect(Collectors.toMap(ProcessNodeEntity::getId, Function.identity()));
-        List<ProcessControlAssignmentEntity> controlAssignments =
-                processControlAssignmentRepository.findByProcessNodeIdInAndActiveTrue(subProcessIds);
+        List<ControlAssignmentEntity> controlAssignments =
+                controlAssignmentRepository.findBySubProcessIdInAndAssignmentStatus(subProcessIds, ControlAssignmentStatus.active);
         List<UUID> controlIds = controlAssignments.stream()
-                .map(ProcessControlAssignmentEntity::getControlId)
+                .map(ControlAssignmentEntity::getControlId)
                 .distinct()
                 .toList();
         Map<UUID, ControlEntity> controls = controlRepository.findAllById(controlIds)
@@ -202,11 +203,11 @@ public class OrganizationProcessRelationshipService {
 
     private OrganizationControlViewResponse toControlResponse(
             UUID organizationId,
-            ProcessControlAssignmentEntity assignment,
+            ControlAssignmentEntity assignment,
             Map<UUID, ProcessNodeEntity> subProcesses,
             Map<UUID, ControlEntity> controls
     ) {
-        ProcessNodeEntity subProcess = subProcesses.get(assignment.getProcessNodeId());
+        ProcessNodeEntity subProcess = subProcesses.get(assignment.getSubProcessId());
         ControlEntity control = controls.get(assignment.getControlId());
 
         if (subProcess == null || control == null) {
@@ -220,19 +221,19 @@ public class OrganizationProcessRelationshipService {
                 .subProcessTitle(subProcess.getTitle())
                 .controlId(control.getId())
                 .controlCode(control.getCode())
-                .controlTitle(control.getTitle())
+                .controlTitle(control.getName())
                 .controlDescription(control.getDescription())
-                .controlAutomation(control.getControlAutomation())
-                .controlFrequency(control.getControlFrequency())
-                .controlClassification(control.getControlClassification())
-                .controlOwner(control.getControlOwner())
-                .importance(control.getImportance())
-                .status(control.getStatus())
+                .controlAutomation(control.getAutomationType() == null ? null : control.getAutomationType().name())
+                .controlFrequency(null)
+                .controlClassification(control.getControlClass())
+                .controlOwner(assignment.getOwnerName())
+                .importance(control.getImportance() == null ? null : control.getImportance().name())
+                .status(control.getStatus() == null ? null : control.getStatus().name())
                 .processControlAssignmentId(assignment.getId())
-                .assignmentType(assignment.getAssignmentType())
+                .assignmentType(assignment.getAssignmentStatus() == null ? null : assignment.getAssignmentStatus().name())
                 .validFrom(assignment.getValidFrom())
                 .validTo(assignment.getValidTo())
-                .isActive(assignment.isActive())
+                .isActive(assignment.getAssignmentStatus() == ControlAssignmentStatus.active)
                 .build();
     }
 

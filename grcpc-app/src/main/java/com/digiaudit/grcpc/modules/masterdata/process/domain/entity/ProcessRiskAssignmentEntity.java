@@ -9,20 +9,20 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(
-        name = "process_control_assignment",
+        name = "process_risk_assignment",
         indexes = {
-                @Index(name = "idx_process_control_assignment_process", columnList = "process_node_id"),
-                @Index(name = "idx_process_control_assignment_control", columnList = "control_id"),
-                @Index(name = "idx_process_control_assignment_active", columnList = "active")
+                @Index(name = "idx_proc_risk_asg_process", columnList = "process_node_id"),
+                @Index(name = "idx_proc_risk_asg_risk", columnList = "risk_node_id"),
+                @Index(name = "idx_proc_risk_asg_active", columnList = "active")
         },
-        uniqueConstraints = @UniqueConstraint(name = "uk_process_control_assignment", columnNames = {"process_node_id", "control_id"})
+        uniqueConstraints = @UniqueConstraint(name = "uk_process_risk_assignment", columnNames = {"process_node_id", "risk_node_id"})
 )
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder(toBuilder = true)
-public class ProcessControlAssignmentEntity extends AuditableEntity {
+public class ProcessRiskAssignmentEntity extends AuditableEntity {
 
     @Id
     @GeneratedValue
@@ -31,8 +31,8 @@ public class ProcessControlAssignmentEntity extends AuditableEntity {
     @Column(name = "process_node_id", nullable = false)
     private UUID processNodeId;
 
-    @Column(name = "control_id", nullable = false)
-    private UUID controlId;
+    @Column(name = "risk_node_id", nullable = false)
+    private UUID riskNodeId;
 
     @Column(name = "assignment_type", nullable = false, length = 50)
     private String assignmentType;
