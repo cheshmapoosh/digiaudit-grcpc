@@ -57,7 +57,8 @@
       }
     },
     "documents": {
-      "saveFirst": "Save the objective first, then upload documents."
+      "saveFirst": "Save the objective first, then upload documents.",
+      "viewHint": "Documents registered for this objective"
     },
     "tree": {
       "expand": "Expand branch",

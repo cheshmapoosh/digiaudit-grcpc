@@ -12,15 +12,17 @@ import {
     Title,
 } from "@ui5/webcomponents-react";
 
+import { DocumentAttachmentsTab, type DocumentAttachment } from "@/features/document";
 import type { ObjectiveNode, ObjectiveStatus, ObjectiveType } from "../domain/objective.model";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface ObjectiveSummaryPanelProps {
     value?: ObjectiveNode | null;
+    documents?: DocumentAttachment[];
+    documentsBusy?: boolean;
     busy?: boolean;
     error?: string | null;
-    onEdit?: (id: string) => void;
-    onCancel?: () => void;
+    onClose: () => void;
 }
 
 type ObjectiveDetailTabKey = "general" | "relatedOrganizations" | "documents";
@@ -185,10 +187,10 @@ function SimpleTable({
 
 export default function ObjectiveSummaryPanel({
     value,
-    busy = false,
+    documents = [],
+    documentsBusy = false,
     error,
-    onEdit,
-    onCancel,
+    onClose,
 }: ObjectiveSummaryPanelProps) {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<ObjectiveDetailTabKey>("general");
@@ -286,14 +288,18 @@ export default function ObjectiveSummaryPanel({
     };
 
     const renderDocuments = () => (
-        <SimpleTable
-            columns={[
-                t("objective.fields.name", { defaultValue: "نام" }),
-                t("objective.fields.description", { defaultValue: "شرح" }),
-                t("objective.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                t("objective.fields.validUntil", { defaultValue: "تاریخ اعتبار" }),
-            ]}
-            rows={[]}
+        <DocumentAttachmentsTab
+            title={t("objective.tabs.documents", {
+                defaultValue: "مستندات",
+            })}
+            targetType="OBJECTIVE_NODE"
+            targetId={value.id}
+            documents={documents}
+            busy={documentsBusy}
+            readOnly
+            viewHint={t("objective.documents.viewHint", {
+                defaultValue: "مستندات ثبت‌شده برای این هدف",
+            })}
         />
     );
 
@@ -370,25 +376,15 @@ export default function ObjectiveSummaryPanel({
 
             <Bar
                 endContent={
-                    <>
-                        <Button
-                            design="Emphasized"
-                            disabled={busy || !onEdit}
-                            style={ACTION_BUTTON_STYLE}
-                            onClick={() => onEdit?.(value.id)}
-                        >
-                            {t("common.edit", { defaultValue: "ویرایش" })}
-                        </Button>
-
-                        <Button
-                            design="Transparent"
-                            disabled={busy}
-                            style={ACTION_BUTTON_STYLE}
-                            onClick={onCancel}
-                        >
-                            {t("common.cancel", { defaultValue: "انصراف" })}
-                        </Button>
-                    </>
+                    <Button
+                        design="Transparent"
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={onClose}
+                    >
+                        {t("common.close", {
+                            defaultValue: "بستن",
+                        })}
+                    </Button>
                 }
             />
         </div>

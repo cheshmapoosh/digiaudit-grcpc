@@ -210,6 +210,10 @@ export default function ObjectivesFclShellPage() {
     const tempDocumentsBySession = useDocumentAttachmentState(
         (state) => state.tempDocumentsBySession,
     );
+    const documentsByTarget = useDocumentAttachmentState(
+        (state) => state.documentsByTarget,
+    );
+    const documentsLoading = useDocumentAttachmentState((state) => state.loading);
     const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
     const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
@@ -292,24 +296,34 @@ export default function ObjectivesFclShellPage() {
     }, [documentScopeKey]);
 
     useEffect(() => {
-        if (!objectiveId) {
+        const targetIds = Array.from(
+            new Set(
+                [objectiveId, selectedTreeItem?.id].filter(
+                    (id): id is string => Boolean(id),
+                ),
+            ),
+        );
+
+        if (targetIds.length === 0) {
             return;
         }
 
-        void loadDocumentsForTarget(OBJECTIVE_DOCUMENT_TARGET_TYPE, objectiveId).catch(
-            (error: unknown) => {
-                setObjectError(
-                    mapError(
-                        error,
-                        t("document.errors.load", {
-                            defaultValue: "خطا در بارگذاری مستندات",
-                        }),
-                        t,
-                    ),
-                );
-            },
-        );
-    }, [loadDocumentsForTarget, objectiveId, t]);
+        void Promise.all(
+            targetIds.map((targetId) =>
+                loadDocumentsForTarget(OBJECTIVE_DOCUMENT_TARGET_TYPE, targetId),
+            ),
+        ).catch((error: unknown) => {
+            setObjectError(
+                mapError(
+                    error,
+                    t("document.errors.load", {
+                        defaultValue: "خطا در بارگذاری مستندات",
+                    }),
+                    t,
+                ),
+            );
+        });
+    }, [loadDocumentsForTarget, objectiveId, selectedTreeItem?.id, t]);
 
     const treeSelectedId = useMemo(() => {
         if (routeMode === "create") {
@@ -579,6 +593,12 @@ export default function ObjectivesFclShellPage() {
     const showInlineSummaryPane = Boolean(selectedTreeItem);
     const fclLayout: FclLayout = showInlineSummaryPane ? "TwoColumnsStartExpanded" : "OneColumn";
     const createOptions = CREATE_NODE_TYPES;
+    const selectedObjectiveDocumentKey = selectedTreeItem?.id
+        ? `${OBJECTIVE_DOCUMENT_TARGET_TYPE}:${selectedTreeItem.id}`
+        : null;
+    const selectedObjectiveDocuments = selectedObjectiveDocumentKey
+        ? documentsByTarget[selectedObjectiveDocumentKey] ?? []
+        : [];
 
     const slotContainerStyle = useMemo<CSSProperties>(
         () => ({
@@ -664,10 +684,11 @@ export default function ObjectivesFclShellPage() {
               <div style={frameStyle}>
                   <ObjectiveSummaryPanel
                       value={selectedTreeItem}
+                      documents={selectedObjectiveDocuments}
+                      documentsBusy={documentsLoading}
                       busy={loading || submitting}
                       error={!showModal ? pageError : null}
-                      onEdit={handleEdit}
-                      onCancel={() => {
+                      onClose={() => {
                           setSelectedTreeId(null);
                           setTreeExpansionAnchorId(null);
                       }}

@@ -105,15 +105,12 @@
   "toast.success.setupInitialized": "راه اندازی اولیه با موفقیت انجام شد.",
   "org.filter.date": "تاریخ",
   "org.filter.clear": "پاک کردن",
-
   "org.sections.general": "اطلاعات عمومی",
   "org.sections.validity": "اعتبار",
   "org.createChild.title": "ایجاد زیرمجموعه",
-
   "common.back": "بازگشت",
   "common.refresh": "بازآوری",
   "common.new": "جدید",
-
   "app": {
     "companyName": "Digiaudit",
     "productName": "GRCPC",
@@ -121,5 +118,7 @@
     "footer": {
       "copyright": "© {{year}} {{company}} — {{product}} v{{version}}"
     }
-  }
+  },
+  "common.active": "فعال",
+  "common.inactive": "غیرفعال"
 }

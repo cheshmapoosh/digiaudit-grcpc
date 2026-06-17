@@ -9,12 +9,14 @@ import faDocument from "../features/document/i18n/fa.document.json";
 import enDocument from "../features/document/i18n/en.document.json";
 import faObjective from "../features/objective/i18n/fa.objective.json";
 import enObjective from "../features/objective/i18n/en.objective.json";
+import faOrganization from "../features/organization/i18n/fa.organization.json";
+import enOrganization from "../features/organization/i18n/en.organization.json";
 import fa from "./locales/fa.json";
 import en from "./locales/en.json";
 
 export const resources = {
-    fa: { translation: { ...fa, ...faProcess, ...faControl, ...faDocument, ...faObjective } },
-    en: { translation: { ...en, ...enProcess, ...enControl, ...enDocument, ...enObjective } }
+    fa: { translation: { ...fa, ...faProcess, ...faControl, ...faDocument, ...faObjective, ...faOrganization } },
+    en: { translation: { ...en, ...enProcess, ...enControl, ...enDocument, ...enObjective, ...enOrganization } }
 } as const;
 
 export function initI18n(lang: "fa" | "en") {

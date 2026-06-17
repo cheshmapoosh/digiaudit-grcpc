@@ -1,0 +1,28 @@
+{
+  "organization": {
+    "tabs": {
+      "goals": {
+        "label": "Objectives",
+        "title": "Objectives",
+        "hint": "Objectives are loaded from the Objective feature and their relationships with the organization are stored separately.",
+        "saveFirstHint": "Save the organization before assigning an objective."
+      }
+    },
+    "goals": {
+      "selectPlaceholder": "Select objective",
+      "noData": "No objective has been assigned to this organization."
+    },
+    "actions": {
+      "add": "Add",
+      "delete": "Remove"
+    },
+    "fields": {
+      "goal": "Objective",
+      "description": "Description",
+      "owner": "Owner / Type",
+      "assignmentAndStatus": "Relationship / Status",
+      "validity": "Validity",
+      "actions": "Actions"
+    }
+  }
+}

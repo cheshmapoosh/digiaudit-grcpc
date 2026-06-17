@@ -548,7 +548,7 @@ function resolveTabLabel(
         controls: t("organization.tabs.controls", { defaultValue: "کنترل ها" }),
         rules: t("organization.tabs.rules", { defaultValue: "قوانین" }),
         policies: t("organization.tabs.policies", { defaultValue: "سیاست ها" }),
-        goals: t("organization.tabs.goals", { defaultValue: "اهداف" }),
+        goals: t("organization.tabs.goals.label", { defaultValue: "اهداف" }),
         kpi: "KPI",
         kri: "KRI",
         riskAppetite: t("organization.tabs.riskAppetite", { defaultValue: "اشتهای ریسک" }),
@@ -1314,9 +1314,9 @@ export default function OrganizationObjectPage({
                         <TableHeaderRow>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
                                 {t("organization.fields.subProcess", {
-                                    defaultValue: "زیر فرآیند",
-                                })}
-                            </TableHeaderCell>
+                                    defaultValue: "رابطه / وضعیت",
+                                    })}
+                                </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
                                 {t("organization.fields.parentProcess", {
                                     defaultValue: "فرآیند والد",
@@ -1921,7 +1921,7 @@ export default function OrganizationObjectPage({
                                 void handleAssignObjective(unassignedOptions);
                             }}
                         >
-                            {t("organization.actions.add", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡ Ù†Ù…ÙˆØ¯Ù†" })}
+                            {t("organization.actions.add", { defaultValue: "اضافه نمودن" })}
                         </Button>
                     </div>
                 ) : null}
@@ -1935,21 +1935,21 @@ export default function OrganizationObjectPage({
                                 {entityLabel}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
+                                {t("organization.fields.description", { defaultValue: "شرح" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.owner", { defaultValue: "Ù…Ø§Ù„Ú© / Ù†ÙˆØ¹" })}
+                                {t("organization.fields.owner", { defaultValue: "مالک / نوع" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
                                 {t("organization.fields.assignmentAndStatus", {
-                                    defaultValue: "Ø±Ø§Ø¨Ø·Ù‡ / ÙˆØ¶Ø¹ÛŒØª",
+                                    defaultValue: "رابطه / وضعیت",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.validity", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø±" })}
+                                {t("organization.fields.validity", { defaultValue: "اعتبار" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.actions", { defaultValue: "Ø¹Ù…Ù„ÛŒØ§Øª" })}
+                                {t("organization.fields.actions", { defaultValue: "عملیات" })}
                             </TableHeaderCell>
                         </TableHeaderRow>
                     }
@@ -1976,9 +1976,9 @@ export default function OrganizationObjectPage({
                                 <div style={TABLE_CELL_CONTENT_STYLE}>
                                     <span style={TABLE_INLINE_META_STYLE}>
                                         {assignment.active
-                                            ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+                                            ? t("common.active", { defaultValue: "فعال" })
                                             : t("common.inactive", {
-                                                  defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„",
+                                                  defaultValue: "غیرفعال",
                                               })}
                                         {assignment.status ? ` / ${assignment.status}` : ""}
                                     </span>
@@ -2002,7 +2002,7 @@ export default function OrganizationObjectPage({
                                         );
                                     }}
                                 >
-                                    {t("organization.actions.delete", { defaultValue: "Ø­Ø°Ù" })}
+                                    {t("organization.actions.delete", { defaultValue: "حذف" })}
                                 </Button>
                             </TableCell>
                         </TableRow>
@@ -2077,7 +2077,7 @@ export default function OrganizationObjectPage({
 
     const renderGoalsTab = () =>
         renderObjectiveAssignmentTab({
-            title: t("organization.tabs.goals", { defaultValue: "اهداف" }),
+            title: t("organization.tabs.goals.title", { defaultValue: "اهداف" }),
             entityLabel: t("organization.fields.goal", { defaultValue: "هدف" }),
             options: availableObjectives,
             assignments: objectiveAssignments,

@@ -105,15 +105,12 @@
   "toast.success.setupInitialized": "Initial setup completed successfully.",
   "org.filter.date": "Date",
   "org.filter.clear": "Clear",
-
   "org.sections.general": "General Information",
   "org.sections.validity": "Validity",
   "org.createChild.title": "Create Child Organization",
-
   "common.back": "Back",
   "common.refresh": "Refresh",
   "common.new": "New",
-
   "app": {
     "companyName": "Digiaudit",
     "productName": "GRCPC",
@@ -121,5 +118,7 @@
     "footer": {
       "copyright": "© {{year}} {{company}} — {{product}} v{{version}}"
     }
-  }
+  },
+  "common.active": "Active",
+  "common.inactive": "Inactive"
 }
