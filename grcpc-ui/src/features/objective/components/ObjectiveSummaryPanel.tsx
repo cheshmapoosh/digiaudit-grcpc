@@ -23,7 +23,7 @@ export interface ObjectiveSummaryPanelProps {
     onCancel?: () => void;
 }
 
-type ObjectiveDetailTabKey = "general" | "organizationUnits" | "documents";
+type ObjectiveDetailTabKey = "general" | "relatedOrganizations" | "documents";
 
 interface DetailTabDefinition {
     key: ObjectiveDetailTabKey;
@@ -200,8 +200,8 @@ export default function ObjectiveSummaryPanel({
                 label: t("objective.tabs.general", { defaultValue: "اطلاعات کلی" }),
             },
             {
-                key: "organizationUnits",
-                label: t("objective.tabs.organizationUnits", { defaultValue: "واحد سازمانی" }),
+                key: "relatedOrganizations",
+                label: t("objective.tabs.relatedOrganizations"),
             },
             {
                 key: "documents",
@@ -260,22 +260,30 @@ export default function ObjectiveSummaryPanel({
         </div>
     );
 
-    const renderOrganizationUnits = () => (
-        <SimpleTable
-            columns={[
-                t("objective.fields.name", { defaultValue: "نام" }),
-                t("objective.fields.description", { defaultValue: "شرح" }),
-            ]}
-            rows={[
-                [
-                    value.organizationUnitName,
-                    t("objective.object.organizationUnitPlaceholder", {
-                        defaultValue: "اتصال به فیچر سازمان در قدم بعدی تکمیل می‌شود.",
-                    }),
-                ],
-            ]}
-        />
-    );
+    const renderRelatedOrganizations = () => {
+        const organizations = value.organizations ?? [];
+
+        return (
+            <SimpleTable
+                columns={[
+                    t("objective.relatedOrganizations.columns.organization"),
+                    t("objective.relatedOrganizations.columns.status"),
+                ]}
+                rows={
+                    organizations.length > 0
+                        ? organizations.map((organization) => [
+                              organization.organizationCode
+                                  ? `${organization.organizationCode} - ${organization.organizationName ?? ""}`
+                                  : organization.organizationName,
+                              organization.organizationStatus
+                                  ? resolveStatusLabel(organization.organizationStatus, t)
+                                  : "-",
+                          ])
+                        : [[t("objective.relatedOrganizations.empty"), ""]]
+                }
+            />
+        );
+    };
 
     const renderDocuments = () => (
         <SimpleTable
@@ -290,8 +298,8 @@ export default function ObjectiveSummaryPanel({
     );
 
     const renderActiveTab = () => {
-        if (activeTab === "organizationUnits") {
-            return renderOrganizationUnits();
+        if (activeTab === "relatedOrganizations") {
+            return renderRelatedOrganizations();
         }
 
         if (activeTab === "documents") {

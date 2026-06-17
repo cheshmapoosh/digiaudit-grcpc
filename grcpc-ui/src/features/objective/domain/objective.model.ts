@@ -12,6 +12,15 @@ export type ObjectiveType =
     | "reporting"
     | "market";
 
+export interface ObjectiveOrganizationRef {
+    organizationId: string;
+    organizationCode?: string;
+    organizationName?: string;
+    organizationStatus?: "active" | "inactive";
+    relationType?: string;
+    primaryResponsible?: boolean;
+}
+
 export interface ObjectiveNode extends AuditFields {
     id: string;
     code: string;
@@ -30,6 +39,7 @@ export interface ObjectiveNode extends AuditFields {
     effectiveFrom?: string;
     validUntil?: string;
     documentsCount?: number;
+    organizations?: ObjectiveOrganizationRef[];
 }
 
 export type ObjectiveReadonlyKeys =
@@ -41,6 +51,15 @@ export type ObjectiveReadonlyKeys =
     | "deletedAt"
     | "deletedBy";
 
-export type ObjectiveNodeCreate = Omit<ObjectiveNode, ObjectiveReadonlyKeys>;
+export type ObjectiveNodeCreate = Omit<
+    ObjectiveNode,
+    ObjectiveReadonlyKeys | "organizations"
+> & {
+    organizationIds?: string[];
+};
 
-export type ObjectiveNodeUpdate = Partial<Omit<ObjectiveNode, ObjectiveReadonlyKeys>>;
+export type ObjectiveNodeUpdate = Partial<
+    Omit<ObjectiveNode, ObjectiveReadonlyKeys | "organizations">
+> & {
+    organizationIds?: string[];
+};

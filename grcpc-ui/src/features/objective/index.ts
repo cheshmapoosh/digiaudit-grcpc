@@ -5,6 +5,7 @@ export type {
     ObjectiveNodeCreate,
     ObjectiveNodeType,
     ObjectiveNodeUpdate,
+    ObjectiveOrganizationRef,
     ObjectiveReadonlyKeys,
     ObjectiveStatus,
     ObjectiveType,

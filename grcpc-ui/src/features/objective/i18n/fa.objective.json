@@ -40,7 +40,21 @@
     "tabs": {
       "general": "اطلاعات کلی",
       "organizationUnits": "واحد سازمانی",
+      "relatedOrganizations": "سازمان‌های مرتبط",
       "documents": "مستندات"
+    },
+    "relatedOrganizations": {
+      "title": "سازمان‌های مرتبط با هدف",
+      "hint": "سازمان‌های انتخاب‌شده همراه با اطلاعات هدف ذخیره می‌شوند.",
+      "selectPlaceholder": "انتخاب سازمان",
+      "add": "اضافه نمودن",
+      "remove": "حذف",
+      "empty": "هیچ سازمانی برای این هدف انتخاب نشده است.",
+      "columns": {
+        "organization": "سازمان",
+        "status": "وضعیت",
+        "actions": "عملیات"
+      }
     },
     "documents": {
       "saveFirst": "ابتدا هدف را ذخیره کنید، سپس مستندات را بارگذاری کنید."
@@ -77,7 +91,8 @@
       "hasChildren": "امکان حذف هدفی که زیرمجموعه دارد وجود ندارد",
       "invalidHierarchy": "ساختار انتخاب‌شده برای اهداف معتبر نیست",
       "delete": "خطا در حذف هدف",
-      "save": "خطا در ذخیره هدف"
+      "save": "خطا در ذخیره هدف",
+      "loadOrganizations": "خطا در بارگذاری سازمان‌ها"
     },
     "validation": {
       "codeRequired": "کد الزامی است",

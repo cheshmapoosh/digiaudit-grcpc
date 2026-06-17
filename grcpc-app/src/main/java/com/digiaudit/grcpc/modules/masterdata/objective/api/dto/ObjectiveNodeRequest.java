@@ -1,5 +1,6 @@
 package com.digiaudit.grcpc.modules.masterdata.objective.api.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 public record ObjectiveNodeRequest(
@@ -17,6 +18,7 @@ public record ObjectiveNodeRequest(
         String organizationUnitName,
         String effectiveFrom,
         String validUntil,
-        Integer documentsCount
+        Integer documentsCount,
+        List<UUID> organizationIds
 ) {
 }

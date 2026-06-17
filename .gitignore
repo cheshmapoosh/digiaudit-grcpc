@@ -5,3 +5,4 @@
 /.docker/
 # Local boot jar used by grcpc-app.test.bat test runner
 /grcpc-app.jar
+/data/
