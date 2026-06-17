@@ -25,6 +25,7 @@ import { processAccountGroupAssignmentService } from "../../service/process-acco
 interface ProcessAccountGroupsTabProps {
     processId: string | null;
     readOnly?: boolean;
+    showActions?: boolean;
 }
 
 type AccountGroupsLoadStatus = "idle" | "loading" | "success" | "error";
@@ -142,6 +143,7 @@ function resolveStatusLabel(
 export default function ProcessAccountGroupsTab({
     processId,
     readOnly = false,
+    showActions = true,
 }: ProcessAccountGroupsTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
@@ -244,6 +246,7 @@ export default function ProcessAccountGroupsTab({
         ? formatAssignmentOption(removeCandidate, noneText)
         : "";
     const canAssign =
+        showActions &&
         !readOnly &&
         !!processId &&
         !!selectedAccountGroupId &&
@@ -322,15 +325,17 @@ export default function ProcessAccountGroupsTab({
                     {t("process.accountGroups.loadError")}
                 </MessageStrip>
 
-                <div style={ERROR_ACTION_STYLE}>
-                    <Button
-                        design="Emphasized"
-                        disabled={isLoading}
-                        onClick={refresh}
-                    >
-                        {t("process.accountGroups.retry")}
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div style={ERROR_ACTION_STYLE}>
+                        <Button
+                            design="Emphasized"
+                            disabled={isLoading}
+                            onClick={refresh}
+                        >
+                            {t("process.accountGroups.retry")}
+                        </Button>
+                    </div>
+                ) : null}
             </div>
         );
     }
@@ -341,7 +346,7 @@ export default function ProcessAccountGroupsTab({
 
             <div style={{ height: "0.75rem" }} />
 
-            {!readOnly ? (
+            {!readOnly && showActions ? (
                 <div style={ASSIGNMENT_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("process.accountGroups.assignAccessibleName")}
@@ -393,7 +398,7 @@ export default function ProcessAccountGroupsTab({
                 </div>
             ) : null}
 
-            {availableAccountGroups.length === 0 && !isLoading ? (
+            {showActions && availableAccountGroups.length === 0 && !isLoading ? (
                 <>
                     <div style={{ height: "0.75rem" }} />
                     <MessageStrip design="Information" hideCloseButton>
@@ -433,9 +438,11 @@ export default function ProcessAccountGroupsTab({
                         <TableHeaderCell width="8rem">
                             {t("process.accountGroups.columns.status")}
                         </TableHeaderCell>
-                        <TableHeaderCell width="8rem">
-                            {t("process.accountGroups.columns.actions")}
-                        </TableHeaderCell>
+                        {showActions ? (
+                            <TableHeaderCell width="8rem">
+                                {t("process.accountGroups.columns.actions")}
+                            </TableHeaderCell>
+                        ) : null}
                     </TableHeaderRow>
                 }
                 loading={isLoading}
@@ -454,39 +461,43 @@ export default function ProcessAccountGroupsTab({
                             {resolveAssignmentTypeLabel(assignment.assignmentType, t)}
                         </TableCell>
                         <TableCell>{resolveStatusLabel(assignment.status, t)}</TableCell>
-                        <TableCell>
-                            {!readOnly ? (
-                                <Button
-                                    design="Transparent"
-                                    disabled={mutationBusy}
-                                    onClick={() => setRemoveCandidate(assignment)}
-                                >
-                                    {t("process.accountGroups.remove")}
-                                </Button>
-                            ) : (
-                                noneText
-                            )}
-                        </TableCell>
+                        {showActions ? (
+                            <TableCell>
+                                {!readOnly ? (
+                                    <Button
+                                        design="Transparent"
+                                        disabled={mutationBusy}
+                                        onClick={() => setRemoveCandidate(assignment)}
+                                    >
+                                        {t("process.accountGroups.remove")}
+                                    </Button>
+                                ) : (
+                                    noneText
+                                )}
+                            </TableCell>
+                        ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            <DeleteConfirmDialog
-                open={!!removeCandidate}
-                title={t("process.accountGroups.removeTitle")}
-                message={t("process.accountGroups.removeConfirm", {
-                    title: removeCandidateLabel,
-                })}
-                loading={mutationBusy}
-                confirmText={t("process.accountGroups.confirmRemove")}
-                cancelText={t("process.accountGroups.cancelRemove")}
-                onClose={() => {
-                    if (!mutationBusy) {
-                        setRemoveCandidate(null);
-                    }
-                }}
-                onConfirm={handleRemove}
-            />
+            {showActions ? (
+                <DeleteConfirmDialog
+                    open={!!removeCandidate}
+                    title={t("process.accountGroups.removeTitle")}
+                    message={t("process.accountGroups.removeConfirm", {
+                        title: removeCandidateLabel,
+                    })}
+                    loading={mutationBusy}
+                    confirmText={t("process.accountGroups.confirmRemove")}
+                    cancelText={t("process.accountGroups.cancelRemove")}
+                    onClose={() => {
+                        if (!mutationBusy) {
+                            setRemoveCandidate(null);
+                        }
+                    }}
+                    onConfirm={handleRemove}
+                />
+            ) : null}
         </div>
     );
 }

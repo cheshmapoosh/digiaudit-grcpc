@@ -24,6 +24,7 @@ interface ProcessRisksTabProps {
     processId: string | null;
     nodeType: ProcessNodeType;
     readOnly?: boolean;
+    showActions?: boolean;
 }
 
 type RisksLoadStatus = "idle" | "loading" | "success" | "error";
@@ -151,6 +152,7 @@ export default function ProcessRisksTab({
     processId,
     nodeType,
     readOnly = false,
+    showActions = true,
 }: ProcessRisksTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
@@ -256,6 +258,7 @@ export default function ProcessRisksTab({
         ? formatAssignmentOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        showActions &&
         !readOnly &&
         !!processId &&
         !!selectedRiskId &&
@@ -353,11 +356,13 @@ export default function ProcessRisksTab({
                     })}
                 </MessageStrip>
 
-                <div style={ERROR_ACTION_STYLE}>
-                    <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
-                        {t("process.risks.retry", { defaultValue: "تلاش دوباره" })}
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div style={ERROR_ACTION_STYLE}>
+                        <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
+                            {t("process.risks.retry", { defaultValue: "تلاش دوباره" })}
+                        </Button>
+                    </div>
+                ) : null}
             </div>
         );
     }
@@ -368,7 +373,7 @@ export default function ProcessRisksTab({
 
             <div style={{ height: "0.75rem" }} />
 
-            {!readOnly ? (
+            {!readOnly && showActions ? (
                 <div style={ADD_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("process.risks.addAccessibleName", {
@@ -418,7 +423,7 @@ export default function ProcessRisksTab({
                 </div>
             ) : null}
 
-            {availableRisks.length === 0 && !isLoading ? (
+            {showActions && availableRisks.length === 0 && !isLoading ? (
                 <>
                     <div style={{ height: "0.75rem" }} />
                     <MessageStrip design="Information" hideCloseButton>
@@ -466,9 +471,11 @@ export default function ProcessRisksTab({
                         <TableHeaderCell width="8rem">
                             {t("process.risks.columns.status", { defaultValue: "وضعیت" })}
                         </TableHeaderCell>
-                        <TableHeaderCell width="8rem">
-                            {t("process.risks.columns.actions", { defaultValue: "عملیات" })}
-                        </TableHeaderCell>
+                        {showActions ? (
+                            <TableHeaderCell width="8rem">
+                                {t("process.risks.columns.actions", { defaultValue: "عملیات" })}
+                            </TableHeaderCell>
+                        ) : null}
                     </TableHeaderRow>
                 }
                 loading={isLoading}
@@ -489,40 +496,44 @@ export default function ProcessRisksTab({
                             {resolveRiskTypeLabel(assignment.riskType, noneText, t)}
                         </TableCell>
                         <TableCell>{resolveStatusLabel(assignment.status, t)}</TableCell>
-                        <TableCell>
-                            {!readOnly ? (
-                                <Button
-                                    design="Transparent"
-                                    disabled={mutationBusy}
-                                    onClick={() => setRemoveCandidate(assignment)}
-                                >
-                                    {t("process.risks.remove", { defaultValue: "حذف" })}
-                                </Button>
-                            ) : (
-                                noneText
-                            )}
-                        </TableCell>
+                        {showActions ? (
+                            <TableCell>
+                                {!readOnly ? (
+                                    <Button
+                                        design="Transparent"
+                                        disabled={mutationBusy}
+                                        onClick={() => setRemoveCandidate(assignment)}
+                                    >
+                                        {t("process.risks.remove", { defaultValue: "حذف" })}
+                                    </Button>
+                                ) : (
+                                    noneText
+                                )}
+                            </TableCell>
+                        ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            <DeleteConfirmDialog
-                open={!!removeCandidate}
-                title={t("process.risks.removeTitle", { defaultValue: "حذف ریسک" })}
-                message={t("process.risks.removeConfirm", {
-                    defaultValue: "آیا از حذف ریسک «{{title}}» از این آیتم مطمئن هستید؟",
-                    title: removeCandidateLabel,
-                })}
-                loading={mutationBusy}
-                confirmText={t("process.risks.confirmRemove", { defaultValue: "حذف" })}
-                cancelText={t("process.risks.cancelRemove", { defaultValue: "انصراف" })}
-                onClose={() => {
-                    if (!mutationBusy) {
-                        setRemoveCandidate(null);
-                    }
-                }}
-                onConfirm={handleRemove}
-            />
+            {showActions ? (
+                <DeleteConfirmDialog
+                    open={!!removeCandidate}
+                    title={t("process.risks.removeTitle", { defaultValue: "حذف ریسک" })}
+                    message={t("process.risks.removeConfirm", {
+                        defaultValue: "آیا از حذف ریسک «{{title}}» از این آیتم مطمئن هستید؟",
+                        title: removeCandidateLabel,
+                    })}
+                    loading={mutationBusy}
+                    confirmText={t("process.risks.confirmRemove", { defaultValue: "حذف" })}
+                    cancelText={t("process.risks.cancelRemove", { defaultValue: "انصراف" })}
+                    onClose={() => {
+                        if (!mutationBusy) {
+                            setRemoveCandidate(null);
+                        }
+                    }}
+                    onConfirm={handleRemove}
+                />
+            ) : null}
         </div>
     );
 }

@@ -1268,8 +1268,7 @@ export default function ProcessesFclShellPage() {
                     busy={loading || controlLoading || submitting}
                     error={!showModal ? pageError : null}
                     onErrorClose={() => setPageError(null)}
-                    onEdit={handleEdit}
-                    onCancel={() => {
+                    onClose={() => {
                         setSelectedTreeId(null);
                         setTreeExpansionAnchorId(null);
                     }}

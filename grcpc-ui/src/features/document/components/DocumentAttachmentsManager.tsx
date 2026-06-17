@@ -13,6 +13,7 @@ export interface DocumentAttachmentsManagerProps {
     tempSessionId?: string;
     stagingMode?: "tempUntilParentSave" | "direct";
     readOnly?: boolean;
+    showActions?: boolean;
     busy?: boolean;
     title?: string;
     saveFirstMessage?: string;
@@ -40,6 +41,7 @@ export default function DocumentAttachmentsManager({
     tempSessionId,
     stagingMode = "direct",
     readOnly = false,
+    showActions = true,
     busy = false,
     title,
     saveFirstMessage,
@@ -212,6 +214,7 @@ export default function DocumentAttachmentsManager({
             uploadPolicy={uploadPolicy}
             busy={busy || loading}
             readOnly={readOnly}
+            showActions={showActions}
             uploadRequiresTempSession={useTempUpload}
             error={loadError}
             saveFirstMessage={saveFirstMessage}
@@ -220,10 +223,10 @@ export default function DocumentAttachmentsManager({
             })}
             viewHint={viewHint}
             editHint={editHint}
-            onUploadDocument={handleUploadDocument}
-            onUpdateDocumentTitle={handleUpdateDocumentTitle}
-            onDeleteDocument={deleteDocument}
-            onDownloadDocument={handleDownloadDocument}
+            onUploadDocument={showActions ? handleUploadDocument : undefined}
+            onUpdateDocumentTitle={showActions ? handleUpdateDocumentTitle : undefined}
+            onDeleteDocument={showActions ? deleteDocument : undefined}
+            onDownloadDocument={showActions ? handleDownloadDocument : undefined}
             onErrorClose={() => setLoadError(null)}
             onBeforeParentSubmitChange={onBeforeParentSubmitChange}
             onPendingUploadsChange={onPendingUploadsChange}

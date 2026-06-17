@@ -25,6 +25,7 @@ export interface ProcessControlsTabProps {
     subProcessId: string | null;
     subProcessTitle?: string | null;
     readOnly?: boolean;
+    showActions?: boolean;
     onOpenControl?: (controlAssignmentId: string) => void;
     onControlStructureChanged?: () => void | Promise<void>;
 }
@@ -166,6 +167,7 @@ export default function ProcessControlsTab({
     subProcessId,
     subProcessTitle,
     readOnly = false,
+    showActions = true,
     onOpenControl,
     onControlStructureChanged,
 }: ProcessControlsTabProps) {
@@ -283,6 +285,7 @@ export default function ProcessControlsTab({
         ? formatAssignedControlOption(removeCandidate, noneText)
         : "";
     const canAssign =
+        showActions &&
         !readOnly &&
         !!subProcessId &&
         !!selectedControlId &&
@@ -383,11 +386,13 @@ export default function ProcessControlsTab({
                     })}
                 </MessageStrip>
 
-                <div style={ERROR_ACTION_STYLE}>
-                    <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
-                        {t("process.controls.retry", { defaultValue: "تلاش دوباره" })}
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div style={ERROR_ACTION_STYLE}>
+                        <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
+                            {t("process.controls.retry", { defaultValue: "تلاش دوباره" })}
+                        </Button>
+                    </div>
+                ) : null}
             </div>
         );
     }
@@ -398,7 +403,7 @@ export default function ProcessControlsTab({
 
             <div style={{ height: "0.75rem" }} />
 
-            {!readOnly ? (
+            {!readOnly && showActions ? (
                 <div style={ASSIGNMENT_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("process.controls.assignAccessibleName", {
@@ -448,7 +453,7 @@ export default function ProcessControlsTab({
                 </div>
             ) : null}
 
-            {availableControls.length === 0 && !isLoading ? (
+            {showActions && availableControls.length === 0 && !isLoading ? (
                 <>
                     <div style={{ height: "0.75rem" }} />
                     <MessageStrip design="Information" hideCloseButton>
@@ -505,11 +510,13 @@ export default function ProcessControlsTab({
                                 defaultValue: "اعتبار",
                             })}
                         </TableHeaderCell>
-                        <TableHeaderCell width="12rem">
-                            {t("process.controls.columns.actions", {
-                                defaultValue: "عملیات",
-                            })}
-                        </TableHeaderCell>
+                        {showActions ? (
+                            <TableHeaderCell width="12rem">
+                                {t("process.controls.columns.actions", {
+                                    defaultValue: "عملیات",
+                                })}
+                            </TableHeaderCell>
+                        ) : null}
                     </TableHeaderRow>
                 }
                 loading={isLoading}
@@ -538,58 +545,64 @@ export default function ProcessControlsTab({
                                 {formatOptionalValue(control.ownerName, noneText)}
                             </TableCell>
                             <TableCell>{formatValidity(control)}</TableCell>
-                            <TableCell>
-                                <div style={ACTIONS_STYLE}>
-                                    <Button
-                                        design="Transparent"
-                                        disabled={!onOpenControl || mutationBusy}
-                                        onClick={() => onOpenControl?.(assignmentId)}
-                                    >
-                                        {t("process.controls.show", {
-                                            defaultValue: "نمایش",
-                                        })}
-                                    </Button>
-                                    {!readOnly ? (
-                                        <Button
-                                            design="Transparent"
-                                            disabled={mutationBusy}
-                                            onClick={() => setRemoveCandidate(control)}
-                                        >
-                                            {t("process.controls.remove", {
-                                                defaultValue: "حذف",
-                                            })}
-                                        </Button>
-                                    ) : null}
-                                </div>
-                            </TableCell>
+                            {showActions ? (
+                                <TableCell>
+                                    <div style={ACTIONS_STYLE}>
+                                        {onOpenControl ? (
+                                            <Button
+                                                design="Transparent"
+                                                disabled={mutationBusy}
+                                                onClick={() => onOpenControl(assignmentId)}
+                                            >
+                                                {t("process.controls.show", {
+                                                    defaultValue: "نمایش",
+                                                })}
+                                            </Button>
+                                        ) : null}
+                                        {!readOnly ? (
+                                            <Button
+                                                design="Transparent"
+                                                disabled={mutationBusy}
+                                                onClick={() => setRemoveCandidate(control)}
+                                            >
+                                                {t("process.controls.remove", {
+                                                    defaultValue: "حذف",
+                                                })}
+                                            </Button>
+                                        ) : null}
+                                    </div>
+                                </TableCell>
+                            ) : null}
                         </TableRow>
                     );
                 })}
             </Table>
 
-            <DeleteConfirmDialog
-                open={!!removeCandidate}
-                title={t("process.controls.removeTitle", {
-                    defaultValue: "حذف اتصال کنترل",
-                })}
-                message={t("process.controls.removeConfirm", {
-                    defaultValue: "آیا از حذف اتصال کنترل «{{title}}» مطمئن هستید؟",
-                    title: removeCandidateLabel,
-                })}
-                loading={mutationBusy}
-                confirmText={t("process.controls.confirmRemove", {
-                    defaultValue: "حذف",
-                })}
-                cancelText={t("process.controls.cancelRemove", {
-                    defaultValue: "انصراف",
-                })}
-                onClose={() => {
-                    if (!mutationBusy) {
-                        setRemoveCandidate(null);
-                    }
-                }}
-                onConfirm={handleRemove}
-            />
+            {showActions ? (
+                <DeleteConfirmDialog
+                    open={!!removeCandidate}
+                    title={t("process.controls.removeTitle", {
+                        defaultValue: "حذف اتصال کنترل",
+                    })}
+                    message={t("process.controls.removeConfirm", {
+                        defaultValue: "آیا از حذف اتصال کنترل «{{title}}» مطمئن هستید؟",
+                        title: removeCandidateLabel,
+                    })}
+                    loading={mutationBusy}
+                    confirmText={t("process.controls.confirmRemove", {
+                        defaultValue: "حذف",
+                    })}
+                    cancelText={t("process.controls.cancelRemove", {
+                        defaultValue: "انصراف",
+                    })}
+                    onClose={() => {
+                        if (!mutationBusy) {
+                            setRemoveCandidate(null);
+                        }
+                    }}
+                    onConfirm={handleRemove}
+                />
+            ) : null}
         </div>
     );
 }

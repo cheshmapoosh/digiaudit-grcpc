@@ -25,6 +25,7 @@ interface ProcessRegulationsTabProps {
     processId: string | null;
     nodeType: ProcessNodeType;
     readOnly?: boolean;
+    showActions?: boolean;
 }
 
 type RegulationsLoadStatus = "idle" | "loading" | "success" | "error";
@@ -156,6 +157,7 @@ export default function ProcessRegulationsTab({
     processId,
     nodeType,
     readOnly = false,
+    showActions = true,
 }: ProcessRegulationsTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
@@ -275,6 +277,7 @@ export default function ProcessRegulationsTab({
         ? formatAssignmentOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        showActions &&
         !readOnly &&
         !!processId &&
         !!selectedLawId &&
@@ -367,11 +370,13 @@ export default function ProcessRegulationsTab({
                     })}
                 </MessageStrip>
 
-                <div style={ERROR_ACTION_STYLE}>
-                    <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
-                        {t("process.regulations.retry", { defaultValue: "تلاش دوباره" })}
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div style={ERROR_ACTION_STYLE}>
+                        <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
+                            {t("process.regulations.retry", { defaultValue: "تلاش دوباره" })}
+                        </Button>
+                    </div>
+                ) : null}
             </div>
         );
     }
@@ -382,7 +387,7 @@ export default function ProcessRegulationsTab({
 
             <div style={{ height: "0.75rem" }} />
 
-            {!readOnly ? (
+            {!readOnly && showActions ? (
                 <div style={ADD_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("process.regulations.addAccessibleName", {
@@ -432,7 +437,7 @@ export default function ProcessRegulationsTab({
                 </div>
             ) : null}
 
-            {availableLaws.length === 0 && !isLoading ? (
+            {showActions && availableLaws.length === 0 && !isLoading ? (
                 <>
                     <div style={{ height: "0.75rem" }} />
                     <MessageStrip design="Information" hideCloseButton>
@@ -489,11 +494,13 @@ export default function ProcessRegulationsTab({
                                 defaultValue: "اعتبار",
                             })}
                         </TableHeaderCell>
-                        <TableHeaderCell width="8rem">
-                            {t("process.regulations.columns.actions", {
-                                defaultValue: "عملیات",
-                            })}
-                        </TableHeaderCell>
+                        {showActions ? (
+                            <TableHeaderCell width="8rem">
+                                {t("process.regulations.columns.actions", {
+                                    defaultValue: "عملیات",
+                                })}
+                            </TableHeaderCell>
+                        ) : null}
                     </TableHeaderRow>
                 }
                 loading={isLoading}
@@ -513,8 +520,9 @@ export default function ProcessRegulationsTab({
                         <TableCell>{formatOptionalValue(assignment.issuer, noneText)}</TableCell>
                         <TableCell>{resolveStatusLabel(assignment.status, t)}</TableCell>
                         <TableCell>{formatValidity(assignment, "-")}</TableCell>
-                        <TableCell>
-                            {!readOnly ? (
+                        {showActions ? (
+                            <TableCell>
+                                {!readOnly ? (
                                 <Button
                                     design="Transparent"
                                     disabled={mutationBusy}
@@ -522,38 +530,41 @@ export default function ProcessRegulationsTab({
                                 >
                                     {t("process.regulations.remove", { defaultValue: "حذف" })}
                                 </Button>
-                            ) : (
-                                noneText
-                            )}
-                        </TableCell>
+                                ) : (
+                                    noneText
+                                )}
+                            </TableCell>
+                        ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            <DeleteConfirmDialog
-                open={!!removeCandidate}
-                title={t("process.regulations.removeTitle", {
-                    defaultValue: "حذف قانون",
-                })}
-                message={t("process.regulations.removeConfirm", {
-                    defaultValue:
-                        "آیا از حذف قانون «{{title}}» از این آیتم مطمئن هستید؟",
-                    title: removeCandidateLabel,
-                })}
-                loading={mutationBusy}
-                confirmText={t("process.regulations.confirmRemove", {
-                    defaultValue: "حذف",
-                })}
-                cancelText={t("process.regulations.cancelRemove", {
-                    defaultValue: "انصراف",
-                })}
-                onClose={() => {
-                    if (!mutationBusy) {
-                        setRemoveCandidate(null);
-                    }
-                }}
-                onConfirm={handleRemove}
-            />
+            {showActions ? (
+                <DeleteConfirmDialog
+                    open={!!removeCandidate}
+                    title={t("process.regulations.removeTitle", {
+                        defaultValue: "حذف قانون",
+                    })}
+                    message={t("process.regulations.removeConfirm", {
+                        defaultValue:
+                            "آیا از حذف قانون «{{title}}» از این آیتم مطمئن هستید؟",
+                        title: removeCandidateLabel,
+                    })}
+                    loading={mutationBusy}
+                    confirmText={t("process.regulations.confirmRemove", {
+                        defaultValue: "حذف",
+                    })}
+                    cancelText={t("process.regulations.cancelRemove", {
+                        defaultValue: "انصراف",
+                    })}
+                    onClose={() => {
+                        if (!mutationBusy) {
+                            setRemoveCandidate(null);
+                        }
+                    }}
+                    onConfirm={handleRemove}
+                />
+            ) : null}
         </div>
     );
 }

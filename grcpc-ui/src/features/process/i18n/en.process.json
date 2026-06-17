@@ -265,6 +265,9 @@
       "textMaxLength": "Text cannot be longer than 2000 characters",
       "updateAtLeastOneField": "At least one field is required for update",
       "sortOrderInvalid": "Sort order must be a non-negative integer"
+    },
+    "documents": {
+      "viewHint": "Documents registered for this subprocess"
     }
   }
 }

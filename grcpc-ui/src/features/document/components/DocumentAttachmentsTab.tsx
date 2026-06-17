@@ -42,6 +42,7 @@ export interface DocumentAttachmentsTabProps {
     uploadPolicy?: DocumentUploadPolicy;
     busy?: boolean;
     readOnly?: boolean;
+    showActions?: boolean;
     uploadRequiresTempSession?: boolean;
     error?: string | null;
     saveFirstMessage?: string;
@@ -234,6 +235,7 @@ export default function DocumentAttachmentsTab({
     uploadPolicy,
     busy = false,
     readOnly = false,
+    showActions = true,
     uploadRequiresTempSession = false,
     error,
     saveFirstMessage,
@@ -303,6 +305,7 @@ export default function DocumentAttachmentsTab({
         ? Boolean(tempSessionId)
         : Boolean(targetId || tempSessionId);
     const canUploadDocuments =
+        showActions &&
         !readOnly &&
         !busy &&
         canAddressTarget &&
@@ -677,6 +680,10 @@ export default function DocumentAttachmentsTab({
     };
 
     const renderDocumentActions = (documentItem: DocumentAttachment) => {
+        if (!showActions) {
+            return null;
+        }
+
         const canDownload = documentItem.status === "ACTIVE" && Boolean(onDownloadDocument);
         const canDelete = !readOnly && Boolean(onDeleteDocument);
         const canSaveTitle = !readOnly && Boolean(onUpdateDocumentTitle);
@@ -751,7 +758,7 @@ export default function DocumentAttachmentsTab({
     };
 
     const renderUploadProgressArea = () => {
-        if (uploadItems.length === 0) {
+        if (!showActions || uploadItems.length === 0) {
             return null;
         }
 
@@ -841,10 +848,10 @@ export default function DocumentAttachmentsTab({
                 <div style={HEADER_TEXT_STYLE}>
                     <Title level="H5">{documentTitle}</Title>
                     {documentHint ? <Text>{documentHint}</Text> : null}
-                    {!readOnly ? <Text>{maxFileSizeText}</Text> : null}
+                    {!readOnly && showActions ? <Text>{maxFileSizeText}</Text> : null}
                 </div>
 
-                {!readOnly ? (
+                {!readOnly && showActions ? (
                     <FileUploader
                         hideInput
                         multiple
@@ -868,7 +875,7 @@ export default function DocumentAttachmentsTab({
                 ) : null}
             </div>
 
-            {!readOnly && !canAddressTarget ? (
+            {!readOnly && showActions && !canAddressTarget ? (
                 <>
                     <div style={TABLE_SPACER_STYLE} />
                     <MessageStrip design="Information" hideCloseButton>
@@ -931,9 +938,11 @@ export default function DocumentAttachmentsTab({
                                 defaultValue: "تاریخ بارگذاری",
                             })}
                         </TableHeaderCell>
-                        <TableHeaderCell width="10rem">
-                            {t("document.fields.actions", { defaultValue: "عملیات" })}
-                        </TableHeaderCell>
+                        {showActions ? (
+                            <TableHeaderCell width="10rem">
+                                {t("document.fields.actions", { defaultValue: "عملیات" })}
+                            </TableHeaderCell>
+                        ) : null}
                     </TableHeaderRow>
                 }
                 loading={busy}
@@ -955,7 +964,9 @@ export default function DocumentAttachmentsTab({
                                 <TableCell>
                                     {formatDocumentUploadedAt(documentItem.uploadedAt)}
                                 </TableCell>
-                                <TableCell>{renderDocumentActions(documentItem)}</TableCell>
+                                {showActions ? (
+                                    <TableCell>{renderDocumentActions(documentItem)}</TableCell>
+                                ) : null}
                             </TableRow>
                         ))}
 
@@ -973,30 +984,34 @@ export default function DocumentAttachmentsTab({
                                 <TableCell>
                                     {formatDocumentUploadedAt(documentItem.uploadedAt)}
                                 </TableCell>
-                                <TableCell>{renderDocumentActions(documentItem)}</TableCell>
+                                {showActions ? (
+                                    <TableCell>{renderDocumentActions(documentItem)}</TableCell>
+                                ) : null}
                             </TableRow>
                         ))}
                     </>
                 )}
             </Table>
 
-            <DeleteConfirmDialog
-                open={Boolean(documentDeleteCandidate)}
-                title={t("document.delete.title", { defaultValue: "حذف مستند" })}
-                message={t("document.delete.confirm", {
-                    defaultValue: "آیا از حذف مستند «{{title}}» مطمئن هستید؟",
-                    title: documentDeleteCandidate
-                        ? getDocumentTitleValue(documentDeleteCandidate)
-                        : "",
-                })}
-                confirmText={t("document.actions.delete", { defaultValue: "حذف" })}
-                cancelText={t("common.cancel", { defaultValue: "انصراف" })}
-                loading={busy}
-                onClose={() => setDocumentDeleteCandidate(null)}
-                onConfirm={() => {
-                    void confirmDocumentDelete();
-                }}
-            />
+            {showActions ? (
+                <DeleteConfirmDialog
+                    open={Boolean(documentDeleteCandidate)}
+                    title={t("document.delete.title", { defaultValue: "حذف مستند" })}
+                    message={t("document.delete.confirm", {
+                        defaultValue: "آیا از حذف مستند «{{title}}» مطمئن هستید؟",
+                        title: documentDeleteCandidate
+                            ? getDocumentTitleValue(documentDeleteCandidate)
+                            : "",
+                    })}
+                    confirmText={t("document.actions.delete", { defaultValue: "حذف" })}
+                    cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+                    loading={busy}
+                    onClose={() => setDocumentDeleteCandidate(null)}
+                    onConfirm={() => {
+                        void confirmDocumentDelete();
+                    }}
+                />
+            ) : null}
         </div>
     );
 }

@@ -25,6 +25,7 @@ import { processObjectiveAssignmentService } from "../../service/process-objecti
 interface ProcessObjectivesTabProps {
     processId: string | null;
     readOnly?: boolean;
+    showActions?: boolean;
 }
 
 type ObjectivesLoadStatus = "idle" | "loading" | "success" | "error";
@@ -142,6 +143,7 @@ function resolveStatusLabel(
 export default function ProcessObjectivesTab({
     processId,
     readOnly = false,
+    showActions = true,
 }: ProcessObjectivesTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
@@ -239,6 +241,7 @@ export default function ProcessObjectivesTab({
         ? formatAssignmentOption(removeCandidate, noneText)
         : "";
     const canAssign =
+        showActions &&
         !readOnly &&
         !!processId &&
         !!selectedObjectiveId &&
@@ -317,15 +320,17 @@ export default function ProcessObjectivesTab({
                     {t("process.objectives.loadError")}
                 </MessageStrip>
 
-                <div style={ERROR_ACTION_STYLE}>
-                    <Button
-                        design="Emphasized"
-                        disabled={isLoading}
-                        onClick={refresh}
-                    >
-                        {t("process.objectives.retry")}
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div style={ERROR_ACTION_STYLE}>
+                        <Button
+                            design="Emphasized"
+                            disabled={isLoading}
+                            onClick={refresh}
+                        >
+                            {t("process.objectives.retry")}
+                        </Button>
+                    </div>
+                ) : null}
             </div>
         );
     }
@@ -336,7 +341,7 @@ export default function ProcessObjectivesTab({
 
             <div style={{ height: "0.75rem" }} />
 
-            {!readOnly ? (
+            {!readOnly && showActions ? (
                 <div style={ASSIGNMENT_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("process.objectives.assignAccessibleName")}
@@ -382,7 +387,7 @@ export default function ProcessObjectivesTab({
                 </div>
             ) : null}
 
-            {availableObjectives.length === 0 && !isLoading ? (
+            {showActions && availableObjectives.length === 0 && !isLoading ? (
                 <>
                     <div style={{ height: "0.75rem" }} />
                     <MessageStrip design="Information" hideCloseButton>
@@ -422,9 +427,11 @@ export default function ProcessObjectivesTab({
                         <TableHeaderCell width="8rem">
                             {t("process.objectives.columns.status")}
                         </TableHeaderCell>
-                        <TableHeaderCell width="8rem">
-                            {t("process.objectives.columns.actions")}
-                        </TableHeaderCell>
+                        {showActions ? (
+                            <TableHeaderCell width="8rem">
+                                {t("process.objectives.columns.actions")}
+                            </TableHeaderCell>
+                        ) : null}
                     </TableHeaderRow>
                 }
                 loading={isLoading}
@@ -443,39 +450,43 @@ export default function ProcessObjectivesTab({
                             {resolveAssignmentTypeLabel(assignment.assignmentType, t)}
                         </TableCell>
                         <TableCell>{resolveStatusLabel(assignment.status, t)}</TableCell>
-                        <TableCell>
-                            {!readOnly ? (
-                                <Button
-                                    design="Transparent"
-                                    disabled={mutationBusy}
-                                    onClick={() => setRemoveCandidate(assignment)}
-                                >
-                                    {t("process.objectives.remove")}
-                                </Button>
-                            ) : (
-                                noneText
-                            )}
-                        </TableCell>
+                        {showActions ? (
+                            <TableCell>
+                                {!readOnly ? (
+                                    <Button
+                                        design="Transparent"
+                                        disabled={mutationBusy}
+                                        onClick={() => setRemoveCandidate(assignment)}
+                                    >
+                                        {t("process.objectives.remove")}
+                                    </Button>
+                                ) : (
+                                    noneText
+                                )}
+                            </TableCell>
+                        ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            <DeleteConfirmDialog
-                open={!!removeCandidate}
-                title={t("process.objectives.removeTitle")}
-                message={t("process.objectives.removeConfirm", {
-                    title: removeCandidateLabel,
-                })}
-                loading={mutationBusy}
-                confirmText={t("process.objectives.confirmRemove")}
-                cancelText={t("process.objectives.cancelRemove")}
-                onClose={() => {
-                    if (!mutationBusy) {
-                        setRemoveCandidate(null);
-                    }
-                }}
-                onConfirm={handleRemove}
-            />
+            {showActions ? (
+                <DeleteConfirmDialog
+                    open={!!removeCandidate}
+                    title={t("process.objectives.removeTitle")}
+                    message={t("process.objectives.removeConfirm", {
+                        title: removeCandidateLabel,
+                    })}
+                    loading={mutationBusy}
+                    confirmText={t("process.objectives.confirmRemove")}
+                    cancelText={t("process.objectives.cancelRemove")}
+                    onClose={() => {
+                        if (!mutationBusy) {
+                            setRemoveCandidate(null);
+                        }
+                    }}
+                    onConfirm={handleRemove}
+                />
+            ) : null}
         </div>
     );
 }
