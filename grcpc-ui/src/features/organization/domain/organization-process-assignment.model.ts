@@ -107,8 +107,7 @@ export interface OrganizationRiskOption {
 export type OrganizationReferenceType =
     | "CONTROL"
     | "REGULATION"
-    | "POLICY"
-    | "OBJECTIVE";
+    | "POLICY";
 
 export interface OrganizationReferenceAssignment extends AuditFields {
     id: string;

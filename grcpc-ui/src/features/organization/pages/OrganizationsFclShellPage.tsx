@@ -32,6 +32,11 @@ import type {
     OrganizationSubProcessOption,
     OrganizationSubProcessView,
 } from "../domain/organization-process-assignment.model";
+import type {
+    OrganizationObjectiveAssignment,
+    OrganizationObjectiveOption,
+    OrganizationObjectiveView,
+} from "../domain/organization-objective-assignment.model";
 import type { ProcessNode } from "@/features/process";
 import {
     ROOT_PARENT as PROCESS_ROOT_PARENT,
@@ -64,6 +69,7 @@ import { useDocumentAttachmentState } from "@/features/document";
 import { useOrganizationState, ROOT_PARENT } from "../state/organization.state";
 import { useOrganizationProcessAssignmentState } from "../state/organization-process-assignment.state";
 import { useOrganizationProcessRelationshipState } from "../state/organization-process-relationship.state";
+import { useOrganizationObjectiveAssignmentState } from "../state/organization-objective-assignment.state";
 import { useOrganizationReferenceAssignmentState } from "../state/organization-reference-assignment.state";
 import { hasChildren, sortOrganizations } from "../utils/organization.tree";
 
@@ -81,13 +87,13 @@ const DIALOG_WIDTH = "90vw";
 const EMPTY_ASSIGNMENTS: OrganizationProcessAssignment[] = [];
 const EMPTY_RISKS: OrganizationRiskAssignment[] = [];
 const EMPTY_REFERENCE_ASSIGNMENTS: OrganizationReferenceAssignment[] = [];
+const EMPTY_OBJECTIVE_ASSIGNMENTS: OrganizationObjectiveAssignment[] = [];
 const EMPTY_DOCUMENTS: DocumentAttachment[] = [];
 const DOCUMENT_TARGET_TYPE = "ORGANIZATION";
 const REFERENCE_TYPES: readonly OrganizationReferenceType[] = [
     "CONTROL",
     "REGULATION",
     "POLICY",
-    "OBJECTIVE",
 ];
 const MIN_PANEL_GAP = "1px";
 
@@ -334,14 +340,13 @@ function toPolicyReferenceOption(policy: PolicyNode): OrganizationReferenceOptio
     };
 }
 
-function toObjectiveReferenceOption(objective: ObjectiveNode): OrganizationReferenceOption {
+function toObjectiveOption(objective: ObjectiveNode): OrganizationObjectiveOption {
     return {
-        referenceId: objective.id,
+        objectiveNodeId: objective.id,
         code: objective.code,
         title: objective.title,
         description: objective.description,
         status: objective.status,
-        ownerName: objective.organizationUnitName,
         typeLabel: objective.objectiveType,
         validFrom: objective.effectiveFrom,
         validTo: objective.validUntil,
@@ -407,6 +412,29 @@ function buildOrganizationReferenceViews(
             };
         })
         .filter((item): item is OrganizationReferenceView => item !== null)
+        .sort((a, b) => {
+            const codeCompare = a.code.localeCompare(b.code, "fa");
+            return codeCompare !== 0 ? codeCompare : a.title.localeCompare(b.title, "fa");
+        });
+}
+
+function buildOrganizationObjectiveViews(
+    assignments: OrganizationObjectiveAssignment[],
+): OrganizationObjectiveView[] {
+    return assignments
+        .map((assignment): OrganizationObjectiveView => ({
+            assignmentId: assignment.assignmentId,
+            organizationId: assignment.organizationId,
+            objectiveNodeId: assignment.objectiveNodeId,
+            code: assignment.objectiveCode,
+            title: assignment.objectiveTitle,
+            description: assignment.description,
+            status: assignment.objectiveStatus,
+            typeLabel: assignment.objectiveType,
+            validFrom: assignment.effectiveFrom,
+            validTo: assignment.validUntil,
+            active: assignment.active,
+        }))
         .sort((a, b) => {
             const codeCompare = a.code.localeCompare(b.code, "fa");
             return codeCompare !== 0 ? codeCompare : a.title.localeCompare(b.title, "fa");
@@ -496,6 +524,21 @@ export default function OrganizationsFclShellPage() {
     );
     const removeRiskFromOrganization = useOrganizationProcessRelationshipState(
         (state) => state.removeRiskAssignment,
+    );
+    const objectiveAssignmentsByOrganizationId = useOrganizationObjectiveAssignmentState(
+        (state) => state.assignmentsByOrganizationId,
+    );
+    const objectiveAssignmentsLoading = useOrganizationObjectiveAssignmentState(
+        (state) => state.loading,
+    );
+    const loadObjectiveAssignmentsForOrganization = useOrganizationObjectiveAssignmentState(
+        (state) => state.loadForOrganization,
+    );
+    const assignObjectiveToOrganization = useOrganizationObjectiveAssignmentState(
+        (state) => state.assignObjective,
+    );
+    const removeObjectiveFromOrganization = useOrganizationObjectiveAssignmentState(
+        (state) => state.removeAssignment,
     );
     const referenceAssignmentsByOrganizationAndType = useOrganizationReferenceAssignmentState(
         (state) => state.assignmentsByOrganizationAndType,
@@ -609,8 +652,8 @@ export default function OrganizationsFclShellPage() {
                 .map(toPolicyReferenceOption),
         [policyItems],
     );
-    const availableObjectiveReferences = useMemo(
-        () => objectiveItems.map(toObjectiveReferenceOption),
+    const availableObjectiveOptions = useMemo(
+        () => objectiveItems.map(toObjectiveOption),
         [objectiveItems],
     );
 
@@ -1122,6 +1165,7 @@ export default function OrganizationsFclShellPage() {
         void Promise.all([
             loadAssignmentsForOrganization(objectValue.id),
             loadRisksForOrganization(objectValue.id),
+            loadObjectiveAssignmentsForOrganization(objectValue.id),
             loadDocumentsForTarget(DOCUMENT_TARGET_TYPE, objectValue.id),
             ...REFERENCE_TYPES.map((referenceType) =>
                 loadReferenceAssignmentsForOrganization(objectValue.id, referenceType),
@@ -1139,6 +1183,7 @@ export default function OrganizationsFclShellPage() {
     }, [
         loadAssignmentsForOrganization,
         loadDocumentsForTarget,
+        loadObjectiveAssignmentsForOrganization,
         loadRisksForOrganization,
         loadReferenceAssignmentsForOrganization,
         objectValue?.id,
@@ -1152,6 +1197,9 @@ export default function OrganizationsFclShellPage() {
     const organizationRisks = objectValue?.id
         ? risksByOrganizationId[objectValue.id] ?? EMPTY_RISKS
         : EMPTY_RISKS;
+    const organizationObjectiveAssignments = objectValue?.id
+        ? objectiveAssignmentsByOrganizationId[objectValue.id] ?? EMPTY_OBJECTIVE_ASSIGNMENTS
+        : EMPTY_OBJECTIVE_ASSIGNMENTS;
     const organizationDocumentTargetKey = getDocumentTargetKey(
         DOCUMENT_TARGET_TYPE,
         objectValue?.id || undefined,
@@ -1216,21 +1264,9 @@ export default function OrganizationsFclShellPage() {
             referenceAssignmentsByOrganizationAndType,
         ],
     );
-    const organizationObjectiveReferences = useMemo(
-        () =>
-            buildOrganizationReferenceViews(
-                getReferenceAssignments(
-                    referenceAssignmentsByOrganizationAndType,
-                    objectValue?.id,
-                    "OBJECTIVE",
-                ),
-                availableObjectiveReferences,
-            ),
-        [
-            availableObjectiveReferences,
-            objectValue?.id,
-            referenceAssignmentsByOrganizationAndType,
-        ],
+    const organizationObjectiveViews = useMemo(
+        () => buildOrganizationObjectiveViews(organizationObjectiveAssignments),
+        [organizationObjectiveAssignments],
     );
 
     const handleAssignSubProcessToOrganization = useCallback(
@@ -1426,6 +1462,63 @@ export default function OrganizationsFclShellPage() {
             }
         },
         [objectValue?.id, removeReferenceFromOrganization, t],
+    );
+
+    const handleAssignObjectiveToOrganization = useCallback(
+        async (objectiveNodeId: string) => {
+            if (!objectValue?.id) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setObjectError(null);
+
+                await assignObjectiveToOrganization({
+                    organizationId: objectValue.id,
+                    objectiveNodeId,
+                });
+            } catch (error) {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("organization.references.errors.assign", {
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± ØªØ®ØµÛŒØµ Ø¢ÛŒØªÙ… Ø¨Ù‡ Ø³Ø§Ø²Ù…Ø§Ù†",
+                        }),
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [assignObjectiveToOrganization, objectValue?.id, t],
+    );
+
+    const handleRemoveObjectiveAssignment = useCallback(
+        async (assignmentId: string) => {
+            if (!objectValue?.id) {
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                setObjectError(null);
+
+                await removeObjectiveFromOrganization(objectValue.id, assignmentId);
+            } catch (error) {
+                setObjectError(
+                    mapError(
+                        error,
+                        t("organization.references.errors.remove", {
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù ØªØ®ØµÛŒØµ Ø§Ø² Ø³Ø§Ø²Ù…Ø§Ù†",
+                        }),
+                    ),
+                );
+            } finally {
+                setSubmitting(false);
+            }
+        },
+        [objectValue?.id, removeObjectiveFromOrganization, t],
     );
 
     const handleUploadOrganizationDocument = useCallback(
@@ -1669,8 +1762,8 @@ export default function OrganizationsFclShellPage() {
                             availableRegulationReferences={availableRegulationReferences}
                             policyReferences={organizationPolicyReferences}
                             availablePolicyReferences={availablePolicyReferences}
-                            objectiveReferences={organizationObjectiveReferences}
-                            availableObjectiveReferences={availableObjectiveReferences}
+                            objectiveAssignments={organizationObjectiveViews}
+                            availableObjectives={availableObjectiveOptions}
                             risks={organizationRisks}
                             availableRisks={availableRiskTemplates}
                             documents={organizationDocuments}
@@ -1684,7 +1777,8 @@ export default function OrganizationsFclShellPage() {
                                 controlLoading ||
                                 regulationLoading ||
                                 policyLoading ||
-                                objectiveLoading
+                                objectiveLoading ||
+                                objectiveAssignmentsLoading
                             }
                             documentsBusy={documentsLoading}
                             busy={loading || submitting}
@@ -1699,6 +1793,8 @@ export default function OrganizationsFclShellPage() {
                             onRemoveRiskAssignment={handleRemoveRiskAssignment}
                             onAssignReference={handleAssignReferenceToOrganization}
                             onRemoveReferenceAssignment={handleRemoveReferenceAssignment}
+                            onAssignObjective={handleAssignObjectiveToOrganization}
+                            onRemoveObjectiveAssignment={handleRemoveObjectiveAssignment}
                             onUploadDocument={handleUploadOrganizationDocument}
                             onUpdateDocumentTitle={handleUpdateOrganizationDocumentTitle}
                             onDeleteDocument={handleDeleteOrganizationDocument}

@@ -385,7 +385,7 @@ public class ObjectiveService {
                             organization.getId(),
                             organization.getCode(),
                             organization.getName(),
-                            organization.getStatus()
+                            organization.getStatus().name().toLowerCase(Locale.ROOT)
                     ));
         }
 

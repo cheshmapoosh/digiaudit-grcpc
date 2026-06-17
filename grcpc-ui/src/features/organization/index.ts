@@ -22,6 +22,13 @@ export type {
 } from "./domain/organization-process-assignment.model";
 
 export type {
+    OrganizationObjectiveAssignment,
+    OrganizationObjectiveAssignmentCreate,
+    OrganizationObjectiveOption,
+    OrganizationObjectiveView,
+} from "./domain/organization-objective-assignment.model";
+
+export type {
     OrganizationCreateInput,
     OrganizationUpdateInput,
 } from "./domain/organization.schema";

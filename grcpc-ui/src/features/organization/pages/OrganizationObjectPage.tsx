@@ -46,6 +46,10 @@ import type {
     OrganizationSubProcessOption,
     OrganizationSubProcessView,
 } from "../domain/organization-process-assignment.model";
+import type {
+    OrganizationObjectiveOption,
+    OrganizationObjectiveView,
+} from "../domain/organization-objective-assignment.model";
 import type { DocumentAttachment, DocumentUploadPolicy } from "@/features/document";
 import {
     DocumentAttachmentsTab,
@@ -99,8 +103,8 @@ export interface OrganizationObjectPageProps {
     availableRegulationReferences?: OrganizationReferenceOption[];
     policyReferences?: OrganizationReferenceView[];
     availablePolicyReferences?: OrganizationReferenceOption[];
-    objectiveReferences?: OrganizationReferenceView[];
-    availableObjectiveReferences?: OrganizationReferenceOption[];
+    objectiveAssignments?: OrganizationObjectiveView[];
+    availableObjectives?: OrganizationObjectiveOption[];
     risks?: OrganizationRiskAssignment[];
     availableRisks?: OrganizationRiskOption[];
     documents?: DocumentAttachment[];
@@ -129,6 +133,8 @@ export interface OrganizationObjectPageProps {
         referenceType: OrganizationReferenceType,
         assignmentId: string,
     ) => Promise<void> | void;
+    onAssignObjective?: (objectiveNodeId: string) => Promise<void> | void;
+    onRemoveObjectiveAssignment?: (assignmentId: string) => Promise<void> | void;
     onUploadDocument?: (
         file: File,
         onProgress?: (progress: number) => void,
@@ -338,7 +344,6 @@ const EMPTY_SELECTED_REFERENCES: Record<OrganizationReferenceType, string> = {
     CONTROL: "",
     REGULATION: "",
     POLICY: "",
-    OBJECTIVE: "",
 };
 
 function toFormState(
@@ -516,6 +521,10 @@ function formatReferenceOption(option: OrganizationReferenceOption): string {
     return `${option.code} - ${option.title}${parentTitle}`;
 }
 
+function formatObjectiveOption(option: OrganizationObjectiveOption): string {
+    return `${option.code} - ${option.title}`;
+}
+
 function formatOptionalValue(value?: string): string {
     return formatPersianDate(value);
 }
@@ -659,8 +668,8 @@ export default function OrganizationObjectPage({
     availableRegulationReferences = [],
     policyReferences = [],
     availablePolicyReferences = [],
-    objectiveReferences = [],
-    availableObjectiveReferences = [],
+    objectiveAssignments = [],
+    availableObjectives = [],
     risks = [],
     availableRisks = [],
     documents = [],
@@ -683,6 +692,8 @@ export default function OrganizationObjectPage({
     onRemoveRiskAssignment,
     onAssignReference,
     onRemoveReferenceAssignment,
+    onAssignObjective,
+    onRemoveObjectiveAssignment,
     onUploadDocument,
     onUpdateDocumentTitle,
     onDeleteDocument,
@@ -716,6 +727,8 @@ export default function OrganizationObjectPage({
     const [selectedReferenceSearchValues, setSelectedReferenceSearchValues] = useState<
         Record<OrganizationReferenceType, string>
     >(EMPTY_SELECTED_REFERENCES);
+    const [selectedObjectiveId, setSelectedObjectiveId] = useState("");
+    const [selectedObjectiveSearchValue, setSelectedObjectiveSearchValue] = useState("");
     const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
     const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
     const activeTab = controlledActiveTab ?? internalActiveTab;
@@ -971,6 +984,30 @@ export default function OrganizationObjectPage({
 
         await onAssignReference(referenceType, targetId);
         setReferenceSelection(referenceType, "", "");
+    };
+
+    const setObjectiveSelection = (
+        objectiveNodeId: string,
+        searchValue: string,
+    ) => {
+        setSelectedObjectiveId(objectiveNodeId);
+        setSelectedObjectiveSearchValue(searchValue);
+    };
+
+    const handleAssignObjective = async (
+        options: OrganizationObjectiveOption[],
+    ) => {
+        const typedMatch = options.find(
+            (option) => formatObjectiveOption(option) === selectedObjectiveSearchValue,
+        );
+        const targetId = selectedObjectiveId || typedMatch?.objectiveNodeId;
+
+        if (!targetId || !onAssignObjective || !value?.id) {
+            return;
+        }
+
+        await onAssignObjective(targetId);
+        setObjectiveSelection("", "");
     };
 
     const handleAssignSubProcess = async () => {
@@ -1781,6 +1818,200 @@ export default function OrganizationObjectPage({
         );
     };
 
+    const renderObjectiveAssignmentTab = ({
+        title,
+        entityLabel,
+        options,
+        assignments,
+        selectPlaceholder,
+        noDataText,
+        hint,
+        saveFirstHint,
+    }: {
+        title: string;
+        entityLabel: string;
+        options: OrganizationObjectiveOption[];
+        assignments: OrganizationObjectiveView[];
+        selectPlaceholder: string;
+        noDataText: string;
+        hint: string;
+        saveFirstHint: string;
+    }) => {
+        const assignedObjectiveIds = new Set(
+            assignments.map((assignment) => assignment.objectiveNodeId),
+        );
+        const unassignedOptions = options.filter(
+            (option) => !assignedObjectiveIds.has(option.objectiveNodeId),
+        );
+        const selectedAssignableObjective = unassignedOptions.some(
+            (option) => option.objectiveNodeId === selectedObjectiveId,
+        )
+            ? selectedObjectiveId
+            : "";
+        const selectedObjectiveOption = unassignedOptions.find(
+            (option) => option.objectiveNodeId === selectedAssignableObjective,
+        );
+        const comboBoxValue = selectedObjectiveOption
+            ? formatObjectiveOption(selectedObjectiveOption)
+            : selectedObjectiveSearchValue;
+        const canSelect =
+            !readOnly &&
+            !busy &&
+            !referencesBusy &&
+            Boolean(value?.id) &&
+            Boolean(onAssignObjective) &&
+            unassignedOptions.length > 0;
+        const canAssign = canSelect && Boolean(selectedAssignableObjective);
+
+        return (
+            <div style={TABLE_PANEL_STYLE}>
+                <Title level="H5">{title}</Title>
+
+                <div style={TABLE_HINT_STYLE}>{value?.id ? hint : saveFirstHint}</div>
+
+                {!readOnly ? (
+                    <div style={SUB_PROCESS_PICKER_STYLE}>
+                        <ComboBox
+                            style={SUB_PROCESS_COMBOBOX_STYLE}
+                            filter="Contains"
+                            showClearIcon
+                            value={comboBoxValue}
+                            placeholder={selectPlaceholder}
+                            disabled={!canSelect}
+                            onInput={(event) => {
+                                const nextValue = readInputValue(event);
+                                const matchedOption = unassignedOptions.find(
+                                    (option) => formatObjectiveOption(option) === nextValue,
+                                );
+                                setObjectiveSelection(
+                                    matchedOption?.objectiveNodeId ?? "",
+                                    nextValue,
+                                );
+                            }}
+                            onSelectionChange={(event) => {
+                                const nextValue = readSelectedComboBoxDataValue(
+                                    event,
+                                    selectedAssignableObjective,
+                                );
+                                const selectedOption = unassignedOptions.find(
+                                    (option) => option.objectiveNodeId === nextValue,
+                                );
+
+                                setObjectiveSelection(
+                                    nextValue,
+                                    selectedOption ? formatObjectiveOption(selectedOption) : "",
+                                );
+                            }}
+                        >
+                            {unassignedOptions.map((option) => (
+                                <ComboBoxItem
+                                    key={option.objectiveNodeId}
+                                    data-value={option.objectiveNodeId}
+                                    text={formatObjectiveOption(option)}
+                                    additionalText={option.typeLabel ?? option.status}
+                                />
+                            ))}
+                        </ComboBox>
+
+                        <Button
+                            style={SUB_PROCESS_ADD_BUTTON_STYLE}
+                            design="Emphasized"
+                            disabled={!canAssign}
+                            onClick={() => {
+                                void handleAssignObjective(unassignedOptions);
+                            }}
+                        >
+                            {t("organization.actions.add", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡ Ù†Ù…ÙˆØ¯Ù†" })}
+                        </Button>
+                    </div>
+                ) : null}
+
+                <Table
+                    style={TABLE_STYLE}
+                    noDataText={noDataText}
+                    headerRow={
+                        <TableHeaderRow>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {entityLabel}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.owner", { defaultValue: "Ù…Ø§Ù„Ú© / Ù†ÙˆØ¹" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.assignmentAndStatus", {
+                                    defaultValue: "Ø±Ø§Ø¨Ø·Ù‡ / ÙˆØ¶Ø¹ÛŒØª",
+                                })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.validity", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø±" })}
+                            </TableHeaderCell>
+                            <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
+                                {t("organization.fields.actions", { defaultValue: "Ø¹Ù…Ù„ÛŒØ§Øª" })}
+                            </TableHeaderCell>
+                        </TableHeaderRow>
+                    }
+                >
+                    {assignments.map((assignment) => (
+                        <TableRow key={assignment.assignmentId}>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <strong>{assignment.title}</strong>
+                                    <span style={TABLE_SECONDARY_TEXT_STYLE}>
+                                        {assignment.code}
+                                    </span>
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                {assignment.description || "-"}
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <span>{assignment.typeLabel || "-"}</span>
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <div style={TABLE_CELL_CONTENT_STYLE}>
+                                    <span style={TABLE_INLINE_META_STYLE}>
+                                        {assignment.active
+                                            ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+                                            : t("common.inactive", {
+                                                  defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„",
+                                              })}
+                                        {assignment.status ? ` / ${assignment.status}` : ""}
+                                    </span>
+                                </div>
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                {formatValidityRange(assignment.validFrom, assignment.validTo)}
+                            </TableCell>
+                            <TableCell style={TABLE_TEXT_CELL_STYLE}>
+                                <Button
+                                    design="Transparent"
+                                    disabled={
+                                        readOnly ||
+                                        busy ||
+                                        referencesBusy ||
+                                        !onRemoveObjectiveAssignment
+                                    }
+                                    onClick={() => {
+                                        void onRemoveObjectiveAssignment?.(
+                                            assignment.assignmentId,
+                                        );
+                                    }}
+                                >
+                                    {t("organization.actions.delete", { defaultValue: "Ø­Ø°Ù" })}
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </Table>
+            </div>
+        );
+    };
+
     const renderControlsTab = () =>
         renderReferenceAssignmentTab({
             referenceType: "CONTROL",
@@ -1845,12 +2076,11 @@ export default function OrganizationObjectPage({
         });
 
     const renderGoalsTab = () =>
-        renderReferenceAssignmentTab({
-            referenceType: "OBJECTIVE",
+        renderObjectiveAssignmentTab({
             title: t("organization.tabs.goals", { defaultValue: "اهداف" }),
             entityLabel: t("organization.fields.goal", { defaultValue: "هدف" }),
-            options: availableObjectiveReferences,
-            assignments: objectiveReferences,
+            options: availableObjectives,
+            assignments: objectiveAssignments,
             selectPlaceholder: t("organization.goals.selectPlaceholder", {
                 defaultValue: "انتخاب هدف",
             }),

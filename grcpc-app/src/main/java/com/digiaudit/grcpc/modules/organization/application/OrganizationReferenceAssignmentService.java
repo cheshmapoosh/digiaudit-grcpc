@@ -10,7 +10,6 @@ import com.digiaudit.grcpc.modules.audit.application.AuditService;
 import com.digiaudit.grcpc.modules.audit.domain.enums.ActionResult;
 import com.digiaudit.grcpc.modules.audit.domain.enums.AuditEventType;
 import com.digiaudit.grcpc.modules.audit.domain.enums.AuditTargetType;
-import com.digiaudit.grcpc.modules.masterdata.objective.domain.repository.ObjectiveNodeRepository;
 import com.digiaudit.grcpc.modules.masterdata.policy.domain.entity.PolicyNodeEntity;
 import com.digiaudit.grcpc.modules.masterdata.policy.domain.repository.PolicyNodeRepository;
 import com.digiaudit.grcpc.modules.masterdata.control.domain.repository.ControlRepository;
@@ -41,12 +40,10 @@ public class OrganizationReferenceAssignmentService {
     private static final String TYPE_CONTROL = "CONTROL";
     private static final String TYPE_REGULATION = "REGULATION";
     private static final String TYPE_POLICY = "POLICY";
-    private static final String TYPE_OBJECTIVE = "OBJECTIVE";
     private static final Set<String> SUPPORTED_REFERENCE_TYPES = Set.of(
             TYPE_CONTROL,
             TYPE_REGULATION,
-            TYPE_POLICY,
-            TYPE_OBJECTIVE
+            TYPE_POLICY
     );
 
     private final OrganizationRepository organizationRepository;
@@ -54,7 +51,6 @@ public class OrganizationReferenceAssignmentService {
     private final ControlRepository controlRepository;
     private final RegulationRepository regulationRepository;
     private final PolicyNodeRepository policyNodeRepository;
-    private final ObjectiveNodeRepository objectiveNodeRepository;
     private final AuditService auditService;
     private final CurrentUserProvider currentUserProvider;
 
@@ -160,11 +156,6 @@ public class OrganizationReferenceAssignmentService {
                         .orElseThrow(() -> notFound(referenceType, referenceId));
                 if (!"policy".equals(policy.getNodeType())) {
                     throw invalidReference(referenceType, referenceId);
-                }
-            }
-            case TYPE_OBJECTIVE -> {
-                if (!objectiveNodeRepository.existsById(referenceId)) {
-                    throw notFound(referenceType, referenceId);
                 }
             }
             default -> throw invalidReference(referenceType, referenceId);
