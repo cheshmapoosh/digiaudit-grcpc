@@ -706,17 +706,14 @@ export default function RegulationsFclShellPage() {
         </div>
     );
 
-    const inlineSummaryColumn = showInlineSummaryPane
+    const inlineSummaryColumn = selectedTreeItem
         ? (
             <div key="summary" dir={appDir} style={columnContainerStyle}>
                 <div style={frameStyle}>
                     <RegulationSummaryPanel
+                        key={selectedTreeItem.id}
                         value={selectedTreeItem}
-                        allItems={items}
-                        busy={loading || submitting}
-                        error={!showModal ? pageError : null}
-                        onEdit={handleEdit}
-                        onCancel={() => {
+                        onClose={() => {
                             setSelectedTreeId(null);
                             setTreeExpansionAnchorId(null);
                             setPageError(null);

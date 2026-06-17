@@ -1,4 +1,4 @@
-import { httpClient } from "@/shared/infra/http.client";
+import { httpClient, HttpError } from "@/shared/infra/http.client";
 import type {
     RegulationNode,
     RegulationNodeCreate,
@@ -16,8 +16,12 @@ export class RegulationApiRepo implements RegulationRepo {
     async getById(id: string): Promise<RegulationNode | null> {
         try {
             return await httpClient.get<RegulationNode>(`${BASE_URL}/${id}`);
-        } catch {
-            return null;
+        } catch (error) {
+            if (error instanceof HttpError && error.status === 404) {
+                return null;
+            }
+
+            throw error;
         }
     }
 
@@ -34,7 +38,7 @@ export class RegulationApiRepo implements RegulationRepo {
     }
 
     async getChildren(parentId: string | null): Promise<RegulationNode[]> {
-        const url = parentId ? `${BASE_URL}/children/${parentId}` : `${BASE_URL}/roots`;
+        const url = parentId ? `${BASE_URL}/${parentId}/children` : `${BASE_URL}/roots`;
         return httpClient.get<RegulationNode[]>(url);
     }
 

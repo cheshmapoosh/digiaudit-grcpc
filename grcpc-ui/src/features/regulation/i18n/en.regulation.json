@@ -48,6 +48,9 @@
       "modalTitle": "Regulation Center",
       "createModalTitle": "Create"
     },
+    "details": {
+      "loadError": "Failed to load regulation details"
+    },
     "create": {
       "title": "Create Regulation Item"
     },
@@ -83,6 +86,7 @@
       "sortOrderInvalid": "Sort order must be a non-negative integer"
     },
     "requirements": {
+      "loadError": "Failed to load law requirements",
       "title": "Law Requirements",
       "add": "Add Requirement",
       "empty": "No requirement has been registered for this law.",
@@ -98,6 +102,7 @@
       }
     },
     "documents": {
+      "viewHint": "Documents registered for this item",
       "saveFirst": "Save the regulation item first, then upload documents."
     }
   }

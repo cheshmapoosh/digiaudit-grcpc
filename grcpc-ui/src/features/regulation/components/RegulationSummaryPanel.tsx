@@ -1,8 +1,16 @@
-import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+    Fragment,
+    useEffect,
+    useMemo,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
     Bar,
+    BusyIndicator,
     Button,
     Label,
     MessageStrip,
@@ -17,24 +25,31 @@ import type {
     RegulationNodeType,
     RegulationStatus,
 } from "../domain/regulation.model";
+import { regulationService } from "../service/regulation.service";
 import { formatPersianDate } from "@/shared/utils/date.utils";
+import { DocumentAttachmentsManager } from "@/features/document";
+import RegulationRequirementsSummaryTab from "./tabs/RegulationRequirementsSummaryTab";
 
 export interface RegulationSummaryPanelProps {
     value?: RegulationNode | null;
-    allItems?: RegulationNode[];
-    busy?: boolean;
-    error?: string | null;
-    onEdit?: (id: string) => void;
-    onCancel?: () => void;
+    onClose: () => void;
 }
 
 type RegulationDetailTabKey = "general" | "requirements" | "documents";
+type DetailLoadStatus = "idle" | "loading" | "success" | "error";
 
 interface DetailTabDefinition {
     key: RegulationDetailTabKey;
     label: string;
 }
 
+interface DetailLoadState {
+    status: DetailLoadStatus;
+    details: RegulationNode | null;
+    error: string | null;
+}
+
+const REGULATION_DOCUMENT_TARGET_TYPE = "REGULATION_NODE";
 const REGULATION_SUMMARY_TAB_CLASS = "regulationSummaryTabs";
 
 addCustomCSS(
@@ -70,40 +85,41 @@ const TAB_BODY_STYLE: CSSProperties = {
 
 const FIELD_GRID_STYLE: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "minmax(6rem, max-content) minmax(0, 1fr)",
+    gridTemplateColumns: "minmax(7rem, max-content) minmax(0, 1fr)",
     gap: "0.5rem",
     alignItems: "start",
     minWidth: 0,
 };
 
-const TABLE_STYLE: CSSProperties = {
+const HEADER_GRID_STYLE: CSSProperties = {
     display: "grid",
-    borderInlineStart: "1px solid var(--sapList_BorderColor)",
-    borderBlockStart: "1px solid var(--sapList_BorderColor)",
-    background: "var(--sapList_Background)",
-    minWidth: "28rem",
+    gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
+    gap: "0.75rem 1rem",
+    padding: "0.75rem 1rem",
+    border: "1px solid var(--sapGroup_ContentBorderColor)",
+    borderBottom: "none",
+    background: "var(--sapGroup_ContentBackground)",
 };
 
-const TABLE_HEADER_CELL_STYLE: CSSProperties = {
-    minHeight: "2rem",
-    padding: "0.35rem 0.5rem",
-    borderInlineEnd: "1px solid var(--sapList_BorderColor)",
-    borderBlockEnd: "1px solid var(--sapList_BorderColor)",
-    background: "var(--sapList_HeaderBackground)",
-    fontWeight: 700,
-    boxSizing: "border-box",
-    overflowWrap: "anywhere",
+const LOADING_STYLE: CSSProperties = {
+    display: "grid",
+    minHeight: "12rem",
+    placeItems: "center",
 };
 
-const TABLE_CELL_STYLE: CSSProperties = {
-    minHeight: "2rem",
-    padding: "0.35rem 0.5rem",
-    borderInlineEnd: "1px solid var(--sapList_BorderColor)",
-    borderBlockEnd: "1px solid var(--sapList_BorderColor)",
-    background: "var(--sapList_Background)",
-    boxSizing: "border-box",
-    overflowWrap: "anywhere",
-};
+function createInitialLoadState(value?: RegulationNode | null): DetailLoadState {
+    return value
+        ? {
+              status: "loading",
+              details: null,
+              error: null,
+          }
+        : {
+              status: "idle",
+              details: null,
+              error: null,
+          };
+}
 
 function readSelectedTabKey(event: unknown): RegulationDetailTabKey | null {
     const selectedTab = (event as {
@@ -139,10 +155,28 @@ function resolveStatusLabel(
         : t("common.inactive", { defaultValue: "غیرفعال" });
 }
 
+function displayText(value?: string | number | null): string {
+    if (typeof value === "number") {
+        return String(value);
+    }
+
+    return value?.trim() ? value : "-";
+}
+
+function displayDate(value?: string | null): string {
+    return value ? formatPersianDate(value) : "-";
+}
+
+function mapLoadError(error: unknown, fallback: string): string {
+    return error instanceof Error && error.message ? error.message : fallback;
+}
+
 function DetailRow({ label, value }: { label: string; value?: ReactNode }) {
     return (
         <div style={FIELD_GRID_STYLE}>
-            <Label showColon wrappingType="None">{label}</Label>
+            <Label showColon wrappingType="None">
+                {label}
+            </Label>
             <span
                 style={{
                     minWidth: 0,
@@ -153,63 +187,6 @@ function DetailRow({ label, value }: { label: string; value?: ReactNode }) {
             >
                 {value || "-"}
             </span>
-        </div>
-    );
-}
-
-function EmptyRows({ columns, rows = 3 }: { columns: number; rows?: number }) {
-    return (
-        <>
-            {Array.from({ length: rows * columns }).map((_, index) => (
-                <div key={index} role="cell" style={TABLE_CELL_STYLE} />
-            ))}
-        </>
-    );
-}
-
-function SimpleTable({
-    columns,
-    data,
-    rows = 3,
-}: {
-    columns: string[];
-    data?: ReactNode[][];
-    rows?: number;
-}) {
-    const tableData = data ?? [];
-
-    return (
-        <div style={{ overflowX: "auto", width: "100%" }}>
-            <div
-                role="table"
-                style={{
-                    ...TABLE_STYLE,
-                    minWidth: `${Math.max(columns.length * 8, 28)}rem`,
-                    gridTemplateColumns: `repeat(${columns.length}, minmax(8rem, 1fr))`,
-                }}
-            >
-                {columns.map((column) => (
-                    <div key={column} role="columnheader" style={TABLE_HEADER_CELL_STYLE}>
-                        {column}
-                    </div>
-                ))}
-
-                {tableData.length > 0
-                    ? tableData.flatMap((row, rowIndex) =>
-                          row.map((cell, columnIndex) => (
-                              <div
-                                  key={`${rowIndex}-${columnIndex}`}
-                                  role="cell"
-                                  style={TABLE_CELL_STYLE}
-                              >
-                                  {cell || "-"}
-                              </div>
-                          )),
-                      )
-                    : (
-                        <EmptyRows columns={columns.length} rows={rows} />
-                    )}
-            </div>
         </div>
     );
 }
@@ -283,24 +260,48 @@ function GeneralTab({ value }: { value: RegulationNode }) {
     return (
         <div style={{ display: "grid", gap: "0.75rem" }}>
             <DetailRow
-                label={t("regulation.fields.description", { defaultValue: "شرح" })}
-                value={value.description}
+                label={t("regulation.fields.code", { defaultValue: "کد" })}
+                value={value.code}
             />
             <DetailRow
-                label={t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" })}
-                value={formatPersianDate(value.effectiveDate)}
+                label={t("regulation.fields.name", { defaultValue: "نام" })}
+                value={value.title}
             />
             <DetailRow
-                label={t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
-                value={formatPersianDate(value.validTo)}
+                label={t("regulation.fields.type", { defaultValue: "نوع" })}
+                value={resolveNodeTypeLabel(value.nodeType, t)}
+            />
+            <DetailRow
+                label={t("regulation.fields.parent", { defaultValue: "والد" })}
+                value={displayText(value.parentId)}
             />
             <DetailRow
                 label={t("regulation.fields.status", { defaultValue: "وضعیت" })}
                 value={resolveStatusLabel(value.status, t)}
             />
             <DetailRow
+                label={t("regulation.fields.sortOrder", { defaultValue: "ترتیب نمایش" })}
+                value={displayText(value.sortOrder)}
+            />
+            <DetailRow
+                label={t("regulation.fields.description", { defaultValue: "شرح" })}
+                value={value.description}
+            />
+            <DetailRow
+                label={t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" })}
+                value={displayDate(value.effectiveDate)}
+            />
+            <DetailRow
+                label={t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
+                value={displayDate(value.validTo)}
+            />
+            <DetailRow
                 label={t("regulation.fields.issuer", { defaultValue: "مرجع صادرکننده" })}
                 value={value.issuer}
+            />
+            <DetailRow
+                label={t("regulation.fields.owner", { defaultValue: "مالک" })}
+                value={value.ownerName}
             />
             <DetailRow
                 label={t("regulation.fields.documents", { defaultValue: "مستندات" })}
@@ -311,72 +312,123 @@ function GeneralTab({ value }: { value: RegulationNode }) {
 }
 
 function TabBody({
-    value,
-    allItems,
+    details,
     activeTab,
 }: {
-    value: RegulationNode;
-    allItems: RegulationNode[];
+    details: RegulationNode;
     activeTab: RegulationDetailTabKey;
 }) {
     const { t } = useTranslation();
 
     if (activeTab === "general") {
-        return <GeneralTab value={value} />;
+        return <GeneralTab value={details} />;
     }
 
-    if (activeTab === "requirements") {
-        const requirements = allItems.filter(
-            (item) => item.parentId === value.id && item.nodeType === "lawRequirement",
-        );
-
+    if (activeTab === "requirements" && details.nodeType === "law") {
         return (
-            <SimpleTable
-                columns={[
-                    t("regulation.fields.requirement", { defaultValue: "الزامات" }),
-                    t("regulation.fields.description", { defaultValue: "شرح" }),
-                    t("regulation.fields.lawName", { defaultValue: "نام قانون" }),
-                    t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" }),
-                    t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" }),
-                ]}
-                data={requirements.map((requirement) => [
-                    requirement.title,
-                    requirement.description,
-                    value.title,
-                    formatPersianDate(requirement.effectiveDate),
-                    formatPersianDate(requirement.validTo),
-                ])}
+            <RegulationRequirementsSummaryTab
+                key={`${details.id}:requirements`}
+                lawId={details.id}
             />
         );
     }
 
     return (
-        <SimpleTable
-            columns={[
-                t("regulation.fields.name", { defaultValue: "نام" }),
-                t("regulation.fields.type", { defaultValue: "نوع" }),
-                t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" }),
-            ]}
+        <DocumentAttachmentsManager
+            key={`${details.id}:documents`}
+            targetType={REGULATION_DOCUMENT_TARGET_TYPE}
+            targetId={details.id}
+            readOnly
+            showActions={false}
+            title={t("regulation.tabs.documents", {
+                defaultValue: "مستندات",
+            })}
+            viewHint={t("regulation.documents.viewHint", {
+                defaultValue: "مستندات ثبت‌شده برای این آیتم",
+            })}
         />
     );
 }
 
 export default function RegulationSummaryPanel({
     value,
-    allItems = [],
-    busy = false,
-    error,
-    onEdit,
-    onCancel,
+    onClose,
 }: RegulationSummaryPanelProps) {
     const { t } = useTranslation();
+    const selectedId = value?.id ?? null;
     const [activeTab, setActiveTab] = useState<RegulationDetailTabKey>("general");
+    const [loadState, setLoadState] = useState<DetailLoadState>(() =>
+        createInitialLoadState(value),
+    );
 
-    const tabs = useMemo(() => (value ? getTabs(value.nodeType, t) : []), [t, value]);
+    useEffect(() => {
+        if (!selectedId) {
+            return;
+        }
+
+        let active = true;
+
+        void regulationService
+            .getById(selectedId)
+            .then((details) => {
+                if (!active) {
+                    return;
+                }
+
+                if (!details) {
+                    setLoadState({
+                        status: "error",
+                        details: null,
+                        error: t("regulation.errors.notFound", {
+                            defaultValue: "آیتم موردنظر یافت نشد",
+                        }),
+                    });
+                    return;
+                }
+
+                setLoadState({
+                    status: "success",
+                    details,
+                    error: null,
+                });
+            })
+            .catch((error: unknown) => {
+                if (!active) {
+                    return;
+                }
+
+                setLoadState({
+                    status: "error",
+                    details: null,
+                    error: mapLoadError(
+                        error,
+                        t("regulation.details.loadError", {
+                            defaultValue: "خطا در بارگذاری جزئیات قانون",
+                        }),
+                    ),
+                });
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [selectedId, t]);
+
+    const details = loadState.status === "success" ? loadState.details : null;
+    const tabNodeType = details?.nodeType ?? value?.nodeType ?? null;
+
+    const tabs = useMemo(
+        () => (tabNodeType ? getTabs(tabNodeType, t) : []),
+        [t, tabNodeType],
+    );
 
     const effectiveActiveTab = tabs.some((tab) => tab.key === activeTab)
         ? activeTab
         : tabs[0]?.key ?? "general";
+
+    const title = details?.title ?? t("regulation.object.summaryTitle", {
+        defaultValue: "جزئیات قانون",
+    });
 
     return (
         <div
@@ -391,93 +443,76 @@ export default function RegulationSummaryPanel({
             <Bar
                 startContent={
                     <Title level="H4">
-                        {value?.title
-                            ? `${resolveNodeTypeLabel(value.nodeType, t)}: ${value.title}`
-                            : t("regulation.object.summaryTitle", {
-                                  defaultValue: "جزئیات قانون",
-                              })}
+                        {title}
                     </Title>
                 }
             />
 
             <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
-                {error ? (
-                    <MessageStrip design="Negative" hideCloseButton>
-                        {error}
-                    </MessageStrip>
-                ) : null}
-
-                {value ? (
-                    <div>
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
-                                gap: "0.75rem 1rem",
-                                padding: "0.75rem 1rem",
-                                border: "1px solid var(--sapGroup_ContentBorderColor)",
-                                borderBottom: "none",
-                                background: "var(--sapGroup_ContentBackground)",
-                            }}
-                        >
-                            <DetailRow
-                                label={t("regulation.fields.name", { defaultValue: "نام" })}
-                                value={value.title}
-                            />
-                            <DetailRow
-                                label={t("regulation.fields.code", { defaultValue: "کد" })}
-                                value={value.code}
-                            />
-                            <DetailRow
-                                label={t("regulation.fields.type", { defaultValue: "نوع" })}
-                                value={resolveNodeTypeLabel(value.nodeType, t)}
-                            />
-                        </div>
-
-                        <RegulationTabs
-                            tabs={tabs}
-                            activeTab={effectiveActiveTab}
-                            onChange={setActiveTab}
-                        />
-
-                        <div style={{ ...TAB_BODY_STYLE, minWidth: 0, overflowX: "auto" }}>
-                            <TabBody
-                                value={value}
-                                allItems={allItems}
-                                activeTab={effectiveActiveTab}
-                            />
-                        </div>
-                    </div>
-                ) : (
+                {!value ? (
                     <MessageStrip design="Information" hideCloseButton>
                         {t("regulation.object.selectPrompt", {
                             defaultValue: "برای مشاهده جزئیات، یک آیتم قانون را انتخاب کنید.",
                         })}
                     </MessageStrip>
+                ) : (
+                    <div>
+                        {details ? (
+                            <div style={HEADER_GRID_STYLE}>
+                                <DetailRow
+                                    label={t("regulation.fields.name", { defaultValue: "نام" })}
+                                    value={details.title}
+                                />
+                                <DetailRow
+                                    label={t("regulation.fields.code", { defaultValue: "کد" })}
+                                    value={details.code}
+                                />
+                                <DetailRow
+                                    label={t("regulation.fields.type", { defaultValue: "نوع" })}
+                                    value={resolveNodeTypeLabel(details.nodeType, t)}
+                                />
+                            </div>
+                        ) : null}
+
+                        {tabs.length > 0 ? (
+                            <RegulationTabs
+                                tabs={tabs}
+                                activeTab={effectiveActiveTab}
+                                onChange={setActiveTab}
+                            />
+                        ) : null}
+
+                        <div style={{ ...TAB_BODY_STYLE, minWidth: 0, overflowX: "auto" }}>
+                            {loadState.status === "loading" ? (
+                                <div style={LOADING_STYLE}>
+                                    <BusyIndicator active delay={0} />
+                                </div>
+                            ) : loadState.status === "error" ? (
+                                <MessageStrip design="Negative" hideCloseButton>
+                                    {loadState.error}
+                                </MessageStrip>
+                            ) : details ? (
+                                <TabBody
+                                    details={details}
+                                    activeTab={effectiveActiveTab}
+                                />
+                            ) : null}
+                        </div>
+                    </div>
                 )}
             </div>
 
             <Bar
                 endContent={
-                    <>
-                        <Button
-                            design="Emphasized"
-                            disabled={!value || busy}
-                            style={ACTION_BUTTON_STYLE}
-                            onClick={() => value && onEdit?.(value.id)}
-                        >
-                            {t("common.edit", { defaultValue: "ویرایش" })}
-                        </Button>
-
-                        <Button
-                            design="Transparent"
-                            disabled={busy}
-                            style={ACTION_BUTTON_STYLE}
-                            onClick={onCancel}
-                        >
-                            {t("common.cancel", { defaultValue: "انصراف" })}
-                        </Button>
-                    </>
+                    <Button
+                        design="Transparent"
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={onClose}
+                    >
+                        {t("common.close", {
+                            defaultValue: "بستن",
+                        })}
+                    </Button>
                 }
             />
         </div>

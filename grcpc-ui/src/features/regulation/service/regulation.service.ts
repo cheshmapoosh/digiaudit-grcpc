@@ -109,6 +109,7 @@ function assertUpdateHierarchy(
 export interface RegulationService {
     list(): Promise<RegulationNode[]>;
     getById(id: string): Promise<RegulationNode | null>;
+    listChildren(parentId: string): Promise<RegulationNode[]>;
     create(payload: RegulationNodeCreate): Promise<RegulationNode>;
     update(id: string, payload: RegulationNodeUpdate): Promise<RegulationNode>;
     remove(id: string): Promise<void>;
@@ -124,6 +125,10 @@ export function createRegulationService(repo: RegulationRepo): RegulationService
 
         async getById(id) {
             return repo.getById(id);
+        },
+
+        async listChildren(parentId) {
+            return sortRegulations(await repo.getChildren(parentId));
         },
 
         async create(payload) {
