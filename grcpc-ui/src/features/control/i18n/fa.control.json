@@ -133,7 +133,18 @@
     },
     "steps": {
       "createTitle": "افزودن مرحله",
-      "editTitle": "ویرایش مرحله"
+      "editTitle": "ویرایش مرحله",
+      "title": "مراحل",
+      "loadError": "خطا در بارگذاری مراحل کنترل.",
+      "tableAccessibleName": "جدول مراحل کنترل",
+      "columns": {
+        "title": "عنوان",
+        "description": "شرح",
+        "requiredDocument": "مستند الزامی",
+        "requiredNote": "یادداشت الزامی",
+        "sensitivity": "حساسیت",
+        "sortOrder": "ترتیب نمایش"
+      }
     },
     "documents": {
       "createTitle": "افزودن مستند",
@@ -142,6 +153,19 @@
     "performancePlan": {
       "createTitle": "افزودن برنامه عملکرد",
       "editTitle": "ویرایش برنامه عملکرد"
+    },
+    "performancePlans": {
+      "title": "برنامه عملکرد",
+      "loadError": "خطا در بارگذاری برنامه‌های عملکرد.",
+      "tableAccessibleName": "جدول برنامه‌های عملکرد کنترل",
+      "columns": {
+        "title": "عنوان",
+        "description": "شرح",
+        "frequency": "تناوب",
+        "ownerName": "مسئول",
+        "plannedDate": "تاریخ برنامه‌ریزی",
+        "status": "وضعیت"
+      }
     },
     "regulations": {
       "title": "قوانین",
@@ -169,7 +193,17 @@
       }
     },
     "requirements": {
-      "linkTitle": "اتصال الزام"
+      "linkTitle": "اتصال الزام",
+      "title": "الزامات",
+      "loadError": "خطا در بارگذاری الزامات کنترل.",
+      "tableAccessibleName": "جدول الزامات کنترل",
+      "columns": {
+        "code": "کد",
+        "title": "عنوان",
+        "description": "شرح",
+        "regulationTitle": "قانون",
+        "validity": "اعتبار"
+      }
     },
     "risks": {
       "title": "ریسک‌ها",

@@ -9,6 +9,7 @@ export interface ControlDocumentsTabProps {
     controlAssignmentId: string;
     tempSessionId?: string;
     readOnly?: boolean;
+    showActions?: boolean;
     onBeforeParentSubmitChange?: (
         handler: DocumentBeforeParentSubmitHandler | null,
     ) => void;
@@ -19,6 +20,7 @@ export default function ControlDocumentsTab({
     controlAssignmentId,
     tempSessionId,
     readOnly = false,
+    showActions = true,
     onBeforeParentSubmitChange,
     onPendingUploadsChange,
 }: ControlDocumentsTabProps) {
@@ -32,6 +34,7 @@ export default function ControlDocumentsTab({
             tempSessionId={tempSessionId}
             stagingMode="tempUntilParentSave"
             readOnly={readOnly}
+            showActions={showActions}
             onBeforeParentSubmitChange={onBeforeParentSubmitChange}
             onPendingUploadsChange={onPendingUploadsChange}
         />

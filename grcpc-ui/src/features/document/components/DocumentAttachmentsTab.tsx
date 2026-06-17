@@ -887,7 +887,11 @@ export default function DocumentAttachmentsTab({
             {error ? (
                 <>
                     <div style={TABLE_SPACER_STYLE} />
-                    <MessageStrip design="Negative" onClose={onErrorClose}>
+                    <MessageStrip
+                        design="Negative"
+                        hideCloseButton={!showActions}
+                        onClose={showActions ? onErrorClose : undefined}
+                    >
                         {error}
                     </MessageStrip>
                 </>
@@ -898,7 +902,8 @@ export default function DocumentAttachmentsTab({
                     <div style={TABLE_SPACER_STYLE} />
                     <MessageStrip
                         design={actionMessage.design}
-                        onClose={() => setActionMessage(null)}
+                        hideCloseButton={!showActions}
+                        onClose={showActions ? () => setActionMessage(null) : undefined}
                     >
                         {actionMessage.text}
                     </MessageStrip>

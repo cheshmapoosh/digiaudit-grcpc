@@ -133,7 +133,18 @@
     },
     "steps": {
       "createTitle": "Add Step",
-      "editTitle": "Edit Step"
+      "editTitle": "Edit Step",
+      "title": "Steps",
+      "loadError": "Failed to load control steps.",
+      "tableAccessibleName": "Control steps table",
+      "columns": {
+        "title": "Title",
+        "description": "Description",
+        "requiredDocument": "Required Document",
+        "requiredNote": "Required Note",
+        "sensitivity": "Sensitivity",
+        "sortOrder": "Sort Order"
+      }
     },
     "documents": {
       "createTitle": "Add Document",
@@ -142,6 +153,19 @@
     "performancePlan": {
       "createTitle": "Add Performance Plan",
       "editTitle": "Edit Performance Plan"
+    },
+    "performancePlans": {
+      "title": "Performance Plan",
+      "loadError": "Failed to load performance plans.",
+      "tableAccessibleName": "Control performance plans table",
+      "columns": {
+        "title": "Title",
+        "description": "Description",
+        "frequency": "Frequency",
+        "ownerName": "Owner",
+        "plannedDate": "Planned Date",
+        "status": "Status"
+      }
     },
     "regulations": {
       "title": "Regulations",
@@ -169,7 +193,17 @@
       }
     },
     "requirements": {
-      "linkTitle": "Link Requirement"
+      "linkTitle": "Link Requirement",
+      "title": "Requirements",
+      "loadError": "Failed to load control requirements.",
+      "tableAccessibleName": "Control requirements table",
+      "columns": {
+        "code": "Code",
+        "title": "Title",
+        "description": "Description",
+        "regulationTitle": "Regulation",
+        "validity": "Validity"
+      }
     },
     "risks": {
       "title": "Risks",

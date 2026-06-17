@@ -42,6 +42,8 @@ interface ControlPerformancePlanFormState {
 
 export interface ControlPerformancePlanTabProps {
     controlAssignmentId: string;
+    readOnly?: boolean;
+    showActions?: boolean;
 }
 
 const EMPTY_FORM: ControlPerformancePlanFormState = {
@@ -86,6 +88,8 @@ function toPayload(form: ControlPerformancePlanFormState): CreateControlPerforma
 
 export default function ControlPerformancePlanTab({
     controlAssignmentId,
+    readOnly = false,
+    showActions = true,
 }: ControlPerformancePlanTabProps) {
     const { t } = useTranslation();
     const [items, setItems] = useState<ControlPerformancePlan[]>([]);
@@ -99,6 +103,9 @@ export default function ControlPerformancePlanTab({
 
     useEffect(() => {
         let active = true;
+        setLoading(true);
+        setError(null);
+        setItems([]);
 
         void controlService
             .listPerformancePlans(controlAssignmentId)
@@ -112,8 +119,8 @@ export default function ControlPerformancePlanTab({
                     setError(
                         mapControlTabError(
                             loadError,
-                            t("control.errors.loadPerformancePlans", {
-                                defaultValue: "Failed to load performance plans.",
+                            t("control.performancePlans.loadError", {
+                                defaultValue: "خطا در بارگذاری برنامه‌های عملکرد.",
                             }),
                         ),
                     );
@@ -139,8 +146,8 @@ export default function ControlPerformancePlanTab({
             setError(
                 mapControlTabError(
                     loadError,
-                    t("control.errors.loadPerformancePlans", {
-                        defaultValue: "Failed to load performance plans.",
+                    t("control.performancePlans.loadError", {
+                        defaultValue: "خطا در بارگذاری برنامه‌های عملکرد.",
                     }),
                 ),
             );
@@ -246,17 +253,20 @@ export default function ControlPerformancePlanTab({
     return (
         <>
             <ControlTabShell
-                title={t("control.tabs.performancePlan", { defaultValue: "Performance Plan" })}
+                title={t("control.performancePlans.title", { defaultValue: "برنامه عملکرد" })}
                 loading={loading}
                 error={error}
                 onErrorClose={() => setError(null)}
+                hideErrorCloseButton={!showActions}
                 empty={!items.length}
                 action={
-                    <Button design="Emphasized" disabled={loading || saving} onClick={openCreateDialog}>
-                        {t("control.actions.addPerformancePlan", {
-                            defaultValue: "Add Performance Plan",
-                        })}
-                    </Button>
+                    showActions && !readOnly ? (
+                        <Button design="Emphasized" disabled={loading || saving} onClick={openCreateDialog}>
+                            {t("control.actions.addPerformancePlan", {
+                                defaultValue: "Add Performance Plan",
+                            })}
+                        </Button>
+                    ) : null
                 }
             >
                 {!items.length ? (
@@ -266,63 +276,90 @@ export default function ControlPerformancePlanTab({
                 ) : (
                     <ControlTable
                         items={items}
+                        accessibleName={t("control.performancePlans.tableAccessibleName", {
+                            defaultValue: "جدول برنامه‌های عملکرد کنترل",
+                        })}
                         columns={[
                             {
                                 key: "title",
-                                label: t("control.fields.title", { defaultValue: "Title" }),
+                                label: t("control.performancePlans.columns.title", {
+                                    defaultValue: "عنوان",
+                                }),
                                 render: (item) => displayText(item.title),
                             },
                             {
+                                key: "description",
+                                label: t("control.performancePlans.columns.description", {
+                                    defaultValue: "شرح",
+                                }),
+                                render: (item) => displayText(item.description),
+                            },
+                            {
                                 key: "frequency",
-                                label: t("control.fields.frequency", { defaultValue: "Frequency" }),
+                                label: t("control.performancePlans.columns.frequency", {
+                                    defaultValue: "تناوب",
+                                }),
                                 render: (item) => displayText(item.frequency),
                             },
                             {
                                 key: "ownerName",
-                                label: t("control.fields.ownerName", { defaultValue: "Owner" }),
+                                label: t("control.performancePlans.columns.ownerName", {
+                                    defaultValue: "مسئول",
+                                }),
                                 render: (item) => displayText(item.ownerName),
                             },
                             {
                                 key: "plannedDate",
-                                label: t("control.fields.plannedDate", { defaultValue: "Planned Date" }),
+                                label: t("control.performancePlans.columns.plannedDate", {
+                                    defaultValue: "تاریخ برنامه‌ریزی",
+                                }),
                                 render: (item) => displayDate(item.plannedDate),
                             },
                             {
                                 key: "status",
-                                label: t("control.fields.status", { defaultValue: "Status" }),
+                                label: t("control.performancePlans.columns.status", {
+                                    defaultValue: "وضعیت",
+                                }),
                                 render: (item) => displayText(item.status),
                             },
-                            {
-                                key: "actions",
-                                label: t("common.actions", { defaultValue: "Actions" }),
-                                width: "10rem",
-                                render: (item) => (
-                                    <RowActions>
-                                        <Button
-                                            design="Transparent"
-                                            disabled={saving}
-                                            onClick={() => openEditDialog(item)}
-                                        >
-                                            {t("common.edit", { defaultValue: "Edit" })}
-                                        </Button>
-                                        <DeleteButton
-                                            disabled={saving}
-                                            onClick={() => {
-                                                void handleDelete(item.id);
-                                            }}
-                                        >
-                                            {t("common.delete", { defaultValue: "Delete" })}
-                                        </DeleteButton>
-                                    </RowActions>
-                                ),
-                            },
+                            ...(showActions
+                                ? [
+                                      {
+                                          key: "actions",
+                                          label: t("common.actions", { defaultValue: "Actions" }),
+                                          width: "10rem",
+                                          render: (item: ControlPerformancePlan) => (
+                                              <RowActions>
+                                                  <Button
+                                                      design="Transparent"
+                                                      disabled={saving}
+                                                      onClick={() => openEditDialog(item)}
+                                                  >
+                                                      {t("common.edit", { defaultValue: "Edit" })}
+                                                  </Button>
+                                                  {!readOnly ? (
+                                                      <DeleteButton
+                                                          disabled={saving}
+                                                          onClick={() => {
+                                                              void handleDelete(item.id);
+                                                          }}
+                                                      >
+                                                          {t("common.delete", { defaultValue: "Delete" })}
+                                                      </DeleteButton>
+                                                  ) : null}
+                                              </RowActions>
+                                          ),
+                                      },
+                                  ]
+                                : []),
                         ]}
                     />
                 )}
             </ControlTabShell>
 
-            <Dialog
-                open={dialogOpen}
+            {showActions ? (
+                <Dialog
+                    open={dialogOpen}
                 accessibleName={
                     editingItem
                         ? t("control.performancePlan.editTitle", {
@@ -441,7 +478,8 @@ export default function ControlPerformancePlanTab({
                         </ControlFormField>
                     </div>
                 </div>
-            </Dialog>
+                </Dialog>
+            ) : null}
         </>
     );
 }

@@ -35,24 +35,41 @@ import {
 } from "@/shared/utils/date.utils";
 import ControlAccountGroupsTab from "../components/tabs/ControlAccountGroupsTab";
 import ControlDocumentsTab from "../components/tabs/ControlDocumentsTab";
+import ControlPerformancePlanTab from "../components/tabs/ControlPerformancePlanTab";
 import ControlRegulationsTab from "../components/tabs/ControlRegulationsTab";
+import ControlRequirementsTab from "../components/tabs/ControlRequirementsTab";
 import ControlRisksTab from "../components/tabs/ControlRisksTab";
+import ControlStepsTab from "../components/tabs/ControlStepsTab";
 import type { DocumentBeforeParentSubmitHandler } from "@/features/document";
 
 export type ControlObjectMode = "view" | "edit";
 
 type ControlTabKey =
     | "general"
+    | "steps"
     | "regulations"
+    | "requirements"
     | "risks"
     | "accountGroups"
+    | "performancePlan"
     | "documents";
 
-const CONTROL_TABS: ControlTabKey[] = [
+const MODAL_CONTROL_TABS: ControlTabKey[] = [
     "general",
     "regulations",
     "risks",
     "accountGroups",
+    "documents",
+];
+
+const PANEL_CONTROL_TABS: ControlTabKey[] = [
+    "general",
+    "steps",
+    "regulations",
+    "requirements",
+    "risks",
+    "accountGroups",
+    "performancePlan",
     "documents",
 ];
 
@@ -69,6 +86,7 @@ interface ControlAssignmentFormState {
 
 export interface ControlObjectPageProps {
     mode: ControlObjectMode;
+    presentation?: "panel" | "modal";
     value: ControlDetails;
     busy?: boolean;
     error?: string | null;
@@ -314,9 +332,14 @@ function resolveTabLabel(
 ): string {
     const labels: Record<ControlTabKey, string> = {
         general: t("control.tabs.general", { defaultValue: "اطلاعات کلی" }),
+        steps: t("control.tabs.steps", { defaultValue: "مراحل" }),
         regulations: t("control.tabs.regulations", { defaultValue: "قوانین" }),
+        requirements: t("control.tabs.requirements", { defaultValue: "الزامات" }),
         risks: t("control.tabs.risks", { defaultValue: "ریسک‌ها" }),
         accountGroups: t("control.tabs.accountGroups", { defaultValue: "گروه حساب‌ها" }),
+        performancePlan: t("control.tabs.performancePlan", {
+            defaultValue: "برنامه عملکرد",
+        }),
         documents: t("control.tabs.documents", { defaultValue: "مستندات" }),
     };
 
@@ -325,9 +348,11 @@ function resolveTabLabel(
 
 function ControlTabs({
     activeTab,
+    tabs,
     onChange,
 }: {
     activeTab: ControlTabKey;
+    tabs: ControlTabKey[];
     onChange: (tab: ControlTabKey) => void;
 }) {
     const { t } = useTranslation();
@@ -343,7 +368,7 @@ function ControlTabs({
             }}
             style={TAB_CONTAINER_STYLE}
         >
-            {CONTROL_TABS.map((tab, index) => (
+            {tabs.map((tab, index) => (
                 <Fragment key={tab}>
                     {index === 1 ? <TabSeparator /> : null}
                     <Tab
@@ -359,6 +384,7 @@ function ControlTabs({
 
 export default function ControlObjectPage({
     mode,
+    presentation = "modal",
     value,
     busy = false,
     error,
@@ -369,7 +395,10 @@ export default function ControlObjectPage({
     onEdit,
 }: ControlObjectPageProps) {
     const { t } = useTranslation();
-    const readOnly = mode === "view";
+    const isPanel = presentation === "panel";
+    const effectiveReadOnly = isPanel || mode === "view";
+    const showTabActions = !isPanel;
+    const tabs = isPanel ? PANEL_CONTROL_TABS : MODAL_CONTROL_TABS;
     const [form, setForm] = useState<ControlAssignmentFormState>(() => toFormState(value));
     const [validationError, setValidationError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<ControlTabKey>("general");
@@ -408,7 +437,7 @@ export default function ControlObjectPage({
     );
 
     const handleSubmit = async () => {
-        if (readOnly || !validate()) {
+        if (effectiveReadOnly || !validate()) {
             return;
         }
 
@@ -632,13 +661,28 @@ export default function ControlObjectPage({
 
     const renderGeneralTab = () => (
         <>
-            {mode === "view" ? renderViewContent() : renderEditContent()}
+            {effectiveReadOnly ? renderViewContent() : renderEditContent()}
         </>
     );
 
-    const renderFooterActions = () => (
-        <div style={FOOTER_STYLE}>
-            {mode === "view" ? (
+    const renderFooterActions = () => {
+        if (isPanel) {
+            return (
+                <div style={FOOTER_STYLE}>
+                    <Button
+                        design="Transparent"
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={onCancel}
+                    >
+                        {t("common.close", { defaultValue: "بستن" })}
+                    </Button>
+                </div>
+            );
+        }
+
+        return (
+            <div style={FOOTER_STYLE}>
+                {mode === "view" ? (
                 <Button
                     design="Emphasized"
                     disabled={busy || !onEdit}
@@ -647,7 +691,7 @@ export default function ControlObjectPage({
                 >
                     {t("common.edit", { defaultValue: "ویرایش" })}
                 </Button>
-            ) : (
+                ) : (
                 <Button
                     design="Emphasized"
                     disabled={busy}
@@ -656,52 +700,92 @@ export default function ControlObjectPage({
                 >
                     {t("common.save", { defaultValue: "ذخیره" })}
                 </Button>
-            )}
+                )}
 
-            <Button
-                design="Transparent"
-                disabled={busy}
-                style={ACTION_BUTTON_STYLE}
-                onClick={onCancel}
-            >
-                {mode === "view"
-                    ? t("common.close", { defaultValue: "بستن" })
-                    : t("common.cancel", { defaultValue: "انصراف" })}
-            </Button>
-        </div>
-    );
+                <Button
+                    design="Transparent"
+                    disabled={busy}
+                    style={ACTION_BUTTON_STYLE}
+                    onClick={onCancel}
+                >
+                    {mode === "view"
+                        ? t("common.close", { defaultValue: "بستن" })
+                        : t("common.cancel", { defaultValue: "انصراف" })}
+                </Button>
+            </div>
+        );
+    };
 
     const renderTabContent = () => {
         switch (activeTab) {
+            case "steps":
+                return (
+                    <ControlStepsTab
+                        key={`${value.controlAssignmentId}:steps`}
+                        controlAssignmentId={value.controlAssignmentId}
+                        readOnly={effectiveReadOnly}
+                        showActions={showTabActions}
+                    />
+                );
             case "regulations":
                 return (
                     <ControlRegulationsTab
+                        key={`${value.controlAssignmentId}:regulations`}
                         controlAssignmentId={value.controlAssignmentId}
-                        readOnly={readOnly}
+                        readOnly={effectiveReadOnly}
+                        showActions={showTabActions}
+                    />
+                );
+            case "requirements":
+                return (
+                    <ControlRequirementsTab
+                        key={`${value.controlAssignmentId}:requirements`}
+                        controlAssignmentId={value.controlAssignmentId}
+                        readOnly={effectiveReadOnly}
+                        showActions={showTabActions}
                     />
                 );
             case "risks":
                 return (
                     <ControlRisksTab
+                        key={`${value.controlAssignmentId}:risks`}
                         controlAssignmentId={value.controlAssignmentId}
-                        readOnly={readOnly}
+                        readOnly={effectiveReadOnly}
+                        showActions={showTabActions}
                     />
                 );
             case "accountGroups":
                 return (
                     <ControlAccountGroupsTab
+                        key={`${value.controlAssignmentId}:account-groups`}
                         controlAssignmentId={value.controlAssignmentId}
-                        readOnly={readOnly}
+                        readOnly={effectiveReadOnly}
+                        showActions={showTabActions}
+                    />
+                );
+            case "performancePlan":
+                return (
+                    <ControlPerformancePlanTab
+                        key={`${value.controlAssignmentId}:performance-plans`}
+                        controlAssignmentId={value.controlAssignmentId}
+                        readOnly={effectiveReadOnly}
+                        showActions={showTabActions}
                     />
                 );
             case "documents":
                 return (
                     <ControlDocumentsTab
+                        key={`${value.controlAssignmentId}:documents`}
                         controlAssignmentId={value.controlAssignmentId}
-                        tempSessionId={documentTempSessionId}
-                        readOnly={readOnly}
-                        onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
-                        onPendingUploadsChange={setHasPendingDocumentUploads}
+                        tempSessionId={isPanel ? undefined : documentTempSessionId}
+                        readOnly={effectiveReadOnly}
+                        showActions={showTabActions}
+                        onBeforeParentSubmitChange={
+                            isPanel ? undefined : handleDocumentBeforeParentSubmitChange
+                        }
+                        onPendingUploadsChange={
+                            isPanel ? undefined : setHasPendingDocumentUploads
+                        }
                     />
                 );
             case "general":
@@ -741,16 +825,24 @@ export default function ControlObjectPage({
                 </div>
             </div>
 
-            <ControlTabs activeTab={activeTab} onChange={setActiveTab} />
+            <ControlTabs activeTab={activeTab} tabs={tabs} onChange={setActiveTab} />
 
             {error ? (
-                <MessageStrip design="Negative" onClose={onErrorClose}>
+                <MessageStrip
+                    design="Negative"
+                    hideCloseButton={isPanel}
+                    onClose={isPanel ? undefined : onErrorClose}
+                >
                     {error}
                 </MessageStrip>
             ) : null}
 
             {validationError ? (
-                <MessageStrip design="Negative" onClose={() => setValidationError(null)}>
+                <MessageStrip
+                    design="Negative"
+                    hideCloseButton={isPanel}
+                    onClose={isPanel ? undefined : () => setValidationError(null)}
+                >
                     {validationError}
                 </MessageStrip>
             ) : null}

@@ -81,6 +81,7 @@ export function ControlTabShell({
     loading,
     error,
     onErrorClose,
+    hideErrorCloseButton = false,
     empty,
     children,
 }: {
@@ -89,6 +90,7 @@ export function ControlTabShell({
     loading?: boolean;
     error?: string | null;
     onErrorClose?: () => void;
+    hideErrorCloseButton?: boolean;
     empty?: boolean;
     children: ReactNode;
 }) {
@@ -100,7 +102,11 @@ export function ControlTabShell({
             </div>
 
             {error ? (
-                <MessageStrip design="Negative" onClose={onErrorClose}>
+                <MessageStrip
+                    design="Negative"
+                    hideCloseButton={hideErrorCloseButton}
+                    onClose={hideErrorCloseButton ? undefined : onErrorClose}
+                >
                     {error}
                 </MessageStrip>
             ) : null}
@@ -121,13 +127,15 @@ export function ControlTabShell({
 export function ControlTable<T extends { id: string }>({
     items,
     columns,
+    accessibleName,
 }: {
     items: T[];
     columns: ControlTableColumn<T>[];
+    accessibleName?: string;
 }) {
     return (
         <div style={TABLE_WRAP_STYLE}>
-            <table style={TABLE_STYLE}>
+            <table aria-label={accessibleName} style={TABLE_STYLE}>
                 <thead>
                     <tr>
                         {columns.map((column) => (

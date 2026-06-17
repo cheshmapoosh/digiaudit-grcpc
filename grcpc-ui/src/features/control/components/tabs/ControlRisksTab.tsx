@@ -23,6 +23,7 @@ import { displayDate } from "./ControlTabUtils";
 export interface ControlRisksTabProps {
     controlAssignmentId: string;
     readOnly?: boolean;
+    showActions?: boolean;
 }
 
 type RisksLoadStatus = "loading" | "success" | "error";
@@ -104,6 +105,7 @@ function readSelectedComboBoxDataValue(event: unknown, fallback: string): string
 export default function ControlRisksTab({
     controlAssignmentId,
     readOnly = false,
+    showActions = true,
 }: ControlRisksTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
@@ -121,9 +123,11 @@ export default function ControlRisksTab({
         const requestId = requestSeq.current + 1;
         requestSeq.current = requestId;
 
+        const shouldLoadCatalog = showActions && !readOnly;
+
         Promise.all([
             controlService.listRisks(controlAssignmentId),
-            riskService.list(),
+            shouldLoadCatalog ? riskService.list() : Promise.resolve([]),
         ])
             .then(([links, riskOptions]) => {
                 if (requestSeq.current !== requestId) {
@@ -159,7 +163,7 @@ export default function ControlRisksTab({
                 requestSeq.current += 1;
             }
         };
-    }, [controlAssignmentId, retryKey]);
+    }, [controlAssignmentId, readOnly, retryKey, showActions]);
 
     const noneText = t("common.none", { defaultValue: "ندارد" });
     const duplicateMessage = t("control.risks.duplicate", {
@@ -198,6 +202,7 @@ export default function ControlRisksTab({
         ? formatLinkOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        showActions &&
         !readOnly &&
         !!selectedRiskId &&
         availableRisks.some((risk) => risk.id === selectedRiskId) &&
@@ -207,7 +212,7 @@ export default function ControlRisksTab({
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (readOnly || !selectedRiskId) {
+        if (!showActions || readOnly || !selectedRiskId) {
             return;
         }
 
@@ -236,7 +241,7 @@ export default function ControlRisksTab({
     };
 
     const handleRemove = async () => {
-        if (readOnly || !removeCandidate) {
+        if (!showActions || readOnly || !removeCandidate) {
             return;
         }
 
@@ -263,11 +268,13 @@ export default function ControlRisksTab({
                         defaultValue: "خطا در بارگذاری ریسک‌ها.",
                     })}
                 </MessageStrip>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
-                        {t("control.risks.retry", { defaultValue: "تلاش دوباره" })}
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
+                            {t("control.risks.retry", { defaultValue: "تلاش دوباره" })}
+                        </Button>
+                    </div>
+                ) : null}
             </div>
         );
     }
@@ -276,7 +283,7 @@ export default function ControlRisksTab({
         <div style={PANEL_STYLE}>
             <Title level="H5">{t("control.risks.title", { defaultValue: "ریسک‌ها" })}</Title>
 
-            {!readOnly ? (
+            {showActions && !readOnly ? (
                 <div style={ADD_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("control.risks.addAccessibleName", {
@@ -326,7 +333,7 @@ export default function ControlRisksTab({
                 </div>
             ) : null}
 
-            {availableRisks.length === 0 && !isLoading ? (
+            {showActions && !readOnly && availableRisks.length === 0 && !isLoading ? (
                 <MessageStrip design="Information" hideCloseButton>
                     {t("control.risks.noAssignable", {
                         defaultValue: "ریسک قابل افزودن دیگری وجود ندارد.",
@@ -367,9 +374,11 @@ export default function ControlRisksTab({
                         <TableHeaderCell width="12rem">
                             {t("control.risks.columns.validity", { defaultValue: "اعتبار" })}
                         </TableHeaderCell>
-                        <TableHeaderCell width="8rem">
-                            {t("control.risks.columns.actions", { defaultValue: "عملیات" })}
-                        </TableHeaderCell>
+                        {showActions ? (
+                            <TableHeaderCell width="8rem">
+                                {t("control.risks.columns.actions", { defaultValue: "عملیات" })}
+                            </TableHeaderCell>
+                        ) : null}
                     </TableHeaderRow>
                 }
                 loading={isLoading}
@@ -391,25 +400,26 @@ export default function ControlRisksTab({
                         <TableCell>
                             {`${displayDate(link.validFrom)} - ${displayDate(link.validTo)}`}
                         </TableCell>
-                        <TableCell>
-                            {!readOnly ? (
-                                <Button
-                                    design="Transparent"
-                                    disabled={mutationBusy}
-                                    onClick={() => setRemoveCandidate(link)}
-                                >
-                                    {t("control.risks.remove", { defaultValue: "حذف" })}
-                                </Button>
-                            ) : (
-                                noneText
-                            )}
-                        </TableCell>
+                        {showActions ? (
+                            <TableCell>
+                                {!readOnly ? (
+                                    <Button
+                                        design="Transparent"
+                                        disabled={mutationBusy}
+                                        onClick={() => setRemoveCandidate(link)}
+                                    >
+                                        {t("control.risks.remove", { defaultValue: "حذف" })}
+                                    </Button>
+                                ) : null}
+                            </TableCell>
+                        ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            <DeleteConfirmDialog
-                open={!!removeCandidate}
+            {showActions ? (
+                <DeleteConfirmDialog
+                    open={!!removeCandidate}
                 title={t("control.risks.removeTitle", { defaultValue: "حذف ریسک" })}
                 message={t("control.risks.removeConfirm", {
                     defaultValue: "آیا از حذف ریسک «{{title}}» مطمئن هستید؟",
@@ -423,8 +433,9 @@ export default function ControlRisksTab({
                         setRemoveCandidate(null);
                     }
                 }}
-                onConfirm={handleRemove}
-            />
+                    onConfirm={handleRemove}
+                />
+            ) : null}
         </div>
     );
 }

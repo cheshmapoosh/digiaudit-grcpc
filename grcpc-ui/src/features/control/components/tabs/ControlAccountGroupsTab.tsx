@@ -23,6 +23,7 @@ import { controlService } from "../../service/control.service";
 export interface ControlAccountGroupsTabProps {
     controlAssignmentId: string;
     readOnly?: boolean;
+    showActions?: boolean;
 }
 
 type AccountGroupsLoadStatus = "loading" | "success" | "error";
@@ -147,6 +148,7 @@ function formatAssertionType(
 export default function ControlAccountGroupsTab({
     controlAssignmentId,
     readOnly = false,
+    showActions = true,
 }: ControlAccountGroupsTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
@@ -166,9 +168,11 @@ export default function ControlAccountGroupsTab({
         const requestId = requestSeq.current + 1;
         requestSeq.current = requestId;
 
+        const shouldLoadCatalog = showActions && !readOnly;
+
         Promise.all([
             controlService.listAccountGroups(controlAssignmentId),
-            accountGroupService.list(),
+            shouldLoadCatalog ? accountGroupService.list() : Promise.resolve([]),
         ])
             .then(([links, accountGroupOptions]) => {
                 if (requestSeq.current !== requestId) {
@@ -204,7 +208,7 @@ export default function ControlAccountGroupsTab({
                 requestSeq.current += 1;
             }
         };
-    }, [controlAssignmentId, retryKey]);
+    }, [controlAssignmentId, readOnly, retryKey, showActions]);
 
     const noneText = t("common.none", { defaultValue: "ندارد" });
     const duplicateMessage = t("control.accountGroups.duplicate", {
@@ -250,6 +254,7 @@ export default function ControlAccountGroupsTab({
         ? formatLinkOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        showActions &&
         !readOnly &&
         !!selectedAccountGroupId &&
         availableAccountGroups.some(
@@ -261,7 +266,7 @@ export default function ControlAccountGroupsTab({
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (readOnly || !selectedAccountGroupId) {
+        if (!showActions || readOnly || !selectedAccountGroupId) {
             return;
         }
 
@@ -295,7 +300,7 @@ export default function ControlAccountGroupsTab({
     };
 
     const handleRemove = async () => {
-        if (readOnly || !removeCandidate) {
+        if (!showActions || readOnly || !removeCandidate) {
             return;
         }
 
@@ -329,11 +334,13 @@ export default function ControlAccountGroupsTab({
                         defaultValue: "خطا در بارگذاری گروه حساب‌ها.",
                     })}
                 </MessageStrip>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
-                        {t("control.accountGroups.retry", { defaultValue: "تلاش دوباره" })}
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
+                            {t("control.accountGroups.retry", { defaultValue: "تلاش دوباره" })}
+                        </Button>
+                    </div>
+                ) : null}
             </div>
         );
     }
@@ -344,7 +351,7 @@ export default function ControlAccountGroupsTab({
                 {t("control.accountGroups.title", { defaultValue: "گروه حساب‌ها" })}
             </Title>
 
-            {!readOnly ? (
+            {showActions && !readOnly ? (
                 <div style={ADD_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("control.accountGroups.addAccessibleName", {
@@ -403,7 +410,7 @@ export default function ControlAccountGroupsTab({
                 </div>
             ) : null}
 
-            {availableAccountGroups.length === 0 && !isLoading ? (
+            {showActions && !readOnly && availableAccountGroups.length === 0 && !isLoading ? (
                 <MessageStrip design="Information" hideCloseButton>
                     {t("control.accountGroups.noAssignable", {
                         defaultValue: "گروه حساب قابل افزودن دیگری وجود ندارد.",
@@ -442,11 +449,13 @@ export default function ControlAccountGroupsTab({
                                 defaultValue: "نوع ادعا",
                             })}
                         </TableHeaderCell>
-                        <TableHeaderCell width="8rem">
-                            {t("control.accountGroups.columns.actions", {
-                                defaultValue: "عملیات",
-                            })}
-                        </TableHeaderCell>
+                        {showActions ? (
+                            <TableHeaderCell width="8rem">
+                                {t("control.accountGroups.columns.actions", {
+                                    defaultValue: "عملیات",
+                                })}
+                            </TableHeaderCell>
+                        ) : null}
                     </TableHeaderRow>
                 }
                 loading={isLoading}
@@ -464,25 +473,26 @@ export default function ControlAccountGroupsTab({
                         <TableCell>
                             {formatAssertionType(link.assertionType, noneText, t)}
                         </TableCell>
-                        <TableCell>
-                            {!readOnly ? (
-                                <Button
-                                    design="Transparent"
-                                    disabled={mutationBusy}
-                                    onClick={() => setRemoveCandidate(link)}
-                                >
-                                    {t("control.accountGroups.remove", { defaultValue: "حذف" })}
-                                </Button>
-                            ) : (
-                                noneText
-                            )}
-                        </TableCell>
+                        {showActions ? (
+                            <TableCell>
+                                {!readOnly ? (
+                                    <Button
+                                        design="Transparent"
+                                        disabled={mutationBusy}
+                                        onClick={() => setRemoveCandidate(link)}
+                                    >
+                                        {t("control.accountGroups.remove", { defaultValue: "حذف" })}
+                                    </Button>
+                                ) : null}
+                            </TableCell>
+                        ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            <DeleteConfirmDialog
-                open={!!removeCandidate}
+            {showActions ? (
+                <DeleteConfirmDialog
+                    open={!!removeCandidate}
                 title={t("control.accountGroups.removeTitle", {
                     defaultValue: "حذف گروه حساب",
                 })}
@@ -502,8 +512,9 @@ export default function ControlAccountGroupsTab({
                         setRemoveCandidate(null);
                     }
                 }}
-                onConfirm={handleRemove}
-            />
+                    onConfirm={handleRemove}
+                />
+            ) : null}
         </div>
     );
 }

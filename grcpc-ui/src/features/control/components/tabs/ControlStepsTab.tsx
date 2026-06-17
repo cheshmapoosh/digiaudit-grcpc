@@ -40,6 +40,8 @@ interface ControlStepFormState {
 
 export interface ControlStepsTabProps {
     controlAssignmentId: string;
+    readOnly?: boolean;
+    showActions?: boolean;
 }
 
 const EMPTY_FORM: ControlStepFormState = {
@@ -79,7 +81,11 @@ function toPayload(form: ControlStepFormState): CreateControlStepRequest {
     };
 }
 
-export default function ControlStepsTab({ controlAssignmentId }: ControlStepsTabProps) {
+export default function ControlStepsTab({
+    controlAssignmentId,
+    readOnly = false,
+    showActions = true,
+}: ControlStepsTabProps) {
     const { t } = useTranslation();
     const [items, setItems] = useState<ControlStep[]>([]);
     const [loading, setLoading] = useState(true);
@@ -92,6 +98,9 @@ export default function ControlStepsTab({ controlAssignmentId }: ControlStepsTab
 
     useEffect(() => {
         let active = true;
+        setLoading(true);
+        setError(null);
+        setItems([]);
 
         void controlService
             .listSteps(controlAssignmentId)
@@ -105,8 +114,8 @@ export default function ControlStepsTab({ controlAssignmentId }: ControlStepsTab
                     setError(
                         mapControlTabError(
                             loadError,
-                            t("control.errors.loadSteps", {
-                                defaultValue: "Failed to load control steps.",
+                            t("control.steps.loadError", {
+                                defaultValue: "خطا در بارگذاری مراحل کنترل.",
                             }),
                         ),
                     );
@@ -132,8 +141,8 @@ export default function ControlStepsTab({ controlAssignmentId }: ControlStepsTab
             setError(
                 mapControlTabError(
                     loadError,
-                    t("control.errors.loadSteps", {
-                        defaultValue: "Failed to load control steps.",
+                    t("control.steps.loadError", {
+                        defaultValue: "خطا در بارگذاری مراحل کنترل.",
                     }),
                 ),
             );
@@ -244,15 +253,18 @@ export default function ControlStepsTab({ controlAssignmentId }: ControlStepsTab
     return (
         <>
             <ControlTabShell
-                title={t("control.tabs.steps", { defaultValue: "Steps" })}
+                title={t("control.steps.title", { defaultValue: "مراحل" })}
                 loading={loading}
                 error={error}
                 onErrorClose={() => setError(null)}
+                hideErrorCloseButton={!showActions}
                 empty={!items.length}
                 action={
+                    showActions && !readOnly ? (
                     <Button design="Emphasized" disabled={loading || saving} onClick={openCreateDialog}>
                         {t("control.actions.addStep", { defaultValue: "Add Step" })}
                     </Button>
+                    ) : null
                 }
             >
                 {!items.length ? (
@@ -260,61 +272,87 @@ export default function ControlStepsTab({ controlAssignmentId }: ControlStepsTab
                 ) : (
                     <ControlTable
                         items={items}
+                        accessibleName={t("control.steps.tableAccessibleName", {
+                            defaultValue: "جدول مراحل کنترل",
+                        })}
                         columns={[
                             {
                                 key: "title",
-                                label: t("control.fields.title", { defaultValue: "Title" }),
+                                label: t("control.steps.columns.title", { defaultValue: "عنوان" }),
                                 render: (item) => displayText(item.title),
                             },
                             {
+                                key: "description",
+                                label: t("control.steps.columns.description", {
+                                    defaultValue: "شرح",
+                                }),
+                                render: (item) => displayText(item.description),
+                            },
+                            {
                                 key: "requiredDocument",
-                                label: t("control.fields.requiredDocument", {
-                                    defaultValue: "Required Document",
+                                label: t("control.steps.columns.requiredDocument", {
+                                    defaultValue: "مستند الزامی",
                                 }),
                                 render: (item) => displayText(item.requiredDocument),
                             },
                             {
+                                key: "requiredNote",
+                                label: t("control.steps.columns.requiredNote", {
+                                    defaultValue: "یادداشت الزامی",
+                                }),
+                                render: (item) => displayText(item.requiredNote),
+                            },
+                            {
                                 key: "sensitivity",
-                                label: t("control.fields.sensitivity", {
-                                    defaultValue: "Sensitivity",
+                                label: t("control.steps.columns.sensitivity", {
+                                    defaultValue: "حساسیت",
                                 }),
                                 render: (item) => displayText(item.sensitivity),
                             },
                             {
                                 key: "sortOrder",
-                                label: t("control.fields.sortOrder", { defaultValue: "Sort Order" }),
+                                label: t("control.steps.columns.sortOrder", {
+                                    defaultValue: "ترتیب نمایش",
+                                }),
                                 render: (item) => displayText(item.sortOrder),
                             },
-                            {
-                                key: "actions",
-                                label: t("common.actions", { defaultValue: "Actions" }),
-                                width: "10rem",
-                                render: (item) => (
-                                    <RowActions>
-                                        <Button
-                                            design="Transparent"
-                                            disabled={saving}
-                                            onClick={() => openEditDialog(item)}
-                                        >
-                                            {t("common.edit", { defaultValue: "Edit" })}
-                                        </Button>
-                                        <DeleteButton
-                                            disabled={saving}
-                                            onClick={() => {
-                                                void handleDelete(item.id);
-                                            }}
-                                        >
-                                            {t("common.delete", { defaultValue: "Delete" })}
-                                        </DeleteButton>
-                                    </RowActions>
-                                ),
-                            },
+                            ...(showActions
+                                ? [
+                                      {
+                                          key: "actions",
+                                          label: t("common.actions", { defaultValue: "Actions" }),
+                                          width: "10rem",
+                                          render: (item: ControlStep) => (
+                                              <RowActions>
+                                                  <Button
+                                                      design="Transparent"
+                                                      disabled={saving}
+                                                      onClick={() => openEditDialog(item)}
+                                                  >
+                                                      {t("common.edit", { defaultValue: "Edit" })}
+                                                  </Button>
+                                                  {!readOnly ? (
+                                                      <DeleteButton
+                                                          disabled={saving}
+                                                          onClick={() => {
+                                                              void handleDelete(item.id);
+                                                          }}
+                                                      >
+                                                          {t("common.delete", { defaultValue: "Delete" })}
+                                                      </DeleteButton>
+                                                  ) : null}
+                                              </RowActions>
+                                          ),
+                                      },
+                                  ]
+                                : []),
                         ]}
                     />
                 )}
             </ControlTabShell>
 
-            <Dialog
+            {showActions ? (
+                <Dialog
                 open={dialogOpen}
                 accessibleName={
                     editingItem
@@ -339,7 +377,7 @@ export default function ControlStepsTab({ controlAssignmentId }: ControlStepsTab
                         </Button>
                     </>
                 }
-            >
+                >
                 <ModalDialogHeader
                     title={
                         editingItem
@@ -427,7 +465,8 @@ export default function ControlStepsTab({ controlAssignmentId }: ControlStepsTab
                         </ControlFormField>
                     </div>
                 </div>
-            </Dialog>
+                </Dialog>
+            ) : null}
         </>
     );
 }

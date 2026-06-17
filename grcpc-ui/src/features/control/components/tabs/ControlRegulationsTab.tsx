@@ -24,6 +24,7 @@ import { displayDate } from "./ControlTabUtils";
 export interface ControlRegulationsTabProps {
     controlAssignmentId: string;
     readOnly?: boolean;
+    showActions?: boolean;
 }
 
 type RegulationsLoadStatus = "loading" | "success" | "error";
@@ -120,6 +121,7 @@ function resolveMutationError(
 export default function ControlRegulationsTab({
     controlAssignmentId,
     readOnly = false,
+    showActions = true,
 }: ControlRegulationsTabProps) {
     const { t } = useTranslation();
     const requestSeq = useRef(0);
@@ -138,9 +140,11 @@ export default function ControlRegulationsTab({
         const requestId = requestSeq.current + 1;
         requestSeq.current = requestId;
 
+        const shouldLoadCatalog = showActions && !readOnly;
+
         Promise.all([
             controlService.listRegulations(controlAssignmentId),
-            regulationService.list(),
+            shouldLoadCatalog ? regulationService.list() : Promise.resolve([]),
         ])
             .then(([links, regulationOptions]) => {
                 if (requestSeq.current !== requestId) {
@@ -178,7 +182,7 @@ export default function ControlRegulationsTab({
                 requestSeq.current += 1;
             }
         };
-    }, [controlAssignmentId, retryKey]);
+    }, [controlAssignmentId, readOnly, retryKey, showActions]);
 
     const noneText = t("common.none", { defaultValue: "ندارد" });
     const duplicateMessage = t("control.regulations.duplicate", {
@@ -219,6 +223,7 @@ export default function ControlRegulationsTab({
         ? formatLinkOption(removeCandidate, noneText)
         : "";
     const canAdd =
+        showActions &&
         !readOnly &&
         !!selectedLawId &&
         availableLaws.some((law) => law.id === selectedLawId) &&
@@ -228,7 +233,7 @@ export default function ControlRegulationsTab({
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (readOnly || !selectedLawId) {
+        if (!showActions || readOnly || !selectedLawId) {
             return;
         }
 
@@ -259,7 +264,7 @@ export default function ControlRegulationsTab({
     };
 
     const handleRemove = async () => {
-        if (readOnly || !removeCandidate) {
+        if (!showActions || readOnly || !removeCandidate) {
             return;
         }
 
@@ -293,11 +298,13 @@ export default function ControlRegulationsTab({
                         defaultValue: "خطا در بارگذاری قوانین.",
                     })}
                 </MessageStrip>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
-                        {t("control.regulations.retry", { defaultValue: "تلاش دوباره" })}
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <Button design="Emphasized" disabled={isLoading} onClick={refresh}>
+                            {t("control.regulations.retry", { defaultValue: "تلاش دوباره" })}
+                        </Button>
+                    </div>
+                ) : null}
             </div>
         );
     }
@@ -308,7 +315,7 @@ export default function ControlRegulationsTab({
                 {t("control.regulations.title", { defaultValue: "قوانین" })}
             </Title>
 
-            {!readOnly ? (
+            {showActions && !readOnly ? (
                 <div style={ADD_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("control.regulations.addAccessibleName", {
@@ -358,7 +365,7 @@ export default function ControlRegulationsTab({
                 </div>
             ) : null}
 
-            {availableLaws.length === 0 && !isLoading ? (
+            {showActions && !readOnly && availableLaws.length === 0 && !isLoading ? (
                 <MessageStrip design="Information" hideCloseButton>
                     {t("control.regulations.noAssignable", {
                         defaultValue: "قانون قابل افزودن دیگری وجود ندارد.",
@@ -397,11 +404,13 @@ export default function ControlRegulationsTab({
                                 defaultValue: "اعتبار",
                             })}
                         </TableHeaderCell>
-                        <TableHeaderCell width="8rem">
-                            {t("control.regulations.columns.actions", {
-                                defaultValue: "عملیات",
-                            })}
-                        </TableHeaderCell>
+                        {showActions ? (
+                            <TableHeaderCell width="8rem">
+                                {t("control.regulations.columns.actions", {
+                                    defaultValue: "عملیات",
+                                })}
+                            </TableHeaderCell>
+                        ) : null}
                     </TableHeaderRow>
                 }
                 loading={isLoading}
@@ -419,25 +428,26 @@ export default function ControlRegulationsTab({
                         <TableCell>
                             {`${displayDate(link.validFrom)} - ${displayDate(link.validTo)}`}
                         </TableCell>
-                        <TableCell>
-                            {!readOnly ? (
-                                <Button
-                                    design="Transparent"
-                                    disabled={mutationBusy}
-                                    onClick={() => setRemoveCandidate(link)}
-                                >
-                                    {t("control.regulations.remove", { defaultValue: "حذف" })}
-                                </Button>
-                            ) : (
-                                noneText
-                            )}
-                        </TableCell>
+                        {showActions ? (
+                            <TableCell>
+                                {!readOnly ? (
+                                    <Button
+                                        design="Transparent"
+                                        disabled={mutationBusy}
+                                        onClick={() => setRemoveCandidate(link)}
+                                    >
+                                        {t("control.regulations.remove", { defaultValue: "حذف" })}
+                                    </Button>
+                                ) : null}
+                            </TableCell>
+                        ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            <DeleteConfirmDialog
-                open={!!removeCandidate}
+            {showActions ? (
+                <DeleteConfirmDialog
+                    open={!!removeCandidate}
                 title={t("control.regulations.removeTitle", {
                     defaultValue: "حذف قانون",
                 })}
@@ -457,8 +467,9 @@ export default function ControlRegulationsTab({
                         setRemoveCandidate(null);
                     }
                 }}
-                onConfirm={handleRemove}
-            />
+                    onConfirm={handleRemove}
+                />
+            ) : null}
         </div>
     );
 }

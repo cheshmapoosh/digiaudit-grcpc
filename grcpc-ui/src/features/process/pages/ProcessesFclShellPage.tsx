@@ -3,6 +3,7 @@ import {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
     type CSSProperties,
 } from "react";
@@ -11,7 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
 
-import { Dialog, MessageStrip } from "@ui5/webcomponents-react";
+import { BusyIndicator, Dialog, MessageStrip } from "@ui5/webcomponents-react";
 
 import type { ProcessNode, ProcessNodeCreate, ProcessNodeType, ProcessNodeUpdate } from "../domain/process.model";
 import { ROOT_PARENT, useProcessState } from "../state/process.state";
@@ -400,6 +401,8 @@ export default function ProcessesFclShellPage() {
     const [controlModalDocumentTempSessionId, setControlModalDocumentTempSessionId] = useState(
         createDocumentTempSessionId,
     );
+    const [controlObjectLoadedId, setControlObjectLoadedId] = useState<string | null>(null);
+    const controlObjectRequestSeq = useRef(0);
 
     const processItems = useMemo(() => sortProcesses(Object.values(nodesById)), [nodesById]);
     const combinedTreeItems = useMemo(() => {
@@ -494,22 +497,45 @@ export default function ProcessesFclShellPage() {
 
     useEffect(() => {
         if (!controlAssignmentId) {
+            setControlObjectLoadedId(null);
             return;
         }
 
+        const requestId = controlObjectRequestSeq.current + 1;
+        controlObjectRequestSeq.current = requestId;
+
         setSelectedTreeId(controlAssignmentId);
         setTreeExpansionAnchorId(controlAssignmentId);
-        void loadControlAssignment(controlAssignmentId).catch((error: unknown) => {
-            setControlObjectError(
-                mapControlError(
-                    error,
-                    t("control.errors.loadAssignment", {
-                        defaultValue: "خطا در بارگذاری جزئیات اتصال کنترل",
-                    }),
-                    t,
-                ),
-            );
-        });
+        setControlObjectError(null);
+        setControlObjectLoadedId(null);
+        void loadControlAssignment(controlAssignmentId)
+            .then(() => {
+                if (controlObjectRequestSeq.current === requestId) {
+                    setControlObjectLoadedId(controlAssignmentId);
+                    setControlObjectError(null);
+                }
+            })
+            .catch((error: unknown) => {
+                if (controlObjectRequestSeq.current !== requestId) {
+                    return;
+                }
+
+                setControlObjectError(
+                    mapControlError(
+                        error,
+                        t("control.errors.loadAssignment", {
+                            defaultValue: "خطا در بارگذاری جزئیات اتصال کنترل",
+                        }),
+                        t,
+                    ),
+                );
+            });
+
+        return () => {
+            if (controlObjectRequestSeq.current === requestId) {
+                controlObjectRequestSeq.current += 1;
+            }
+        };
     }, [controlAssignmentId, loadControlAssignment, t]);
 
     const treeSelectedId = useMemo(() => {
@@ -535,6 +561,10 @@ export default function ProcessesFclShellPage() {
     const selectedControlAssignment = controlAssignmentId
         ? controlAssignmentsById[controlAssignmentId] ?? null
         : null;
+    const selectedControlAssignmentReady =
+        Boolean(selectedControlAssignment) &&
+        selectedControlAssignment?.controlAssignmentId === controlAssignmentId &&
+        controlObjectLoadedId === controlAssignmentId;
     const controlModalAssignment = controlModalAssignmentId
         ? controlAssignmentsById[controlModalAssignmentId] ?? null
         : null;
@@ -999,29 +1029,13 @@ export default function ProcessesFclShellPage() {
         ],
     );
 
-    const handleCancelControlObject = useCallback(() => {
+    const handleCloseControlDetailsPanel = useCallback(() => {
         setControlObjectError(null);
-
-        if (routeMode === "edit" && controlAssignmentId) {
-            navigate(`/processes/control-assignments/${controlAssignmentId}`);
-            return;
-        }
-
+        setControlObjectLoadedId(null);
         setSelectedTreeId(null);
         setTreeExpansionAnchorId(null);
         navigate("/processes");
-    }, [controlAssignmentId, navigate, routeMode]);
-
-    const handleEditControlObject = useCallback(() => {
-        if (!controlAssignmentId) {
-            return;
-        }
-
-        setSelectedTreeId(controlAssignmentId);
-        setTreeExpansionAnchorId(controlAssignmentId);
-        setControlObjectError(null);
-        navigate(`/processes/control-assignments/${controlAssignmentId}/edit`);
-    }, [controlAssignmentId, navigate]);
+    }, [navigate]);
 
     const handleControlModalClose = useCallback(() => {
         setControlModalAssignmentId(null);
@@ -1226,37 +1240,35 @@ export default function ProcessesFclShellPage() {
 
     const midColumnContent = (() => {
         if (showControlObjectPane) {
-            if (selectedControlAssignment) {
+            if (selectedControlAssignmentReady && selectedControlAssignment) {
                 return (
                     <ControlObjectPage
                         key={selectedControlAssignment.controlAssignmentId}
                         mode={routeMode === "edit" ? "edit" : "view"}
+                        presentation="panel"
                         value={selectedControlAssignment}
                         busy={controlLoading || submitting}
                         error={controlObjectError}
                         documentTempSessionId={controlDocumentTempSessionId}
                         onErrorClose={() => setControlObjectError(null)}
                         onSubmit={handleControlObjectSubmit}
-                        onCancel={handleCancelControlObject}
-                        onEdit={handleEditControlObject}
+                        onCancel={handleCloseControlDetailsPanel}
                     />
                 );
             }
 
             if (controlObjectError) {
                 return (
-                    <MessageStrip design="Negative" onClose={() => setControlObjectError(null)}>
+                    <MessageStrip design="Negative" hideCloseButton>
                         {controlObjectError}
                     </MessageStrip>
                 );
             }
 
             return (
-                <MessageStrip design="Information" hideCloseButton>
-                    {t("control.object.notFound", {
-                        defaultValue: "اتصال کنترل انتخاب‌شده یافت نشد.",
-                    })}
-                </MessageStrip>
+                <div style={{ display: "grid", placeItems: "center", minHeight: "12rem" }}>
+                    <BusyIndicator active delay={0} />
+                </div>
             );
         }
 

@@ -227,7 +227,7 @@ export default function DocumentAttachmentsManager({
             onUpdateDocumentTitle={showActions ? handleUpdateDocumentTitle : undefined}
             onDeleteDocument={showActions ? deleteDocument : undefined}
             onDownloadDocument={showActions ? handleDownloadDocument : undefined}
-            onErrorClose={() => setLoadError(null)}
+            onErrorClose={showActions ? () => setLoadError(null) : undefined}
             onBeforeParentSubmitChange={onBeforeParentSubmitChange}
             onPendingUploadsChange={onPendingUploadsChange}
         />
