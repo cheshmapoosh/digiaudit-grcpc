@@ -151,6 +151,7 @@ export default function ControlAccountGroupsTab({
     showActions = true,
 }: ControlAccountGroupsTabProps) {
     const { t } = useTranslation();
+    const canEdit = showActions && !readOnly;
     const requestSeq = useRef(0);
     const [retryKey, setRetryKey] = useState(0);
     const [selectedAccountGroupId, setSelectedAccountGroupId] = useState("");
@@ -168,7 +169,7 @@ export default function ControlAccountGroupsTab({
         const requestId = requestSeq.current + 1;
         requestSeq.current = requestId;
 
-        const shouldLoadCatalog = showActions && !readOnly;
+        const shouldLoadCatalog = canEdit;
 
         Promise.all([
             controlService.listAccountGroups(controlAssignmentId),
@@ -208,7 +209,7 @@ export default function ControlAccountGroupsTab({
                 requestSeq.current += 1;
             }
         };
-    }, [controlAssignmentId, readOnly, retryKey, showActions]);
+    }, [canEdit, controlAssignmentId, retryKey]);
 
     const noneText = t("common.none", { defaultValue: "ندارد" });
     const duplicateMessage = t("control.accountGroups.duplicate", {
@@ -254,8 +255,7 @@ export default function ControlAccountGroupsTab({
         ? formatLinkOption(removeCandidate, noneText)
         : "";
     const canAdd =
-        showActions &&
-        !readOnly &&
+        canEdit &&
         !!selectedAccountGroupId &&
         availableAccountGroups.some(
             (accountGroup) => accountGroup.id === selectedAccountGroupId,
@@ -266,7 +266,7 @@ export default function ControlAccountGroupsTab({
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (!showActions || readOnly || !selectedAccountGroupId) {
+        if (!canEdit || !selectedAccountGroupId) {
             return;
         }
 
@@ -300,7 +300,7 @@ export default function ControlAccountGroupsTab({
     };
 
     const handleRemove = async () => {
-        if (!showActions || readOnly || !removeCandidate) {
+        if (!canEdit || !removeCandidate) {
             return;
         }
 
@@ -351,7 +351,7 @@ export default function ControlAccountGroupsTab({
                 {t("control.accountGroups.title", { defaultValue: "گروه حساب‌ها" })}
             </Title>
 
-            {showActions && !readOnly ? (
+            {canEdit ? (
                 <div style={ADD_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("control.accountGroups.addAccessibleName", {
@@ -410,7 +410,7 @@ export default function ControlAccountGroupsTab({
                 </div>
             ) : null}
 
-            {showActions && !readOnly && availableAccountGroups.length === 0 && !isLoading ? (
+            {canEdit && availableAccountGroups.length === 0 && !isLoading ? (
                 <MessageStrip design="Information" hideCloseButton>
                     {t("control.accountGroups.noAssignable", {
                         defaultValue: "گروه حساب قابل افزودن دیگری وجود ندارد.",
@@ -449,7 +449,7 @@ export default function ControlAccountGroupsTab({
                                 defaultValue: "نوع ادعا",
                             })}
                         </TableHeaderCell>
-                        {showActions ? (
+                        {canEdit ? (
                             <TableHeaderCell width="8rem">
                                 {t("control.accountGroups.columns.actions", {
                                     defaultValue: "عملیات",
@@ -473,41 +473,39 @@ export default function ControlAccountGroupsTab({
                         <TableCell>
                             {formatAssertionType(link.assertionType, noneText, t)}
                         </TableCell>
-                        {showActions ? (
+                        {canEdit ? (
                             <TableCell>
-                                {!readOnly ? (
-                                    <Button
-                                        design="Transparent"
-                                        disabled={mutationBusy}
-                                        onClick={() => setRemoveCandidate(link)}
-                                    >
-                                        {t("control.accountGroups.remove", { defaultValue: "حذف" })}
-                                    </Button>
-                                ) : null}
+                                <Button
+                                    design="Transparent"
+                                    disabled={mutationBusy}
+                                    onClick={() => setRemoveCandidate(link)}
+                                >
+                                    {t("control.accountGroups.remove", { defaultValue: "حذف" })}
+                                </Button>
                             </TableCell>
                         ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            {showActions ? (
+            {canEdit ? (
                 <DeleteConfirmDialog
                     open={!!removeCandidate}
-                title={t("control.accountGroups.removeTitle", {
+                    title={t("control.accountGroups.removeTitle", {
                     defaultValue: "حذف گروه حساب",
                 })}
-                message={t("control.accountGroups.removeConfirm", {
+                    message={t("control.accountGroups.removeConfirm", {
                     defaultValue: "آیا از حذف گروه حساب «{{title}}» مطمئن هستید؟",
                     title: removeCandidateLabel,
                 })}
-                loading={mutationBusy}
-                confirmText={t("control.accountGroups.confirmRemove", {
+                    loading={mutationBusy}
+                    confirmText={t("control.accountGroups.confirmRemove", {
                     defaultValue: "حذف",
                 })}
-                cancelText={t("control.accountGroups.cancelRemove", {
+                    cancelText={t("control.accountGroups.cancelRemove", {
                     defaultValue: "انصراف",
                 })}
-                onClose={() => {
+                    onClose={() => {
                     if (!mutationBusy) {
                         setRemoveCandidate(null);
                     }

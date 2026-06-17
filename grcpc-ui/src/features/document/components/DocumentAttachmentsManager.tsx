@@ -71,6 +71,10 @@ export default function DocumentAttachmentsManager({
     const createDownloadUrl = useDocumentAttachmentState((state) => state.createDownloadUrl);
 
     useEffect(() => {
+        if (!showActions || readOnly) {
+            return;
+        }
+
         void loadUploadPolicy(targetType)
             .then(() => setLoadError(null))
             .catch((error: unknown) => {
@@ -84,7 +88,7 @@ export default function DocumentAttachmentsManager({
                     ),
                 );
             });
-    }, [loadUploadPolicy, targetType, t]);
+    }, [loadUploadPolicy, readOnly, showActions, targetType, t]);
 
     useEffect(() => {
         if (!targetId) {

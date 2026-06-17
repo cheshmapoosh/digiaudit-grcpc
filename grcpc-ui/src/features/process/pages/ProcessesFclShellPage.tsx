@@ -50,6 +50,10 @@ import {
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
+type ControlObjectErrorState = {
+    controlAssignmentId: string;
+    message: string;
+};
 
 const DIALOG_WIDTH = "90vw";
 const PROCESS_DOCUMENT_TARGET_TYPE = "PROCESS_NODE";
@@ -381,7 +385,8 @@ export default function ProcessesFclShellPage() {
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
     const [objectError, setObjectError] = useState<string | null>(null);
-    const [controlObjectError, setControlObjectError] = useState<string | null>(null);
+    const [controlObjectError, setControlObjectError] =
+        useState<ControlObjectErrorState | null>(null);
     const [controlDialogError, setControlDialogError] = useState<string | null>(null);
     const [deleteCandidate, setDeleteCandidate] = useState<ProcessNode | null>(null);
     const [deleteControlCandidate, setDeleteControlCandidate] = useState<ProcessControlTreeItem | null>(null);
@@ -497,17 +502,12 @@ export default function ProcessesFclShellPage() {
 
     useEffect(() => {
         if (!controlAssignmentId) {
-            setControlObjectLoadedId(null);
             return;
         }
 
         const requestId = controlObjectRequestSeq.current + 1;
         controlObjectRequestSeq.current = requestId;
 
-        setSelectedTreeId(controlAssignmentId);
-        setTreeExpansionAnchorId(controlAssignmentId);
-        setControlObjectError(null);
-        setControlObjectLoadedId(null);
         void loadControlAssignment(controlAssignmentId)
             .then(() => {
                 if (controlObjectRequestSeq.current === requestId) {
@@ -520,15 +520,16 @@ export default function ProcessesFclShellPage() {
                     return;
                 }
 
-                setControlObjectError(
-                    mapControlError(
+                setControlObjectError({
+                    controlAssignmentId,
+                    message: mapControlError(
                         error,
                         t("control.errors.loadAssignment", {
                             defaultValue: "خطا در بارگذاری جزئیات اتصال کنترل",
                         }),
                         t,
                     ),
-                );
+                });
             });
 
         return () => {
@@ -565,6 +566,10 @@ export default function ProcessesFclShellPage() {
         Boolean(selectedControlAssignment) &&
         selectedControlAssignment?.controlAssignmentId === controlAssignmentId &&
         controlObjectLoadedId === controlAssignmentId;
+    const selectedControlObjectError =
+        controlObjectError && controlObjectError.controlAssignmentId === controlAssignmentId
+            ? controlObjectError.message
+            : null;
     const controlModalAssignment = controlModalAssignmentId
         ? controlAssignmentsById[controlModalAssignmentId] ?? null
         : null;
@@ -1006,13 +1011,14 @@ export default function ProcessesFclShellPage() {
                 setTreeExpansionAnchorId(controlAssignmentId);
                 navigate(`/processes/control-assignments/${controlAssignmentId}`);
             } catch (error) {
-                setControlObjectError(
-                    mapControlError(
+                setControlObjectError({
+                    controlAssignmentId,
+                    message: mapControlError(
                         error,
                         t("control.errors.save", { defaultValue: "خطا در ذخیره کنترل" }),
                         t,
                     ),
-                );
+                });
             } finally {
                 setSubmitting(false);
             }
@@ -1248,7 +1254,7 @@ export default function ProcessesFclShellPage() {
                         presentation="panel"
                         value={selectedControlAssignment}
                         busy={controlLoading || submitting}
-                        error={controlObjectError}
+                        error={selectedControlObjectError}
                         documentTempSessionId={controlDocumentTempSessionId}
                         onErrorClose={() => setControlObjectError(null)}
                         onSubmit={handleControlObjectSubmit}
@@ -1257,10 +1263,10 @@ export default function ProcessesFclShellPage() {
                 );
             }
 
-            if (controlObjectError) {
+            if (selectedControlObjectError) {
                 return (
                     <MessageStrip design="Negative" hideCloseButton>
-                        {controlObjectError}
+                        {selectedControlObjectError}
                     </MessageStrip>
                 );
             }

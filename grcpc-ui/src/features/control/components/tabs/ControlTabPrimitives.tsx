@@ -115,7 +115,7 @@ export function ControlTabShell({
                 <div style={{ display: "grid", placeItems: "center", minHeight: "10rem" }}>
                     <BusyIndicator active delay={0} />
                 </div>
-            ) : empty ? (
+            ) : error ? null : empty ? (
                 <Text>{children}</Text>
             ) : (
                 children

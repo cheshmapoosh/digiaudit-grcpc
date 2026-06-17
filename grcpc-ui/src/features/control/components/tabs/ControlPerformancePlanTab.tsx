@@ -92,6 +92,7 @@ export default function ControlPerformancePlanTab({
     showActions = true,
 }: ControlPerformancePlanTabProps) {
     const { t } = useTranslation();
+    const canEdit = showActions && !readOnly;
     const [items, setItems] = useState<ControlPerformancePlan[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -103,28 +104,30 @@ export default function ControlPerformancePlanTab({
 
     useEffect(() => {
         let active = true;
-        setLoading(true);
-        setError(null);
-        setItems([]);
 
         void controlService
             .listPerformancePlans(controlAssignmentId)
             .then((loadedItems) => {
-                if (active) {
-                    setItems(loadedItems);
+                if (!active) {
+                    return;
                 }
+
+                setItems(loadedItems);
+                setError(null);
             })
             .catch((loadError: unknown) => {
-                if (active) {
-                    setError(
-                        mapControlTabError(
-                            loadError,
-                            t("control.performancePlans.loadError", {
-                                defaultValue: "خطا در بارگذاری برنامه‌های عملکرد.",
-                            }),
-                        ),
-                    );
+                if (!active) {
+                    return;
                 }
+
+                setError(
+                    mapControlTabError(
+                        loadError,
+                        t("control.performancePlans.loadError", {
+                            defaultValue: "خطا در بارگذاری برنامه‌های عملکرد.",
+                        }),
+                    ),
+                );
             })
             .finally(() => {
                 if (active) {
@@ -157,6 +160,10 @@ export default function ControlPerformancePlanTab({
     };
 
     const openCreateDialog = () => {
+        if (!canEdit) {
+            return;
+        }
+
         setEditingItem(null);
         setForm(EMPTY_FORM);
         setValidationError(null);
@@ -164,6 +171,10 @@ export default function ControlPerformancePlanTab({
     };
 
     const openEditDialog = (item: ControlPerformancePlan) => {
+        if (!canEdit) {
+            return;
+        }
+
         setEditingItem(item);
         setForm(toFormState(item));
         setValidationError(null);
@@ -195,6 +206,10 @@ export default function ControlPerformancePlanTab({
     };
 
     const handleSave = async () => {
+        if (!canEdit) {
+            return;
+        }
+
         if (!validate()) {
             return;
         }
@@ -231,6 +246,10 @@ export default function ControlPerformancePlanTab({
     };
 
     const handleDelete = async (planId: string) => {
+        if (!canEdit) {
+            return;
+        }
+
         try {
             setSaving(true);
             setError(null);
@@ -260,7 +279,7 @@ export default function ControlPerformancePlanTab({
                 hideErrorCloseButton={!showActions}
                 empty={!items.length}
                 action={
-                    showActions && !readOnly ? (
+                    canEdit ? (
                         <Button design="Emphasized" disabled={loading || saving} onClick={openCreateDialog}>
                             {t("control.actions.addPerformancePlan", {
                                 defaultValue: "Add Performance Plan",
@@ -322,7 +341,7 @@ export default function ControlPerformancePlanTab({
                                 }),
                                 render: (item) => displayText(item.status),
                             },
-                            ...(showActions
+                            ...(canEdit
                                 ? [
                                       {
                                           key: "actions",
@@ -337,16 +356,14 @@ export default function ControlPerformancePlanTab({
                                                   >
                                                       {t("common.edit", { defaultValue: "Edit" })}
                                                   </Button>
-                                                  {!readOnly ? (
-                                                      <DeleteButton
-                                                          disabled={saving}
-                                                          onClick={() => {
-                                                              void handleDelete(item.id);
-                                                          }}
-                                                      >
-                                                          {t("common.delete", { defaultValue: "Delete" })}
-                                                      </DeleteButton>
-                                                  ) : null}
+                                                  <DeleteButton
+                                                      disabled={saving}
+                                                      onClick={() => {
+                                                          void handleDelete(item.id);
+                                                      }}
+                                                  >
+                                                      {t("common.delete", { defaultValue: "Delete" })}
+                                                  </DeleteButton>
                                               </RowActions>
                                           ),
                                       },
@@ -357,37 +374,41 @@ export default function ControlPerformancePlanTab({
                 )}
             </ControlTabShell>
 
-            {showActions ? (
+            {canEdit ? (
                 <Dialog
                     open={dialogOpen}
-                accessibleName={
-                    editingItem
-                        ? t("control.performancePlan.editTitle", {
-                              defaultValue: "Edit Performance Plan",
-                          })
-                        : t("control.performancePlan.createTitle", {
-                              defaultValue: "Add Performance Plan",
-                          })
-                }
-                style={{ width: "90vw", maxWidth: "90vw" }}
-                onClose={() => setDialogOpen(false)}
-                footer={
-                    <>
-                        <Button
-                            design="Emphasized"
-                            disabled={saving}
-                            onClick={() => {
-                                void handleSave();
-                            }}
-                        >
-                            {t("common.save", { defaultValue: "Save" })}
-                        </Button>
-                        <Button design="Transparent" disabled={saving} onClick={() => setDialogOpen(false)}>
-                            {t("common.cancel", { defaultValue: "Cancel" })}
-                        </Button>
-                    </>
-                }
-            >
+                    accessibleName={
+                        editingItem
+                            ? t("control.performancePlan.editTitle", {
+                                  defaultValue: "Edit Performance Plan",
+                              })
+                            : t("control.performancePlan.createTitle", {
+                                  defaultValue: "Add Performance Plan",
+                              })
+                    }
+                    style={{ width: "90vw", maxWidth: "90vw" }}
+                    onClose={() => setDialogOpen(false)}
+                    footer={
+                        <>
+                            <Button
+                                design="Emphasized"
+                                disabled={saving}
+                                onClick={() => {
+                                    void handleSave();
+                                }}
+                            >
+                                {t("common.save", { defaultValue: "Save" })}
+                            </Button>
+                            <Button
+                                design="Transparent"
+                                disabled={saving}
+                                onClick={() => setDialogOpen(false)}
+                            >
+                                {t("common.cancel", { defaultValue: "Cancel" })}
+                            </Button>
+                        </>
+                    }
+                >
                 <ModalDialogHeader
                     title={
                         editingItem

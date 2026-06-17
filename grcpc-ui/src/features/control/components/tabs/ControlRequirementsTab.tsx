@@ -52,38 +52,42 @@ export default function ControlRequirementsTab({
     showActions = true,
 }: ControlRequirementsTabProps) {
     const { t } = useTranslation();
+    const canEdit = showActions && !readOnly;
+    const shouldUseReadOnlyView = !canEdit;
     const [items, setItems] = useState<ControlRequirementLink[]>([]);
-    const [loading, setLoading] = useState(!showActions || readOnly);
+    const [loading, setLoading] = useState(shouldUseReadOnlyView);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (showActions && !readOnly) {
+        if (!shouldUseReadOnlyView) {
             return undefined;
         }
 
         let active = true;
-        setLoading(true);
-        setError(null);
-        setItems([]);
 
         void controlService
             .listRequirements(controlAssignmentId)
             .then((loadedItems) => {
-                if (active) {
-                    setItems(loadedItems);
+                if (!active) {
+                    return;
                 }
+
+                setItems(loadedItems);
+                setError(null);
             })
             .catch((loadError: unknown) => {
-                if (active) {
-                    setError(
-                        mapControlTabError(
-                            loadError,
-                            t("control.requirements.loadError", {
-                                defaultValue: "خطا در بارگذاری الزامات کنترل.",
-                            }),
-                        ),
-                    );
+                if (!active) {
+                    return;
                 }
+
+                setError(
+                    mapControlTabError(
+                        loadError,
+                        t("control.requirements.loadError", {
+                            defaultValue: "خطا در بارگذاری الزامات کنترل.",
+                        }),
+                    ),
+                );
             })
             .finally(() => {
                 if (active) {
@@ -94,9 +98,9 @@ export default function ControlRequirementsTab({
         return () => {
             active = false;
         };
-    }, [controlAssignmentId, readOnly, showActions, t]);
+    }, [controlAssignmentId, shouldUseReadOnlyView, t]);
 
-    if (showActions && !readOnly) {
+    if (canEdit) {
         return (
             <ControlLinkTab<ControlRequirementLink>
                 controlAssignmentId={controlAssignmentId}

@@ -87,6 +87,7 @@ export default function ControlStepsTab({
     showActions = true,
 }: ControlStepsTabProps) {
     const { t } = useTranslation();
+    const canEdit = showActions && !readOnly;
     const [items, setItems] = useState<ControlStep[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -98,28 +99,30 @@ export default function ControlStepsTab({
 
     useEffect(() => {
         let active = true;
-        setLoading(true);
-        setError(null);
-        setItems([]);
 
         void controlService
             .listSteps(controlAssignmentId)
             .then((loadedItems) => {
-                if (active) {
-                    setItems(loadedItems);
+                if (!active) {
+                    return;
                 }
+
+                setItems(loadedItems);
+                setError(null);
             })
             .catch((loadError: unknown) => {
-                if (active) {
-                    setError(
-                        mapControlTabError(
-                            loadError,
-                            t("control.steps.loadError", {
-                                defaultValue: "خطا در بارگذاری مراحل کنترل.",
-                            }),
-                        ),
-                    );
+                if (!active) {
+                    return;
                 }
+
+                setError(
+                    mapControlTabError(
+                        loadError,
+                        t("control.steps.loadError", {
+                            defaultValue: "خطا در بارگذاری مراحل کنترل.",
+                        }),
+                    ),
+                );
             })
             .finally(() => {
                 if (active) {
@@ -152,6 +155,10 @@ export default function ControlStepsTab({
     };
 
     const openCreateDialog = () => {
+        if (!canEdit) {
+            return;
+        }
+
         setEditingItem(null);
         setForm(EMPTY_FORM);
         setValidationError(null);
@@ -159,6 +166,10 @@ export default function ControlStepsTab({
     };
 
     const openEditDialog = (item: ControlStep) => {
+        if (!canEdit) {
+            return;
+        }
+
         setEditingItem(item);
         setForm(toFormState(item));
         setValidationError(null);
@@ -199,6 +210,10 @@ export default function ControlStepsTab({
     };
 
     const handleSave = async () => {
+        if (!canEdit) {
+            return;
+        }
+
         if (!validate()) {
             return;
         }
@@ -231,6 +246,10 @@ export default function ControlStepsTab({
     };
 
     const handleDelete = async (stepId: string) => {
+        if (!canEdit) {
+            return;
+        }
+
         try {
             setSaving(true);
             setError(null);
@@ -260,10 +279,10 @@ export default function ControlStepsTab({
                 hideErrorCloseButton={!showActions}
                 empty={!items.length}
                 action={
-                    showActions && !readOnly ? (
-                    <Button design="Emphasized" disabled={loading || saving} onClick={openCreateDialog}>
-                        {t("control.actions.addStep", { defaultValue: "Add Step" })}
-                    </Button>
+                    canEdit ? (
+                        <Button design="Emphasized" disabled={loading || saving} onClick={openCreateDialog}>
+                            {t("control.actions.addStep", { defaultValue: "Add Step" })}
+                        </Button>
                     ) : null
                 }
             >
@@ -316,7 +335,7 @@ export default function ControlStepsTab({
                                 }),
                                 render: (item) => displayText(item.sortOrder),
                             },
-                            ...(showActions
+                            ...(canEdit
                                 ? [
                                       {
                                           key: "actions",
@@ -331,16 +350,14 @@ export default function ControlStepsTab({
                                                   >
                                                       {t("common.edit", { defaultValue: "Edit" })}
                                                   </Button>
-                                                  {!readOnly ? (
-                                                      <DeleteButton
-                                                          disabled={saving}
-                                                          onClick={() => {
-                                                              void handleDelete(item.id);
-                                                          }}
-                                                      >
-                                                          {t("common.delete", { defaultValue: "Delete" })}
-                                                      </DeleteButton>
-                                                  ) : null}
+                                                  <DeleteButton
+                                                      disabled={saving}
+                                                      onClick={() => {
+                                                          void handleDelete(item.id);
+                                                      }}
+                                                  >
+                                                      {t("common.delete", { defaultValue: "Delete" })}
+                                                  </DeleteButton>
                                               </RowActions>
                                           ),
                                       },
@@ -351,32 +368,36 @@ export default function ControlStepsTab({
                 )}
             </ControlTabShell>
 
-            {showActions ? (
+            {canEdit ? (
                 <Dialog
-                open={dialogOpen}
-                accessibleName={
-                    editingItem
-                        ? t("control.steps.editTitle", { defaultValue: "Edit Step" })
-                        : t("control.steps.createTitle", { defaultValue: "Add Step" })
-                }
-                style={{ width: "90vw", maxWidth: "90vw" }}
-                onClose={() => setDialogOpen(false)}
-                footer={
-                    <>
-                        <Button
-                            design="Emphasized"
-                            disabled={saving}
-                            onClick={() => {
-                                void handleSave();
-                            }}
-                        >
-                            {t("common.save", { defaultValue: "Save" })}
-                        </Button>
-                        <Button design="Transparent" disabled={saving} onClick={() => setDialogOpen(false)}>
-                            {t("common.cancel", { defaultValue: "Cancel" })}
-                        </Button>
-                    </>
-                }
+                    open={dialogOpen}
+                    accessibleName={
+                        editingItem
+                            ? t("control.steps.editTitle", { defaultValue: "Edit Step" })
+                            : t("control.steps.createTitle", { defaultValue: "Add Step" })
+                    }
+                    style={{ width: "90vw", maxWidth: "90vw" }}
+                    onClose={() => setDialogOpen(false)}
+                    footer={
+                        <>
+                            <Button
+                                design="Emphasized"
+                                disabled={saving}
+                                onClick={() => {
+                                    void handleSave();
+                                }}
+                            >
+                                {t("common.save", { defaultValue: "Save" })}
+                            </Button>
+                            <Button
+                                design="Transparent"
+                                disabled={saving}
+                                onClick={() => setDialogOpen(false)}
+                            >
+                                {t("common.cancel", { defaultValue: "Cancel" })}
+                            </Button>
+                        </>
+                    }
                 >
                 <ModalDialogHeader
                     title={

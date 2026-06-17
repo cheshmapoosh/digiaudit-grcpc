@@ -124,6 +124,7 @@ export default function ControlRegulationsTab({
     showActions = true,
 }: ControlRegulationsTabProps) {
     const { t } = useTranslation();
+    const canEdit = showActions && !readOnly;
     const requestSeq = useRef(0);
     const [retryKey, setRetryKey] = useState(0);
     const [selectedLawId, setSelectedLawId] = useState("");
@@ -140,7 +141,7 @@ export default function ControlRegulationsTab({
         const requestId = requestSeq.current + 1;
         requestSeq.current = requestId;
 
-        const shouldLoadCatalog = showActions && !readOnly;
+        const shouldLoadCatalog = canEdit;
 
         Promise.all([
             controlService.listRegulations(controlAssignmentId),
@@ -182,7 +183,7 @@ export default function ControlRegulationsTab({
                 requestSeq.current += 1;
             }
         };
-    }, [controlAssignmentId, readOnly, retryKey, showActions]);
+    }, [canEdit, controlAssignmentId, retryKey]);
 
     const noneText = t("common.none", { defaultValue: "ندارد" });
     const duplicateMessage = t("control.regulations.duplicate", {
@@ -223,8 +224,7 @@ export default function ControlRegulationsTab({
         ? formatLinkOption(removeCandidate, noneText)
         : "";
     const canAdd =
-        showActions &&
-        !readOnly &&
+        canEdit &&
         !!selectedLawId &&
         availableLaws.some((law) => law.id === selectedLawId) &&
         !isLoading &&
@@ -233,7 +233,7 @@ export default function ControlRegulationsTab({
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (!showActions || readOnly || !selectedLawId) {
+        if (!canEdit || !selectedLawId) {
             return;
         }
 
@@ -264,7 +264,7 @@ export default function ControlRegulationsTab({
     };
 
     const handleRemove = async () => {
-        if (!showActions || readOnly || !removeCandidate) {
+        if (!canEdit || !removeCandidate) {
             return;
         }
 
@@ -315,7 +315,7 @@ export default function ControlRegulationsTab({
                 {t("control.regulations.title", { defaultValue: "قوانین" })}
             </Title>
 
-            {showActions && !readOnly ? (
+            {canEdit ? (
                 <div style={ADD_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("control.regulations.addAccessibleName", {
@@ -365,7 +365,7 @@ export default function ControlRegulationsTab({
                 </div>
             ) : null}
 
-            {showActions && !readOnly && availableLaws.length === 0 && !isLoading ? (
+            {canEdit && availableLaws.length === 0 && !isLoading ? (
                 <MessageStrip design="Information" hideCloseButton>
                     {t("control.regulations.noAssignable", {
                         defaultValue: "قانون قابل افزودن دیگری وجود ندارد.",
@@ -404,7 +404,7 @@ export default function ControlRegulationsTab({
                                 defaultValue: "اعتبار",
                             })}
                         </TableHeaderCell>
-                        {showActions ? (
+                        {canEdit ? (
                             <TableHeaderCell width="8rem">
                                 {t("control.regulations.columns.actions", {
                                     defaultValue: "عملیات",
@@ -428,41 +428,39 @@ export default function ControlRegulationsTab({
                         <TableCell>
                             {`${displayDate(link.validFrom)} - ${displayDate(link.validTo)}`}
                         </TableCell>
-                        {showActions ? (
+                        {canEdit ? (
                             <TableCell>
-                                {!readOnly ? (
-                                    <Button
-                                        design="Transparent"
-                                        disabled={mutationBusy}
-                                        onClick={() => setRemoveCandidate(link)}
-                                    >
-                                        {t("control.regulations.remove", { defaultValue: "حذف" })}
-                                    </Button>
-                                ) : null}
+                                <Button
+                                    design="Transparent"
+                                    disabled={mutationBusy}
+                                    onClick={() => setRemoveCandidate(link)}
+                                >
+                                    {t("control.regulations.remove", { defaultValue: "حذف" })}
+                                </Button>
                             </TableCell>
                         ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            {showActions ? (
+            {canEdit ? (
                 <DeleteConfirmDialog
                     open={!!removeCandidate}
-                title={t("control.regulations.removeTitle", {
+                    title={t("control.regulations.removeTitle", {
                     defaultValue: "حذف قانون",
                 })}
-                message={t("control.regulations.removeConfirm", {
+                    message={t("control.regulations.removeConfirm", {
                     defaultValue: "آیا از حذف قانون «{{title}}» مطمئن هستید؟",
                     title: removeCandidateLabel,
                 })}
-                loading={mutationBusy}
-                confirmText={t("control.regulations.confirmRemove", {
+                    loading={mutationBusy}
+                    confirmText={t("control.regulations.confirmRemove", {
                     defaultValue: "حذف",
                 })}
-                cancelText={t("control.regulations.cancelRemove", {
+                    cancelText={t("control.regulations.cancelRemove", {
                     defaultValue: "انصراف",
                 })}
-                onClose={() => {
+                    onClose={() => {
                     if (!mutationBusy) {
                         setRemoveCandidate(null);
                     }

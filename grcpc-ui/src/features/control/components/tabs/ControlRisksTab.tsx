@@ -108,6 +108,7 @@ export default function ControlRisksTab({
     showActions = true,
 }: ControlRisksTabProps) {
     const { t } = useTranslation();
+    const canEdit = showActions && !readOnly;
     const requestSeq = useRef(0);
     const [retryKey, setRetryKey] = useState(0);
     const [selectedRiskId, setSelectedRiskId] = useState("");
@@ -123,7 +124,7 @@ export default function ControlRisksTab({
         const requestId = requestSeq.current + 1;
         requestSeq.current = requestId;
 
-        const shouldLoadCatalog = showActions && !readOnly;
+        const shouldLoadCatalog = canEdit;
 
         Promise.all([
             controlService.listRisks(controlAssignmentId),
@@ -163,7 +164,7 @@ export default function ControlRisksTab({
                 requestSeq.current += 1;
             }
         };
-    }, [controlAssignmentId, readOnly, retryKey, showActions]);
+    }, [canEdit, controlAssignmentId, retryKey]);
 
     const noneText = t("common.none", { defaultValue: "ندارد" });
     const duplicateMessage = t("control.risks.duplicate", {
@@ -202,8 +203,7 @@ export default function ControlRisksTab({
         ? formatLinkOption(removeCandidate, noneText)
         : "";
     const canAdd =
-        showActions &&
-        !readOnly &&
+        canEdit &&
         !!selectedRiskId &&
         availableRisks.some((risk) => risk.id === selectedRiskId) &&
         !isLoading &&
@@ -212,7 +212,7 @@ export default function ControlRisksTab({
     const refresh = () => setRetryKey((current) => current + 1);
 
     const handleAdd = async () => {
-        if (!showActions || readOnly || !selectedRiskId) {
+        if (!canEdit || !selectedRiskId) {
             return;
         }
 
@@ -241,7 +241,7 @@ export default function ControlRisksTab({
     };
 
     const handleRemove = async () => {
-        if (!showActions || readOnly || !removeCandidate) {
+        if (!canEdit || !removeCandidate) {
             return;
         }
 
@@ -283,7 +283,7 @@ export default function ControlRisksTab({
         <div style={PANEL_STYLE}>
             <Title level="H5">{t("control.risks.title", { defaultValue: "ریسک‌ها" })}</Title>
 
-            {showActions && !readOnly ? (
+            {canEdit ? (
                 <div style={ADD_TOOLBAR_STYLE}>
                     <ComboBox
                         accessibleName={t("control.risks.addAccessibleName", {
@@ -333,7 +333,7 @@ export default function ControlRisksTab({
                 </div>
             ) : null}
 
-            {showActions && !readOnly && availableRisks.length === 0 && !isLoading ? (
+            {canEdit && availableRisks.length === 0 && !isLoading ? (
                 <MessageStrip design="Information" hideCloseButton>
                     {t("control.risks.noAssignable", {
                         defaultValue: "ریسک قابل افزودن دیگری وجود ندارد.",
@@ -374,7 +374,7 @@ export default function ControlRisksTab({
                         <TableHeaderCell width="12rem">
                             {t("control.risks.columns.validity", { defaultValue: "اعتبار" })}
                         </TableHeaderCell>
-                        {showActions ? (
+                        {canEdit ? (
                             <TableHeaderCell width="8rem">
                                 {t("control.risks.columns.actions", { defaultValue: "عملیات" })}
                             </TableHeaderCell>
@@ -400,35 +400,33 @@ export default function ControlRisksTab({
                         <TableCell>
                             {`${displayDate(link.validFrom)} - ${displayDate(link.validTo)}`}
                         </TableCell>
-                        {showActions ? (
+                        {canEdit ? (
                             <TableCell>
-                                {!readOnly ? (
-                                    <Button
-                                        design="Transparent"
-                                        disabled={mutationBusy}
-                                        onClick={() => setRemoveCandidate(link)}
-                                    >
-                                        {t("control.risks.remove", { defaultValue: "حذف" })}
-                                    </Button>
-                                ) : null}
+                                <Button
+                                    design="Transparent"
+                                    disabled={mutationBusy}
+                                    onClick={() => setRemoveCandidate(link)}
+                                >
+                                    {t("control.risks.remove", { defaultValue: "حذف" })}
+                                </Button>
                             </TableCell>
                         ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            {showActions ? (
+            {canEdit ? (
                 <DeleteConfirmDialog
                     open={!!removeCandidate}
-                title={t("control.risks.removeTitle", { defaultValue: "حذف ریسک" })}
-                message={t("control.risks.removeConfirm", {
+                    title={t("control.risks.removeTitle", { defaultValue: "حذف ریسک" })}
+                    message={t("control.risks.removeConfirm", {
                     defaultValue: "آیا از حذف ریسک «{{title}}» مطمئن هستید؟",
                     title: removeCandidateLabel,
                 })}
-                loading={mutationBusy}
-                confirmText={t("control.risks.confirmRemove", { defaultValue: "حذف" })}
-                cancelText={t("control.risks.cancelRemove", { defaultValue: "انصراف" })}
-                onClose={() => {
+                    loading={mutationBusy}
+                    confirmText={t("control.risks.confirmRemove", { defaultValue: "حذف" })}
+                    cancelText={t("control.risks.cancelRemove", { defaultValue: "انصراف" })}
+                    onClose={() => {
                     if (!mutationBusy) {
                         setRemoveCandidate(null);
                     }
