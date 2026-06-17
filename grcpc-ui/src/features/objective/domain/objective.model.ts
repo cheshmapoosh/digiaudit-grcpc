@@ -17,8 +17,6 @@ export interface ObjectiveOrganizationRef {
     organizationCode?: string;
     organizationName?: string;
     organizationStatus?: "active" | "inactive";
-    relationType?: string;
-    primaryResponsible?: boolean;
 }
 
 export interface ObjectiveNode extends AuditFields {
