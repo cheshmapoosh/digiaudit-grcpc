@@ -18,7 +18,6 @@ import {
     Option,
     Select,
     Tab,
-    TabContainer,
     TabSeparator,
     Table,
     TableCell,
@@ -28,6 +27,8 @@ import {
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     RegulationNode,
@@ -350,7 +351,7 @@ function RegulationTabs({
     const { t } = useTranslation();
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={REGULATION_TAB_CONTAINER_CLASS}
             onTabSelect={(event) => {
                 const nextTab = readSelectedTabKey(event);
@@ -370,7 +371,7 @@ function RegulationTabs({
                     />
                 </Fragment>
             ))}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 

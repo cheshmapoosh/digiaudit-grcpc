@@ -18,11 +18,12 @@ import {
     Option,
     Select,
     Tab,
-    TabContainer,
     TabSeparator,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     RiskNode,
@@ -391,7 +392,7 @@ function RiskTabs({
     const { t } = useTranslation();
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={RISK_TAB_CONTAINER_CLASS}
             onTabSelect={(event) => {
                 const nextTab = readSelectedTabKey(event);
@@ -421,7 +422,7 @@ function RiskTabs({
 
                 return [item];
             })}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 

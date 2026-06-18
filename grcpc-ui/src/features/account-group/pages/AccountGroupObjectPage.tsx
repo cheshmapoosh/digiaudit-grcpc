@@ -11,11 +11,12 @@ import {
     Option,
     Select,
     Tab,
-    TabContainer,
     TabSeparator,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     AccountGroupAssertions,
@@ -351,7 +352,7 @@ function AccountGroupTabs({
     const { t } = useTranslation();
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={ACCOUNT_GROUP_TAB_CONTAINER_CLASS}
             onTabSelect={(event) => {
                 const nextTab = readSelectedTabKey(event);
@@ -381,7 +382,7 @@ function AccountGroupTabs({
 
                 return [item];
             })}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 

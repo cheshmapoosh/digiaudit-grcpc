@@ -23,11 +23,12 @@ import {
     TableHeaderCell,
     TableHeaderRow,
     TableRow,
-    TabContainer,
     TabSeparator,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     OrganizationNode,
@@ -570,7 +571,7 @@ function OrganizationTabs({
     const { t } = useTranslation();
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={ORGANIZATION_TAB_CONTAINER_CLASS}
             onTabSelect={(event) => {
                 const nextTab = readSelectedTabKey(event);
@@ -600,7 +601,7 @@ function OrganizationTabs({
 
                 return [tabItem];
             })}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 
