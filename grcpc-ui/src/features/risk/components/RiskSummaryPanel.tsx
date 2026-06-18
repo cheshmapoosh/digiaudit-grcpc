@@ -491,7 +491,6 @@ export default function RiskSummaryPanel({
                                              value,
                                              busy = false,
                                              error,
-                                             onEdit,
                                              onCancel,
                                          }: RiskSummaryPanelProps) {
     const { t } = useTranslation();
@@ -587,25 +586,14 @@ export default function RiskSummaryPanel({
 
             <Bar
                 endContent={
-                    <>
-                        <Button
-                            design="Emphasized"
-                            disabled={!value || busy}
-                            style={ACTION_BUTTON_STYLE}
-                            onClick={() => value && onEdit?.(value.id)}
-                        >
-                            {t("common.edit", { defaultValue: "ویرایش" })}
-                        </Button>
-
-                        <Button
-                            design="Transparent"
-                            disabled={busy}
-                            style={ACTION_BUTTON_STYLE}
-                            onClick={onCancel}
-                        >
-                            {t("common.cancel", { defaultValue: "انصراف" })}
-                        </Button>
-                    </>
+                    <Button
+                        design="Transparent"
+                        disabled={busy}
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={onCancel}
+                    >
+                        {t("common.close", { defaultValue: "بستن" })}
+                    </Button>
                 }
             />
         </div>

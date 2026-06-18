@@ -564,7 +564,6 @@ export default function PolicySummaryPanel({
     value,
     busy = false,
     error,
-    onEdit,
     onCancel,
 }: PolicySummaryPanelProps) {
     const { t } = useTranslation();
@@ -663,25 +662,14 @@ export default function PolicySummaryPanel({
 
             <Bar
                 endContent={
-                    <>
-                        <Button
-                            design="Emphasized"
-                            disabled={!value || busy}
-                            style={ACTION_BUTTON_STYLE}
-                            onClick={() => value && onEdit?.(value.id)}
-                        >
-                            {t("common.edit", { defaultValue: "ویرایش" })}
-                        </Button>
-
-                        <Button
-                            design="Transparent"
-                            disabled={busy}
-                            style={ACTION_BUTTON_STYLE}
-                            onClick={onCancel}
-                        >
-                            {t("common.cancel", { defaultValue: "انصراف" })}
-                        </Button>
-                    </>
+                    <Button
+                        design="Transparent"
+                        disabled={busy}
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={onCancel}
+                    >
+                        {t("common.close", { defaultValue: "بستن" })}
+                    </Button>
                 }
             />
         </div>
