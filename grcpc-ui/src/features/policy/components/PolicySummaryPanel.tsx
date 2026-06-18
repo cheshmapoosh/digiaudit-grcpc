@@ -281,10 +281,6 @@ function getTabs(
             label: t("policy.tabs.general", { defaultValue: "اطلاعات کلی" }),
         },
         {
-            key: "documents",
-            label: t("policy.tabs.documents", { defaultValue: "مستندات" }),
-        },
-        {
             key: "scope",
             label: t("policy.tabs.scope", { defaultValue: "دامنه سیاست" }),
         },
@@ -308,6 +304,11 @@ function getTabs(
             key: "reviewApproval",
             label: t("policy.tabs.reviewApproval", { defaultValue: "بازنگری و تصویب" }),
         },
+        {
+            key: "documents",
+            label: t("policy.tabs.documents", { defaultValue: "مستندات" }),
+        },
+
     ];
 }
 

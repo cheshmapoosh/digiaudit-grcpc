@@ -6,8 +6,8 @@ import {
     type CSSProperties,
     type ReactNode,
 } from "react";
-import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
-import { useTranslation } from "react-i18next";
+import {addCustomCSS} from "@ui5/webcomponents-base/dist/Theming.js";
+import {useTranslation} from "react-i18next";
 import {
     Button,
     DatePicker,
@@ -300,11 +300,11 @@ function parseOptionalInteger(value: string): number | undefined {
     return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-function HeaderItem({ label, value }: { label: string; value?: string | null }) {
+function HeaderItem({label, value}: { label: string; value?: string | null }) {
     return (
         <div style={HEADER_ROW_STYLE}>
             <strong>{label}:</strong>
-            <span style={{ minWidth: 0, wordBreak: "break-word" }}>
+            <span style={{minWidth: 0, wordBreak: "break-word"}}>
                 {value?.trim() ? value : "-"}
             </span>
         </div>
@@ -312,18 +312,18 @@ function HeaderItem({ label, value }: { label: string; value?: string | null }) 
 }
 
 function FormField({
-    label,
-    required = false,
-    fullWidth = false,
-    children,
-}: {
+                       label,
+                       required = false,
+                       fullWidth = false,
+                       children,
+                   }: {
     label: string;
     required?: boolean;
     fullWidth?: boolean;
     children: ReactNode;
 }) {
     return (
-        <div style={{ ...FIELD_STYLE, ...(fullWidth ? FULL_WIDTH_STYLE : undefined) }}>
+        <div style={{...FIELD_STYLE, ...(fullWidth ? FULL_WIDTH_STYLE : undefined)}}>
             <Label showColon required={required}>
                 {label}
             </Label>
@@ -337,8 +337,8 @@ function resolveNodeTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<PolicyNodeType, string> = {
-        policyGroup: t("policy.nodeType.policyGroup", { defaultValue: "گروه سیاست" }),
-        policy: t("policy.nodeType.policy", { defaultValue: "سیاست" }),
+        policyGroup: t("policy.nodeType.policyGroup", {defaultValue: "گروه سیاست"}),
+        policy: t("policy.nodeType.policy", {defaultValue: "سیاست"}),
     };
 
     return map[nodeType];
@@ -349,11 +349,11 @@ function resolveStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<PolicyStatus, string> = {
-        draft: t("policy.status.draft", { defaultValue: "پیش‌نویس" }),
-        underReview: t("policy.status.underReview", { defaultValue: "در حال بررسی" }),
-        pendingApproval: t("policy.status.pendingApproval", { defaultValue: "در انتظار تأیید" }),
-        approved: t("policy.status.approved", { defaultValue: "تأیید شده" }),
-        inactive: t("common.inactive", { defaultValue: "غیرفعال" }),
+        draft: t("policy.status.draft", {defaultValue: "پیش‌نویس"}),
+        underReview: t("policy.status.underReview", {defaultValue: "در حال بررسی"}),
+        pendingApproval: t("policy.status.pendingApproval", {defaultValue: "در انتظار تأیید"}),
+        approved: t("policy.status.approved", {defaultValue: "تأیید شده"}),
+        inactive: t("common.inactive", {defaultValue: "غیرفعال"}),
     };
 
     return map[status];
@@ -364,13 +364,13 @@ function resolveCategoryLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<PolicyCategory, string> = {
-        hr: t("policy.category.hr", { defaultValue: "منابع انسانی" }),
-        accounting: t("policy.category.accounting", { defaultValue: "حسابداری" }),
-        purchase: t("policy.category.purchase", { defaultValue: "خرید" }),
-        it: t("policy.category.it", { defaultValue: "فناوری اطلاعات" }),
-        finance: t("policy.category.finance", { defaultValue: "مالی" }),
-        compliance: t("policy.category.compliance", { defaultValue: "انطباق" }),
-        other: t("policy.category.other", { defaultValue: "سایر" }),
+        hr: t("policy.category.hr", {defaultValue: "منابع انسانی"}),
+        accounting: t("policy.category.accounting", {defaultValue: "حسابداری"}),
+        purchase: t("policy.category.purchase", {defaultValue: "خرید"}),
+        it: t("policy.category.it", {defaultValue: "فناوری اطلاعات"}),
+        finance: t("policy.category.finance", {defaultValue: "مالی"}),
+        compliance: t("policy.category.compliance", {defaultValue: "انطباق"}),
+        other: t("policy.category.other", {defaultValue: "سایر"}),
     };
 
     return map[category];
@@ -381,10 +381,10 @@ function resolvePolicyKindLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<PolicyKind, string> = {
-        policy: t("policy.kind.policy", { defaultValue: "سیاست" }),
-        procedure: t("policy.kind.procedure", { defaultValue: "دستورالعمل" }),
-        announcement: t("policy.kind.announcement", { defaultValue: "اطلاعیه" }),
-        workInstruction: t("policy.kind.workInstruction", { defaultValue: "روش اجرایی" }),
+        policy: t("policy.kind.policy", {defaultValue: "سیاست"}),
+        procedure: t("policy.kind.procedure", {defaultValue: "دستورالعمل"}),
+        announcement: t("policy.kind.announcement", {defaultValue: "اطلاعیه"}),
+        workInstruction: t("policy.kind.workInstruction", {defaultValue: "روش اجرایی"}),
     };
 
     return map[kind];
@@ -395,9 +395,9 @@ function resolveCommunicationMethodLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<PolicyCommunicationMethod, string> = {
-        announcement: t("policy.communication.announcement", { defaultValue: "اطلاعیه" }),
-        questionnaire: t("policy.communication.questionnaire", { defaultValue: "پرسشنامه" }),
-        survey: t("policy.communication.survey", { defaultValue: "نظرسنجی" }),
+        announcement: t("policy.communication.announcement", {defaultValue: "اطلاعیه"}),
+        questionnaire: t("policy.communication.questionnaire", {defaultValue: "پرسشنامه"}),
+        survey: t("policy.communication.survey", {defaultValue: "نظرسنجی"}),
     };
 
     return map[method];
@@ -410,41 +410,41 @@ function defaultTabs(nodeType: PolicyNodeType): PolicyTabKey[] {
 
     return [
         "general",
-        "documents",
         "scope",
         "risks",
         "controls",
         "sources",
         "roles",
         "reviewApproval",
+        "documents",
     ];
 }
 
 function resolveTabLabel(tab: PolicyTabKey, t: ReturnType<typeof useTranslation>["t"]): string {
     const labels: Record<PolicyTabKey, string> = {
-        general: t("policy.tabs.general", { defaultValue: "اطلاعات کلی" }),
-        documents: t("policy.tabs.documents", { defaultValue: "مستندات" }),
-        scope: t("policy.tabs.scope", { defaultValue: "دامنه سیاست" }),
-        risks: t("policy.tabs.risks", { defaultValue: "ریسک‌ها" }),
-        controls: t("policy.tabs.controls", { defaultValue: "کنترل‌ها" }),
-        sources: t("policy.tabs.sources", { defaultValue: "منابع سیاست" }),
-        roles: t("policy.tabs.roles", { defaultValue: "نقش‌ها" }),
-        reviewApproval: t("policy.tabs.reviewApproval", { defaultValue: "بازنگری و تصویب" }),
+        general: t("policy.tabs.general", {defaultValue: "اطلاعات کلی"}),
+        scope: t("policy.tabs.scope", {defaultValue: "دامنه سیاست"}),
+        risks: t("policy.tabs.risks", {defaultValue: "ریسک‌ها"}),
+        controls: t("policy.tabs.controls", {defaultValue: "کنترل‌ها"}),
+        sources: t("policy.tabs.sources", {defaultValue: "منابع سیاست"}),
+        roles: t("policy.tabs.roles", {defaultValue: "نقش‌ها"}),
+        reviewApproval: t("policy.tabs.reviewApproval", {defaultValue: "بازنگری و تصویب"}),
+        documents: t("policy.tabs.documents", {defaultValue: "مستندات"}),
     };
 
     return labels[tab];
 }
 
 function PolicyTabs({
-    tabs,
-    activeTab,
-    onChange,
-}: {
+                        tabs,
+                        activeTab,
+                        onChange,
+                    }: {
     tabs: PolicyTabKey[];
     activeTab: PolicyTabKey;
     onChange: (tab: PolicyTabKey) => void;
 }) {
-    const { t } = useTranslation();
+    const {t} = useTranslation();
 
     return (
         <TabContainer
@@ -472,7 +472,7 @@ function PolicyTabs({
                 }
 
                 if (index === 1) {
-                    return [<TabSeparator key="general-separator" />, item];
+                    return [<TabSeparator key="general-separator"/>, item];
                 }
 
                 return [item];
@@ -482,10 +482,10 @@ function PolicyTabs({
 }
 
 function TablePlaceholder({
-    title,
-    columns,
-    actions,
-}: {
+                              title,
+                              columns,
+                              actions,
+                          }: {
     title: string;
     columns: string[];
     actions?: ReactNode;
@@ -498,24 +498,24 @@ function TablePlaceholder({
 
             <table style={TABLE_STYLE}>
                 <thead>
-                    <tr>
-                        {columns.map((column) => (
-                            <th key={column} style={TABLE_HEADER_STYLE}>
-                                {column}
-                            </th>
-                        ))}
-                    </tr>
+                <tr>
+                    {columns.map((column) => (
+                        <th key={column} style={TABLE_HEADER_STYLE}>
+                            {column}
+                        </th>
+                    ))}
+                </tr>
                 </thead>
                 <tbody>
-                    {[0, 1, 2].map((row) => (
-                        <tr key={row}>
-                            {columns.map((column) => (
-                                <td key={column} style={TABLE_CELL_STYLE}>
-                                    &nbsp;
-                                </td>
-                            ))}
-                        </tr>
-                    ))}
+                {[0, 1, 2].map((row) => (
+                    <tr key={row}>
+                        {columns.map((column) => (
+                            <td key={column} style={TABLE_CELL_STYLE}>
+                                &nbsp;
+                            </td>
+                        ))}
+                    </tr>
+                ))}
                 </tbody>
             </table>
         </div>
@@ -523,20 +523,20 @@ function TablePlaceholder({
 }
 
 export default function PolicyObjectPage({
-    mode,
-    allItems,
-    value,
-    parent,
-    requestedNodeType,
-    busy = false,
-    error,
-    documentTempSessionId,
-    onErrorClose,
-    onSubmit,
-    onCancel,
-    onEdit,
-}: PolicyObjectPageProps) {
-    const { t } = useTranslation();
+                                             mode,
+                                             allItems,
+                                             value,
+                                             parent,
+                                             requestedNodeType,
+                                             busy = false,
+                                             error,
+                                             documentTempSessionId,
+                                             onErrorClose,
+                                             onSubmit,
+                                             onCancel,
+                                             onEdit,
+                                         }: PolicyObjectPageProps) {
+    const {t} = useTranslation();
     const readOnly = mode === "view";
 
     const [form, setForm] = useState<PolicyFormState>(() =>
@@ -556,7 +556,7 @@ export default function PolicyObjectPage({
     const headerTitle = form.title || value?.title || "";
     const headerParent = selectedParent
         ? `${selectedParent.code} - ${selectedParent.title}`
-        : t("common.none", { defaultValue: "ندارد" });
+        : t("common.none", {defaultValue: "ندارد"});
     const headerType = resolveNodeTypeLabel(form.nodeType, t);
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerCategory = resolveCategoryLabel(form.policyCategory, t);
@@ -576,14 +576,14 @@ export default function PolicyObjectPage({
     const validate = (): boolean => {
         if (!form.code.trim()) {
             setValidationError(
-                t("policy.validation.codeRequired", { defaultValue: "کد الزامی است" }),
+                t("policy.validation.codeRequired", {defaultValue: "کد الزامی است"}),
             );
             return false;
         }
 
         if (!form.title.trim()) {
             setValidationError(
-                t("policy.validation.titleRequired", { defaultValue: "نام الزامی است" }),
+                t("policy.validation.titleRequired", {defaultValue: "نام الزامی است"}),
             );
             return false;
         }
@@ -708,7 +708,7 @@ export default function PolicyObjectPage({
     const renderGeneralTab = () => (
         <>
             <div style={FORM_GRID_STYLE}>
-                <FormField label={t("policy.fields.code", { defaultValue: "شناسه" })} required>
+                <FormField label={t("policy.fields.code", {defaultValue: "شناسه"})} required>
                     <Input
                         value={form.code}
                         disabled={readOnly || busy}
@@ -716,7 +716,7 @@ export default function PolicyObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("policy.fields.name", { defaultValue: "نام" })} required>
+                <FormField label={t("policy.fields.name", {defaultValue: "نام"})} required>
                     <Input
                         value={form.title}
                         disabled={readOnly || busy}
@@ -724,16 +724,16 @@ export default function PolicyObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("policy.fields.parent", { defaultValue: "والد" })}>
-                    <Input value={headerParent} readonly />
+                <FormField label={t("policy.fields.parent", {defaultValue: "والد"})}>
+                    <Input value={headerParent} readonly/>
                 </FormField>
 
-                <FormField label={t("policy.fields.type", { defaultValue: "نوع" })}>
-                    <Input value={headerType} readonly />
+                <FormField label={t("policy.fields.type", {defaultValue: "نوع"})}>
+                    <Input value={headerType} readonly/>
                 </FormField>
 
                 {form.nodeType === "policy" ? (
-                    <FormField label={t("policy.fields.policyKind", { defaultValue: "نوع سیاست" })}>
+                    <FormField label={t("policy.fields.policyKind", {defaultValue: "نوع سیاست"})}>
                         <Select
                             disabled={readOnly || busy}
                             onChange={(event) => {
@@ -814,12 +814,12 @@ export default function PolicyObjectPage({
                     </Select>
                 </FormField>
 
-                <FormField label={t("policy.fields.status", { defaultValue: "وضعیت" })}>
+                <FormField label={t("policy.fields.status", {defaultValue: "وضعیت"})}>
                     {renderStatusSelect()}
                 </FormField>
 
                 <FormField
-                    label={t("policy.fields.sortOrder", { defaultValue: "ترتیب نمایش" })}
+                    label={t("policy.fields.sortOrder", {defaultValue: "ترتیب نمایش"})}
                 >
                     <Input
                         value={form.sortOrder}
@@ -828,7 +828,7 @@ export default function PolicyObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("policy.fields.owner", { defaultValue: "مالک" })}>
+                <FormField label={t("policy.fields.owner", {defaultValue: "مالک"})}>
                     <Input
                         value={form.ownerName}
                         disabled={readOnly || busy}
@@ -866,7 +866,7 @@ export default function PolicyObjectPage({
                             />
                         </FormField>
 
-                        <FormField label={t("policy.fields.version", { defaultValue: "نسخه" })}>
+                        <FormField label={t("policy.fields.version", {defaultValue: "نسخه"})}>
                             <Input
                                 value={form.version}
                                 disabled={readOnly || busy}
@@ -877,7 +877,7 @@ export default function PolicyObjectPage({
                 ) : null}
 
                 <FormField
-                    label={t("policy.fields.validFrom", { defaultValue: "تاریخ شروع اعتبار" })}
+                    label={t("policy.fields.validFrom", {defaultValue: "تاریخ شروع اعتبار"})}
                 >
                     <DatePicker
                         value={form.validFrom}
@@ -895,7 +895,7 @@ export default function PolicyObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("policy.fields.validTo", { defaultValue: "تاریخ پایان اعتبار" })}
+                    label={t("policy.fields.validTo", {defaultValue: "تاریخ پایان اعتبار"})}
                 >
                     <DatePicker
                         value={form.validTo}
@@ -1004,10 +1004,10 @@ export default function PolicyObjectPage({
                             }}
                         >
                             <Option data-value="false" selected={!form.evaluationConfirmed}>
-                                {t("common.no", { defaultValue: "خیر" })}
+                                {t("common.no", {defaultValue: "خیر"})}
                             </Option>
                             <Option data-value="true" selected={form.evaluationConfirmed}>
-                                {t("common.yes", { defaultValue: "بله" })}
+                                {t("common.yes", {defaultValue: "بله"})}
                             </Option>
                         </Select>
                     </FormField>
@@ -1015,7 +1015,7 @@ export default function PolicyObjectPage({
 
                 {form.nodeType === "policy" ? (
                     <>
-                        <FormField label={t("policy.fields.objective", { defaultValue: "هدف" })} fullWidth>
+                        <FormField label={t("policy.fields.objective", {defaultValue: "هدف"})} fullWidth>
                             <TextArea
                                 rows={3}
                                 value={form.objective}
@@ -1026,7 +1026,7 @@ export default function PolicyObjectPage({
                             />
                         </FormField>
 
-                        <FormField label={t("policy.fields.note", { defaultValue: "یادداشت" })} fullWidth>
+                        <FormField label={t("policy.fields.note", {defaultValue: "یادداشت"})} fullWidth>
                             <TextArea
                                 rows={3}
                                 value={form.note}
@@ -1038,7 +1038,7 @@ export default function PolicyObjectPage({
                 ) : null}
 
                 <FormField
-                    label={t("policy.fields.description", { defaultValue: "شرح" })}
+                    label={t("policy.fields.description", {defaultValue: "شرح"})}
                     fullWidth
                 >
                     <TextArea
@@ -1062,7 +1062,7 @@ export default function PolicyObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={onEdit}
                     >
-                        {t("common.edit", { defaultValue: "ویرایش" })}
+                        {t("common.edit", {defaultValue: "ویرایش"})}
                     </Button>
 
                     <Button
@@ -1071,7 +1071,7 @@ export default function PolicyObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={onCancel}
                     >
-                        {t("common.close", { defaultValue: "بستن" })}
+                        {t("common.close", {defaultValue: "بستن"})}
                     </Button>
                 </>
             );
@@ -1086,7 +1086,7 @@ export default function PolicyObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={() => void handleSubmit("draft")}
                     >
-                        {t("common.save", { defaultValue: "ذخیره" })}
+                        {t("common.save", {defaultValue: "ذخیره"})}
                     </Button>
 
                     <Button
@@ -1095,7 +1095,7 @@ export default function PolicyObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={() => void handleSubmit("underReview")}
                     >
-                        {t("policy.actions.sendForReview", { defaultValue: "ارسال برای بررسی" })}
+                        {t("policy.actions.sendForReview", {defaultValue: "ارسال برای بررسی"})}
                     </Button>
 
                     <Button
@@ -1104,7 +1104,7 @@ export default function PolicyObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={() => void handleSubmit("pendingApproval")}
                     >
-                        {t("policy.actions.submitForApproval", { defaultValue: "ثبت برای تأیید" })}
+                        {t("policy.actions.submitForApproval", {defaultValue: "ثبت برای تأیید"})}
                     </Button>
 
                     <Button
@@ -1113,7 +1113,7 @@ export default function PolicyObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={onCancel}
                     >
-                        {t("common.cancel", { defaultValue: "انصراف" })}
+                        {t("common.cancel", {defaultValue: "انصراف"})}
                     </Button>
                 </>
             );
@@ -1127,7 +1127,7 @@ export default function PolicyObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={() => void handleSubmit()}
                 >
-                    {t("common.save", { defaultValue: "ثبت" })}
+                    {t("common.save", {defaultValue: "ثبت"})}
                 </Button>
 
                 <Button
@@ -1136,19 +1136,19 @@ export default function PolicyObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={onCancel}
                 >
-                    {t("common.cancel", { defaultValue: "انصراف" })}
+                    {t("common.cancel", {defaultValue: "انصراف"})}
                 </Button>
             </>
         );
     }
 
-    const tableActionButtons = (createText = t("common.create", { defaultValue: "ایجاد" })) => (
+    const tableActionButtons = (createText = t("common.create", {defaultValue: "ایجاد"})) => (
         <>
             <Button design="Emphasized" disabled={busy || readOnly}>
                 {createText}
             </Button>
             <Button design="Negative" disabled={busy || readOnly}>
-                {t("common.delete", { defaultValue: "حذف" })}
+                {t("common.delete", {defaultValue: "حذف"})}
             </Button>
         </>
     );
@@ -1156,6 +1156,99 @@ export default function PolicyObjectPage({
     const renderTabContent = (tab: PolicyTabKey) => {
         if (tab === "general") {
             return renderGeneralTab();
+        }
+
+        if (tab === "scope") {
+            return (
+                <TablePlaceholder
+                    title={t("policy.tabs.scope", {defaultValue: "دامنه سیاست"})}
+                    actions={tableActionButtons()}
+                    columns={[
+                        t("policy.fields.process", {defaultValue: "فرآیندها"}),
+                        t("policy.fields.type", {defaultValue: "نوع"}),
+                        t("policy.fields.description", {defaultValue: "شرح"}),
+                        t("policy.fields.organization", {defaultValue: "سازمان"}),
+                        t("policy.fields.owner", {defaultValue: "مالک"}),
+                    ]}
+                />
+            );
+        }
+
+        if (tab === "risks") {
+            return (
+                <TablePlaceholder
+                    title={t("policy.tabs.risks", {defaultValue: "ریسک‌ها"})}
+                    actions={tableActionButtons(t("policy.actions.assign", {defaultValue: "تخصیص"}))}
+                    columns={[
+                        t("policy.fields.risk", {defaultValue: "ریسک"}),
+                        t("policy.fields.organization", {defaultValue: "سازمان"}),
+                        t("policy.fields.owner", {defaultValue: "مالک"}),
+                        t("policy.fields.classification", {defaultValue: "طبقه‌بندی"}),
+                    ]}
+                />
+            );
+        }
+
+        if (tab === "controls") {
+            return (
+                <TablePlaceholder
+                    title={t("policy.tabs.controls", {defaultValue: "کنترل‌ها"})}
+                    actions={tableActionButtons(t("policy.actions.assign", {defaultValue: "تخصیص"}))}
+                    columns={[
+                        t("policy.fields.name", {defaultValue: "نام"}),
+                        t("policy.fields.subProcess", {defaultValue: "زیر فرآیند"}),
+                        t("policy.fields.organization", {defaultValue: "سازمان"}),
+                        t("policy.fields.owner", {defaultValue: "مالک"}),
+                        t("policy.fields.effectivenessTest", {defaultValue: "آزمون اثربخشی"}),
+                        t("policy.fields.controlDesignAssessment", {
+                            defaultValue: "ارزیابی طراحی کنترل",
+                        }),
+                    ]}
+                />
+            );
+        }
+
+        if (tab === "sources") {
+            return (
+                <TablePlaceholder
+                    title={t("policy.tabs.sources", {defaultValue: "منابع سیاست"})}
+                    actions={tableActionButtons(
+                        t("policy.actions.addSources", {defaultValue: "اضافه نمودن منابع"}),
+                    )}
+                    columns={[
+                        t("policy.fields.policySource", {defaultValue: "منابع سیاست"}),
+                        t("policy.fields.type", {defaultValue: "نوع"}),
+                    ]}
+                />
+            );
+        }
+
+        if (tab === "roles") {
+            return (
+                <TablePlaceholder
+                    title={t("policy.tabs.roles", {defaultValue: "نقش‌ها"})}
+                    actions={tableActionButtons(t("policy.actions.select", {defaultValue: "انتخاب"}))}
+                    columns={[
+                        t("policy.fields.roles", {defaultValue: "نقش‌ها"}),
+                        t("policy.fields.type", {defaultValue: "نوع"}),
+                    ]}
+                />
+            );
+        }
+        if (tab === "reviewApproval") {
+            return (
+                <TablePlaceholder
+                    title={t("policy.tabs.reviewApproval", {defaultValue: "بازنگری و تصویب"})}
+                    actions={tableActionButtons(t("policy.actions.assign", {defaultValue: "تخصیص"}))}
+                    columns={[
+                        t("policy.fields.reviewerApprover", {
+                            defaultValue: "بازنگری کنندگان / تصویب کنندگان",
+                        }),
+                        t("policy.fields.name", {defaultValue: "نام"}),
+                        t("policy.fields.identifier", {defaultValue: "شناسه"}),
+                    ]}
+                />
+            );
         }
 
         if (tab === "documents") {
@@ -1178,98 +1271,6 @@ export default function PolicyObjectPage({
                 />
             );
         }
-
-        if (tab === "scope") {
-            return (
-                <TablePlaceholder
-                    title={t("policy.tabs.scope", { defaultValue: "دامنه سیاست" })}
-                    actions={tableActionButtons()}
-                    columns={[
-                        t("policy.fields.process", { defaultValue: "فرآیندها" }),
-                        t("policy.fields.type", { defaultValue: "نوع" }),
-                        t("policy.fields.description", { defaultValue: "شرح" }),
-                        t("policy.fields.organization", { defaultValue: "سازمان" }),
-                        t("policy.fields.owner", { defaultValue: "مالک" }),
-                    ]}
-                />
-            );
-        }
-
-        if (tab === "risks") {
-            return (
-                <TablePlaceholder
-                    title={t("policy.tabs.risks", { defaultValue: "ریسک‌ها" })}
-                    actions={tableActionButtons(t("policy.actions.assign", { defaultValue: "تخصیص" }))}
-                    columns={[
-                        t("policy.fields.risk", { defaultValue: "ریسک" }),
-                        t("policy.fields.organization", { defaultValue: "سازمان" }),
-                        t("policy.fields.owner", { defaultValue: "مالک" }),
-                        t("policy.fields.classification", { defaultValue: "طبقه‌بندی" }),
-                    ]}
-                />
-            );
-        }
-
-        if (tab === "controls") {
-            return (
-                <TablePlaceholder
-                    title={t("policy.tabs.controls", { defaultValue: "کنترل‌ها" })}
-                    actions={tableActionButtons(t("policy.actions.assign", { defaultValue: "تخصیص" }))}
-                    columns={[
-                        t("policy.fields.name", { defaultValue: "نام" }),
-                        t("policy.fields.subProcess", { defaultValue: "زیر فرآیند" }),
-                        t("policy.fields.organization", { defaultValue: "سازمان" }),
-                        t("policy.fields.owner", { defaultValue: "مالک" }),
-                        t("policy.fields.effectivenessTest", { defaultValue: "آزمون اثربخشی" }),
-                        t("policy.fields.controlDesignAssessment", {
-                            defaultValue: "ارزیابی طراحی کنترل",
-                        }),
-                    ]}
-                />
-            );
-        }
-
-        if (tab === "sources") {
-            return (
-                <TablePlaceholder
-                    title={t("policy.tabs.sources", { defaultValue: "منابع سیاست" })}
-                    actions={tableActionButtons(
-                        t("policy.actions.addSources", { defaultValue: "اضافه نمودن منابع" }),
-                    )}
-                    columns={[
-                        t("policy.fields.policySource", { defaultValue: "منابع سیاست" }),
-                        t("policy.fields.type", { defaultValue: "نوع" }),
-                    ]}
-                />
-            );
-        }
-
-        if (tab === "roles") {
-            return (
-                <TablePlaceholder
-                    title={t("policy.tabs.roles", { defaultValue: "نقش‌ها" })}
-                    actions={tableActionButtons(t("policy.actions.select", { defaultValue: "انتخاب" }))}
-                    columns={[
-                        t("policy.fields.roles", { defaultValue: "نقش‌ها" }),
-                        t("policy.fields.type", { defaultValue: "نوع" }),
-                    ]}
-                />
-            );
-        }
-
-        return (
-            <TablePlaceholder
-                title={t("policy.tabs.reviewApproval", { defaultValue: "بازنگری و تصویب" })}
-                actions={tableActionButtons(t("policy.actions.assign", { defaultValue: "تخصیص" }))}
-                columns={[
-                    t("policy.fields.reviewerApprover", {
-                        defaultValue: "بازنگری کنندگان / تصویب کنندگان",
-                    }),
-                    t("policy.fields.name", { defaultValue: "نام" }),
-                    t("policy.fields.identifier", { defaultValue: "شناسه" }),
-                ]}
-            />
-        );
     };
 
     const resolvedActiveTab = tabs.includes(activeTab) ? activeTab : "general";
@@ -1280,11 +1281,11 @@ export default function PolicyObjectPage({
                 <div style={HEADER_TITLE_STYLE}>
                     <Title level="H4">
                         {mode === "create"
-                            ? t("policy.object.createModalTitle", { defaultValue: "ایجاد" })
+                            ? t("policy.object.createModalTitle", {defaultValue: "ایجاد"})
                             : headerTitle ||
-                              t("policy.object.modalTitle", {
-                                  defaultValue: "مرکز سیاست",
-                              })}
+                            t("policy.object.modalTitle", {
+                                defaultValue: "مرکز سیاست",
+                            })}
                     </Title>
                 </div>
 
@@ -1308,23 +1309,23 @@ export default function PolicyObjectPage({
                         value={form.nodeType === "policy" ? headerCommunication : "-"}
                     />
                     <HeaderItem
-                        label={t("policy.fields.status", { defaultValue: "وضعیت" })}
+                        label={t("policy.fields.status", {defaultValue: "وضعیت"})}
                         value={headerStatus}
                     />
                     <HeaderItem
-                        label={t("policy.fields.identifier", { defaultValue: "شناسه" })}
+                        label={t("policy.fields.identifier", {defaultValue: "شناسه"})}
                         value={form.code || value?.id}
                     />
                     <HeaderItem
-                        label={t("policy.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
+                        label={t("policy.fields.createdAt", {defaultValue: "تاریخ ایجاد"})}
                         value={formatPersianDate(value?.createdAt)}
                     />
                     <HeaderItem
-                        label={t("policy.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
+                        label={t("policy.fields.validTo", {defaultValue: "تاریخ اعتبار"})}
                         value={formatPersianDate(form.validTo || value?.validTo)}
                     />
                     <HeaderItem
-                        label={t("policy.fields.version", { defaultValue: "نسخه" })}
+                        label={t("policy.fields.version", {defaultValue: "نسخه"})}
                         value={form.nodeType === "policy" ? form.version : "-"}
                     />
                 </div>
