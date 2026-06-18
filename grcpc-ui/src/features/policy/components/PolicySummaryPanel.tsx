@@ -20,6 +20,7 @@ import type {
     PolicyNodeType,
     PolicyStatus,
 } from "../domain/policy.model";
+import { DocumentAttachmentsManager } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface PolicySummaryPanelProps {
@@ -454,9 +455,11 @@ function GeneralTab({ value }: { value: PolicyNode }) {
 function TabBody({
     value,
     activeTab,
+    busy,
 }: {
     value: PolicyNode;
     activeTab: PolicyDetailTabKey;
+    busy: boolean;
 }) {
     const { t } = useTranslation();
 
@@ -466,15 +469,14 @@ function TabBody({
 
     if (activeTab === "documents") {
         return (
-            <SimpleTable
-                columns={[
-                    t("policy.fields.documentType", { defaultValue: "نوع" }),
-                    t("policy.fields.title", { defaultValue: "عنوان" }),
-                    t("policy.fields.version", { defaultValue: "نسخه" }),
-                    t("policy.fields.fileSize", { defaultValue: "اندازه فایل" }),
-                    t("policy.fields.fileType", { defaultValue: "نوع فایل" }),
-                    t("policy.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                ]}
+            <DocumentAttachmentsManager
+                key={value.id}
+                title={t("policy.tabs.documents", { defaultValue: "مستندات" })}
+                targetType="POLICY_NODE"
+                targetId={value.id}
+                stagingMode="direct"
+                busy={busy}
+                readOnly
             />
         );
     }
@@ -643,7 +645,11 @@ export default function PolicySummaryPanel({
                         />
 
                         <div style={TAB_BODY_STYLE}>
-                            <TabBody value={value} activeTab={effectiveActiveTab} />
+                            <TabBody
+                                value={value}
+                                activeTab={effectiveActiveTab}
+                                busy={busy}
+                            />
                         </div>
                     </div>
                 ) : (
