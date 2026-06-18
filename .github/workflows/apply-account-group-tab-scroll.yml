@@ -1,6 +1,9 @@
 name: Apply account group tab scrolling
 
 on:
+  push:
+    branches:
+      - fix/account-group-tabs-horizontal-scroll
   pull_request:
     branches:
       - main
