@@ -11,22 +11,22 @@ export function DetailTabContainer({
 }: DetailTabContainerProps) {
     return (
         <TabContainer
-  {...props}
-  overflowMode={overflowMode}
-  overflowButton={
-      overflowButton ?? (
-<Button design="Transparent" tooltip="...">
-    ...
-</Button>
-      )
-  }
-  startOverflowButton={
-      startOverflowButton ?? (
-<Button design="Transparent" tooltip="...">
-    ...
-</Button>
-      )
-  }
+            {...props}
+            overflowMode={overflowMode}
+            overflowButton={
+                overflowButton ?? (
+                    <Button design="Transparent" tooltip="...">
+                        ...
+                    </Button>
+                )
+            }
+            startOverflowButton={
+                startOverflowButton ?? (
+                    <Button design="Transparent" tooltip="...">
+                        ...
+                    </Button>
+                )
+            }
         />
     );
 }
