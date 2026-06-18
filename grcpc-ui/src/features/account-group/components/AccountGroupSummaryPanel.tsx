@@ -7,10 +7,11 @@ import {
     Label,
     MessageStrip,
     Tab,
-    TabContainer,
     TabSeparator,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     AccountGroupImportance,
@@ -249,7 +250,7 @@ function AccountGroupTabs({
     };
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={ACCOUNT_GROUP_SUMMARY_TAB_CLASS}
             onTabSelect={handleTabSelect}
             style={TAB_CONTAINER_STYLE}
@@ -264,7 +265,7 @@ function AccountGroupTabs({
                     />
                 </Fragment>
             ))}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 

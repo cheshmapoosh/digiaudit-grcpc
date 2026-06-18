@@ -7,10 +7,11 @@ import {
     Label,
     MessageStrip,
     Tab,
-    TabContainer,
     TabSeparator,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     RiskNode,
@@ -315,7 +316,7 @@ function RiskTabs({
     };
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={RISK_SUMMARY_TAB_CLASS}
             onTabSelect={handleTabSelect}
             style={TAB_CONTAINER_STYLE}
@@ -330,7 +331,7 @@ function RiskTabs({
                     />
                 </Fragment>
             ))}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 

@@ -7,10 +7,11 @@ import {
     Label,
     MessageStrip,
     Tab,
-    TabContainer,
     TabSeparator,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     PolicyCategory,
@@ -331,7 +332,7 @@ function PolicyTabs({
     };
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={POLICY_SUMMARY_TAB_CLASS}
             onTabSelect={handleTabSelect}
             style={TAB_CONTAINER_STYLE}
@@ -346,7 +347,7 @@ function PolicyTabs({
                     />
                 </Fragment>
             ))}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 

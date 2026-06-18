@@ -7,10 +7,11 @@ import {
     Label,
     MessageStrip,
     Tab,
-    TabContainer,
     TabSeparator,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import { DocumentAttachmentsTab, type DocumentAttachment } from "@/features/document";
 import type { ObjectiveNode, ObjectiveStatus, ObjectiveType } from "../domain/objective.model";
@@ -339,7 +340,7 @@ export default function ObjectiveSummaryPanel({
                     </MessageStrip>
                 ) : null}
 
-                <TabContainer
+                <DetailTabContainer
                     className={OBJECTIVE_SUMMARY_TAB_CLASS}
                     style={TAB_CONTAINER_STYLE}
                     onTabSelect={(event) => {
@@ -369,7 +370,7 @@ export default function ObjectiveSummaryPanel({
 
                         return [item];
                     })}
-                </TabContainer>
+                </DetailTabContainer>
 
                 <div style={TAB_BODY_STYLE}>{renderActiveTab()}</div>
             </div>
