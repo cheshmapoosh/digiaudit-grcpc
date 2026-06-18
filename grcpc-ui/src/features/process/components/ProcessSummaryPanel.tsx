@@ -7,10 +7,11 @@ import {
     Label,
     MessageStrip,
     Tab,
-    TabContainer,
     TabSeparator,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     ProcessCategory,
@@ -211,7 +212,7 @@ function ProcessTabs({
     };
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={PROCESS_SUMMARY_TAB_CLASS}
             onTabSelect={handleTabSelect}
             style={TAB_CONTAINER_STYLE}
@@ -226,7 +227,7 @@ function ProcessTabs({
                     />
                 </Fragment>
             ))}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 
