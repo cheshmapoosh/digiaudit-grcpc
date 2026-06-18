@@ -18,6 +18,7 @@ import type {
     RiskStatus,
     RiskTemplateType,
 } from "../domain/risk.model";
+import { DocumentAttachmentsManager } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface RiskSummaryPanelProps {
@@ -393,14 +394,30 @@ function GeneralTab({ value }: { value: RiskNode }) {
 function TabBody({
                      value,
                      activeTab,
+                     busy,
                  }: {
     value: RiskNode;
     activeTab: RiskDetailTabKey;
+    busy: boolean;
 }) {
     const { t } = useTranslation();
 
     if (activeTab === "general") {
         return <GeneralTab value={value} />;
+    }
+
+    if (activeTab === "documents") {
+        return (
+            <DocumentAttachmentsManager
+                key={value.id}
+                title={t("risk.tabs.documents", { defaultValue: "مستندات" })}
+                targetType="RISK_NODE"
+                targetId={value.id}
+                stagingMode="direct"
+                busy={busy}
+                readOnly
+            />
+        );
     }
 
     if (activeTab === "impacts") {
@@ -459,24 +476,12 @@ function TabBody({
         );
     }
 
-    if (activeTab === "kriTemplate") {
-        return (
-            <SimpleTable
-                columns={[
-                    t("risk.fields.name", { defaultValue: "نام" }),
-                    t("risk.fields.type", { defaultValue: "نوع" }),
-                    t("risk.fields.description", { defaultValue: "شرح" }),
-                ]}
-            />
-        );
-    }
-
     return (
         <SimpleTable
             columns={[
                 t("risk.fields.name", { defaultValue: "نام" }),
                 t("risk.fields.type", { defaultValue: "نوع" }),
-                t("risk.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
+                t("risk.fields.description", { defaultValue: "شرح" }),
             ]}
         />
     );
@@ -564,7 +569,11 @@ export default function RiskSummaryPanel({
                         />
 
                         <div style={{ ...TAB_BODY_STYLE, minWidth: 0, overflowX: "auto" }}>
-                            <TabBody value={value} activeTab={effectiveActiveTab} />
+                            <TabBody
+                                value={value}
+                                activeTab={effectiveActiveTab}
+                                busy={busy}
+                            />
                         </div>
                     </div>
                 ) : (
