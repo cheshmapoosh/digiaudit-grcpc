@@ -1,8 +1,0 @@
-
-> grcpc-ui@1.0.3 typecheck
-> tsc -b --pretty false
-
-src/features/document/components/DocumentAttachmentsPanel.tsx(1,21): error TS6133: 'useMemo' is declared but its value is never read.
-src/features/document/components/DocumentAttachmentsPanel.tsx(9,5): error TS6133: 'Label' is declared but its value is never read.
-src/features/document/components/DocumentAttachmentsPanel.tsx(74,5): error TS6133: 'onDeleteDocument' is declared but its value is never read.
-src/features/document/components/DocumentAttachmentsPanel.tsx(151,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'File'.
