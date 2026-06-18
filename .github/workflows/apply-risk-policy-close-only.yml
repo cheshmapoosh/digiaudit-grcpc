@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - fix/risk-policy-details-close-only
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
