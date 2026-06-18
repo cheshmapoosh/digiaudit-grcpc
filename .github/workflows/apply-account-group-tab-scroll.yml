@@ -1,0 +1,72 @@
+name: Apply account group tab scrolling
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/account-group-tabs-horizontal-scroll
+          fetch-depth: 0
+
+      - name: Update account group tab strip
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("grcpc-ui/src/features/account-group/components/AccountGroupSummaryPanel.tsx")
+          text = path.read_text(encoding="utf-8")
+
+          old = '''    content: none;
+    display: none;
+    border: 0;
+}`,
+);'''
+
+          new = '''    content: none;
+    display: none;
+    border: 0;
+}
+
+:host(.${ACCOUNT_GROUP_SUMMARY_TAB_CLASS}) .ui5-tc__header {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+}
+
+:host(.${ACCOUNT_GROUP_SUMMARY_TAB_CLASS}) .ui5-tc__tabStrip {
+    flex: 0 0 max-content;
+    width: max-content;
+    min-width: 100%;
+    overflow: visible;
+}
+
+:host(.${ACCOUNT_GROUP_SUMMARY_TAB_CLASS}) .ui5-tc__overflow {
+    display: none !important;
+}`,
+);'''
+
+          if text.count(old) != 1:
+              raise RuntimeError("Unexpected account group tab CSS structure")
+
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+      - name: Remove temporary workflow and commit
+        shell: bash
+        run: |
+          rm .github/workflows/apply-account-group-tab-scroll.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(account-group): scroll detail tabs horizontally"
+          git push origin HEAD:fix/account-group-tabs-horizontal-scroll
