@@ -17,12 +17,12 @@ import {
     Option,
     Select,
     Tab,
-    TabContainer,
     TabSeparator,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
 
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import type {
     ControlAssignmentStatus,
     ControlDetails,
@@ -100,10 +100,15 @@ export interface ControlObjectPageProps {
 const ROOT_STYLE: CSSProperties = {
     display: "grid",
     gap: "0.75rem",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
     background: "var(--sapBackgroundColor)",
 };
 
 const HEADER_STYLE: CSSProperties = {
+    minWidth: 0,
     border: "1px solid var(--sapGroup_ContentBorderColor)",
     borderBottom: "none",
     background: "var(--sapGroup_ContentBackground)",
@@ -118,17 +123,19 @@ const HEADER_TITLE_STYLE: CSSProperties = {
 
 const HEADER_GRID_STYLE: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: "0.35rem 2rem",
+    gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
+    gap: "0.35rem 1rem",
     padding: "0.75rem 1rem",
     minHeight: "4.5rem",
+    minWidth: 0,
 };
 
 const HEADER_ROW_STYLE: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "8rem minmax(0, 1fr)",
+    gridTemplateColumns: "minmax(6.5rem, 40%) minmax(0, 1fr)",
     gap: "0.5rem",
     alignItems: "center",
+    minWidth: 0,
 };
 
 const CONTROL_TAB_CONTAINER_CLASS = "controlObjectTabs";
@@ -153,6 +160,7 @@ const TAB_CONTAINER_STYLE: CSSProperties = {
 };
 
 const BODY_STYLE: CSSProperties = {
+    minWidth: 0,
     borderInline: "1px solid var(--sapGroup_ContentBorderColor)",
     borderBottom: "1px solid var(--sapGroup_ContentBorderColor)",
     background: "var(--sapBackgroundColor)",
@@ -358,7 +366,7 @@ function ControlTabs({
     const { t } = useTranslation();
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={CONTROL_TAB_CONTAINER_CLASS}
             onTabSelect={(event) => {
                 const nextTab = readSelectedTabKey(event);
@@ -378,7 +386,7 @@ function ControlTabs({
                     />
                 </Fragment>
             ))}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 
