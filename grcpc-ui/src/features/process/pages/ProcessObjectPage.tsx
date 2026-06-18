@@ -16,11 +16,12 @@ import {
     Option,
     Select,
     Tab,
-    TabContainer,
     TabSeparator,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     ProcessCategory,
@@ -344,7 +345,7 @@ function ProcessTabs({
     const { t } = useTranslation();
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={PROCESS_TAB_CONTAINER_CLASS}
             onTabSelect={(event) => {
                 const nextTab = readSelectedTabKey(event);
@@ -374,7 +375,7 @@ function ProcessTabs({
 
                 return [item];
             })}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 

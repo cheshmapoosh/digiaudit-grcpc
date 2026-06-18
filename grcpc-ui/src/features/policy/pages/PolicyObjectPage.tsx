@@ -17,11 +17,12 @@ import {
     Option,
     Select,
     Tab,
-    TabContainer,
     TabSeparator,
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     PolicyCategory,
@@ -447,7 +448,7 @@ function PolicyTabs({
     const {t} = useTranslation();
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={POLICY_TAB_CONTAINER_CLASS}
             onTabSelect={(event) => {
                 const nextTab = readSelectedTabKey(event);
@@ -477,7 +478,7 @@ function PolicyTabs({
 
                 return [item];
             })}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 

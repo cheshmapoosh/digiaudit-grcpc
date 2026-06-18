@@ -19,7 +19,6 @@ import {
     Option,
     Select,
     Tab,
-    TabContainer,
     TabSeparator,
     Table,
     TableCell,
@@ -29,6 +28,8 @@ import {
     TextArea,
     Title,
 } from "@ui5/webcomponents-react";
+
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
 import type {
     ObjectiveNode,
@@ -413,7 +414,7 @@ function ObjectiveTabs({
     const { t } = useTranslation();
 
     return (
-        <TabContainer
+        <DetailTabContainer
             className={OBJECTIVE_TAB_CONTAINER_CLASS}
             onTabSelect={(event) => {
                 const nextTab = readSelectedTabKey(event);
@@ -443,7 +444,7 @@ function ObjectiveTabs({
 
                 return [item];
             })}
-        </TabContainer>
+        </DetailTabContainer>
     );
 }
 
