@@ -152,6 +152,8 @@ export interface OrganizationObjectPageProps {
 const ROOT_STYLE: CSSProperties = {
     display: "grid",
     gap: "0.75rem",
+    minWidth: 0,
+    maxWidth: "100%",
     background: "var(--sapBackgroundColor)",
 };
 
@@ -209,6 +211,7 @@ const BODY_STYLE: CSSProperties = {
     borderBottom: "1px solid var(--sapGroup_ContentBorderColor)",
     background: "var(--sapBackgroundColor)",
     minHeight: "18rem",
+    minWidth: 0,
     padding: "0.75rem",
 };
 

@@ -406,6 +406,8 @@ export default function AccountGroupSummaryPanel({
                 display: "grid",
                 gridTemplateRows: "auto 1fr auto",
                 minHeight: "100%",
+                minWidth: 0,
+                maxWidth: "100%",
                 gap: "1rem",
             }}
         >
@@ -421,7 +423,7 @@ export default function AccountGroupSummaryPanel({
                 }
             />
 
-            <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
+            <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
                 {error ? (
                     <MessageStrip design="Negative" hideCloseButton>
                         {error}

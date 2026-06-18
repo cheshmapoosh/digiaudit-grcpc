@@ -23,20 +23,26 @@ import "./ui/ui5-custom-css";
 import App from "./app/App";
 import { applySettings, loadSettings } from "./ui/ui-settings";
 import { initI18n } from "./i18n/i18n";
+import { reportInitialAppBootstrapFailure } from "./shared/bootstrap/initialLoader";
 
-// 1) load settings
-const settings = loadSettings();
+try {
+    // 1) load settings
+    const settings = loadSettings();
 
-// 2) apply UI5 theme/dir/lang
-applySettings(settings);
+    // 2) apply UI5 theme/dir/lang
+    applySettings(settings);
 
-// 3) init resource bundle language
-initI18n(settings.lang);
+    // 3) init resource bundle language
+    initI18n(settings.lang);
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-    <React.StrictMode>
-        <ThemeProvider>
-            <App />
-        </ThemeProvider>
-    </React.StrictMode>
-);
+    ReactDOM.createRoot(document.getElementById("root")!).render(
+        <React.StrictMode>
+            <ThemeProvider>
+                <App />
+            </ThemeProvider>
+        </React.StrictMode>
+    );
+} catch (error) {
+    reportInitialAppBootstrapFailure();
+    throw error;
+}

@@ -457,7 +457,7 @@ export default function RegulationSummaryPanel({
                         })}
                     </MessageStrip>
                 ) : (
-                    <div>
+                    <div style={{ minWidth: 0, maxWidth: "100%" }}>
                         {details ? (
                             <div style={HEADER_GRID_STYLE}>
                                 <DetailRow

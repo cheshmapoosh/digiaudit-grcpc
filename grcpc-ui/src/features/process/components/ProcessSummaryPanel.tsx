@@ -418,7 +418,7 @@ export default function ProcessSummaryPanel({
                 ) : null}
 
                 {value ? (
-                    <div>
+                    <div style={{ minWidth: 0, maxWidth: "100%" }}>
                         <ProcessTabs
                             tabs={tabs}
                             activeTab={effectiveActiveTab}

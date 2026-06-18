@@ -102,6 +102,7 @@
   "toast.success.statusChanged": "Status changed successfully.",
   "toast.success.login": "Signed in successfully.",
   "toast.success.logout": "Signed out successfully.",
+  "auth.sessionExpired": "Your session has expired. Please sign in again.",
   "toast.success.setupInitialized": "Initial setup completed successfully.",
   "org.filter.date": "Date",
   "org.filter.clear": "Clear",

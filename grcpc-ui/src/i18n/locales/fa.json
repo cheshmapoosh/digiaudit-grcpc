@@ -102,6 +102,7 @@
   "toast.success.statusChanged": "وضعیت با موفقیت تغییر کرد.",
   "toast.success.login": "ورود با موفقیت انجام شد.",
   "toast.success.logout": "خروج با موفقیت انجام شد.",
+  "auth.sessionExpired": "نشست کاربری شما به پایان رسیده است. لطفاً دوباره وارد شوید.",
   "toast.success.setupInitialized": "راه اندازی اولیه با موفقیت انجام شد.",
   "org.filter.date": "تاریخ",
   "org.filter.clear": "پاک کردن",

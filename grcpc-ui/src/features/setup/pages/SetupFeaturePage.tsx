@@ -15,6 +15,7 @@ import {
 
 import { useSetupState } from "@/features/setup";
 import PublicPageHeader from "@/shared/components/PublicPageHeader";
+import { useInitialAppReady } from "@/shared/bootstrap/useInitialAppReady";
 
 interface SetupFormState {
     username: string;
@@ -66,6 +67,8 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 }
 
 export default function SetupFeaturePage() {
+    useInitialAppReady();
+
     const { t } = useTranslation();
     const navigate = useNavigate();
 

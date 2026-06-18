@@ -585,6 +585,8 @@ export default function PolicySummaryPanel({
                 display: "grid",
                 gridTemplateRows: "auto 1fr auto",
                 minHeight: "100%",
+                minWidth: 0,
+                maxWidth: "100%",
                 gap: "1rem",
             }}
         >
@@ -600,7 +602,7 @@ export default function PolicySummaryPanel({
                 }
             />
 
-            <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
+            <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
                 {error ? (
                     <MessageStrip design="Negative" hideCloseButton>
                         {error}
@@ -608,7 +610,7 @@ export default function PolicySummaryPanel({
                 ) : null}
 
                 {value ? (
-                    <div>
+                    <div style={{ minWidth: 0, maxWidth: "100%" }}>
                         <div
                             style={{
                                 display: "grid",

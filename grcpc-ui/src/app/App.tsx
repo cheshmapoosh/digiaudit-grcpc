@@ -1,6 +1,7 @@
 import {BrowserRouter} from "react-router-dom";
 import AppRouter from "./router/AppRouter.tsx";
 import AppToast from "@/shared/components/AppToast";
+import SessionExpiredRedirector from "@/features/auth/components/SessionExpiredRedirector";
 
 export default function App() {
     return (
@@ -11,6 +12,7 @@ export default function App() {
             }}
         >
             <div>
+                <SessionExpiredRedirector />
                 <AppRouter/>
                 <AppToast/>
             </div>

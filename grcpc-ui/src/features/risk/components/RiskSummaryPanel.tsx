@@ -536,7 +536,7 @@ export default function RiskSummaryPanel({
                 ) : null}
 
                 {value ? (
-                    <div>
+                    <div style={{ minWidth: 0, maxWidth: "100%" }}>
                         <div
                             style={{
                                 display: "grid",

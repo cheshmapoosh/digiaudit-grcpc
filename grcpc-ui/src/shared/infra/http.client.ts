@@ -1,5 +1,6 @@
 import i18n from "@/i18n/i18n";
 import { showSuccessToast } from "@/shared/feedback/toast.store";
+import { notifyUnauthorizedSession } from "@/shared/infra/unauthorizedSession";
 
 export class HttpError extends Error {
     public readonly status: number;
@@ -197,6 +198,12 @@ async function request<T>(
     const payload = await parseResponseBody(response);
 
     if (!response.ok) {
+        await notifyUnauthorizedSession({
+            method,
+            status: response.status,
+            url: finalUrl,
+        });
+
         throw new HttpError(
             extractErrorMessage(response.status, payload),
             response.status,

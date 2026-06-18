@@ -1,18 +1,23 @@
 import { create } from "zustand";
 
 import { authService, type AuthMeResponse } from "@/features/auth/service/auth.service";
+import { resetUnauthorizedSessionHandling } from "@/shared/infra/unauthorizedSession";
 
 export interface AuthState {
     me: AuthMeResponse | null;
     loading: boolean;
     submitting: boolean;
     error: string | null;
+    sessionExpired: boolean;
     mePromise: Promise<AuthMeResponse> | null;
 
     loadMe: () => Promise<AuthMeResponse>;
     login: (payload: { username: string; password: string }) => Promise<void>;
     logout: () => Promise<void>;
     clearError: () => void;
+    clearSessionExpired: () => void;
+    markSessionExpired: () => void;
+    handleSessionExpired: () => void;
     reset: () => void;
 }
 
@@ -39,6 +44,7 @@ export const useAuthState = create<AuthState>((set, get) => ({
     loading: false,
     submitting: false,
     error: null,
+    sessionExpired: false,
     mePromise: null,
 
     loadMe: async () => {
@@ -76,12 +82,13 @@ export const useAuthState = create<AuthState>((set, get) => ({
     },
 
     login: async (payload) => {
-        set({ submitting: true, error: null });
+        set({ submitting: true, error: null, sessionExpired: false });
 
         try {
             await authService.login(payload);
             const meResponse = await authService.me();
-            set({ me: meResponse });
+            resetUnauthorizedSessionHandling();
+            set({ me: meResponse, sessionExpired: false });
         } catch (error) {
             set({
                 error: toErrorMessage(error, "ورود به سامانه انجام نشد"),
@@ -93,13 +100,15 @@ export const useAuthState = create<AuthState>((set, get) => ({
     },
 
     logout: async () => {
-        set({ submitting: true, error: null });
+        set({ submitting: true, error: null, sessionExpired: false });
 
         try {
             await authService.logout();
+            resetUnauthorizedSessionHandling();
             set({
                 me: anonymousUser,
                 mePromise: null,
+                sessionExpired: false,
             });
         } catch (error) {
             set({
@@ -115,12 +124,33 @@ export const useAuthState = create<AuthState>((set, get) => ({
         set({ error: null });
     },
 
+    clearSessionExpired: () => {
+        set({ sessionExpired: false });
+    },
+
+    markSessionExpired: () => {
+        set({ sessionExpired: true });
+    },
+
+    handleSessionExpired: () => {
+        set({
+            me: anonymousUser,
+            loading: false,
+            submitting: false,
+            error: null,
+            sessionExpired: true,
+            mePromise: null,
+        });
+    },
+
     reset: () => {
+        resetUnauthorizedSessionHandling();
         set({
             me: null,
             loading: false,
             submitting: false,
             error: null,
+            sessionExpired: false,
             mePromise: null,
         });
     },

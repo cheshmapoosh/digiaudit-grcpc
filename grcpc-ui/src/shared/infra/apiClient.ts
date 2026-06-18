@@ -1,13 +1,12 @@
 // src/shared/api/apiClient.ts
 
-import axios, { AxiosHeaders } from "axios";
+import axios from "axios";
 import type {
     AxiosError,
     AxiosInstance,
-    AxiosRequestConfig,
     AxiosResponse,
-    InternalAxiosRequestConfig,
 } from "axios";
+import { notifyUnauthorizedSession } from "@/shared/infra/unauthorizedSession";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -27,33 +26,6 @@ interface ApiErrorResponse {
     details?: unknown;
 }
 
-interface RetryableRequestConfig extends InternalAxiosRequestConfig {
-    _retry?: boolean;
-}
-
-interface RefreshResponse {
-    accessToken: string;
-}
-
-/* -------------------------------------------------------------------------- */
-/*                              TOKEN MANAGEMENT                              */
-
-/* -------------------------------------------------------------------------- */
-
-let accessToken: string | null = null;
-
-function getAccessToken(): string | null {
-    return accessToken;
-}
-
-function setAccessToken(token: string): void {
-    accessToken = token;
-}
-
-function clearAuth(): void {
-    accessToken = null;
-}
-
 /* -------------------------------------------------------------------------- */
 /*                               AXIOS INSTANCE                               */
 /* -------------------------------------------------------------------------- */
@@ -67,53 +39,22 @@ export const apiClient: AxiosInstance = axios.create({
 });
 
 /* -------------------------------------------------------------------------- */
-/*                            REQUEST INTERCEPTOR                             */
-/* -------------------------------------------------------------------------- */
-
-apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    const token = getAccessToken();
-
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-});
-
-/* -------------------------------------------------------------------------- */
 /*                           RESPONSE INTERCEPTOR                             */
 /* -------------------------------------------------------------------------- */
 
 apiClient.interceptors.response.use(
     (response: AxiosResponse) => response,
     async (error: AxiosError) => {
-        const originalRequest = error.config as RetryableRequestConfig | undefined;
+        if (error.response?.status === 401 && error.config) {
+            const requestUrl = /^https?:\/\//i.test(error.config.url ?? "")
+                ? error.config.url ?? ""
+                : `${BASE_URL}${error.config.url ?? ""}`;
 
-        if (
-            error.response?.status === 401 &&
-            originalRequest &&
-            !originalRequest._retry
-        ) {
-            originalRequest._retry = true;
-
-            try {
-                const refreshResponse = await axios.post<RefreshResponse>(
-                    `${BASE_URL}/auth/refresh`,
-                    {},
-                    {withCredentials: true}
-                );
-
-                const newToken = refreshResponse.data.accessToken;
-
-                setAccessToken(newToken);
-
-                originalRequest.headers = AxiosHeaders.from(originalRequest.headers);
-                originalRequest.headers.set("Authorization", `Bearer ${newToken}`);
-                return apiClient(originalRequest as AxiosRequestConfig);
-            } catch {
-                clearAuth();
-                window.location.href = "/login";
-            }
+            await notifyUnauthorizedSession({
+                method: error.config.method ?? "GET",
+                status: error.response.status,
+                url: requestUrl,
+            });
         }
 
         return Promise.reject(normalizeError(error));

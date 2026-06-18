@@ -5,9 +5,187 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>grcpc-ui</title>
+    <style>
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+        background: #f7f7f7;
+      }
+
+      .grcpc-initial-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-items: center;
+        padding: 1.5rem;
+        box-sizing: border-box;
+        direction: rtl;
+        font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+        color: #1d2d3e;
+        background: #f7f7f7;
+        transition: opacity 160ms ease;
+      }
+
+      .grcpc-initial-loader--hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .grcpc-initial-loader__content {
+        display: grid;
+        justify-items: center;
+        gap: 1rem;
+        text-align: center;
+      }
+
+      .grcpc-initial-loader__spinner {
+        width: 2.75rem;
+        height: 2.75rem;
+        border: 0.25rem solid rgba(10, 110, 209, 0.2);
+        border-top-color: #0a6ed1;
+        border-radius: 50%;
+        animation: grcpc-initial-spin 900ms linear infinite;
+      }
+
+      .grcpc-initial-loader[data-state="error"] .grcpc-initial-loader__spinner {
+        display: none;
+      }
+
+      .grcpc-initial-loader__text {
+        margin: 0;
+        font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+        line-height: 1.8;
+      }
+
+      .grcpc-initial-loader__error {
+        margin: 0;
+        max-width: 24rem;
+        color: #a56a00;
+        line-height: 1.8;
+      }
+
+      .grcpc-initial-loader__reload {
+        min-width: 7rem;
+        padding: 0.5rem 1rem;
+        border: 1px solid #0a6ed1;
+        border-radius: 0.25rem;
+        background: #0a6ed1;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .grcpc-initial-loader__sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @keyframes grcpc-initial-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
   </head>
   <body>
+    <div
+      id="grcpc-initial-loader"
+      class="grcpc-initial-loader"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div class="grcpc-initial-loader__content">
+        <div class="grcpc-initial-loader__spinner" aria-hidden="true"></div>
+        <p class="grcpc-initial-loader__text">در حال بارگذاری سامانه...</p>
+        <p id="grcpc-initial-loader-error" class="grcpc-initial-loader__error" hidden></p>
+        <button id="grcpc-initial-loader-reload" class="grcpc-initial-loader__reload" type="button" hidden>
+          بارگذاری مجدد
+        </button>
+        <span class="grcpc-initial-loader__sr-only">در حال بارگذاری سامانه...</span>
+      </div>
+    </div>
     <div id="root"></div>
+    <script>
+      (function () {
+        var loader = document.getElementById("grcpc-initial-loader");
+        var errorText = document.getElementById("grcpc-initial-loader-error");
+        var reloadButton = document.getElementById("grcpc-initial-loader-reload");
+        var completed = false;
+        var fallbackTimer = window.setTimeout(function () {
+          fail("بارگذاری سامانه بیش از حد انتظار طول کشید.");
+        }, 45000);
+
+        function done() {
+          if (completed || !loader) {
+            return;
+          }
+
+          completed = true;
+          window.clearTimeout(fallbackTimer);
+          loader.setAttribute("aria-busy", "false");
+          loader.classList.add("grcpc-initial-loader--hidden");
+          window.setTimeout(function () {
+            if (loader && loader.parentNode) {
+              loader.parentNode.removeChild(loader);
+            }
+          }, 180);
+        }
+
+        function fail(message) {
+          if (completed || !loader) {
+            return;
+          }
+
+          window.clearTimeout(fallbackTimer);
+          loader.setAttribute("data-state", "error");
+          loader.setAttribute("aria-busy", "false");
+
+          if (errorText) {
+            errorText.hidden = false;
+            errorText.textContent = message || "بارگذاری سامانه با خطا روبه‌رو شد.";
+          }
+
+          if (reloadButton) {
+            reloadButton.hidden = false;
+          }
+        }
+
+        if (reloadButton) {
+          reloadButton.addEventListener("click", function () {
+            window.location.reload();
+          });
+        }
+
+        window.__GRCPC_INITIAL_LOADER__ = { done: done, fail: fail };
+        window.addEventListener(
+          "error",
+          function (event) {
+            var target = event.target;
+            var tagName = target && target.tagName;
+
+            if (tagName && tagName !== "SCRIPT" && tagName !== "LINK") {
+              return;
+            }
+
+            fail();
+          },
+          true
+        );
+        window.addEventListener("unhandledrejection", function () {
+          fail();
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

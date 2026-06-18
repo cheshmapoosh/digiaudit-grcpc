@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,43 +14,48 @@ import {
 
 import { useAuthState } from "@/features/auth";
 import PublicPageHeader from "@/shared/components/PublicPageHeader";
-
-type RouterState = {
-    from?: {
-        pathname?: string;
-        search?: string;
-        hash?: string;
-    };
-};
+import { useInitialAppReady } from "@/shared/bootstrap/useInitialAppReady";
+import {
+    resolveLoginReturnUrl,
+    type LoginRouterState,
+} from "@/features/auth/utils/returnUrl";
 
 export default function LoginFeaturePage() {
+    useInitialAppReady();
+
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
 
     const submitting = useAuthState((state) => state.submitting);
     const error = useAuthState((state) => state.error);
+    const sessionExpired = useAuthState((state) => state.sessionExpired);
     const login = useAuthState((state) => state.login);
     const clearError = useAuthState((state) => state.clearError);
+    const clearSessionExpired = useAuthState((state) => state.clearSessionExpired);
+    const markSessionExpired = useAuthState((state) => state.markSessionExpired);
 
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
 
     const redirectTo = useMemo(() => {
-        const routerState = location.state as RouterState | null;
-        const pathname = routerState?.from?.pathname;
-        const search = routerState?.from?.search ?? "";
-        const hash = routerState?.from?.hash ?? "";
+        return resolveLoginReturnUrl(
+            location.search,
+            location.state as LoginRouterState | null,
+        );
+    }, [location.search, location.state]);
 
-        if (!pathname || pathname === "/" || pathname === "/login") {
-            return "/dashboard";
+    useEffect(() => {
+        const routerState = location.state as LoginRouterState | null;
+
+        if (routerState?.sessionExpired) {
+            markSessionExpired();
         }
-
-        return `${pathname}${search}${hash}`;
-    }, [location.state]);
+    }, [location.state, markSessionExpired]);
 
     async function handleSubmit() {
         clearError();
+        clearSessionExpired();
 
         try {
             await login({
@@ -284,6 +289,14 @@ export default function LoginFeaturePage() {
                             {error ? (
                                 <MessageStrip design="Negative" onClose={clearError}>
                                     {error}
+                                </MessageStrip>
+                            ) : null}
+
+                            {sessionExpired ? (
+                                <MessageStrip design="Critical" onClose={clearSessionExpired}>
+                                    {t("auth.sessionExpired", {
+                                        defaultValue: "نشست کاربری شما به پایان رسیده است. لطفاً دوباره وارد شوید.",
+                                    })}
                                 </MessageStrip>
                             ) : null}
 

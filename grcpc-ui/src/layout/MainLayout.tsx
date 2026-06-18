@@ -19,6 +19,7 @@ import NotificationMenu, {
 import UserProfileMenu from "./components/UserProfileMenu";
 import {useAuthState} from "@/features/auth";
 import {AppFooter} from "@/shared/components/AppFooter.tsx";
+import { useInitialAppReady } from "@/shared/bootstrap/useInitialAppReady";
 
 type SelectionChangeDetail = {
     item?: HTMLElement;
@@ -68,6 +69,8 @@ function isPathInPrefixes(path: string, prefixes: string[]): boolean {
 }
 
 export default function MainLayout() {
+    useInitialAppReady();
+
     const {t} = useTranslation();
 
     const [collapsed, setCollapsed] = useState(false);

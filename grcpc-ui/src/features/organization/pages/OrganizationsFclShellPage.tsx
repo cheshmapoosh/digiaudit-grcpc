@@ -1609,6 +1609,8 @@ export default function OrganizationsFclShellPage() {
     const slotContainerStyle = useMemo<CSSProperties>(
         () => ({
             height: "100%",
+            minWidth: 0,
+            maxWidth: "100%",
             boxSizing: "border-box",
             padding: "1rem",
             overflow: "hidden",
@@ -1631,6 +1633,8 @@ export default function OrganizationsFclShellPage() {
     const frameStyle: CSSProperties = {
         height: "100%",
         minHeight: 0,
+        minWidth: 0,
+        maxWidth: "100%",
         overflow: "auto",
         border: "1px solid var(--sapGroup_ContentBorderColor)",
         borderRadius: "0",
@@ -1652,6 +1656,8 @@ export default function OrganizationsFclShellPage() {
     const dialogContentStyle = useMemo<CSSProperties>(
         () => ({
             width: "100%",
+            minWidth: 0,
+            maxWidth: "100%",
             direction: appDir,
             boxSizing: "border-box",
             padding: 0,
