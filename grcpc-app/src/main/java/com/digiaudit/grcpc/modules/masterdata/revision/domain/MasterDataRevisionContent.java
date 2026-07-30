@@ -40,67 +40,33 @@ public final class MasterDataRevisionContent {
         this.entityType = Objects.requireNonNull(entityType, "entityType is required");
         this.entityId = Objects.requireNonNull(entityId, "entityId is required");
         this.operationType = Objects.requireNonNull(operationType, "operationType is required");
-        validateExpectedVersion(operationType, expectedVersion);
+        RevisionContentResult.validateExpectedVersion(operationType, expectedVersion);
+        RevisionContentResult.validateSnapshots(operationType, beforeSnapshot, afterSnapshot);
         this.expectedVersion = expectedVersion;
-        this.beforeSnapshot = copy(beforeSnapshot);
-        this.afterSnapshot = copy(afterSnapshot);
-        this.appliedEntityVersion = validateAppliedEntityVersion(appliedEntityVersion);
-        this.validationResult = copy(validationResult);
+        this.beforeSnapshot = RevisionContentResult.copy(beforeSnapshot);
+        this.afterSnapshot = RevisionContentResult.copy(afterSnapshot);
+        this.appliedEntityVersion = RevisionContentResult.validateAppliedEntityVersion(appliedEntityVersion);
+        this.validationResult = RevisionContentResult.copy(validationResult);
     }
 
-    public static MasterDataRevisionContent backendDraft(
+    static MasterDataRevisionContent completed(
             UUID id,
             UUID revisionId,
             long sequenceNumber,
-            RevisionEntityType entityType,
-            UUID entityId,
-            RevisionOperationType operationType,
-            Long expectedVersion
+            RevisionContentResult result
     ) {
         return new MasterDataRevisionContent(
                 id,
                 revisionId,
                 sequenceNumber,
-                entityType,
-                entityId,
-                operationType,
-                expectedVersion,
-                null,
-                null,
-                null,
-                null
-        );
-    }
-
-    public MasterDataRevisionContent withBackendSnapshots(JsonNode beforeSnapshot, JsonNode afterSnapshot, JsonNode validationResult) {
-        return new MasterDataRevisionContent(
-                id,
-                revisionId,
-                sequenceNumber,
-                entityType,
-                entityId,
-                operationType,
-                expectedVersion,
-                beforeSnapshot,
-                afterSnapshot,
-                appliedEntityVersion,
-                validationResult
-        );
-    }
-
-    public MasterDataRevisionContent withAppliedEntityVersion(long appliedEntityVersion) {
-        return new MasterDataRevisionContent(
-                id,
-                revisionId,
-                sequenceNumber,
-                entityType,
-                entityId,
-                operationType,
-                expectedVersion,
-                beforeSnapshot,
-                afterSnapshot,
-                appliedEntityVersion,
-                validationResult
+                result.entityType(),
+                result.entityId(),
+                result.operationType(),
+                result.expectedVersion(),
+                result.beforeSnapshot(),
+                result.afterSnapshot(),
+                result.appliedEntityVersion(),
+                result.validationResult()
         );
     }
 
@@ -133,11 +99,11 @@ public final class MasterDataRevisionContent {
     }
 
     public JsonNode beforeSnapshot() {
-        return copy(beforeSnapshot);
+        return RevisionContentResult.copy(beforeSnapshot);
     }
 
     public JsonNode afterSnapshot() {
-        return copy(afterSnapshot);
+        return RevisionContentResult.copy(afterSnapshot);
     }
 
     public Long appliedEntityVersion() {
@@ -145,29 +111,38 @@ public final class MasterDataRevisionContent {
     }
 
     public JsonNode validationResult() {
-        return copy(validationResult);
+        return RevisionContentResult.copy(validationResult);
     }
 
-    private static void validateExpectedVersion(RevisionOperationType operationType, Long expectedVersion) {
-        if (operationType.requiresExpectedVersion() && expectedVersion == null) {
-            throw new IllegalArgumentException("expectedVersion is required for " + operationType);
-        }
-        if (!operationType.requiresExpectedVersion() && expectedVersion != null) {
-            throw new IllegalArgumentException("expectedVersion is not valid for " + operationType);
-        }
-        if (expectedVersion != null && expectedVersion < 0) {
-            throw new IllegalArgumentException("expectedVersion must not be negative");
-        }
+    boolean isReadyForApply(UUID expectedRevisionId, RevisionDomain expectedDomain) {
+        return revisionId.equals(expectedRevisionId)
+                && sequenceNumber > 0
+                && entityType.isPermittedIn(expectedDomain)
+                && expectedVersionIsValid()
+                && snapshotsAreValid()
+                && appliedEntityVersion != null
+                && appliedEntityVersion >= 0;
     }
 
-    private static Long validateAppliedEntityVersion(Long appliedEntityVersion) {
-        if (appliedEntityVersion != null && appliedEntityVersion < 0) {
-            throw new IllegalArgumentException("appliedEntityVersion must not be negative");
-        }
-        return appliedEntityVersion;
+    boolean representsPrimary(com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataMutationResult primaryResult) {
+        Objects.requireNonNull(primaryResult, "primaryResult is required");
+        return entityId.equals(primaryResult.entityId()) && appliedEntityVersion.longValue() == primaryResult.version();
     }
 
-    private static JsonNode copy(JsonNode node) {
-        return node == null ? null : node.deepCopy();
+    private boolean expectedVersionIsValid() {
+        if (operationType.requiresExpectedVersion()) {
+            return expectedVersion != null && expectedVersion >= 0;
+        }
+        return expectedVersion == null;
+    }
+
+    private boolean snapshotsAreValid() {
+        if (RevisionContentResult.isAbsentSnapshot(afterSnapshot)) {
+            return false;
+        }
+        if (operationType == RevisionOperationType.CREATE) {
+            return beforeSnapshot == null;
+        }
+        return !RevisionContentResult.isAbsentSnapshot(beforeSnapshot);
     }
 }

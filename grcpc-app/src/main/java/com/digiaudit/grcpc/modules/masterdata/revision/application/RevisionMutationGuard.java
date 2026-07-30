@@ -1,5 +1,6 @@
 package com.digiaudit.grcpc.modules.masterdata.revision.application;
 
+import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentResult;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionDomain;
 import com.digiaudit.grcpc.modules.masterdata.revision.exception.MasterDataRevisionRequiredException;
 import com.digiaudit.grcpc.modules.masterdata.revision.exception.RevisionDomainMismatchException;
@@ -44,11 +45,11 @@ public final class RevisionMutationGuard {
         }
     }
 
-    public void requireContentEntityType(RevisionExecutionContext context, RevisionContentDraft contentDraft) {
+    public void requireContentEntityType(RevisionExecutionContext context, RevisionContentResult contentResult) {
         RevisionExecutionContext verifiedContext = requireContext(context);
-        Objects.requireNonNull(contentDraft, "contentDraft is required");
-        if (!contentDraft.entityType().isPermittedIn(verifiedContext.domain())) {
-            throw RevisionDomainMismatchException.contentNotPermitted(contentDraft.entityType(), verifiedContext.domain());
+        Objects.requireNonNull(contentResult, "contentResult is required");
+        if (!contentResult.entityType().isPermittedIn(verifiedContext.domain())) {
+            throw RevisionDomainMismatchException.contentNotPermitted(contentResult.entityType(), verifiedContext.domain());
         }
     }
 
@@ -56,13 +57,13 @@ public final class RevisionMutationGuard {
             RevisionExecutionContext context,
             RevisionDomain expectedDomain,
             UUID expectedOrganizationId,
-            Collection<RevisionContentDraft> contentDrafts
+            Collection<RevisionContentResult> contentResults
     ) {
         requireContext(context);
         requireDomain(context, expectedDomain);
         requireOrganization(context, expectedOrganizationId);
         requireDraft(context);
-        Objects.requireNonNull(contentDrafts, "contentDrafts is required");
-        contentDrafts.forEach(contentDraft -> requireContentEntityType(context, contentDraft));
+        Objects.requireNonNull(contentResults, "contentResults is required");
+        contentResults.forEach(contentResult -> requireContentEntityType(context, contentResult));
     }
 }
