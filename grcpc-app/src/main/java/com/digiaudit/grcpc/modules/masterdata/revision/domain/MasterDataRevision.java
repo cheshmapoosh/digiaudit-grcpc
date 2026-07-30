@@ -1,8 +1,12 @@
 package com.digiaudit.grcpc.modules.masterdata.revision.domain;
 
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataMutationResult;
+
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 public final class MasterDataRevision {
@@ -60,35 +64,32 @@ public final class MasterDataRevision {
         return new MasterDataRevision(id, revisionNumber, title, description, RevisionDomain.LOCAL, organizationId, causedByRevisionId);
     }
 
-    public MasterDataRevisionContent appendContent(
-            UUID contentId,
-            RevisionEntityType entityType,
-            UUID entityId,
-            RevisionOperationType operationType,
-            Long expectedVersion
-    ) {
+    public MasterDataRevisionContent appendCompletedContent(UUID contentId, RevisionContentResult result) {
         requireDraft("Only draft revisions may receive content");
-        if (!entityType.isPermittedIn(domain)) {
-            throw new IllegalArgumentException("Entity type " + entityType.wireValue() + " is not valid for " + domain + " revision");
+        Objects.requireNonNull(result, "result is required");
+        if (!result.entityType().isPermittedIn(domain)) {
+            throw new IllegalArgumentException("Entity type " + result.entityType().wireValue() + " is not valid for " + domain + " revision");
         }
-        MasterDataRevisionContent content = MasterDataRevisionContent.backendDraft(
+        ContentKey contentKey = ContentKey.from(result);
+        boolean duplicateContent = contents.stream()
+                .map(ContentKey::from)
+                .anyMatch(contentKey::equals);
+        if (duplicateContent) {
+            throw new IllegalStateException("Duplicate revision content for the same logical mutation");
+        }
+        MasterDataRevisionContent content = MasterDataRevisionContent.completed(
                 contentId,
                 id,
                 contents.size() + 1L,
-                entityType,
-                entityId,
-                operationType,
-                expectedVersion
+                result
         );
         contents.add(content);
         return content;
     }
 
-    public void apply() {
+    public void apply(MasterDataMutationResult primaryResult) {
         requireDraft("Only draft revisions may be applied");
-        if (contents.isEmpty()) {
-            throw new IllegalStateException("A revision requires at least one content item before apply");
-        }
+        validateReadyForApply(primaryResult);
         status = RevisionStatus.APPLIED;
     }
 
@@ -139,6 +140,45 @@ public final class MasterDataRevision {
         }
     }
 
+    private void validateReadyForApply(MasterDataMutationResult primaryResult) {
+        Objects.requireNonNull(primaryResult, "primaryResult is required");
+        if (!primaryResult.revisionId().equals(id)) {
+            throw new IllegalStateException("primaryResult revisionId must match this revision");
+        }
+        if (contents.isEmpty()) {
+            throw new IllegalStateException("A revision requires at least one content item before apply");
+        }
+
+        Set<Long> sequenceNumbers = new HashSet<>();
+        Set<ContentKey> logicalMutations = new HashSet<>();
+        boolean primaryRepresented = false;
+
+        for (MasterDataRevisionContent content : contents) {
+            if (!content.isReadyForApply(id, domain)) {
+                throw new IllegalStateException("Revision content is not complete and ready for apply");
+            }
+            if (!sequenceNumbers.add(content.sequenceNumber())) {
+                throw new IllegalStateException("Revision content sequence numbers must be unique");
+            }
+            if (!logicalMutations.add(ContentKey.from(content))) {
+                throw new IllegalStateException("Revision content logical mutations must be unique");
+            }
+            if (content.representsPrimary(primaryResult)) {
+                primaryRepresented = true;
+            }
+        }
+
+        for (long expectedSequence = 1; expectedSequence <= contents.size(); expectedSequence++) {
+            if (!sequenceNumbers.contains(expectedSequence)) {
+                throw new IllegalStateException("Revision content sequence numbers must be contiguous from 1");
+            }
+        }
+
+        if (!primaryRepresented) {
+            throw new IllegalStateException("primaryResult must be represented by one completed revision content");
+        }
+    }
+
     private static void validateOrganizationBoundary(RevisionDomain domain, UUID organizationId) {
         if (domain == RevisionDomain.CENTRAL && organizationId != null) {
             throw new IllegalArgumentException("Central revisions must not have an organizationId");
@@ -153,5 +193,15 @@ public final class MasterDataRevision {
             throw new IllegalArgumentException(message);
         }
         return value;
+    }
+
+    private record ContentKey(RevisionEntityType entityType, UUID entityId, RevisionOperationType operationType) {
+        private static ContentKey from(RevisionContentResult result) {
+            return new ContentKey(result.entityType(), result.entityId(), result.operationType());
+        }
+
+        private static ContentKey from(MasterDataRevisionContent content) {
+            return new ContentKey(content.entityType(), content.entityId(), content.operationType());
+        }
     }
 }
