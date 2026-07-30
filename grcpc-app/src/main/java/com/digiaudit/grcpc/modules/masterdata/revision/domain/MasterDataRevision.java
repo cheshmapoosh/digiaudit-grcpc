@@ -154,7 +154,7 @@ public final class MasterDataRevision {
         boolean primaryRepresented = false;
 
         for (MasterDataRevisionContent content : contents) {
-            if (!content.isReadyForApply(id, domain)) {
+            if (!content.isCompleteForRevision(id, domain)) {
                 throw new IllegalStateException("Revision content is not complete and ready for apply");
             }
             if (!sequenceNumbers.add(content.sequenceNumber())) {

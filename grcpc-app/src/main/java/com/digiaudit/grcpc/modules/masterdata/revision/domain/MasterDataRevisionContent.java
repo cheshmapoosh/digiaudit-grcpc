@@ -114,7 +114,7 @@ public final class MasterDataRevisionContent {
         return RevisionContentResult.copy(validationResult);
     }
 
-    boolean isReadyForApply(UUID expectedRevisionId, RevisionDomain expectedDomain) {
+    public boolean isCompleteForRevision(UUID expectedRevisionId, RevisionDomain expectedDomain) {
         return revisionId.equals(expectedRevisionId)
                 && sequenceNumber > 0
                 && entityType.isPermittedIn(expectedDomain)

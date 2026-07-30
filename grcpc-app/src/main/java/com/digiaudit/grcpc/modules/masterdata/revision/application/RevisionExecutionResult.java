@@ -3,6 +3,7 @@ package com.digiaudit.grcpc.modules.masterdata.revision.application;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.MasterDataRevisionContent;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionEntityType;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationType;
+import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionStatus;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataMutationResult;
 
 import java.util.HashSet;
@@ -21,6 +22,9 @@ public record RevisionExecutionResult(
         Objects.requireNonNull(primaryResult, "primaryResult is required");
         Objects.requireNonNull(revisionContents, "revisionContents is required");
         revisionContents = List.copyOf(revisionContents);
+        if (context.status() != RevisionStatus.APPLIED) {
+            throw new IllegalArgumentException("revision execution result requires an APPLIED context");
+        }
         if (revisionContents.isEmpty()) {
             throw new IllegalArgumentException("revisionContents must contain at least one item");
         }
@@ -36,21 +40,31 @@ public record RevisionExecutionResult(
             List<MasterDataRevisionContent> revisionContents
     ) {
         Set<ContentKey> uniqueContent = new HashSet<>();
+        Set<Long> sequenceNumbers = new HashSet<>();
         boolean primaryRepresented = false;
+        long expectedOrderedSequence = 1L;
         for (MasterDataRevisionContent content : revisionContents) {
             Objects.requireNonNull(content, "revisionContents must not contain null items");
-            if (!content.revisionId().equals(context.revisionId())) {
-                throw new IllegalArgumentException("revision content must belong to the execution context revision");
+            if (!content.isCompleteForRevision(context.revisionId(), context.domain())) {
+                throw new IllegalArgumentException("revision content must be complete for the execution context");
             }
-            if (!content.entityType().isPermittedIn(context.domain())) {
-                throw new IllegalArgumentException("revision content entity type is not permitted in the execution context domain");
+            if (content.sequenceNumber() != expectedOrderedSequence++) {
+                throw new IllegalArgumentException("revisionContents must be ordered by contiguous sequence number");
             }
             if (!uniqueContent.add(ContentKey.from(content))) {
                 throw new IllegalArgumentException("duplicate revision content for the same logical mutation");
             }
+            if (!sequenceNumbers.add(content.sequenceNumber())) {
+                throw new IllegalArgumentException("revision content sequence numbers must be unique");
+            }
             if (content.entityId().equals(primaryResult.entityId())
                     && content.appliedEntityVersion().longValue() == primaryResult.version()) {
                 primaryRepresented = true;
+            }
+        }
+        for (long expectedSequence = 1; expectedSequence <= revisionContents.size(); expectedSequence++) {
+            if (!sequenceNumbers.contains(expectedSequence)) {
+                throw new IllegalArgumentException("revision content sequence numbers must be contiguous from 1");
             }
         }
         if (!primaryRepresented) {
