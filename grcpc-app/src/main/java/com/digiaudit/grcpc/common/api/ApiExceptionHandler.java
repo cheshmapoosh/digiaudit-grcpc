@@ -4,9 +4,12 @@ import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.ForbiddenException;
 import com.digiaudit.grcpc.common.exception.BusinessException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
+import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
@@ -39,6 +42,12 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleConflict(ConflictException ex, Locale locale) {
         log.warn("Handling ConflictException: {}", ex.getMessage());
         return build(HttpStatus.CONFLICT, ex, locale, List.of());
+    }
+
+    @ExceptionHandler(UnprocessableEntityException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnprocessableEntity(UnprocessableEntityException ex, Locale locale) {
+        log.warn("Handling UnprocessableEntityException: {}", ex.getMessage());
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex, locale, List.of());
     }
 
     @ExceptionHandler(ForbiddenException.class)
@@ -77,6 +86,12 @@ public class ApiExceptionHandler {
                 .collect(Collectors.toList());
         log.warn("Handling ConstraintViolationException. details={}", details);
         return build(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "error.validation.failed", "Validation failed", locale, details);
+    }
+
+    @ExceptionHandler({OptimisticLockingFailureException.class, OptimisticLockException.class})
+    public ResponseEntity<ApiErrorResponse> handleOptimisticLock(Exception ex, Locale locale) {
+        log.warn("Handling optimistic lock failure: {}", ex.getClass().getName());
+        return build(HttpStatus.CONFLICT, "VERSION_CONFLICT", "error.masterdata.v2.versionConflict", "Optimistic lock version conflict", locale, List.of());
     }
 
     @ExceptionHandler(Exception.class)
