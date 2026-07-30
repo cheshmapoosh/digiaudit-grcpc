@@ -5,10 +5,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import org.springframework.stereotype.Component;
 
+import java.util.Objects;
+
+@Component
 @Converter
 public class JsonNodeClobConverter implements AttributeConverter<JsonNode, String> {
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+
+    public JsonNodeClobConverter(ObjectMapper objectMapper) {
+        this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper is required");
+    }
 
     @Override
     public String convertToDatabaseColumn(JsonNode attribute) {
@@ -16,7 +24,7 @@ public class JsonNodeClobConverter implements AttributeConverter<JsonNode, Strin
             return null;
         }
         try {
-            return OBJECT_MAPPER.writeValueAsString(attribute.deepCopy());
+            return objectMapper.writeValueAsString(attribute.deepCopy());
         } catch (JsonProcessingException ex) {
             throw new MasterDataRevisionPersistenceException("Revision JSON snapshot could not be serialized", ex);
         }
@@ -28,7 +36,7 @@ public class JsonNodeClobConverter implements AttributeConverter<JsonNode, Strin
             return null;
         }
         try {
-            return OBJECT_MAPPER.readTree(dbData).deepCopy();
+            return objectMapper.readTree(dbData).deepCopy();
         } catch (JsonProcessingException ex) {
             throw new MasterDataRevisionPersistenceException("Stored Revision JSON snapshot is invalid", ex);
         }

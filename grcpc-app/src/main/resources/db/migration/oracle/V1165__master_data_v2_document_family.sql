@@ -180,11 +180,6 @@ create table document_link (
         'LOCAL_POLICY_SUBPROCESS',
         'LOCAL_POLICY_CONTROL',
         'LOCAL_POLICY_REQUIREMENT',
-        'DOCUMENT_RETENTION_POLICY',
-        'DOCUMENT',
-        'DOCUMENT_VERSION',
-        'DOCUMENT_HOLD',
-        'DOCUMENT_LINK',
         'MASTERDATA_REVISION'
     )),
     constraint ck_document_link_deleted check (
