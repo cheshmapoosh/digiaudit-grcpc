@@ -1,418 +1,343 @@
 # Master Data V2 UI Compatibility Map
 
-## 1. Purpose and evidence boundary
+## 1. Purpose and comparison method
 
-This map compares five inputs for each meaningful user-facing requirement.
+This map compares five inputs for future UI work:
 
-The inputs are the customer UI DOCX files, current React UI, current backend/API, approved Master Data V2 model rules, and required target UI.
+1. Customer-provided Master Data UI Word documents.
+2. Current React/UI5 user interface.
+3. Current Backend/API and Legacy storage behavior.
+4. The approved Master Data V2 Conceptual, Logical, and Physical models.
+5. The required target UI and data flow.
 
-The customer mock-ups are Persian RTL UI specifications, not conceptual, logical, or physical model authority.
+The customer documents remain useful evidence of labels, forms, tabs, and workflows the customer expects to recognize.
 
-The separately named Conceptual, Final Logical, and Physical Design reference files were not present in the working tree during review.
+They cannot add a Master Data concept that is absent from the approved final model.
 
-Their task-issued rules govern the target model in this map.
+Current UI/source is implementation evidence only.
 
-Current source is evidence for present behavior and deletion work only.
+The Final Logical Model owns target entity names and relationships.
 
-## 2. Status vocabulary
+The Physical Design Reference owns the upload/document technical flow.
 
-`KEEP` retains a compatible behavior and data flow.
+Authoritative source files: `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`, `GRC_Master_Data_Logical_Model_Final_FA.docx`, and `GRC_Master_Data_Physical_Design_Reference_FA.docx`.
 
-`KEEP_VISUAL_REPLACE_DATA_FLOW` retains useful appearance or interaction while replacing model, API, storage, and state.
+This document plans later UI changes only.
 
-`REMAP` preserves business intent through another approved V2 entity or use case.
+It does not modify a route, component, store, API repository, i18n resource, or any application source file.
 
-`ADD` is a required V2 capability that is absent from both current UI and customer mock-ups.
+## 2. Status legend
 
-`REMOVE` is a visible feature that must no longer be exposed.
+| Status | UI interpretation |
+| --- | --- |
+| `KEEP` | Preserve the current behavior and data flow because it is compatible. |
+| `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain useful UI5/FCL/List Report/Object Page/tree/search interaction, but replace API/state/storage behavior. |
+| `REMAP` | Keep a recognizable customer intent while mapping it to an exact approved entity/use case. |
+| `ADD` | Build a target capability absent from the current UI but required by the approved model. |
+| `REMOVE` | Remove a UI/API feature because it conflicts with the approved model or has no approved counterpart. |
+| `DEFER_OUT_OF_SCOPE` | Do not build it in Master Data V2; another governed module would need to own it. |
 
-`DEFER_OUT_OF_SCOPE` remains outside Master Data V2 and receives no new Master Data implementation.
+## 3. Current compatible presentation foundation
 
-## 3. Cross-cutting current UI baseline
+The following patterns should remain the visual foundation whenever the new data flow permits.
 
-The current application has FCL shells, List Reports, Object Pages, UI5 controls, Persian RTL, trees, search, dialogs, expanded-state tracking, and i18n feature packs.
+| Current evidence | Status | Target instruction |
+| --- | --- | --- |
+| SAP UI5 Web Components for React | `KEEP` | Retain UI5 controls, form behavior, tables, dialogs, and accessibility conventions. |
+| Flexible Column Layout shells in feature pages | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain master/list/object composition; replace Legacy repository contracts. |
+| List Report and Object Page layout | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain visual navigation and form organization; use typed V2 read DTOs and commands. |
+| Tree navigation | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain tree interaction. Process/Subprocess may be combined only in a tree DTO. |
+| Search, selection, expanded state | `KEEP` | Preserve user interaction state; re-key it with V2 UUIDs and routes. |
+| RTL/Persian and i18n resources | `KEEP` | Preserve Persian-first label treatment and replace stale keys within the owning slice. |
+| Value Help components | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Bind to typed Central catalog queries instead of generic assignment targets. |
+| Reusable document progress/list/download components | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain presentation if compatible; replace direct-upload/generic-attachment state. |
 
-Those mechanics are valuable presentation assets rather than model authority.
+Current route registration is in `grcpc-ui/src/app/router/AppRouter.tsx`.
 
-`OrganizationTree`, `ProcessTree`, `ProcessControlTree`, `ObjectiveTree`, `RiskTree`, `RegulationTree`, `PolicyTree`, and `AccountGroupTree` demonstrate the visual navigation pattern to retain selectively.
+Current feature hub is `grcpc-ui/src/features/master-data/pages/MasterDataFeaturePage.tsx`.
 
-Current API repositories generally use list/get/create/PUT/delete/toggle-status flows without a request `version` or response `revisionId`.
+Current FCL shells include Organization, Process, Objective, Risk, Regulation, Policy, and Account Group feature pages.
 
-Current Zustand state and service layers mirror those generic repository flows.
+The target hub must gain V2 relation/read-model entry points without retaining dead Legacy tiles.
 
-No current UI exists for Central Scope, Central Coverage, Local Context, Local Scope, Local Coverage, Central Policy Scope, Local Policy Scope, Effective, Diagnostic, Roll-up, Policy Applicability, immutable Document Version history, or revision-aware mutation results.
-
-No current Master Data UI has a proper explicit restore operation.
-
-No current Master Data UI has conflict-resolution behavior for optimistic locking.
-
-## 4. Organization
+## 4. Organization comparison
 
 Customer source: `سازمان - فرم ایجاد اطلاعات پایه- Master Data  .docx`.
 
-Current route: `/organizations` with `OrganizationsFclShellPage.tsx`, `OrganizationsListReport.tsx`, and `OrganizationObjectPage.tsx`.
+Current UI evidence: `features/organization/pages/OrganizationsFclShellPage.tsx`, `OrganizationObjectPage.tsx`, organization tree/components, organization state, and organization API repositories.
 
-Current backend root: `/api/organizations` plus organization assignment endpoints backed by legacy `organization`, `organization_process_assignment`, `organization_reference_assignment`, and `organization_process_risk_assignment` storage.
+Current API/storage evidence: `/api/organizations`, generic organization-process/reference/risk assignments, and the current `organization` table.
 
-| Customer requirement | Current UI page/component | Current API/storage | Approved target entity or use case | Status | Future action | Rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| Parent, code, name, type, active status, location, description, and dates | `OrganizationObjectPage.tsx`, `OrganizationTree.tsx`, `ParentValueHelpDialog.tsx` | Generic `/api/organizations`; legacy text UUID organization table | B01 Organization commands/read DTO | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain tree/form/value-help pattern; replace request/response and lifecycle flow | Fields are compatible only after V2 lifecycle/version/revision rules apply |
-| Hierarchy list, display/create/delete actions | FCL shell, list report, tree selection and delete confirmation | Generic create/delete/status routes | Organization create, move, delete, restore commands | KEEP_VISUAL_REPLACE_DATA_FLOW | Keep visual actions; add explicit restore and version conflict UX | Current delete is physical/generic, unlike V2 explicit soft delete |
-| Subprocess assignment wizard | Organization subprocess assignment dialogs and separate stores | `/api/organization-process-assignments` permits any process node | B31 Local Organization–Subprocess Context | REMAP | Retain stepwise wizard appearance but require Subprocess and matching Central Blueprint | Context is not a generic organization-process assignment |
-| Subprocess risk/control selection in wizard | relationship views and selection dialogs | `organization_process_risk_assignment`, generic process/control relations | B32–B42 typed Local Scope/Classification/Coverage | REMAP | Make wizard enter Local Context, then typed scoped selection panes | V2 validates Central origin, local validity, and same context |
-| Direct regulation, policy, and generic objective tabs | Organization object-page tabs / reference-assignment views | `/api/organization-reference-assignments`, string reference type/id | Local Requirement Scope/Coverage and Local Policy Scope | REMAP | Replace with context-scoped typed tabs; remove generic Objective target | Generic Organization references are prohibited |
-| Documents list and document tab | generic document manager with `ORGANIZATION` target | `document_attachment` target type/id | Document / Document Version / controlled Document Link | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain file list/progress UI; show version history and secure download | Generic attachment target is replaced by controlled link |
-| Owner tab | Organization object-page visible tab | legacy direct assignment/presentation | No separate V2 Master Data owner relation | DEFER_OUT_OF_SCOPE | Do not add a generic owner table/API/tab; retain only approved descriptive owner fields | No owner relation appears in the V2 table boundary |
-| Performance assessment and risk appetite tabs | customer mock-up; current UI placeholders | no approved V2 storage | None | DEFER_OUT_OF_SCOPE | Remove visibility from Master Data V2 navigation | Assessment and appetite are outside scope |
-| KPI and KRI tabs | customer mock-up; placeholder content | no current Master Data entity | None | REMOVE | Remove all visible Master Data KPI/KRI tabs and add no APIs | KPI/KRI are explicitly excluded |
+| Customer field, tab, action, or relationship | Current UI/API/storage | Approved target entity or use case | Status | Future action and rationale |
+| --- | --- | --- | --- | --- |
+| Organization hierarchy and parent selection | Organization FCL/tree and `/api/organizations` | `organization` tree | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Keep tree, search, parent Value Help, and Object Page; use V2 lifecycle/version/revision command flow. |
+| Organization code/basic identity fields | Current organization form | `organization` | `REMAP` | Retain compatible core identity fields only; apply approved business-key/lifecycle validation. |
+| Organization description and basic metadata | Current object page/form | `organization` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Preserve compatible form layout; field names must follow the detailed V2 entity contract. |
+| Process/Subprocess tab | Generic organization-process assignments | `local_organization_subprocess_scope` | `REMAP` | Replace generic Process assignment with exact Organization + Subprocess Context; only Subprocess is selectable. |
+| Organization-to-risk tab | `organization_process_risk_assignment` and generic UI | Typed Local Risk Scope/Coverage under `local_organization_subprocess_scope` | `REMAP` | Expose risk as a typed Local Scope or Coverage view, not a direct Organization–Risk relation. |
+| Organization-to-control tab | Generic reference/assignment UI | Local Control Scope and Local Coverage | `REMAP` | Render approved context-bound control data after Local Context exists. |
+| Organization-to-regulation tab | Generic reference/assignment UI | Local Requirement Scope and Requirement–Control Coverage | `REMAP` | Replace Regulation target with atomic Requirement relationships only. |
+| Organization-to-policy tab | Generic reference assignment | `local_policy_organization_scope` | `REMAP` | Provide include/exclude and propagation mode UI for Policy Version applicability. |
+| Organization-to-objective tab | Generic objective assignment | Local Control Objective Scope | `REMAP` | Rename/remap only for genuine Control Objectives; remove generic objective vocabulary. |
+| Organization owner display | Current basic assignment display | Local Control Scope actual owner where execution ownership is intended | `REMAP` | Do not create an organization-level generic owner relationship; show execution owner in Local Control Scope. |
+| Organization document tab | Generic document attachment manager | Version-specific `document_link` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain document panel visual flow; target an approved document-link target and exact version. |
+| Organization multi-step wizard | Customer workflow combining org/process/risk/control | Compound typed Business Commands | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain guided sequencing only after Context/Scope/Coverage APIs exist; browser must not compose revision contents. |
+| Risk appetite | Customer tab | None | `DEFER_OUT_OF_SCOPE` | Do not add to Master Data V2; it needs separate governed design. |
+| KPI/KRI tabs | Customer tabs | None | `DEFER_OUT_OF_SCOPE` | Do not add KPI or KRI UI, API, or storage to Master Data V2. |
+| Performance-related fields | Customer form/tab | None | `DEFER_OUT_OF_SCOPE` | Monitoring/performance capability is outside the approved domain. |
 
-Organization target decisions:
-
-- Keep FCL list/search/tree/selection/expanded-state behavior.
-- Keep Persian default labels and RTL layout.
-- Treat Organization as a Central definition, not the owner of Central definitions.
-- Show Local Context as an explicit child capability, not as a hidden assignment tab.
-- Use a Local Context selector before displaying Local Scope or Local Coverage.
-- Make context validity visible in the object-page summary.
-- Add explicit delete and restore actions that prompt for current version.
-- Show returned revision id and version after each mutation.
-- Replace every generic organization reference picker with typed Value Help filtered by the selected Local Context.
-- Remove KPI, KRI, risk appetite, performance assessment, and generic Objective actions from the V2 Organization UI.
-
-## 5. Process and Subprocess
+## 5. Process and Subprocess comparison
 
 Customer source: `فرایند و زیرفرایند - فرم ایجاد اطلاعات پایه- Master Data  .docx`.
 
-Current route: `/processes` with `ProcessesFclShellPage.tsx`, `ProcessesListReport.tsx`, `ProcessObjectPage.tsx`, `ProcessTree.tsx`, and `ProcessControlTree.tsx`.
+Current UI evidence: `features/process/pages/ProcessesFclShellPage.tsx`, `components/ProcessTree.tsx`, `ProcessControlTree.tsx`, and `utils/process.tree.ts`.
 
-Current backend root: `/api/processes`, backed by combined `process_node` with `nodeType` values `process` and `subProcess`.
+Current API/storage evidence: `/api/processes`, legacy process assignment endpoints, and combined `process_node` persistence.
 
-| Customer requirement | Current UI page/component | Current API/storage | Approved target entity or use case | Status | Future action | Rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| One Process → Subprocess → Control tree | `ProcessTree.tsx`, `ProcessControlTree.tsx` | Combined `process_node`, control assignment | Separate B02 Process, B03 Subprocess, plus combined read projection | KEEP_VISUAL_REPLACE_DATA_FLOW | Preserve tree visual and state; replace source with projection endpoint | Backend must physically separate Process and Subprocess |
-| Process general fields: code/name/category/owner/operation cycle/description | `ProcessObjectPage.tsx` | generic ProcessNode DTO and table fields | Process Create/Update commands | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain compatible form fields after model validation | Current node type and generic CRUD are legacy |
-| Subprocess general fields and documents | same object page/tree | generic ProcessNode and attachment target | Subprocess commands and Document Link | KEEP_VISUAL_REPLACE_DATA_FLOW | Split form by read type; preserve shared page layout | Subprocess is independent physical entity |
-| Direct risks tab | `ProcessRisksTab.tsx` | `/api/process-risk-assignments` | Central Risk Template Scope and typed Coverage | REMAP | Replace tab with Central Scope/coverage view under selected Subprocess Scope | Legacy assignment is not typed/locality-safe |
-| Direct account-groups tab | `ProcessAccountGroupsTab.tsx` | `/api/process-account-group-assignments` | Central Account Group Scope and Control–Account Group Coverage | REMAP | Replace with typed scope and coverage pickers | Current endpoint is generic assignment |
-| Direct objectives tab | `ProcessObjectivesTab.tsx` | `/api/process-objective-assignments` to generic Objective | Central Control Objective Scope and Classification | REMAP | Replace generic Objective list with Control Objective scope/classification | Generic Objective is not retained |
-| Direct regulations/laws tab | `ProcessRegulationsTab.tsx` | `/api/process-regulation-assignments` | Requirement Scope and Requirement–Control Coverage | REMAP | Replace law picker with requirement-level typed coverage UI | Direct law/regulation relation is not approved |
-| Controls tab | `ProcessControlsTab.tsx` / nested control UI | `control_assignment` | Central/Local Control Scope and typed coverage | REMAP | Preserve list/table visual only after scope context is explicit | Control assignment mixes central/local concerns |
+| Customer field, tab, action, or relationship | Current UI/API/storage | Approved target entity or use case | Status | Future action and rationale |
+| --- | --- | --- | --- | --- |
+| Combined Process/Subprocess tree | Current tree backed by `process_node` | `central_process` + `central_subprocess` tree DTO | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Preserve one navigable tree; Backend returns combined read DTO while persistence stays separated. |
+| Create Process | Current process form/API | `central_process` create command | `REMAP` | Use typed Process create/update/status commands and hierarchy cycle validation. |
+| Create Subprocess | Current node-type form/API | `central_subprocess` create command | `REMAP` | Use distinct Subprocess form/command with exactly one parent Process. |
+| Parent move/reorder | Current tree behavior | Process parent and sort order | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Preserve drag/select UX only if it maps to typed move/reorder commands and version validation. |
+| Process basic fields | Current combined node form | Separate Process/Subprocess fields | `REMAP` | Keep shared visual fields but use two DTOs; do not use a node-type switch as persistence. |
+| Controls tab | `ProcessControlsTab.tsx`, generic assignments | Central/Local Control Scope and typed Coverage | `REMAP` | Replace generic Process-to-Control assignment with Subprocess Scope view/commands. |
+| Risks tab | `ProcessRisksTab.tsx`, generic process-risk assignment | Central/Local Risk Template Scope and Coverage | `REMAP` | Requirement is scope-specific; use typed Scope/Coverage, no raw risk relation. |
+| Regulation tab | `ProcessRegulationsTab.tsx`, process-regulation assignment | Central/Local Requirement Scope | `REMAP` | Show Regulation hierarchy for context, but commands select a Requirement Scope. |
+| Control Objective tab | `ProcessObjectivesTab.tsx`, generic objective assignment | Central/Local Control Objective Scope | `REMAP` | Remove generic objective data flow and use exact Control Objective Scope. |
+| Account Group tab | `ProcessAccountGroupsTab.tsx` | None at Process/Subprocess scope | `REMOVE` | No approved Process/Subprocess-to-Account Group Scope exists. |
+| Documents tab | Generic attachment UI | Version-specific Document Link | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Reuse visual panel only for approved document-link targets. |
+| Process-level coverage editing | Current generic links/controls | Central Coverage under Subprocess | `REMAP` | Move entry point to selected Subprocess; enforce Scope-before-Coverage. |
+| Tree selection/expanded state/search | Current process tree UX | V2 combined read DTO | `KEEP` | Preserve user interaction state and route synchronization. |
 
-Process/Subprocess target decisions:
+## 6. Control and Control Objective comparison
 
-- The backend state, domain types, schemas, factories, services, and repositories split Process from Subprocess.
-- The UI may display both through one read-model tree with distinct node rendering and valid create actions.
-- Child creation menus must expose only relationships approved by the parent entity type.
-- A Central Subprocess Scope entry point must be available from a selected Subprocess.
-- A Local Context entry point must be available from a selected Organization/Subprocess pairing, not the Process alone.
-- Direct assignment tabs are replaced one vertical slice at a time, never maintained as compatibility tabs.
-- Control rows show Central/Local scope status rather than legacy `control_assignment` status.
-- Documents use Document Link and Document Version, not a generic ProcessNode attachment target.
-- Any legacy free-text “objective” field is removed or remapped to typed Control Objective selection where appropriate.
-- No Process/Subprocess UI adds KPI, KRI, risk assessment, control results, or workflow.
+Customer sources: `کنترل- فرم ایجاد اطلاعات پایه -Master Data.docx` and `هدف کنترلی- فرم ایجاد اطلاعات پایه- Master Data  .docx`.
 
-## 6. Control
+Current UI evidence: `features/control/pages/ControlObjectPage.tsx`, control tabs/state/API repository, and nested control route under process control assignment; Control Objective currently uses `features/objective/**`.
 
-Customer source: `کنترل- فرم ایجاد اطلاعات پایه -Master Data.docx`; additional combined-tree evidence in `فرایند و زیرفرایند - فرم ایجاد اطلاعات پایه- Master Data  .docx`.
+Current API/storage evidence: `/api/controls`, `/api/control-assignments/**`, `/api/objectives`, `control_assignment`, generic `objective_node`, direct link tables, and `control_document`.
 
-Current route: no standalone Control route; controls are nested at `/processes/control-assignments/:controlAssignmentId`.
+| Customer field, tab, action, or relationship | Current UI/API/storage | Approved target entity or use case | Status | Future action and rationale |
+| --- | --- | --- | --- | --- |
+| Control code/title/basic definition | Control Object Page and `/api/controls` | `central_control` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain core definition form visual design; use Central Control command/read DTOs. |
+| Control objective text on control form | Legacy control fields | `central_control_objective` plus direct typed Coverage | `REMOVE` | Do not retain a duplicate generic objective text in Control. |
+| Control Objective catalog/form | Generic Objective FCL/API | `central_control_objective` | `REPLACE` | Replace generic Objective feature with Control Objective catalog and correct labels/routes. |
+| Control-to-Control Objective tab | Current direct/generic links | `central_subprocess_control_control_objective_coverage` and Local counterpart | `REMAP` | Present typed direct Coverage in a selected Subprocess/Local Context; never derive from Risk path. |
+| Control-to-Risk tab | `control_risk_link` | Risk–Control Coverage | `REMAP` | Rewire to typed Scope endpoint Coverage, central or local based on context. |
+| Control-to-Requirement tab | `control_requirement_link` | Requirement–Control Coverage | `REMAP` | Use exact Requirement Scope and Control Scope, enforcing same Subprocess/Context. |
+| Control-to-Regulation tab | `control_regulation_link` | None | `REMOVE` | Direct Control–Regulation relation is forbidden; show requirement-based coverage instead. |
+| Control-to-Account Group tab | `control_account_group_link` | `central_control_account_group` | `REMAP` | Retain relationship list/value-help visual pattern; use direct Central classification. |
+| Control Objective-to-Account Group | Customer/customer implied classification | `central_control_objective_account_group` | `ADD` | Add explicit typed classification UI absent from current generic Objective flow. |
+| Control steps | `control_step` tabs/API | None | `REMOVE` | Execution steps are not Master Data V2. |
+| Control performance plan | `control_performance_plan` tab/API | None | `DEFER_OUT_OF_SCOPE` | Do not retain in Master Data; performance/monitoring is a separate concern. |
+| Control actual owner | Customer control fields | `local_subprocess_control_scope.actual_owner_id` | `REMAP` | Display/edit only in selected Local Context, never in Central Control. |
+| Frequency/execution/test method | Customer control fields | Local Control Scope fields | `REMAP` | Move to Local Scope tab and keep Central recommended values distinct. |
+| Control documents | `control_document` and generic manager | `document_link` to exact Document Version | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain document list UX; remove control-assignment-specific storage. |
+| Control test result/effectiveness | Customer control material | None | `DEFER_OUT_OF_SCOPE` | No testing/effectiveness result UI/API is added. |
+| Control nested route under legacy assignment | `/processes/control-assignments/:controlAssignmentId` | Central/Local Control Scope context routes | `REPLACE` | Remove route dependence on legacy assignment; route by typed scope/context. |
+| Control form documents/add action | Current attachment direct upload | Temporary upload then version link | `REMAP` | Final command includes `tempUploadId`; user sees immutable version result. |
 
-Current backend roots: `/api/control-structure`, `/api/controls`, `/api/sub-processes/{id}/controls`, and `/api/control-assignments/**`.
-
-| Customer requirement | Current UI page/component | Current API/storage | Approved target entity or use case | Status | Future action | Rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| Code/name/group/description/nature/automation/importance | control create dialog and `ControlObjectPage.tsx` | Control plus ControlAssignment mixed DTO | B04 Control definition | KEEP_VISUAL_REPLACE_DATA_FLOW | Keep compatible inputs but move to independent Control command | Current create flow combines definition and assignment |
-| Parent Subprocess selection | create control dialog | creates control and legacy assignment together | Central Scope or Local Scope command after Control creation | REMAP | Split into explicit scope step or approved compound business command | Central Control must not depend on Subprocess persistence |
-| Operation cycle / time-event / primary-secondary / activity level | control form | legacy Control/Assignment fields | Delegated Control attributes only if cataloged | REMAP | Retain only approved descriptive fields; remove non-cataloged fields | Customer UI cannot add absent model concepts |
-| Test direction, method, plan, and testing fields | control general tab | legacy assignment fields | None | DEFER_OUT_OF_SCOPE | Remove from Master Data control form | Control testing/results are excluded |
-| Control Objective | free-text `objective` and related control data | legacy Control fields / generic Objective assignment | B05 and B26/B38 typed Control Classification | ADD | Add typed Control Objective Value Help and classification list | V2 requires separate Control Objective rather than free text |
-| Control Steps tab | `ControlStepsTab.tsx` | `control_step` CRUD | None | REMOVE | Remove tab, component, DTO/repository/service endpoints | Steps are not a V2 Master Data feature |
-| Law tab | `ControlRegulationsTab.tsx` | direct `control_regulation_link` | None | REMOVE | Remove direct regulation picker/tab | Direct Control–Regulation relation is prohibited |
-| Requirements tab | `ControlRequirementsTab.tsx` | `control_requirement_link` | B29/B41 Requirement–Control Coverage | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain picker/table UX with scope/context filter | This is closest legacy visual precursor to approved coverage |
-| Risks tab | `ControlRisksTab.tsx` | `control_risk_link` | B28/B40 typed Control–Risk Coverage | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain picker/table UX; require typed scoped members | Legacy link lacks same scope/context validation |
-| Account Groups tab | `ControlAccountGroupsTab.tsx` | `control_account_group_link` | B30/B42 typed Control–Account Group Coverage | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain picker/table UX; use typed coverage command | Current link is generic assignment-style |
-| Documents tab | document manager plus old control document types | generic attachment and `control_document` | Document/Version/Link | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain upload/progress/version-list visual | Current documents are generic/mutable |
-| Performance Plan tab | `ControlPerformancePlanTab.tsx` | `control_performance_plan` CRUD | None | REMOVE | Remove tab and corresponding UI state | Performance planning is outside Master Data |
-
-Control target decisions:
-
-- Add a standalone or clearly separated Central Control definition view; it must not be addressed as a legacy assignment id.
-- Keep UI5 form/list/dialog patterns and Persian i18n, but move data flows to typed command repositories.
-- Make Central Scope and Local Scope context visible whenever a Control is shown in a scoped relationship.
-- Limit Requirement Value Help to Requirement Scope members in the chosen Central Scope or Local Context.
-- Prevent arbitrary UUID entry; remove the current manual fallback in `ControlLinkTab.tsx`.
-- Show no direct Regulation selector anywhere in V2 Control UI.
-- Present association read tables as typed classification/coverage, not as generic assignment grids.
-- Hide test plans, test results, effectiveness, performance plans, workflow, KPIs, and KRIs.
-- Add version/revision feedback and explicit soft-delete/restore behavior.
-- Use Document Version history with secure download rather than a mutable file reference.
-
-## 7. Control Objective and generic Objective
-
-Customer sources: `هدف کنترلی- فرم ایجاد اطلاعات پایه- Master Data  .docx` and `اهداف- فرم ایجاد اطلاعات پایه- Master Data  .docx`.
-
-Current route: `/objectives` is a generic Objective feature with FCL/tree/Object Page.
-
-Current backend root: `/api/objectives`, backed by combined generic `objective_node` and direct organization assignment.
-
-| Customer requirement | Current UI page/component | Current API/storage | Approved target entity or use case | Status | Future action | Rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| Generic objective tree/strategy/parent | `ObjectiveTree.tsx`, `ObjectiveObjectPage.tsx` | `objective_node` hierarchy | None as generic Objective | REMOVE | Remove generic Objective feature and route | V2 does not retain conflicting generic Objective |
-| Generic objective class, organization unit, documents | objective object page | generic Objective and document target | None as generic Objective | REMOVE | Remove direct organization/unit/document objective flow | It cannot override Control Objective model |
-| Control Objective catalog code/name/class/description/dates | customer control-objective mock-up; no current dedicated UI | no dedicated backend aggregate | B05 Control Objective | ADD | Build separate Central definition List Report/Object Page | Approved V2 concept is absent from current UI |
-| Control Objective ↔ Subprocess list | customer Control Objective Subprocess tab | legacy process/generic objective assignments | B21/B33 typed Scope | ADD | Add scoped association view with filtered Subprocess Scope selectors | Relationship must be typed and scoped |
-| Control Objective ↔ Risk list | customer Control Objective Risk tab | generic control-risk/objective flows | B27/B39 typed Coverage | ADD | Add typed coverage picker/list with locality validation feedback | Customer intent remains only via typed Coverage |
-| Control Objective Documents tab | customer mock-up | generic `OBJECTIVE_NODE` attachment flow | Document Link | ADD | Add V2 document version/history tab to Control Objective page | V2 documents are not generic attachment targets |
-
-Control Objective target decisions:
-
-- Generic Objective i18n, route, page, tree, store, repository, service, and API contract are removed with the Central definitions slice.
-- The new Control Objective page reuses the FCL/tree visual pattern only if the approved aggregate benefits from hierarchy browsing.
-- Any category/type vocabulary is loaded from approved definition rules, not copied wholesale from generic Objective mock-ups.
-- Control Objective selection is typed and never represented by a free-text Control field.
-- Organization assignment is represented only by Local Context and local typed relations where approved.
-- Documents attach through controlled Document Link and immutable Document Version.
-- Mutations show entity, revision, and version outcome.
-- No Objective UI introduces strategy-management, KPI, or performance-management scope.
-
-## 8. Risk Category and Risk Template
+## 7. Risk Category and Risk Template comparison
 
 Customer source: `ریسک- فرم ایحاد اطلاعات پایه .docx`.
 
-Current route: `/risks` with FCL/tree/Object Page under `features/risk`.
+Current UI evidence: `features/risk/pages/RisksFclShellPage.tsx`, risk tree/state/API repository.
 
-Current backend root: `/api/risks`, backed by combined `risk_node` with `riskCategory` and `riskTemplate` node types.
+Current API/storage evidence: `/api/risks` and combined `risk_node` persistence.
 
-| Customer requirement | Current UI page/component | Current API/storage | Approved target entity or use case | Status | Future action | Rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| Combined category/template tree | `RiskTree.tsx`, split button, list/object pages | one `risk_node` table/nodeType | B06/B07 plus combined read projection | KEEP_VISUAL_REPLACE_DATA_FLOW | Keep familiar tree but read separate entity API | Physical persistence must be separate |
-| Category parent/code/name/description/dates/profile/reference permission | risk category form | generic risk node fields | B06 Risk Category | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain approved descriptive fields with version/revision | Combined node generic API is replaced |
-| Category risk summary tab | risk page placeholder | no target result model | None | DEFER_OUT_OF_SCOPE | Omit from V2 | Risk assessment/result content is outside scope |
-| Category KRI template tab | risk page/customer mock-up | no current KRI entity | None | REMOVE | Remove KRI tab/key/component; add no KRI APIs | KRI is explicitly excluded |
-| Template company/operation, risk type, causes/effects | risk template form/schema | combined node and effect converter | B07 Risk Template | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain descriptive summaries only | No score, likelihood, impact, or assessment result may be added |
-| Existing risk, response template, control center tabs | risk page placeholders/customer mock-up | no approved V2 storage | None | DEFER_OUT_OF_SCOPE | Remove/omit V2 tabs | These are assessment/response/monitoring adjacent concepts |
-| Risk documents | generic document tab | generic attachment target | Document Link | KEEP_VISUAL_REPLACE_DATA_FLOW | Use V2 upload/version/download flow | Document storage must be immutable/controlled |
+| Customer field, tab, action, or relationship | Current UI/API/storage | Approved target entity or use case | Status | Future action and rationale |
+| --- | --- | --- | --- | --- |
+| Risk Category tree | Current combined risk tree | `central_risk_category` tree | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Preserve hierarchy visual pattern; load category-only tree nodes separately from Templates. |
+| Risk Template form | Current combined node form | `central_risk_template` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Preserve compatible fields/description presentation; use typed template DTO/API. |
+| Category-to-Template parent relationship | Current node type hierarchy | `risk_category_id` FK | `REMAP` | Use explicit parent reference rather than a generic node type. |
+| Causes/effects narrative fields | Customer template tabs | Risk Template detailed attributes when compatible | `REMAP` | Treat as descriptive template content only; do not infer scoring/result structures. |
+| Existing controls relationship | Customer risk tab | Risk–Control Coverage | `REMAP` | Expose only selected Subprocess/Local Context typed Coverage. |
+| Control Objective relationship | Customer risk tab | Risk–Control Objective Coverage | `ADD` | Add typed coverage UI because approved model includes it and current UI lacks it. |
+| Risk response | Customer tab | None | `DEFER_OUT_OF_SCOPE` | Risk treatment/response belongs outside approved Master Data V2. |
+| KRI | Customer tab | None | `DEFER_OUT_OF_SCOPE` | Do not add KRI capability. |
+| Likelihood/impact/score | Customer risk material | None | `DEFER_OUT_OF_SCOPE` | Do not add risk assessment fields, calculations, or result pages. |
+| Inherent/residual assessment | Customer terminology | None | `DEFER_OUT_OF_SCOPE` | Excluded from Master Data V2. |
+| Template documents | Generic attachment manager | Version-specific Document Link | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Reuse document visual elements after V2 Document flow is available. |
 
-Risk target decisions:
-
-- Separate client domain types and schemas for Risk Category and Risk Template.
-- Let the tree projection retain selection and expansion state across navigation.
-- Retain create-menu choices only for valid entity relationships.
-- Add scope-aware Risk Template Value Help for Central and Local typed relationships.
-- Remove KRI labels, tabs, i18n keys, and no-op placeholder actions.
-- Do not add likelihood, impact, risk score, response result, or assessment summary UI.
-- Keep cause/effect descriptions strictly descriptive and model-approved.
-- Add explicit soft-delete/restore and version conflict handling.
-- Send documents through the common temporary-upload/version history components.
-- Do not allow direct Organization risk assignment outside Local Context.
-
-## 9. Regulation Group, Regulation, and Regulation Requirement
+## 8. Regulation Group, Regulation, and Regulation Requirement comparison
 
 Customer source: `گروه قوانین - فرم ایجاد اطلاعات پایه- Master Data  .docx`.
 
-Current route: `/regulations` with FCL/tree/Object Page and a requirements summary tab.
+Current UI evidence: `features/regulation/pages/RegulationsFclShellPage.tsx`, hierarchy components, and `RegulationRequirementsSummaryTab.tsx`.
 
-Current backend root: `/api/regulations`, backed by one self-referential `regulation` table and node type.
+Current API/storage evidence: `/api/regulations` and combined `regulation` persistence.
 
-| Customer requirement | Current UI page/component | Current API/storage | Approved target entity or use case | Status | Future action | Rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| Group → Regulation → Requirement tree | `RegulationTree.tsx`, `RegulationsFclShellPage.tsx` | combined `regulation` node | B08/B09/B10 plus combined hierarchy projection | KEEP_VISUAL_REPLACE_DATA_FLOW | Preserve visual tree/read navigation | V2 physical tables are separate |
-| Group fields: parent/code/name/description/dates/documents | regulation object page | legacy node fields | Regulation Group commands/Document Link | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain form pattern with typed Group API | Node discriminator is removed |
-| Regulation fields: issuer/owner/effective dates | regulation page schema/object page | legacy node fields | B09 Regulation | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain approved fields after Central-definition command split | Central definitions remain Organization-independent |
-| Requirement fields and nested creation/list | `RegulationRequirementsSummaryTab.tsx` | legacy child node CRUD | B10 Regulation Requirement | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain requirement browsing/edit UX over separate entity API | Requirement remains leaf entity |
-| Direct relationship from Control to law/regulation | Control regulation tabs | `control_regulation_link` | None | REMOVE | Remove all law/regulation Control selectors | Direct Control–Regulation is prohibited |
-| Requirement-to-Control selection | Control requirements tab | `control_requirement_link` | B29/B41 typed Requirement–Control Coverage | REMAP | Replace with scope/context-aware coverage UI | Requirement is the approved regulatory endpoint |
-| Regulation documents | generic attachment target | `document_attachment` | controlled Document Link | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain document visual tab with V2 version history | Generic target/storage is replaced |
+| Customer field, tab, action, or relationship | Current UI/API/storage | Approved target entity or use case | Status | Future action and rationale |
+| --- | --- | --- | --- | --- |
+| Regulation Group tree | Current combined hierarchy | `central_regulation_group` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Keep tree navigation but create a typed group read model. |
+| Regulation row/form | Current combined node API | `central_regulation` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Keep object page structure; map to Regulation with group parent FK. |
+| Regulation Requirement form/list | Requirements summary UI | `central_regulation_requirement` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain summary/list visual workflow; Requirement is a first-class typed entity. |
+| Requirement-to-Subprocess relation | Customer/process flow | `central_subprocess_requirement_scope` | `ADD` | Add a typed Scope workflow absent from current UI. |
+| Requirement-to-Control relation | Current direct control requirement link | Requirement–Control Coverage | `REMAP` | Provide central/local Coverage views with exact Scope endpoints. |
+| Direct Regulation-to-Control relation | Current control regulation tab/API | None | `REMOVE` | Do not present editable direct link; explain requirement-level route in UX. |
+| Regulation Group direct operational link | Customer grouping expectation | None | `REMOVE` | Group is classification only, never a Scope/Coverage endpoint. |
+| Regulation/Requirement documents | Generic attachments | V2 Document Link | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Preserve panel visual treatment with exact version links. |
+| Requirement search/value help | Current regulation query | Typed Requirement Value Help | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Preserve search/select patterns, scoped by authorized Central catalog. |
 
-Regulation target decisions:
-
-- Use a combined UI tree as a read projection only.
-- Restrict create menus to Group, Regulation, and Requirement parent-child rules.
-- Preserve tree expansion, selection, and FCL navigation under new read DTOs.
-- Make Requirement Value Help reusable for Central and Local Coverage screens.
-- Never expose a generic Regulation relationship form with a caller-selected target type.
-- Do not add requirement assessment or compliance-test result views.
-- Make direct Control–Regulation removal visible in migration notes and change management.
-- Add revision-aware mutation feedback and explicit restore state.
-- Replace legacy document cards with immutable version history.
-- Retain Persian i18n names only through V2 keys; remove dead legacy node-type labels.
-
-## 10. Policy Group, Policy, and Policy Version
+## 9. Policy Group, Policy, and Policy Version comparison
 
 Customer source: `سیاست- فرم ایجاد اطلاعات پایه- Master Data  .docx`.
 
-Current route: `/policies` with FCL/tree/Object Page and placeholder scope/review tabs.
+Current UI evidence: `features/policy/pages/PoliciesFclShellPage.tsx`, policy tree/state/API repository.
 
-Current backend root: `/api/policies`, backed by combined `policy_node` with mutable version string and workflow-like statuses.
+Current API/storage evidence: `/api/policies` and combined `policy_node` persistence with workflow-oriented behavior.
 
-| Customer requirement | Current UI page/component | Current API/storage | Approved target entity or use case | Status | Future action | Rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| Policy Group/Policy combined tree | `PolicyTree.tsx`, FCL shell, split button | `policy_node` node type | B11/B12 and combined read tree | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain hierarchy visual, split models/API | Physical Policy Group and Policy are separate |
-| Policy type/name/description/owner/date/communication/review/note | `PolicyObjectPage.tsx` | legacy mutable policy node | B12 Policy and B13 Policy Version | REMAP | Allocate stable identity vs immutable issued-version fields | Current node conflates identity and issue content |
-| Mutable version string | policy form | `policyVersion` text field | B13 backend-owned immutable version number | REMOVE | Remove editable version textbox; show issued version history | Version is immutable/backend-owned |
-| Draft/review/approval actions | review/approval tab and status UI | statuses `draft`, `underReview`, `pendingApproval`, `approved` | None | REMOVE | Remove actions, status workflow, tabs, keys, and APIs | Policy approval workflow is excluded |
-| Policy Document tab | document manager | generic policy-node attachment/temp flow | Document/Document Version/Document Link | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain visual document list; use temporary upload and versions | Generic attachment and mutable metadata are replaced |
-| Policy Scope with process/activity/org/people/result targets | placeholder/customer scope tab | no approved V2 storage | B25/B37 Policy Scope | REMAP | Implement Central Policy Scope and Local Policy Scope with typed scope/context | Generic target polymorphism and people/result state are excluded |
-| Direct risks and controls tabs | placeholder/customer tabs | legacy generic link intent | typed Scope/Coverage only where cataloged | REMAP | Expose relevant typed reads, not direct generic assignment CRUD | Customer workflow cannot create missing model concepts |
-| Sources and roles tabs | customer UI/placeholder | no approved V2 table | None | DEFER_OUT_OF_SCOPE | Omit unless a later approved model revision introduces it | No source/role table exists in exact 47 boundary |
-| Review & approval | policy review tab | workflow-shaped UI | None | REMOVE | Delete tab and i18n controls | Explicitly prohibited |
+| Customer field, tab, action, or relationship | Current UI/API/storage | Approved target entity or use case | Status | Future action and rationale |
+| --- | --- | --- | --- | --- |
+| Policy Group tree | Current policy tree | `central_policy_group` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain tree navigation and hierarchy search. |
+| Policy stable identity form | Combined policy node | `central_policy` | `REMAP` | Separate identity fields from version content in the UI. |
+| Policy Version tab | Current mutable version/status behavior | `central_policy_version` | `REPLACE` | Present Version as a first-class immutable content item after publish. |
+| Draft Policy Version editing | Current policy form | DRAFT Policy Version | `REMAP` | Allow typed content metadata editing only while the domain status permits; publish workflow itself remains external. |
+| Published content editing | Current UI may allow mutable node edits | New Policy Version | `REMOVE` | Replace edit-in-place with create-next-version UX. |
+| Approval/review workflow | Customer mock-up tabs/actions | None in Master Data V2 | `DEFER_OUT_OF_SCOPE` | Do not build approval task, queue, or workflow UI in this domain. |
+| Policy documents | Generic attachment UI | Document Version/Link; primary-document semantics | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain document panel but bind to immutable versions and exact links. |
+| Policy-to-Subprocess Scope | Customer generic scope section | `central_policy_version_subprocess_scope` | `ADD` | Add Central baseline policy-scope page/dialog. |
+| Policy-to-Control Scope | Customer generic target selection | `central_policy_version_control_scope` | `ADD` | Add exact Central Control Scope selector; never select raw Control. |
+| Policy-to-Requirement Scope | Customer generic target selection | `central_policy_version_requirement_scope` | `ADD` | Add exact Central Requirement Scope selector; never select raw Requirement/Regulation. |
+| Policy-to-Risk Scope | Customer scope expectation | None | `REMOVE` | The approved model has no Policy-to-Risk scope. |
+| Organization policy applicability | Customer organization policy tab | `local_policy_organization_scope` | `ADD` | Add Include/Exclude and Direct/Descendant behavior with target explanation. |
+| Local Subprocess Policy | Customer scope/workflow | `local_policy_subprocess_scope` | `ADD` | Add Local Context policy decision UI. |
+| Local Control Policy | Customer target workflow | `local_policy_control_scope` | `ADD` | Add exact Local Control Scope policy decision UI. |
+| Local Requirement Policy | Customer target workflow | `local_policy_requirement_scope` | `ADD` | Add exact Local Requirement Scope policy decision UI. |
+| Policy propagation result | Customer expects applicability | Read-only Policy Applicability | `ADD` | Add result page/panel showing selected source, action, propagation, and evaluation date. |
+| Policy review/history | Customer workflow expectation | Business Revision read feedback, not workflow | `REMAP` | Show revision-aware mutation/history information only where authorized; no approval workflow. |
 
-Policy target decisions:
-
-- Separate policy identity creation from immutable Policy Version issue command.
-- Show version history as immutable records, including validity and document links.
-- Use Central Policy Scope and Local Policy Scope pages/tabs as real V2 additions.
-- No UI sends version number, before/after content, or approval state to the backend.
-- Policy Applicability is a read-only query with evaluation date, not a workflow approval screen.
-- Retain FCL/tree/RTL/selection behavior where it does not imply node persistence.
-- Keep compatible communication fields only on the cataloged version entity.
-- Remove surveys, approval, roles, generic target selectors, test/effectiveness UI, and no-op placeholders.
-- Make secure Document Version download available from issue/version history.
-- Use mutation-result feedback and optimistic locking for mutable Policy identity and scope facts.
-
-## 11. Account Group
+## 10. Account Group comparison
 
 Customer source: `گروه حساب ها-فرم ایجاد اطلاعات پایه- Master Data  .docx`.
 
-Current route: `/account-groups` with tree/FCL/Object Page.
+Current UI evidence: `features/account-group/pages/AccountGroupsFclShellPage.tsx`, account-group tree/state/API repository.
 
-Current backend root: `/api/account-groups`, backed by `account_group` plus CLOB JSON relationship fields.
+Current API/storage evidence: `/api/account-groups`, `account_group` with JSON payloads and control account-group links.
 
-| Customer requirement | Current UI page/component | Current API/storage | Approved target entity or use case | Status | Future action | Rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| Hierarchy/code/name/description/materiality/reasonable assurance/dates | Account Group tree/list/object page | `account_group` generic CRUD | B14 Account Group | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain form/tree visual with V2 command/read DTOs | Lifecycle/version/raw UUID flow is replaced |
-| Audit assertions existence/completeness/valuation/disclosure | checkboxes on account-group page | booleans/JSON conversion | B15 Account Group Assertion | REMAP | Replace checkboxes with typed normalized relation editor | Avoid JSON/boolean schema lock-in and support revision |
-| GL account ranges from/to | account range placeholder/display | `accountRanges` JSON | B16 Account Group Account Range | REMAP | Add typed range list/dialog with validity | V2 needs relational integrity |
-| Related generic objectives | model arrays/view placeholders | `objectives` JSON | B17 Account Group–Control Objective | REMAP | Replace with typed Control Objective picker | Generic Objective is removed |
-| Related risks | model arrays/view placeholders | `risks` JSON | B18 Account Group–Risk Template | REMAP | Replace with typed Risk Template picker | V2 uses separate Risk Template |
-| Account Group documents | generic document count/tab | generic attachment target | Document Link | KEEP_VISUAL_REPLACE_DATA_FLOW | Use common V2 document flow/version history | `documentsCount` is not editable state |
+| Customer field, tab, action, or relationship | Current UI/API/storage | Approved target entity or use case | Status | Future action and rationale |
+| --- | --- | --- | --- | --- |
+| Account Group hierarchy | Current tree | `central_account_group` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain tree/search/value-help interaction; use typed parent FK/hierarchy commands. |
+| Account Group basic fields | Current form | `central_account_group` | `REMAP` | Keep compatible core catalog presentation only. |
+| Control classification | Current Control Account Group link | `central_control_account_group` | `REMAP` | Use direct typed Central classification UI. |
+| Control Objective classification | Customer relation | `central_control_objective_account_group` | `ADD` | Add the approved second classification UI. |
+| Assertions | Customer tab / JSON payload | None | `REMOVE` | Do not introduce assertion UI or a relation table absent from final model. |
+| Account/GL ranges | Customer tab / JSON payload | None | `REMOVE` | Do not introduce ranges or JSON relation fields absent from final model. |
+| Materiality/reasonable-assurance attributes | Customer fields | None | `DEFER_OUT_OF_SCOPE` | Do not treat accounting assurance metrics as Master Data V2 structures. |
+| Account Group-to-Risk relation | Customer tab | None | `REMOVE` | No approved direct Account Group–Risk relation. |
+| Account Group documents | Generic attachment UI | Document Link when target is approved | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Use shared V2 Document presentation only. |
 
-Account Group target decisions:
+## 11. Generic Objective customer document comparison
 
-- Retain the compact tree/list/object-page visual pattern.
-- Replace JSON-shaped frontend models, Zod schemas, factories, stores, API repositories, and backend converters.
-- Present assertions, account ranges, Control Objectives, and Risk Templates as typed relation tables/dialogs.
-- Treat materiality as a descriptive catalog field, not a risk score.
-- Derive document count from authorized links rather than editing it.
-- Add revision/version mutation feedback for each normalized relation command.
-- Use scope-aware Value Help when Account Group is included in Central or Local Scope.
-- Do not add generic account-group-to-control assignments outside typed coverage.
-- Preserve Persian labels through new i18n keys.
-- Remove dead legacy JSON key names after the normalized UI slice lands.
+Customer source: `اهداف- فرم ایجاد اطلاعات پایه- Master Data  .docx`.
 
-## 12. Document and temporary upload experience
+Current UI evidence: `features/objective/**`, Objective FCL shell, generic Objective state/API repository, and `/api/objectives`.
 
-Customer sources: all nine mock-ups include document tabs or document rows; strongest detail is in Organization and Policy documents.
+Current API/storage evidence: `objective_node` and `objective_organization_assignment`.
 
-Current UI implementation: `features/document/domain/document.model.ts`, `document.api.repo.ts`, `document-attachment.state.ts`, `DocumentAttachmentsManager.tsx`, and `DocumentAttachmentsTab.tsx`.
+| Customer field, tab, action, or relationship | Current UI/API/storage | Approved target entity or use case | Status | Future action and rationale |
+| --- | --- | --- | --- | --- |
+| Generic objective hierarchy | Objective FCL/tree | None | `REMOVE` | Remove generic objective tree; only Control Objective catalog remains. |
+| Objective code/title/description | Generic Objective form | `central_control_objective` when semantic meaning is control objective | `REMAP` | Migrate visual label/field pattern only where it represents Control Objective; do not retain generic semantics. |
+| Strategy/objective type | Customer generic fields | None unless approved detailed Control Objective attribute | `DEFER_OUT_OF_SCOPE` | Do not add unapproved generic objective fields. |
+| Organization assignment | Generic objective-organization assignment | Local Control Objective Scope | `REMAP` | Only show a Control Objective in a Local Context via typed Scope. |
+| Subprocess relation | Current generic Process objective assignment | Central/Local Control Objective Scope | `REMAP` | Use exact Subprocess Scope; no Process-level generic assignment. |
+| Risk relation | Customer tab | Risk–Control Objective Coverage | `REMAP` | Use typed Coverage in one Central/Local Subprocess context. |
+| Documents | Generic attachments | V2 Document Link | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Reuse document panel only after generic attachment flow is removed. |
 
-Current backend implementation: `/api/documents` direct final upload, `/api/documents/temp`, `/api/documents/commit`, generic `targetType`/`targetId`, `tempSessionId`, `document_attachment`, and legacy `document_temp_upload`.
+## 12. Central Scope, Coverage, and Local Context additions
 
-| Customer requirement | Current UI page/component | Current API/storage | Approved target entity or use case | Status | Future action | Rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| File selection, progress, size/error handling | `DocumentAttachmentsManager.tsx` | generic upload API | Temporary Upload initiation | KEEP_VISUAL_REPLACE_DATA_FLOW | Retain controls but receive backend-issued `tempUploadId` | Current client session/direct upload flow is incompatible |
-| Direct final attach after choosing file | generic manager | `POST /api/documents` / `document_attachment` | Parent Business Command consumes Temp Upload | REMOVE | Remove direct final upload path | V2 requires temporary upload first |
-| Client `tempSessionId` grouping | document repo and FCL call sites | `temp_session_id` table column | T01 `tempUploadId` | REMOVE | Remove client UUID generation and session UI assumptions | Backend owns upload identity |
-| Standalone commit button/flow | document repo `commit` | `/api/documents/commit` | Document-owning create/update command | REMOVE | Remove generic commit API/UI | Backend owns transaction and revision order |
-| Mutable attachment title/version | title patch and attachment row | mutable `document_attachment` | B43 Document and B44 immutable Document Version | REMAP | Show Document metadata plus immutable version history | File version payload cannot be overwritten |
-| Generic target type/id attachment list | state keyed by target | generic attachment table | B45 controlled Document Link | REMAP | Bind document tab to allow-listed V2 aggregate relation | Controlled polymorphism only in Document Link |
-| Download URL opened in browser | document repo / component | presigned URL response with storage details | secure authorized download | KEEP_VISUAL_REPLACE_DATA_FLOW | Keep download action, replace API and hide storage details | No permanent MinIO URL exposure |
-| Document rows: type/title/version/size/file type/creator | Organization/Policy customer rows | generic attachment response | Document/Version read DTO | KEEP_VISUAL_REPLACE_DATA_FLOW | Keep table columns where authorized | Data comes from immutable version/read model |
+These approved capabilities are not implemented in the current UI and must be classified as `ADD`.
 
-Document target decisions:
+| Required target capability | Current UI/API/storage | Approved entity/use case | Status | Required target UI |
+| --- | --- | --- | --- | --- |
+| Central Control Scope | No typed screen; generic process-control assignments only | `central_subprocess_control_scope` | `ADD` | Selected Subprocess tab/dialog with Control Value Help, validity, recommendations, and revision result. |
+| Central Risk Scope | No typed screen | `central_subprocess_risk_scope` | `ADD` | Selected Subprocess tab/dialog with Risk Template Value Help and validity. |
+| Central Control Objective Scope | No typed screen | `central_subprocess_control_objective_scope` | `ADD` | Selected Subprocess Scope list/dialog. |
+| Central Requirement Scope | No typed screen | `central_subprocess_requirement_scope` | `ADD` | Selected Subprocess Requirement Scope list/dialog. |
+| Central Risk–Control Coverage | Generic risk/control link only | `central_subprocess_risk_control_coverage` | `ADD` | Scope-picker dialog that exposes only scopes in the selected Subprocess. |
+| Central Risk–Control Objective Coverage | No equivalent | `central_subprocess_risk_control_objective_coverage` | `ADD` | Typed Scope-pair dialog, no generated relation. |
+| Central Control–Control Objective Coverage | No exact contextual equivalent | `central_subprocess_control_control_objective_coverage` | `ADD` | Direct typed coverage list/dialog independent of Risk path. |
+| Central Requirement–Control Coverage | Legacy direct link lacks context | `central_subprocess_requirement_control_coverage` | `ADD` | Typed requirement/control Scope-pair dialog. |
+| Central Policy Scope | No approved model equivalent | Three `central_policy_version_*_scope` tables | `ADD` | Policy Version scope tab with type-specific selectors and baseline explanation. |
+| Local Organization–Subprocess Context | Generic organization-process assignment only | `local_organization_subprocess_scope` | `ADD` | Organization Object Page Local Context tab with exact Subprocess selection and validity. |
+| Local Control/Risk/Objective/Requirement Scope | Generic local/reference assignments only | Four `local_subprocess_*_scope` tables | `ADD` | Context-scoped typed tabs, source type, inherited reference indication, and validity checks. |
+| Local Coverage | Generic links/assignments only | Four `local_subprocess_*_coverage` tables | `ADD` | Context-scoped typed Coverage dialogs that select only same-context Scope endpoints. |
+| Local Policy Scope | No typed policy applicability UI | Four `local_policy_*_scope` tables | `ADD` | Organization/Context/exact-target policy tabs with decision/preference feedback. |
 
-- Add a temporary-upload state presentation with expiry and one-time-consumption feedback.
-- Disable repeated consume actions after a command returns successful revision result.
-- Show a clear expired or already-consumed error without exposing storage identifiers.
-- Add immutable version-history list on document-owning pages.
-- Add authorized secure-download action for an available version.
-- Display purged version state without offering a broken download link.
-- Use the parent aggregate mutation result to refresh document/version state.
-- Delete unused `DocumentAttachmentsPanel.tsx` during document-slice cleanup.
-- Remove generic `targetType`, `targetId`, `bucketName`, `objectKey`, and `tempSessionId` from frontend domain types.
-- Do not create a direct permanent MinIO URL or an independent final-attachment screen.
+## 13. Document, Business Revision, and read-model UX additions
 
-## 13. Required V2 UI additions
+| Required target capability | Current UI/API/storage | Approved entity/use case | Status | Required target UI |
+| --- | --- | --- | --- | --- |
+| Temporary upload first | `/api/documents/temp` plus session-oriented client state | `document_temp_upload` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Keep progress UI; replace session state with `tempUploadId`, expiry, and authorization feedback. |
+| No direct final upload | `POST /api/documents` direct upload | Final typed Business Command | `REMOVE` | Remove direct final-upload action; final save consumes temporary upload inside the command. |
+| Immutable Document Version list | Generic attachment list | `document` + `document_version` | `ADD` | Add version history, version number, file metadata, storage state, and immutable replacement action. |
+| Retention policy display | No current V2 equivalent | `document_retention_policy` | `ADD` | Add retention policy selection/read information where authorized. |
+| Document Hold display/action | No current V2 equivalent | `document_hold` | `ADD` | Add authorized hold/release panel and purge-block explanation. |
+| Controlled Document Link | Generic `targetType`/`targetId` binding | `document_link` | `REPLACE` | UI chooses an approved typed target context; it never exposes an open generic target list. |
+| Secure download | Presigned download URL flow | Authorized document-version download use case | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain download button; request controlled stream/short-lived URL without exposing permanent key. |
+| Revision-aware mutation result | Current CRUD feedback only | `masterdata_revision` result | `ADD` | Show successful entity ID, revision ID, and new version; link to authorized revision summary if available. |
+| Business Revision history | No current V2 UI | `masterdata_revision` and read projection | `ADD` | Add read-only revision panel separated from generic Audit Trail. |
+| Effective status | No current UI | Effective Read DTO | `ADD` | Add read-only status badge with common evaluation date and source. |
+| Diagnostic detail | No current UI | Diagnostic DTO | `ADD` | Add read-only support/admin diagnostic panel listing every blocker/dependency. |
+| Roll-up | No current V2 UI | Roll-up read DTO | `ADD` | Add read-only organization/process roll-up views retaining source identity. |
+| Policy Applicability | No current V2 UI | Policy Applicability DTO | `ADD` | Add read-only result explaining selected policy scope, action, propagation, and precedence. |
 
-These additions are not present in the customer mock-ups or current UI, but are mandated by the approved V2 model rules.
+## 14. Current API and storage compatibility summary
 
-| Required target UI | Customer document filename | Current UI/API | Approved target entity or use case | Status | Future action | Rationale |
-| --- | --- | --- | --- | --- | --- | --- |
-| Central Scope workspace | Not present in customer docs; approved V2 rule | No page, route, store, or API | B19–B24 Central Scope | ADD | Add route, FCL/List/Object Page or scoped workspace, typed value help, and read DTOs | Central Blueprint must be managed explicitly |
-| Central Coverage workspace | Not present in customer docs; approved V2 rule | No page or API | B26–B30 Classification/Coverage | ADD | Add typed coverage tables/dialogs with same-Subprocess feedback | Direct/generic links are replaced |
-| Local Organization–Subprocess Context | Not present as V2 concept; customer has legacy wizard | generic organization-process assignment | B31 Local Context | ADD | Add context creation, list, validity/lifecycle summary, and scoped navigation | Local data has this mandatory root |
-| Local Scope workspace | Not present as V2 concept | legacy org assignments | B32–B36 Local Scope | ADD | Add context-bound typed scope selectors and tables | Prevents generic org assignment use |
-| Local Coverage workspace | Not present as V2 concept | legacy org/process/control links | B38–B42 Local Coverage | ADD | Add context-bound typed coverage dialogs and diagnostics | Enforces same-context relationship |
-| Central Policy Scope | Not present as real feature; policy scope placeholder only | no real storage/API | B25 | ADD | Add policy-version-to-Central-Scope UI | Required V2 applicability fact |
-| Local Policy Scope | Not present as real feature | no real storage/API | B37 | ADD | Add context-bound policy applicability UI | Required V2 local applicability fact |
-| Document Versioning | Customer rows imply version; legacy attachment mutable | no immutable history | B43–B45 | ADD | Add immutable version list, metadata, purge state, secure download | Approved Document model is new |
-| Temporary upload flow | Customer upload tab; no V2 flow | `tempSessionId` generic flow | T01 | ADD | Add backend-issued `tempUploadId` lifecycle UI | One-time consumption required |
-| Effective status | Not present | No query API/page | Effective Read DTO | ADD | Add read-only evaluation-date status page/tab | Approved Effective View |
-| Diagnostics | Not present | No query API/page | Diagnostic DTO | ADD | Add read-only explanation drawer/page | Approved Diagnostic read model |
-| Roll-up | Not present | No query API/page | Roll-up query | ADD | Add read-only aggregation view with evaluation date | Approved read model |
-| Policy Applicability | Not present | policy scope placeholder only | Policy Applicability query | ADD | Add read-only applicability result view | Must not become workflow |
-| Revision-aware mutation result | Not present | generic entity response | common mutation envelope | ADD | Add toast/banner with entity/revision/version and conflict handling | Backend-owned Business Revision is mandatory |
+| Current endpoint/storage behavior | Status | Approved target correction |
+| --- | --- | --- |
+| `/api/organizations` basic tree CRUD | `REMAP` | Retain Organization capability under revision/version/lifecycle rules. |
+| `/api/processes` over combined process nodes | `REPLACE` | Separate Process/Subprocess route families and combined read-tree DTO. |
+| `/api/objectives` generic objective API | `REMOVE` | Replace with Control Objective API only. |
+| `/api/risks` combined risk nodes | `REPLACE` | Separate Category and Template endpoints. |
+| `/api/regulations` combined hierarchy | `REPLACE` | Separate Group/Regulation/Requirement endpoint families. |
+| `/api/policies` combined hierarchy/version/workflow | `REPLACE` | Separate Group/Policy/Policy Version and typed policy scope APIs. |
+| `/api/account-groups` JSON relationship behavior | `REPLACE` | Hierarchy plus only two approved direct classifications. |
+| `/api/control-assignments/**` legacy tab APIs | `REMOVE` | Replace individual approved relation interactions with typed Scope/Coverage commands. |
+| `/api/organization-process-assignments` | `REMOVE` | Replace with Local Organization–Subprocess Scope command/query. |
+| `/api/organization-risk-assignments` and generic reference endpoints | `REMOVE` | Replace only with typed Local Scope/Coverage/Policy Scope flows. |
+| `POST /api/documents` direct final upload | `REMOVE` | Temporary upload then document-aware business command. |
+| `/api/documents/temp` and `/api/documents/commit` session flow | `REPLACE` | `tempUploadId` staging and one-time server-side consumption. |
+| Generic document attachment storage | `REPLACE` | Document, immutable Version, Retention, Hold, controlled Link. |
 
-## 14. Read-model UX principles
+## 15. Explicit exclusions in target UI
 
-Effective, Diagnostic, Roll-up, and Policy Applicability pages are read-only.
+The target Master Data V2 UI must not add a KPI page.
 
-They all expose a common evaluation-date control using localized display but `YYYY-MM-DD` API values.
+The target Master Data V2 UI must not add a KRI page.
 
-Effective result lists identify Central or Local origin without allowing a user to mutate derived facts inline.
+The target Master Data V2 UI must not add likelihood, impact, inherent score, residual score, or assessment-result fields.
 
-Diagnostic views explain inclusion, exclusion, validity, scope, coverage, and policy reasoning in human-readable terms.
+The target Master Data V2 UI must not add control-test results or control-effectiveness fields.
 
-Roll-up views aggregate only approved read facts and do not display calculated risk scores or control effectiveness.
+The target Master Data V2 UI must not add a Policy approval workflow, task queue, approval history, or acknowledgement screen.
 
-Policy Applicability displays immutable Policy Version references and valid applicability reasoning without approval actions.
+The target Master Data V2 UI must not add monitoring, jobs, scheduler, cache, outbox, or generic Audit management views.
 
-All query pages use pagination and server-approved sort fields for collection results.
+The target Master Data V2 UI must not expose a generic Objective feature.
 
-All query pages preserve RTL, Persian default labels, UI5, loading, empty-state, and error patterns.
+The target Master Data V2 UI must not expose a direct Control-to-Regulation relation.
 
-No read-model page writes cache, audit, workflow, or local derived rows.
+The target Master Data V2 UI must not expose arbitrary generic Scope/Coverage target selection.
 
-## 15. UI validation and authorization principles
+## 16. UI delivery order and cleanup rule
 
-Typed Value Help is required wherever a Scope or Coverage command selects an entity.
+First deliver V2 navigation and read-only Central catalog tree/query routes while preserving compatible UI5/FCL patterns.
 
-Value Help filters by Central Subprocess Scope or Local Context before allowing selection.
+Next deliver Central Scope/Classification/Coverage and Policy Scope screens.
 
-The UI validates required dates and version before submit, while backend validation remains authoritative.
+Next deliver Local Context before Local Scope/Coverage/Policy Scope screens.
 
-The UI displays duplicate business-key, hierarchy-cycle, local-validity, cross-Subprocess, cross-context, and temporary-upload errors using i18n keys.
+Next deliver Document Version/temporary-upload/hold/link UI and Revision-aware mutation feedback.
 
-The UI never asks users to paste arbitrary IDs as a relationship fallback.
+Next deliver Effective, Diagnostic, Roll-up, and Policy Applicability read-only pages/panels.
 
-The UI never builds Revision Content, snapshots, sequences, or transaction steps.
+Each vertical slice removes its replaced Legacy page, route, store, API repository, dialog, permission reference, and i18n key before the slice is accepted.
 
-Action visibility follows permissions, but backend resource authorization is authoritative.
+No Legacy UI is kept as a compatibility screen.
 
-Restore actions are explicit and version-aware.
+No existing visual workflow is retained if it would cause a generic relation, direct regulation link, browser-owned revision, direct final upload, or out-of-scope feature.
 
-Conflict UX offers refresh/review behavior rather than silent overwrite.
-
-No dead route, permission, store, API repository, component, or i18n key remains once its vertical slice replaces it.
-
-## 16. Explicit removals and exclusions
-
-Do not add KPI to Master Data UI.
-
-Do not add KRI to Master Data UI.
-
-Do not add likelihood, impact, risk score, or assessment-result UI.
-
-Do not add control-test result or control-effectiveness UI.
-
-Do not create a Policy approval workflow, review queue, or approval status UI.
-
-Do not retain Generic Objective when it conflicts with Control Objective.
-
-Do not retain direct Control-to-Regulation UI.
-
-Do not retain generic attachment target/type UI.
-
-Do not retain direct final upload or standalone temporary commit UI.
-
-Do not add materialized Effective, Diagnostic, Roll-up, or Policy Applicability editing screens.
+The final target preserves useful customer workflows visually while enforcing the approved V2 model underneath.

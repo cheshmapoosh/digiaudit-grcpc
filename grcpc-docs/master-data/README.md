@@ -1,175 +1,184 @@
-# Master Data V2 — Phase 1 Implementation Baseline
+# Master Data V2 — Phase 1 Reference Pack
 
-## Directory purpose
+## Purpose
 
-This directory contains the Phase 1 planning baseline for the greenfield Master Data V2 redesign.
+This directory is the implementation-planning baseline for the greenfield Master Data V2 redesign in `cheshmapoosh/digiaudit-grcpc`.
 
-It is the handoff package for later database, backend, frontend, document, security, and cleanup vertical slices.
+It reconciles the approved Conceptual Model, Final Logical Model, Physical Design Reference, the retained customer UI documents, and the current application solely as Legacy implementation evidence.
 
-It does not contain application source changes.
+The eight Markdown files in this directory are planning artifacts. They do not change the application, database, runtime configuration, permissions, or the retained Word documents.
 
-It does not move customer documents again.
+## Execution record
 
-It keeps the customer UI evidence beside the implementation contract that governs later work.
-
-## Repository and execution baseline
-
-| Item | Value |
+| Item | Recorded value |
 | --- | --- |
 | Repository | `cheshmapoosh/digiaudit-grcpc` |
 | Current branch | `feature/master-data-v2-greenfield` |
-| Baseline commit SHA | `a773cbf37784a286e72d09dab506abe9b1d830a4` |
-| Baseline commit message | `release(grcpc): 1.0.4` |
-| Phase 1 execution date | 2026-07-30 |
-| Database target | Fresh Oracle 19c-compatible installation |
-| Schema ownership | Flyway Day-Zero; Hibernate validates only |
-| Master Data table count | 47 business tables plus 1 technical temporary-upload table |
-| Explicit exclusions | KPI, KRI, assessment results, test results, workflow, monitoring, jobs, scheduler, outbox, cache |
+| Documentation baseline commit | `861792c7ed49a5f8ea14201d6d7892f6010c52a4` |
+| Documentation baseline message | `docs(master-data): add v2 implementation references and planning documents` |
+| Execution date | 2026-07-30 |
+| Approved-model date | 2026-07-29 |
+| Design mode | Greenfield Oracle Day-Zero implementation |
+| Application-code changes in this corrective planning pass | None |
+
+The Final Logical Model records `a773cbf37784a286e72d09dab506abe9b1d830a4` (`release(grcpc): 1.0.4`) as its source-code inventory baseline. The commit above is the repository baseline observed immediately before this reconciliation pass; these are different, intentionally recorded reference points.
+
+## Directory contents
+
+### Authoritative reference documents
+
+| Filename | Document title / version | Authority supplied by the document |
+| --- | --- | --- |
+| `GRC_Master_Data_Reference_Conceptual_Model_FA.docx` | *GRC Master Data Reference Model — Conceptual Design*, v1.0, approved | Business meaning, Central Blueprint, Local Context, Effective View, Roll-up, Policy Propagation, Document concepts, Business Revision, and domain boundaries. |
+| `GRC_Master_Data_Logical_Model_Final_FA.docx` | `سند مرجع نهایی مدل منطقی اطلاعات پایه سامانه GRC`, v2.0 Final, cycles 1–12 locked | Exact final entities, 47 business tables, typed relationships, local context, scope, coverage, policy applicability, document and revision structures. |
+| `GRC_Master_Data_Physical_Design_Reference_FA.docx` | *GRC Master Data Physical Design Reference*, v1.0 | Oracle 19c physical rules, types, sizes, constraints, indexes, Flyway Day-Zero, MinIO, and the sole technical temporary-upload table. |
+
+### Customer UI documents retained for compatibility analysis
+
+Customer documents describe the existing customer-facing vocabulary and visual workflows. They may inform compatible UI behavior only when it fits the approved model.
+
+| Filename | Main customer subject |
+| --- | --- |
+| `اهداف- فرم ایجاد اطلاعات پایه- Master Data  .docx` | Generic objective hierarchy and form |
+| `ریسک- فرم ایحاد اطلاعات پایه .docx` | Risk category and risk-template form |
+| `سازمان - فرم ایجاد اطلاعات پایه- Master Data  .docx` | Organization hierarchy and contextual tabs |
+| `سیاست- فرم ایجاد اطلاعات پایه- Master Data  .docx` | Policy hierarchy, versions, scope, and workflow mock-up |
+| `فرایند و زیرفرایند - فرم ایجاد اطلاعات پایه- Master Data  .docx` | Combined process/subprocess tree and related tabs |
+| `هدف کنترلی- فرم ایجاد اطلاعات پایه- Master Data  .docx` | Control-objective catalog and links |
+| `کنترل- فرم ایجاد اطلاعات پایه -Master Data.docx` | Control form, relationships, documents, and execution-oriented tabs |
+| `گروه حساب ها-فرم ایجاد اطلاعات پایه- Master Data  .docx` | Account-group hierarchy and classifications |
+| `گروه قوانین - فرم ایجاد اطلاعات پایه- Master Data  .docx` | Regulation-group, regulation, and requirement hierarchy |
+
+### Generated implementation documents
+
+1. [Implementation contract](implementation-contract.md) — non-negotiable architecture and ownership rules.
+2. [Table catalog](table-catalog.md) — the exact 47 business tables and one technical table.
+3. [Dependency map](dependency-map.md) — schema, backend, UI, revision, document, and read-model sequencing.
+4. [Legacy deletion map](legacy-deletion-map.md) — current implementation inventory and slice-owned replacement/removal work.
+5. [API conventions](api-conventions.md) — use-case APIs, commands, DTOs, errors, authorization, documents, and read queries.
+6. [UI compatibility map](ui-compatibility-map.md) — customer/current/target UI traceability.
+7. [Acceptance checklist](acceptance-checklist.md) — implementation and full-stack verification gates.
 
 ## Authority hierarchy
 
-1. `GRC Master Data Conceptual Model` governs business meaning, Central Blueprint, Local Context, Effective View, Business Revision, and shared Document concepts.
-2. `GRC Master Data Final Logical Model` governs final entities, relationships, Scope, Coverage, Local Context, Policy Scope, Document, and Business Revision.
-3. `GRC Master Data Physical Design Reference` governs Oracle types, sizes, constraints, indexes, Flyway Day-Zero, MinIO, and the one technical temporary-upload table.
-4. Customer UI Word documents govern compatible fields, tabs, labels, workflows, and visual behavior only.
-5. Current repository source governs implementation evidence and legacy cleanup only.
+1. The Conceptual Model owns business meaning and the Master Data domain boundary.
+2. The Final Logical Model owns final entities, table names, relationships, and dependency rules.
+3. The Physical Design Reference owns Oracle types, sizes, physical constraints, indexes, Flyway, and MinIO rules.
+4. Customer UI documents own only compatible expected UI fields, labels, forms, tabs, and workflows.
+5. Current source code is implementation and Legacy evidence; it is not authoritative when it conflicts with the approved model.
 
-The three named authoritative model files were not physically present under this directory during the review.
-
-The task-issued model rules were therefore used as the approved baseline, while unknown file-specific detail is labeled as an implementation assumption in the catalog.
-
-No customer mock-up or current source behavior overrides that hierarchy.
-
-## Authoritative reference-document inventory
-
-| Declared title | Expected authority | Physical review result | Treatment in Phase 1 |
-| --- | --- | --- | --- |
-| `GRC Master Data Conceptual Model` | Business meaning and domain boundaries | No `.doc`, `.docx`, or `.md` file with this title was found under `grcpc-docs/master-data/` or repository history | Use the task-issued conceptual rules; do not fabricate unobserved sections/pages |
-| `GRC Master Data Final Logical Model` | Final 47 business entities and relationships | No file with this title was found under the target directory or repository history | Use the task-issued table boundary and relation rules; identify physical naming as a Phase 1 assumption |
-| `GRC Master Data Physical Design Reference` | Oracle and MinIO physical rules | No file with this title was found under the target directory or repository history | Use explicit task-issued RAW(16), Day-Zero, MinIO, and one-temp-table rules; identify delegated sizes as assumptions |
-
-The absence is an evidence condition, not permission to infer KPI/KRI, generic assignments, or legacy compatibility requirements.
-
-## Customer UI Word-document inventory
-
-All nine DOCX files were read by paragraph and table content, including merged-cell metadata where represented in OOXML.
-
-Word core titles and subjects are blank, so each file was identified by embedded Persian screen content rather than filename alone.
-
-| Customer document filename | Identified content | V2 planning use |
-| --- | --- | --- |
-| `اهداف- فرم ایجاد اطلاعات پایه- Master Data  .docx` | Generic Objectives tree/form, strategy, organization-unit and document tabs | Evidence for legacy generic Objective removal; not model authority over Control Objective |
-| `ریسک- فرم ایحاد اطلاعات پایه .docx` | Risk Category/Risk Template tree, KRI, causes/effects, response/control-center tabs | Evidence for split risk UI and removal of KRI/assessment-adjacent features |
-| `سازمان - فرم ایجاد اطلاعات پایه- Master Data  .docx` | Organization hierarchy, subprocess/risk/control wizard, reference tabs, documents, KPI/KRI | Evidence for Local Context visual workflow and exclusions |
-| `سیاست- فرم ایجاد اطلاعات پایه- Master Data  .docx` | Policy Group/Policy tree, version, workflow, scope, documents, review/approval | Evidence for Policy/Version visual behavior and workflow removal |
-| `فرایند و زیرفرایند - فرم ایجاد اطلاعات پایه- Master Data  .docx` | Process → Subprocess → Control tree and direct related tabs | Evidence for combined tree projection and typed scope/coverage remap |
-| `کنترل- فرم ایجاد اطلاعات پایه -Master Data.docx` | Control form, steps, law/requirements/risk/account-group/documents/performance tabs | Evidence for typed coverage UI, direct-law removal, and out-of-scope tabs |
-| `گروه حساب ها-فرم ایجاد اطلاعات پایه- Master Data  .docx` | Account Group hierarchy, assertions, GL ranges, risks, documents | Evidence for normalized Account Group relation UI |
-| `گروه قوانین - فرم ایجاد اطلاعات پایه- Master Data  .docx` | Regulation Group → Regulation → Requirement hierarchy | Evidence for separate entities and combined tree projection |
-| `هدف کنترلی- فرم ایجاد اطلاعات پایه- Master Data  .docx` | Control Objective catalog, Subprocess/Risk/Documents tabs | Evidence for approved Control Objective UI and typed relationships |
-
-## Generated implementation-document inventory
-
-These seven documents are the other generated Markdown files in this directory.
-
-| Document | Purpose |
-| --- | --- |
-| [implementation-contract.md](implementation-contract.md) | Binding greenfield, data, architecture, document, revision, and exclusion rules |
-| [table-catalog.md](table-catalog.md) | Complete 47-business-table and 1-technical-table physical catalog |
-| [dependency-map.md](dependency-map.md) | Flyway, backend, UI, revision, document, and read-model order |
-| [legacy-deletion-map.md](legacy-deletion-map.md) | Slice-owned legacy replacement/removal inventory |
-| [api-conventions.md](api-conventions.md) | Typed command/read/error/security/document API contract |
-| [ui-compatibility-map.md](ui-compatibility-map.md) | Customer/current/target UI traceability and required additions |
-| [acceptance-checklist.md](acceptance-checklist.md) | Implementation-prompt acceptance gates and full-stack release checks |
+No customer mock-up or existing endpoint may introduce a Master Data concept absent from the approved model.
 
 ## Recommended reading order
 
-1. Read this README for scope, sources, and navigation.
-2. Read [implementation-contract.md](implementation-contract.md) before making any design or code change.
-3. Read [table-catalog.md](table-catalog.md) before writing Flyway, entity, repository, or DTO code.
-4. Read [dependency-map.md](dependency-map.md) before planning a vertical slice or migration order.
-5. Read [api-conventions.md](api-conventions.md) before implementing controller, service, frontend repository, or state code.
-6. Read [ui-compatibility-map.md](ui-compatibility-map.md) before changing routes, FCL pages, dialogs, Value Help, i18n, or document UX.
-7. Read [legacy-deletion-map.md](legacy-deletion-map.md) while replacing legacy code in the owning slice.
-8. Use [acceptance-checklist.md](acceptance-checklist.md) to verify each slice and final delivery.
+1. Read the three authoritative Word documents in the authority order above.
+2. Read [implementation-contract.md](implementation-contract.md) for boundaries that later implementation tasks must honor.
+3. Read [table-catalog.md](table-catalog.md) for exact schema vocabulary and physical conventions.
+4. Read [dependency-map.md](dependency-map.md) before dividing later work into vertical slices.
+5. Read [api-conventions.md](api-conventions.md) and [ui-compatibility-map.md](ui-compatibility-map.md) before changing APIs or UI.
+6. Use [legacy-deletion-map.md](legacy-deletion-map.md) while replacing existing implementation.
+7. Apply [acceptance-checklist.md](acceptance-checklist.md) to each implementation prompt and final integration.
 
-## Master Data V2 table summary
+## Approved table baseline
 
-The 47 business tables are intentionally grouped into six families.
+The Final Logical Model §5 is the counted schema authority. It defines exactly 47 business tables in four logical families.
 
-| Family | Business-table count | Core responsibility |
-| --- | ---: | --- |
-| Structural and Central Definitions | 18 | Organization, separate process/risk/regulation/policy hierarchies, Control Objective, Control, and normalized Account Group relations |
-| Central Scope, Classification, Policy Scope, and Coverage | 12 | Central Blueprint, typed Central Scope, classification, coverage, and Policy Scope |
-| Local Context, Local Scope, Local Coverage, and Local Policy Scope | 12 | Organization–Subprocess context, explicit local applicability, classification, coverage, and policy applicability facts |
-| Document | 3 | Document identity, immutable Document Version, controlled Document Link |
-| Business Revision | 2 | Backend-owned revision root and immutable Revision Content |
-| Total business tables | **47** | Complete Master Data business persistence boundary |
+### 1. Structural and Central Definitions — 14
 
-The single technical table is `document_temp_upload`.
+1. `organization`
+2. `central_process`
+3. `central_subprocess`
+4. `central_control`
+5. `central_control_objective`
+6. `central_risk_category`
+7. `central_risk_template`
+8. `central_account_group`
+9. `central_regulation_group`
+10. `central_regulation`
+11. `central_regulation_requirement`
+12. `central_policy_group`
+13. `central_policy`
+14. `central_policy_version`
 
-It receives a backend-issued `tempUploadId`, has expiry and one-time consumption state, and is not a business document or generic attachment table.
+### 2. Central Scope, Classification, Policy Scope, and Coverage — 13
 
-No other temporary, cache, job, scheduler, outbox, workflow, monitoring, audit, or materialized-result table is permitted in this redesign scope.
+15. `central_subprocess_control_scope`
+16. `central_subprocess_risk_scope`
+17. `central_subprocess_control_objective_scope`
+18. `central_subprocess_requirement_scope`
+19. `central_policy_version_subprocess_scope`
+20. `central_policy_version_control_scope`
+21. `central_policy_version_requirement_scope`
+22. `central_control_account_group`
+23. `central_control_objective_account_group`
+24. `central_subprocess_risk_control_coverage`
+25. `central_subprocess_risk_control_objective_coverage`
+26. `central_subprocess_control_control_objective_coverage`
+27. `central_subprocess_requirement_control_coverage`
 
-## Intended later implementation phases
+### 3. Local Context, Local Scope, Local Coverage, and Local Policy Scope — 13
 
-| Phase | Vertical slice | Primary outputs | Legacy responsibility owned by the slice |
-| --- | --- | --- | --- |
-| P0 | Day-Zero foundation | RAW(16), Flyway Day-Zero, lifecycle, optimistic locking, revision core, permission/error conventions | No V2 text UUID or generic compatibility scaffold |
-| P1 | Central definitions | B01–B18, separate entities, normalized Account Group relations | Combined Process/Risk/Regulation/Policy/Objective and JSON account-group implementations |
-| P2 | Central Scope | B19–B24 and typed commands/read DTOs | Legacy process assignments and historic process-control assignment |
-| P3 | Central Coverage and Policy Scope | B25–B30, same-Subprocess rules | Direct Control–Regulation and generic control link behavior |
-| P4 | Local Context | B31, context navigation and lifecycle | Organization-process assignment behavior |
-| P5 | Local Scope/Coverage/Policy Scope | B32–B42, local validity/same-context rules | Organization reference/risk assignments and generic local links |
-| P6 | Document and Business Revision integration | B43–B47 and T01, secure upload/download/versioning | `document_attachment`, `control_document`, direct upload, `tempSessionId`, standalone commit |
-| P7 | Read models | Effective, Diagnostic, Roll-up, Policy Applicability queries | Any attempt to persist derived results |
-| P8 | Full-stack cleanup | dead-code removal, permissions/i18n cleanup, final verification | Residue not removed by its owning vertical slice |
+28. `local_organization_subprocess_scope`
+29. `local_subprocess_control_scope`
+30. `local_subprocess_risk_scope`
+31. `local_subprocess_control_objective_scope`
+32. `local_subprocess_requirement_scope`
+33. `local_subprocess_risk_control_coverage`
+34. `local_subprocess_risk_control_objective_coverage`
+35. `local_subprocess_control_control_objective_coverage`
+36. `local_subprocess_requirement_control_coverage`
+37. `local_policy_organization_scope`
+38. `local_policy_subprocess_scope`
+39. `local_policy_control_scope`
+40. `local_policy_requirement_scope`
 
-## Document movement summary
+### 4. Document and Business Revision — 7
 
-The customer Word documents had already been moved from `grcpc-docs/` directly into `grcpc-docs/master-data/` before this task began.
+41. `document_retention_policy`
+42. `document`
+43. `document_version`
+44. `document_hold`
+45. `document_link`
+46. `masterdata_revision`
+47. `masterdata_revision_content`
 
-This task did not move, rename, overwrite, restore, stash, reset, clean, or delete those documents.
+The Physical Design Reference §12 adds one—and only one—technical table outside the business-table count: `document_temp_upload`.
 
-The initial working tree showed nine staged rename records for those customer files.
+| Count | Value |
+| --- | ---: |
+| Business tables | 47 |
+| Technical temporary-upload tables | 1 |
+| Total physical tables in this redesign scope | 48 |
 
-The Phase 1 deliverable is the eight Markdown files in this directory, not a second document move.
+Effective, Diagnostic, Roll-up, and Policy Applicability are read-only derived views or specialized queries. They are not stored business tables, cache tables, or materialized results.
 
-## Filename collision and deduplication decisions
+## Implementation phase tracker
 
-No byte-identical duplicate among the nine customer files was identified.
+| Later phase | Intended deliverable | Prerequisite / exit condition |
+| --- | --- | --- |
+| 2 — Day-Zero foundation | Oracle conventions, final Flyway baseline, shared lifecycle/value objects, organization/process/subprocess | Fresh Oracle schema starts from the approved final names. |
+| 3 — Central catalog | Central definitions, hierarchies, policy/version, account-group classifications | Typed central catalogs and no combined Legacy persistence remain in the slice. |
+| 4 — Central relationship model | Central scope, central policy scope, central coverage, impact analysis | Same-subprocess constraints and typed APIs are demonstrable. |
+| 5 — Local context model | Local organization-subprocess scope, local scope, coverage, local policy scope | Same-context constraints and no Central-to-Local mutation are demonstrable. |
+| 6 — Document and revision | Retention, document/version/hold/link, temporary upload, revision command service | Immutable document versions and backend-owned atomic revisions work end to end. |
+| 7 — Read models | Effective, Diagnostic, Roll-up, Policy Applicability | Read-only, non-materialized results use a common evaluation date. |
+| 8 — UI replacement and cleanup | Compatible UI5/FCL flows, typed data flows, Legacy route/API/entity cleanup | Every replaced Legacy element is removed by its owning vertical slice. |
+| 9 — Full-stack acceptance | Security, browser UX, Oracle/MinIO integration, build and cleanup checks | All checks in the acceptance checklist pass. |
 
-Several names share the `Master Data` suffix and inconsistent spacing; existing filenames, including trailing spaces before `.docx`, are preserved exactly.
+The tracker is a delivery sequence, not authorization to expand the model with additional tables or modules.
 
-The `کنترل` (Control) and `هدف کنترلی` (Control Objective) files are distinct documents and remain separate evidence sources.
+## Document movement and filename handling
 
-The generic `اهداف` (Objectives) file is distinct from the Control Objective file; it is not deduplicated because it documents a legacy feature that must be removed/remapped.
+The customer Word documents are already retained under this directory, and the three English-named authoritative Word documents are committed here. This corrective planning pass performs no document movement and does not alter any Word file.
 
-Titles and subjects in Word metadata are blank, so filename alone was not used to determine document meaning.
+Several customer filenames contain the phrase `Master Data` and two contain double spaces before `.docx`; they remain intentionally unchanged so their original customer provenance is preserved. There is no duplicate authoritative file: the Conceptual, Final Logical, and Physical Design documents have distinct filenames, titles, versions, and authority roles.
 
-No authoritative reference file is substituted with a customer mock-up merely because names or UI areas overlap.
+## Confirmed exclusions
 
-## Non-negotiable design reminder
+Master Data V2 does not add KPI, KRI, risk-assessment results, likelihood, impact, risk scores, control-test results, control-effectiveness results, policy approval workflow, monitoring, jobs, scheduler, cache, outbox, or generic Audit tables.
 
-Central definitions are independent from Organization.
+Policy approval is an external workflow dependency for publishing a policy version; it is not a Master Data table family or implementation feature in this redesign.
 
-Local facts exist only under an Organization plus Subprocess Context.
+## Change-scope confirmation
 
-Scope and Coverage are typed.
-
-Document Link and Revision Content are the only controlled polymorphism.
-
-Business Revision and transaction ordering are backend-owned.
-
-Temporary upload precedes final Document Version creation.
-
-Effective, Diagnostic, Roll-up, and Policy Applicability are read-only.
-
-KPI and KRI are not Master Data V2.
-
-## Phase 1 change statement
-
-No Java, TypeScript, React, CSS, Flyway, Maven, npm, runtime configuration, permission, i18n, test, or application behavior file was changed by this Phase 1 documentation task.
-
-The only intended new files are this README and the seven linked Markdown implementation documents.
+This corrective pass rewrites only the eight Markdown planning files listed above. No Java, TypeScript, React, CSS, Flyway, Maven, npm, runtime configuration, permissions, i18n, tests, or Word document was changed.

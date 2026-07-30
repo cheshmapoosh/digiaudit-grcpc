@@ -1,389 +1,325 @@
 # Master Data V2 Dependency Map
 
-## 1. Purpose
+## Purpose and authority
 
-This map establishes the mandatory dependency direction for Master Data V2.
+This map sequences the approved 47-business-table model and the one `document_temp_upload` technical table for Flyway, Backend, UI, revision processing, document handling, and read models.
 
-It covers table creation, Flyway Day-Zero ordering, backend vertical slices, UI delivery, revision creation, document handling, and read-only results.
+Entity names and arrows follow the Final Logical Model §5–§14.
 
-It is read together with [implementation-contract.md](implementation-contract.md) and [table-catalog.md](table-catalog.md).
+Authoritative source files: `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`, `GRC_Master_Data_Logical_Model_Final_FA.docx`, and `GRC_Master_Data_Physical_Design_Reference_FA.docx`.
 
-The direction prevents legacy assignment tables from reappearing as shortcut dependencies.
+Oracle/Flyway and MinIO decisions follow the Physical Design Reference §8–§18.
 
-## 2. Non-negotiable direction rules
+The map is a delivery dependency map; it does not add any table, cache, outbox, job, scheduler, workflow, or materialized result.
 
-Central definitions are created before any Central Blueprint member.
+## Dependency principles
 
-Central Subprocess Scope is created before any typed Central Scope row.
+- Central definitions exist independently from Organization.
+- Central Process and Central Subprocess are separate; only Subprocess participates in Scope/Coverage.
+- Central Scope exists before Central Coverage or exact Central Policy Scope.
+- A Local Organization–Subprocess Scope exists before every Local Scope, Coverage, or Local Policy Scope.
+- Local Scope exists before Local Coverage and exact Local Control/Requirement Policy Scope.
+- A Central reference is validated before an inherited Local Scope or Coverage can be applied.
+- Document Version is created from a consumed Temporary Upload before a Document Link is created.
+- A Business Revision header exists before Backend-created Revision Content is persisted and applied.
+- Read models depend on source tables and never become source-table dependencies.
+- Central changes can affect read results and impact analysis; they never create physical Local mutations.
 
-Typed Central Scope is created before Central Classification, Central Coverage, and Central Policy Scope.
+## Central-to-Local dependency direction
 
-Central Coverage never crosses the enclosing Central Subprocess Scope.
+```mermaid
+flowchart TD
+    Org[organization]
+    Proc[central_process]
+    Sub[central_subprocess]
+    Defs[Central definitions<br/>control, objective, risk template,<br/>account group, regulation requirement,<br/>policy version]
+    CS[Typed Central Subprocess Scopes]
+    CC[Typed Central Coverages]
+    CPS[Typed Central Policy Scopes]
+    LCtx[local_organization_subprocess_scope]
+    LS[Typed Local Scopes]
+    LC[Typed Local Coverages]
+    LPS[Typed Local Policy Scopes]
+    Eff[Effective Read Model]
+    Diag[Diagnostic Read Model]
+    Roll[Roll-up Read Model]
+    Pol[Policy Applicability Read Model]
 
-Organization and Subprocess are created before a Local Organization–Subprocess Context.
+    Proc --> Sub
+    Defs --> CS
+    Sub --> CS
+    CS --> CC
+    CS --> CPS
+    Org --> LCtx
+    Sub --> LCtx
+    Defs --> LS
+    CS -. inherited-reference validation .-> LS
+    LCtx --> LS
+    LS --> LC
+    CC -. inherited-reference validation .-> LC
+    LCtx --> LC
+    LCtx --> LPS
+    LS --> LPS
+    CPS --> Pol
+    LPS --> Pol
+    Defs --> Eff
+    CS --> Eff
+    CC --> Eff
+    LCtx --> Eff
+    LS --> Eff
+    LC --> Eff
+    Eff --> Diag
+    Org --> Roll
+    Proc --> Roll
+    Sub --> Roll
+    Eff --> Roll
+    Eff --> Pol
+```
 
-Local Context is created before every Local Scope, Local Coverage, and Local Policy Scope row.
+The solid arrows identify stored foreign-key or explicit application dependencies.
 
-Local Scope is created before Local Classification or Local Coverage.
+The dotted arrows identify inherited-reference validation and Effective dependency, not automatic data synchronization.
 
-Local Coverage never crosses the enclosing Local Context.
+`organization` is shown alongside Central definitions because it is structural reference data and the Local anchor, not because Central definitions become organization-owned.
 
-Local validity is checked against the referenced Central origin before the Local command commits.
+## Table creation dependency by family
 
-Central changes never write Local database rows as a side effect.
+### A. Structural and Central Definitions
 
-Business Revision is written by the backend in the same database transaction as a successful Business Command.
+| Creation wave | Tables | Must exist first | Why |
+| --- | --- | --- | --- |
+| A1 | `organization` | Oracle common conventions | Organization parent-tree FK is self-contained. |
+| A2 | `central_process` | Oracle common conventions | Process parent-tree FK is self-contained. |
+| A3 | `central_subprocess` | `central_process` | Every Scope/Coverage context depends on an exact Subprocess leaf. |
+| A4 | `central_control`, `central_control_objective` | Oracle common conventions | Independent Central definitions. |
+| A5 | `central_risk_category` | Oracle common conventions | Risk-category tree parent FK. |
+| A6 | `central_risk_template` | `central_risk_category` | Template has a required category parent. |
+| A7 | `central_account_group` | Oracle common conventions | Account-group parent-tree FK. |
+| A8 | `central_regulation_group` | Oracle common conventions | Regulation-group tree parent FK. |
+| A9 | `central_regulation` | `central_regulation_group` | Regulation belongs to a group. |
+| A10 | `central_regulation_requirement` | `central_regulation` | Requirement is the atomic compliance child. |
+| A11 | `central_policy_group` | Oracle common conventions | Policy-group parent-tree FK. |
+| A12 | `central_policy` | `central_policy_group` | Policy belongs to a group. |
+| A13 | `central_policy_version` | `central_policy` | Policy Version belongs to its stable Policy identity. |
 
-Temporary upload happens before a document-owning command.
+### B. Central Scope, Classification, Policy Scope, and Coverage
 
-Temporary upload consumption happens only inside the document-owning Business Command.
+| Creation wave | Tables | Direct prerequisites | Dependency reason |
+| --- | --- | --- | --- |
+| B1 | `central_subprocess_control_scope` | Subprocess + Control | Establishes Control contextual membership. |
+| B2 | `central_subprocess_risk_scope` | Subprocess + Risk Template | Establishes Risk contextual membership. |
+| B3 | `central_subprocess_control_objective_scope` | Subprocess + Control Objective | Establishes Objective contextual membership. |
+| B4 | `central_subprocess_requirement_scope` | Subprocess + Regulation Requirement | Establishes Requirement contextual membership. |
+| B5 | `central_control_account_group` | Control + Account Group | Direct classification relation. |
+| B6 | `central_control_objective_account_group` | Control Objective + Account Group | Direct classification relation. |
+| B7 | `central_policy_version_subprocess_scope` | Policy Version + Subprocess | Baseline policy inclusion. |
+| B8 | `central_policy_version_control_scope` | Policy Version + Central Control Scope | Exact-context policy decision. |
+| B9 | `central_policy_version_requirement_scope` | Policy Version + Central Requirement Scope | Exact-context policy decision. |
+| B10 | `central_subprocess_risk_control_coverage` | Central Risk Scope + Central Control Scope | Requires same-subprocess composite FKs. |
+| B11 | `central_subprocess_risk_control_objective_coverage` | Central Risk Scope + Central Control Objective Scope | Requires same-subprocess composite FKs. |
+| B12 | `central_subprocess_control_control_objective_coverage` | Central Control Scope + Central Control Objective Scope | Requires same-subprocess composite FKs. |
+| B13 | `central_subprocess_requirement_control_coverage` | Central Requirement Scope + Central Control Scope | Requires same-subprocess composite FKs. |
 
-Document Version is created only after its Document identity exists in the transaction.
+### C. Local Context, Scope, Coverage, and Policy Scope
 
-Document Link is created only after its immutable Document Version exists.
+| Creation wave | Tables | Direct prerequisites | Dependency reason |
+| --- | --- | --- | --- |
+| C1 | `local_organization_subprocess_scope` | Organization + Central Subprocess | Required parent Context for every Local relation. |
+| C2 | `local_subprocess_control_scope` | Local Context + Control; optional Central Control Scope | Typed Local Control Scope and local execution fields. |
+| C3 | `local_subprocess_risk_scope` | Local Context + Risk Template; optional Central Risk Scope | Typed Local Risk Scope. |
+| C4 | `local_subprocess_control_objective_scope` | Local Context + Control Objective; optional Central Objective Scope | Typed Local Objective Scope. |
+| C5 | `local_subprocess_requirement_scope` | Local Context + Requirement; optional Central Requirement Scope | Typed Local Requirement Scope. |
+| C6 | `local_subprocess_risk_control_coverage` | Parent Context + Local Risk Scope + Local Control Scope; optional Central Coverage | Same-context Local Coverage. |
+| C7 | `local_subprocess_risk_control_objective_coverage` | Parent Context + Local Risk Scope + Local Objective Scope; optional Central Coverage | Same-context Local Coverage. |
+| C8 | `local_subprocess_control_control_objective_coverage` | Parent Context + Local Control Scope + Local Objective Scope; optional Central Coverage | Same-context Local Coverage. |
+| C9 | `local_subprocess_requirement_control_coverage` | Parent Context + Local Requirement Scope + Local Control Scope; optional Central Coverage | Same-context Local Coverage. |
+| C10 | `local_policy_organization_scope` | Organization + Policy Version | Organization applicability/propagation decision. |
+| C11 | `local_policy_subprocess_scope` | Local Context + Policy Version | Subprocess-level local policy decision. |
+| C12 | `local_policy_control_scope` | Local Control Scope + Policy Version | Exact Control policy decision. |
+| C13 | `local_policy_requirement_scope` | Local Requirement Scope + Policy Version | Exact Requirement policy decision. |
 
-Effective, Diagnostic, Roll-up, and Policy Applicability are terminal read models, not persistence dependencies.
+### D. Document and Revision
 
-## 3. Central-to-Local dependency graph
+| Creation wave | Tables | Direct prerequisites | Dependency reason |
+| --- | --- | --- | --- |
+| D1 | `document_retention_policy` | Oracle conventions | Document retention parent. |
+| D2 | `document` | Document Retention Policy | Stable document identity. |
+| D3 | `document_version` | Document | Immutable version metadata and object key. |
+| D4 | `document_hold` | Document Version | Hold applies to exact immutable version. |
+| D5 | `document_link` | Document Version + controlled target vocabulary | Link references a precise version. |
+| D6 | `document_temp_upload` | Document Version FK target may be nullable | Technical staging metadata; it can exist before final version. |
+| D7 | `masterdata_revision` | Organization for Local domain; self parent optional | Revision header before contents. |
+| D8 | `masterdata_revision_content` | Master Data Revision | Ordered controlled mutation records. |
+
+## Scope-before-Coverage rule
+
+No Coverage command may create an endpoint Scope implicitly.
+
+No Coverage command may use a raw Central definition ID in place of a Scope ID.
+
+No Central Coverage command may cross a Subprocess boundary.
+
+No Local Coverage command may cross a Local Organization–Subprocess Context boundary.
+
+No Local Coverage command stores a redundant `subprocess_id`.
+
+No direct Control–Regulation command exists.
+
+A Requirement–Control Coverage command needs a Requirement Scope and a Control Scope first.
+
+The direct Control–Control Objective Coverage command is separate from Risk–Control Objective Coverage.
+
+No API derives one Coverage from another.
+
+## Required Flyway Day-Zero ordering
+
+The Physical Design Reference §16-1 provides the migration sequence.
+
+1. Create Oracle conventions, common checks, and helper constraints.
+2. Create `organization`, `central_process`, and `central_subprocess`.
+3. Create the remaining Central definitions and `central_policy_version`.
+4. Create Central Scope, Classification, Central Policy Scope, and Central Coverage tables.
+5. Create Local Context, Local Scope, Local Coverage, and Local Policy Scope tables.
+6. Create `document_retention_policy`, `document`, `document_version`, `document_hold`, and `document_link`.
+7. Create `document_temp_upload`.
+8. Create `masterdata_revision` and `masterdata_revision_content`.
+9. Add supplementary unique constraints, composite foreign keys, checks, and indexes.
+10. Create read-only Effective, Diagnostic, Roll-up, and Policy Applicability views or query-facing database objects.
+
+The sequence is Day-Zero creation on a fresh Oracle schema.
+
+It is not a chain of Legacy `DROP`, `ALTER`, data-copy, or compatibility migrations.
+
+## Backend implementation ordering
+
+| Backend slice | Implement after | Deliverable | Key dependency check |
+| --- | --- | --- | --- |
+| 1. Shared foundation | Flyway conventions | UUID RAW mapping, lifecycle/validity, status enums, optimistic locking, revision guard | Hibernate validates rather than creates DDL. |
+| 2. Structural trees | Shared foundation | Organization, Process, Subprocess command/query services | Cycle validation before revision apply. |
+| 3. Central catalogs | Structural trees | Control, Control Objective, Risk Category/Template, Account Group, Regulation hierarchy, Policy/Version | Separate formerly combined concepts. |
+| 4. Central relations | Central catalogs | Typed scopes, classifications, policy scopes, coverage commands | Same-subprocess composite FKs and typed validation. |
+| 5. Local context | Central relations | Local Context and typed Local Scope commands | Local inherited range and definition/context validation. |
+| 6. Local relations | Local context | Local Coverage and Local Policy Scope commands | Same-context composite FKs and precedence input. |
+| 7. Document + Revision | Shared foundation and targets | Temporary upload, document/version/hold/link, revision command coordination | One-time upload consume and immutable version. |
+| 8. Read queries | Central/local/document sources | Effective, Diagnostic, Roll-up, Policy Applicability query services | No mutable endpoint or materialization. |
+| 9. Legacy removal | Each owning slice | Remove old endpoints/entities/services/permissions | No compatibility API or dual write remains. |
+
+The Revision command service is a cross-slice dependency but not a generic persistence shortcut.
+
+It determines revision domain, creates the header/content, validates, performs required impact analysis, applies all mutations in one transaction, and returns the mutation result.
+
+## Revision dependencies
 
 ```mermaid
 flowchart LR
-  CD[Central Definitions\nOrganization / Process / Subprocess / Control / Control Objective\nRisk Category / Risk Template\nRegulation Group / Regulation / Regulation Requirement\nPolicy Group / Policy / Policy Version / Account Group]
-  CS[Central Subprocess Scopes]
-  CC[Central Coverages and\nCentral Policy Scopes]
-  LC[Local Organization-Subprocess Context]
-  LS[Local Scopes]
-  LV[Local Coverages and\nLocal Policy Scopes]
-  ER[Effective]
-  DR[Diagnostic]
-  RR[Roll-up]
-  PA[Policy Applicability]
+    Cmd[Typed Business Command]
+    Auth[Permission and resource authorization]
+    Val[Domain and cross-table validation]
+    IA[Impact analysis when required]
+    Rev[masterdata_revision]
+    Contents[masterdata_revision_content]
+    Tx[Single Backend transaction]
+    Apply[Typed source-table mutations]
+    Result[entityId + revisionId + version]
 
-  CD --> CS
-  CS --> CC
-  CS --> LC
-  CC -. read origin and validity .-> LC
-  LC --> LS
-  LS --> LV
-  CS --> ER
-  CC --> ER
-  LC --> ER
-  LS --> ER
-  LV --> ER
-  ER --> DR
-  ER --> RR
-  ER --> PA
-  CC --> PA
-  LV --> PA
+    Cmd --> Auth --> Val
+    Val --> IA
+    IA --> Rev
+    Rev --> Contents
+    Contents --> Tx
+    Tx --> Apply
+    Apply --> Result
 ```
 
-The solid arrows describe persistence or command prerequisites.
+Central commands create only `CENTRAL` revisions.
 
-The dashed arrow describes read/validation provenance only.
+Local commands create only `LOCAL` revisions tied to one Organization.
 
-The arrows toward Effective and the other read results do not create tables or write data.
+Command handlers must reject cross-domain content before persistence.
 
-## 4. Central Definition dependencies
+A Central impact can identify Local remediation work but cannot create it automatically.
 
-`organization` has only its optional organization-parent dependency.
+Document Link to the current DRAFT revision is handled as metadata of that revision and does not start a recursive revision.
 
-`process` can reference a parent Process.
-
-`subprocess` depends on Process.
-
-Control, Control Objective, and Account Group definitions are Central and independent from Organization.
-
-Risk Template depends on Risk Category.
-
-Regulation depends on Regulation Group.
-
-Regulation Requirement depends on Regulation.
-
-Policy depends on Policy Group.
-
-Policy Version depends on Policy.
-
-Account Group assertion, account range, Control Objective, and Risk Template relations depend on Account Group and their typed target definition.
-
-No definition depends on a Central Scope, Local Context, Document Link, or Effective result.
-
-No definition contains a legacy `node_type` discriminator that combines entities.
-
-## 5. Central Scope dependency order
-
-`central_subprocess_scope` depends on Subprocess.
-
-`central_scope_control` depends on Central Subprocess Scope and Control.
-
-`central_scope_control_objective` depends on Central Subprocess Scope and Control Objective.
-
-`central_scope_risk_template` depends on Central Subprocess Scope and Risk Template.
-
-`central_scope_regulation_requirement` depends on Central Subprocess Scope and Regulation Requirement.
-
-`central_scope_account_group` depends on Central Subprocess Scope and Account Group.
-
-`central_policy_scope` depends on Central Subprocess Scope and immutable Policy Version.
-
-These relations are typed by their table names and no target-type discriminator substitutes for them.
-
-## 6. Central Classification and Coverage dependency order
-
-`central_control_classification` depends on a Control Scope member and a Control Objective Scope member in the same Central Subprocess Scope.
-
-`central_control_objective_risk_coverage` depends on Control Objective Scope and Risk Template Scope in the same Central Subprocess Scope.
-
-`central_control_risk_coverage` depends on Control Scope and Risk Template Scope in the same Central Subprocess Scope.
-
-`central_requirement_control_coverage` depends on Requirement Scope and Control Scope in the same Central Subprocess Scope.
-
-`central_control_account_group_coverage` depends on Control Scope and Account Group Scope in the same Central Subprocess Scope.
-
-Composite foreign keys are the physical dependency that prevents one coverage from mixing Subprocesses.
-
-Coverage validity may not exceed the validity intersection of its source and target Scope members.
-
-No Central Coverage links Control directly to Regulation.
-
-No Central Coverage creates a risk score, assessment result, test result, or performance plan.
-
-## 7. Local Context dependency order
-
-`local_organization_subprocess_context` depends on Organization, Subprocess, and the matching Central Subprocess Scope.
-
-The composite key to Central Subprocess Scope proves that the context's Subprocess matches the blueprint's Subprocess.
-
-The Context is the only Local aggregate root.
-
-An Organization alone is insufficient for Local Scope creation.
-
-A Process alone is insufficient for Local Scope creation.
-
-A generic organization reference assignment is never a prerequisite or a fallback.
-
-One Local Context must be explicitly created by a business command before any local facts appear.
-
-## 8. Local Scope dependency order
-
-Each Local Scope row depends on one Local Context.
-
-Each Local Scope row depends on the corresponding typed Central Scope origin.
-
-Local Control Scope depends on Central Control Scope.
-
-Local Control Objective Scope depends on Central Control Objective Scope.
-
-Local Risk Template Scope depends on Central Risk Template Scope.
-
-Local Regulation Requirement Scope depends on Central Requirement Scope.
-
-Local Account Group Scope depends on Central Account Group Scope.
-
-Local Policy Scope depends on Central Policy Scope.
-
-The origin relation is not synchronization.
-
-The origin relation enables traceability and local-validity containment checks.
-
-Local commands store their own Business Revision rather than reusing the Central revision.
-
-## 9. Local Classification and Coverage dependency order
-
-`local_control_classification` depends on Local Control Scope and Local Control Objective Scope from the same Local Context.
-
-`local_control_objective_risk_coverage` depends on Local Control Objective Scope and Local Risk Template Scope from the same Local Context.
-
-`local_control_risk_coverage` depends on Local Control Scope and Local Risk Template Scope from the same Local Context.
-
-`local_requirement_control_coverage` depends on Local Requirement Scope and Local Control Scope from the same Local Context.
-
-`local_control_account_group_coverage` depends on Local Control Scope and Local Account Group Scope from the same Local Context.
-
-Local coverage commands validate Local member status and validity.
-
-Local coverage commands validate Central-origin validity where the selected Local members have origins.
-
-Local coverage commands return the owning Local entity id, the new Business Revision id, and the new optimistic-lock version.
-
-No Local Coverage command is allowed to emit a generic `relationType` or `targetId` payload.
-
-## 10. Document and revision graph
+## Document dependencies
 
 ```mermaid
 flowchart LR
-  TU[Temporary Upload\ndocument_temp_upload]
-  BC[Business Command\nbackend transaction]
-  BR[Business Revision]
-  D[Document]
-  DV[Immutable Document Version]
-  DL[Document Link]
-  SD[Secure Download]
+    Upload[document_temp_upload<br/>AVAILABLE + unexpired]
+    Verify[Backend validates user/context,<br/>MinIO object, and checksum]
+    Command[Final typed Business Command]
+    Doc[document]
+    Version[immutable document_version]
+    Consume[Temporary upload marked CONSUMED]
+    Link[document_link to exact version]
+    Hold[document_hold when needed]
 
-  TU -->|tempUploadId| BC
-  BC --> BR
-  BC --> D
-  D --> DV
-  BR --> DV
-  DV --> DL
-  DL --> SD
+    Upload --> Verify --> Command
+    Command --> Doc
+    Doc --> Version
+    Version --> Consume
+    Version --> Link
+    Version --> Hold
 ```
 
-The temporary upload is created before the Business Command but is not itself a Business Revision.
+The user-facing temporary-upload flow must never perform a direct permanent final upload.
 
-The command validates uploader, state, expiry, file metadata, and permitted consuming use case.
+The final object key is Backend-owned.
 
-The command atomically marks the upload consumed in Oracle and creates or associates Document facts in its transaction.
+There is no distributed Oracle–MinIO transaction.
 
-The physical MinIO operation is not an Oracle distributed transaction.
+The Backend uses ordered operations and best-effort cleanup.
 
-The command therefore uses explicit recoverable state and idempotency handling when a storage action fails.
+Temporary MinIO cleanup uses bucket lifecycle behavior rather than a job or scheduler table.
 
-Document Version creation needs a Document identity and a Business Revision identity.
+## Read-model dependencies
 
-Document Link needs an immutable Document Version and an authorized, allow-listed target aggregate.
-
-Secure download resolves authorization from the document link and version before any storage URL or stream is issued.
-
-## 11. Revision dependencies
-
-Business Revision is a foundation dependency for all mutable vertical slices.
-
-Each successful create command creates a Business Revision before the transaction commits.
-
-Each successful update, status change, delete, restore, classification change, scope change, coverage change, policy-scope change, and document command creates a Business Revision.
-
-Revision Content depends on the Business Revision root record.
-
-Revision Content serializes only backend-owned before/after snapshots.
-
-Revision Content target types are closed to approved Master Data aggregates.
-
-A read query never creates a Business Revision.
-
-A failed validation never creates an applied Business Revision.
-
-An idempotent retry with the same command identity returns the prior mutation result without creating a duplicate revision.
-
-## 12. Read-model dependencies
-
-Effective reads depend on evaluation date, lifecycle, validity, Central Scope, Central Coverage, Local Context, Local Scope, Local Coverage, Central Policy Scope, and Local Policy Scope.
-
-Effective reads may include Document Link and Document Version availability where a result needs document evidence status.
-
-Diagnostic reads depend on the Effective resolution trace and expose why a Central or Local item was included, overridden, invalid, absent, or excluded.
-
-Roll-up reads depend on Effective output and the tree hierarchy needed for the requested aggregation boundary.
-
-Policy Applicability depends on Effective context plus Central and Local Policy Scope and the validity/lifecycle of the selected Policy Version.
-
-Read-model APIs accept one common `evaluationDate`.
-
-Read-model APIs are read-only and cannot trigger local materialization.
-
-Read-model APIs are paginated and sortable when output is a collection.
-
-No query writes cache rows, result rows, or status markers into Master Data tables.
-
-## 13. Flyway Day-Zero ordering
-
-The new schema is installed only on a fresh database.
-
-The V2 Flyway set begins with common `RAW(16)`, timestamp, lifecycle, version, and constraint conventions.
-
-The first logical migration layer creates the 18 Structural and Central Definition tables.
-
-The second logical migration layer creates `central_subprocess_scope` and its typed Central Scope member tables.
-
-The third logical migration layer creates Central Policy Scope, Classification, and Coverage tables after their member tables.
-
-The fourth logical migration layer creates Local Context before Local Scope tables.
-
-The fifth logical migration layer creates Local Classification, Local Coverage, and Local Policy Scope after local member tables.
-
-The sixth logical migration layer creates Business Revision before Document Version's revision foreign key.
-
-The seventh logical migration layer creates Document, Document Version, Document Link, and the one technical temporary-upload table.
-
-The last logical migration layer creates required indexes, composite foreign keys, and check constraints not declared inline.
-
-Permission seed data may be placed after V2 API resource vocabulary is finalized, but it is not a Master Data business table.
-
-No V2 migration reads, copies, drops, alters, or transforms legacy Master Data rows.
-
-No legacy `V1003` through `V1161` object is part of the V2 Day-Zero dependency graph.
-
-## 14. Backend implementation ordering
-
-**Slice 0 — Day-Zero foundation** owns RAW UUID mapping, Flyway configuration for a fresh installation, explicit lifecycle base, optimistic locking, error envelope, Business Revision core, and permission-boundary scaffolding.
-
-**Slice 1 — Central definitions** owns Organization, separate Process/Subprocess, Control Objective, Control, split Risk hierarchy, split Regulation hierarchy, split Policy/Policy Version, and normalized Account Group definition relations.
-
-**Slice 2 — Central Scope** owns Central Subprocess Scope and the five typed Central Scope membership commands and reads.
-
-**Slice 3 — Central Classification, Coverage, and Policy Scope** owns same-Subprocess validation, Requirement–Control Coverage, central policy applicability facts, and removal of direct Process/Control legacy assignments.
-
-**Slice 4 — Local Context** owns Organization–Subprocess Context creation, validation, lifecycle, and removal of legacy organization-process assignment flows.
-
-**Slice 5 — Local Scope, Classification, Coverage, and Policy Scope** owns local origin/validity checks, same-context validation, and removal of generic organization reference/risk flows.
-
-**Slice 6 — Document and revision integration** owns temporary upload, Document, immutable Document Version, Document Link, secure download, and removal of generic attachment/control-document flows.
-
-**Slice 7 — Read models** owns Effective, Diagnostic, Roll-up, and Policy Applicability query services and their authorization.
-
-**Slice 8 — Cleanup and hardening** owns deletion of dead legacy controllers, DTOs, mappers, services, repositories, entities, permissions, routes, and translations introduced by completed slices.
-
-## 15. UI implementation ordering
-
-The UI first adopts shared mutation-result handling for `entityId`, `revisionId`, and `version`.
-
-The UI then replaces Central definition data flows while retaining compatible FCL, List Report, Object Page, tree, search, selection, expanded-state, RTL, UI5, and i18n patterns.
-
-The Process/Subprocess visual tree is delivered as a read projection over separate backend entities.
-
-The UI next adds Central Scope and typed Central Coverage pages, filtered value help, and policy scope tabs.
-
-The UI then adds Local Context as the entry point for all local selectors and lists.
-
-Local Scope, Local Coverage, and Local Policy Scope pages are delivered only after Local Context exists.
-
-The document UI switches to backend-issued `tempUploadId` before any V2 document-owning page is released.
-
-Document Version history and secure download are delivered with the document slice.
-
-Effective, Diagnostic, Roll-up, and Policy Applicability are delivered as read-only query pages with a shared evaluation-date control.
-
-Each UI slice removes the legacy repository, store, component, route, and i18n keys that it replaces.
-
-## 16. Feature ownership matrix
-
-| Later vertical slice | Owns | Must not depend on |
+| Read model | Source dependencies | Output boundary |
 | --- | --- | --- |
-| Day-Zero foundation | RAW UUIDs, revision root/content, lifecycle, version, error and permission conventions | Legacy UUID text compatibility |
-| Central definitions | All B01–B18 definition aggregates | Local Context or generic assignments |
-| Central Scope | B19–B24 typed members | Coverage before Scope |
-| Central Coverage and Policy Scope | B25–B30 | Direct Control–Regulation or generic relation APIs |
-| Local Context | B31 | Organization-process assignment compatibility |
-| Local Scope and Coverage | B32–B42 | Cross-context coverage or automatic central mutation |
-| Document and revision integration | B43–B47 and T01 | Direct final upload or `tempSessionId` |
-| Read models | Effective, Diagnostic, Roll-up, Policy Applicability queries | Materialized derived tables |
-| Cleanup | Legacy code owned by prior slices | A final catch-all deletion phase |
+| Effective | Central definitions, Central Scope/Coverage, Local Context/Scope/Coverage, stored status, validity, one evaluation date | One primary effective status and source; read-only. |
+| Diagnostic | Effective dependencies plus all blocker branches and validation/impact facts | Multiple simultaneous blocker rows; read-only and permission-bound. |
+| Roll-up | Organization hierarchy, Process hierarchy, Subprocess source records, Effective results | Child-to-parent visibility and counts while preserving source IDs; read-only. |
+| Policy Applicability | Policy Version, Central Policy Scope, Local Policy Scope, Organization hierarchy, Local Context, one evaluation date | Highest-priority applicable decision or `NOT_APPLICABLE`; read-only. |
 
-## 17. Failure and rollback dependencies
+No source-table command depends on a computed read result being materialized.
 
-Optimistic-lock conflict is detected before mutation and creates no new revision.
+No read model emits a Business Revision merely because a calculation changes.
 
-Business-key duplicate is detected by database uniqueness and mapped to a stable conflict error.
+## UI implementation ordering
 
-Hierarchy cycle is detected before hierarchy mutation and creates no new revision.
+1. Preserve the Master Data hub, UI5, FCL, List Report, Object Page, tree, search, selection, expanded-state, RTL, and i18n building blocks.
+2. Rewire Organization and Process/Subprocess tree data to the separate approved structural tables.
+3. Replace generic catalog forms with Central Control Objective, Risk Category/Template, Regulation hierarchy, Policy/Version, and Account Group forms.
+4. Add Central Scope, Classification, Central Policy Scope, and Central Coverage screens/dialogs after the central relation APIs exist.
+5. Add Local Organization–Subprocess Context before Local Scope, Local Coverage, and Local Policy Scope workflows.
+6. Replace generic document attachment UI with temporary upload, immutable versions, exact links, hold, and secure download presentation.
+7. Add revision-aware mutation feedback containing entity/revision/version information.
+8. Add read-only Effective, Diagnostic, Roll-up, and Policy Applicability views after query APIs exist.
+9. Remove the Legacy tab, route, API repository, state, permission, and i18n element in the same vertical slice that replaces it.
 
-Central or Local validity violation is detected before scope or coverage mutation and creates no new revision.
+## Vertical-slice ownership
 
-Cross-Subprocess Central Coverage is rejected by composite foreign keys and command validation.
+| Later vertical slice | Owns approved feature | Owns Legacy cleanup |
+| --- | --- | --- |
+| Foundation | Oracle conventions, UUID/RAW mapping, lifecycle, revision framework | V2-incompatible master-data migration assumptions and UUID-VARCHAR mapping. |
+| Organization and process tree | `organization`, `central_process`, `central_subprocess` | Combined process/subprocess persistence and organization-process assignment flow. |
+| Central catalog | Central definitions and Policy Version | Combined risk, regulation, policy, generic objective, and account-group JSON structures. |
+| Central relation | Central Scope, Classification, Policy Scope, Coverage | Generic process/reference/control relationship tables and direct Control–Regulation links. |
+| Local relation | Local Context, Local Scope/Coverage/Policy Scope | Generic organization-reference and organization-process-risk relationships. |
+| Document and revision | Retention, document/version/hold/link, temporary upload, revisions | Generic attachment, direct final upload, session-based upload/commit, legacy document tables. |
+| Read model | Effective, Diagnostic, Roll-up, Policy Applicability | Any mutable or cached substitute for derived outcomes. |
+| UI and integration | Compatible visual workflows and resource authorization | Dead routes, stores, API repos, permissions, i18n keys, DTOs, controllers, and services. |
 
-Cross-context Local Coverage is rejected by composite foreign keys and command validation.
+## Completion rule
 
-Invalid, expired, or consumed temporary upload is rejected before Document Version creation.
+Do not begin a dependent feature by inventing a temporary generic relation.
 
-Failed MinIO finalization invokes the documented compensating state without pretending an Oracle–MinIO distributed transaction exists.
+Do not reorder Local Coverage ahead of Local Scope.
 
-Retry safety is anchored in command identity and stored Business Revision result, never in frontend transaction ordering.
+Do not reorder Document Link ahead of Document Version.
+
+Do not expose read-model data through mutable CRUD.
+
+Do not leave the Legacy implementation to a final catch-all cleanup phase.
+
+Every slice must demonstrate its source dependencies, typed constraints, Backend-owned revision path, and removal of the behavior it supersedes.

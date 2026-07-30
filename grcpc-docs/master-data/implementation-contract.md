@@ -1,50 +1,34 @@
 # Master Data V2 Implementation Contract
 
-## 1. Status and purpose
+## 1. Contract status
 
-This contract is binding on every later Master Data V2 implementation task.
+This is the binding implementation contract for all later Master Data V2 tasks in `cheshmapoosh/digiaudit-grcpc`.
 
-It is a greenfield contract, not an incremental modernization contract.
+It translates the approved Conceptual Model v1.0, Final Logical Model v2.0 Final, and Physical Design Reference v1.0 into delivery rules.
 
-It translates the approved authority order into implementation constraints.
+Authoritative source files: `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`, `GRC_Master_Data_Logical_Model_Final_FA.docx`, and `GRC_Master_Data_Physical_Design_Reference_FA.docx`.
 
-It also records the known points where the current repository is legacy evidence rather than a target pattern.
+The authority order is deliberate.
 
-The contract applies to database migrations, backend code, APIs, UI behavior, documents, and cleanup work.
+1. The Conceptual Model owns business meaning and domain boundaries.
+2. The Final Logical Model owns final entity names, relationships, and dependency rules.
+3. The Physical Design Reference owns Oracle, Flyway, physical constraints, indexes, and MinIO rules.
+4. Customer UI documents can shape compatible user experience only.
+5. Existing source is Legacy implementation evidence only.
 
-It does not authorize changes in this Phase 1 documentation task.
+An older implementation, customer wireframe, or convenient generic abstraction cannot override an approved model rule.
 
-## 2. Authority order
+## 2. Delivery posture
 
-The `GRC Master Data Conceptual Model` is authoritative for business meaning.
+Master Data V2 is a greenfield implementation.
 
-Its concepts include Central Blueprint, Local Context, Effective View, Business Revision, and shared Document concepts.
+The target is a fresh Oracle database.
 
-The `GRC Master Data Final Logical Model` is authoritative for final entities, relationships, Scope, Coverage, Local Context, Policy Scope, Document, and Business Revision.
+Flyway creates the final schema on Day Zero.
 
-The `GRC Master Data Physical Design Reference` is authoritative for Oracle data types, sizes, constraints, indexes, Flyway Day-Zero rules, MinIO rules, and the single temporary-upload table.
+There is no Legacy data migration.
 
-The customer UI DOCX files are authoritative only for customer-facing interaction intent that stays inside the approved model.
-
-Current source code is implementation evidence only.
-
-When current source or a customer document conflicts with the approved models, the approved models win.
-
-The three named model documents were not physically present under `grcpc-docs/master-data/` during this review.
-
-Their titles and the explicit approved rules supplied for this task are therefore recorded as the authority baseline.
-
-No absent-model detail is treated as a confirmed legacy requirement.
-
-## 3. Greenfield database boundary
-
-Master Data V2 starts with a fresh Oracle database.
-
-Flyway Day-Zero creates the complete V2 schema in dependency order.
-
-There is no legacy data migration.
-
-There is no legacy schema upgrade path.
+There is no Legacy schema upgrade path.
 
 There is no compatibility view.
 
@@ -52,354 +36,502 @@ There is no compatibility API.
 
 There is no dual write.
 
-There is no shadow copy of legacy entities.
+There is no table-preserving adapter for old generic assignment or attachment structures.
 
-There is no fallback from V2 reads to legacy tables.
+The implementation does not attempt to make an existing populated Master Data database conform in place.
 
-Every later vertical slice must remove the legacy implementation it replaces.
+Other module migrations remain outside the Master Data V2 rewrite unless an explicitly authorized later task says otherwise.
 
-The new database must be deployable without any old Master Data migration being executed.
+## 3. Fixed scope and count
 
-The Day-Zero migration set must be internally coherent rather than an accumulation of incremental repair scripts.
+The final business-table count is exactly 47.
 
-## 4. Physical platform rules
+The sole technical temporary-upload table is `document_temp_upload`.
 
-The design must be compatible with Oracle Database 19c.
+The total physical table count inside this redesign scope is exactly 48.
 
-Every V2 UUID primary key and UUID foreign key is stored as `RAW(16)`.
+The 47 business tables are the exact list in [table-catalog.md](table-catalog.md).
 
-The backend generates UUID values before persistence.
+No additional Master Data table is authorized merely to simplify implementation.
 
-The API serializes UUIDs in canonical text form only at the boundary.
+No generic Scope table is authorized.
 
-No V2 business UUID is stored as `VARCHAR2(36)`.
+No generic Coverage table is authorized.
 
-Flyway is the owner of the schema.
+No generic assignment table is authorized.
 
-Hibernate must run with `ddl-auto=validate`.
+No generic document-attachment table is authorized.
 
-Hibernate must not create, alter, or drop V2 tables.
+No generic objective table is authorized.
 
-Oracle constraints and indexes are part of the physical contract, not optional Hibernate hints.
+No generic target table is authorized for core Master Data relations.
 
-Business-key uniqueness must include soft-deleted records.
+The only controlled polymorphism is in `document_link` and `masterdata_revision_content`.
 
-That rule prevents a deleted code from being silently reused for another business identity.
+Neither controlled polymorphic exception may be expanded into a generic relation framework.
 
-## 5. Exact table boundary
+## 4. Explicit exclusions
 
-Master Data V2 has exactly 47 business tables.
+No Audit tables are part of Master Data V2.
 
-Master Data V2 has exactly one technical temporary-upload table named `document_temp_upload`.
+No Monitoring tables are part of Master Data V2.
 
-The redesign scope therefore contains exactly 48 physical tables.
+No metric tables are part of Master Data V2.
 
-No additional Master Data table may be introduced for convenience.
+No Workflow tables are part of Master Data V2.
 
-No generic assignment table may be introduced.
+No Job tables are part of Master Data V2.
 
-No generic relationship table may be introduced.
+No Scheduler tables are part of Master Data V2.
 
-No generic scope table with target-type and target-id polymorphism may be introduced.
+No technical lock table is part of Master Data V2.
 
-No generic coverage table with target-type and target-id polymorphism may be introduced.
+No Outbox is part of Master Data V2.
 
-New persistence is allowed only when it is an approved catalog table in [table-catalog.md](table-catalog.md).
+No Event Store is part of Master Data V2.
 
-Read-only Effective, Diagnostic, Roll-up, and Policy Applicability results are queries, not tables.
+No Cache table is part of Master Data V2.
 
-## 6. Explicit exclusions
+No materialized derived result is part of Master Data V2.
 
-There are no Master Data audit tables.
+No KPI is part of Master Data V2.
 
-There are no Master Data monitoring tables.
+No KRI is part of Master Data V2.
 
-There are no Master Data workflow tables.
+No risk assessment result is part of Master Data V2.
 
-There are no Master Data job tables.
+No likelihood, impact, inherent score, or residual score is part of Master Data V2.
 
-There are no Master Data scheduler tables.
+No control-test result, effectiveness result, or operational evidence table is part of Master Data V2.
 
-There is no Master Data outbox.
+No Policy approval workflow is part of Master Data V2.
 
-There is no Master Data cache table.
+`document_hold.hold_type = AUDIT` or `WORKFLOW` is a controlled document-hold reason; it does not create Audit or Workflow table families.
 
-There are no materialized derived-result tables.
+## 5. Oracle, identifiers, and schema ownership
 
-KPI is not Master Data V2 functionality.
+The physical target is Oracle 19c-compatible.
 
-KRI is not Master Data V2 functionality.
+Newer Oracle-only features are not required for version one.
 
-Risk assessment results are not Master Data V2 functionality.
+Every primary identifier is a UUID stored as `RAW(16)`.
 
-Likelihood, impact, and risk score are not Master Data V2 attributes.
+UUIDs are generated by the Backend.
 
-Control test results are not Master Data V2 functionality.
+Oracle sequences and triggers do not generate UUIDs.
 
-Control effectiveness results are not Master Data V2 functionality.
+Business codes use `VARCHAR2(64 BYTE)`.
 
-Policy approval workflow is not Master Data V2 functionality.
+Titles and names use `VARCHAR2(255 CHAR)`.
 
-Performance plans are not Master Data V2 functionality.
+Controlled enum/status values use `VARCHAR2(32 BYTE)`.
 
-## 7. Entity identity and lifecycle
+Short notes use `VARCHAR2(1000 CHAR)`.
 
-Every mutable business entity has an immutable UUID identity.
+Long descriptions, official long content, and snapshots use `CLOB`.
 
-Every mutable business entity has a business key where the logical model defines one.
+JSON stored in Oracle uses `CLOB` with an `IS JSON` constraint unless an approved future decision fixes a native JSON alternative.
 
-Business codes are normalized and compared according to the cataloged unique constraint.
+Business dates use `DATE` and contain no time portion.
 
-Lifecycle state is explicit in normal columns.
+Technical timestamps use `TIMESTAMP(6) WITH TIME ZONE`.
 
-Soft delete is explicit through lifecycle columns such as `deleted_at`, `deleted_by`, and an applicable status.
+Optimistic lock fields use `NUMBER(19,0)`.
 
-Restore is an explicit business command.
+Flyway owns schema creation and evolution for this redesign.
 
-Delete is never implemented by hidden `@SQLDelete` behavior.
+Hibernate uses `ddl-auto=validate`.
 
-Repository methods must not conceal lifecycle transitions behind JPA annotations.
+Hibernate never generates production DDL for this redesign.
 
-Purging is limited to the defined document-version lifecycle and is never a generic entity delete shortcut.
+## 6. Lifecycle, validity, and concurrency
 
-Every mutable entity carries optimistic-lock field `version NUMBER(19)`.
+Normal lifecycle status values are `ACTIVE`, `INACTIVE`, and `DELETED`.
 
-Updates, status changes, deletes, and restores require the current version.
+Deletion is an explicit soft-delete operation.
 
-## 8. Central definitions
+Restore is an explicit operation.
+
+There is no hidden JPA `@SQLDelete` behavior.
+
+Used business data is not physically deleted during normal operation.
+
+A deleted business key remains occupied.
+
+A new create with an inactive matching business key must reactivate the existing record.
+
+A new create with a deleted matching business key must restore the existing record.
+
+The implementation must not insert a duplicate record to evade a deleted business key.
+
+Every mutable entity has optimistic locking.
+
+`version` is required for update, status change, delete, and restore commands.
+
+Soft-delete consistency requires deleted metadata when, and only when, `status = DELETED`.
+
+Business validity uses nullable inclusive `valid_from` and `valid_to` dates.
+
+The valid range must satisfy `valid_from <= valid_to` when both dates exist.
+
+All Effective calculations use one common `evaluation_date`.
+
+An inherited Local record’s validity must be a subset of its Central reference at create/update time.
+
+That multi-table rule is enforced during Backend revision validation, not by a broad generic trigger.
+
+Later Central validity changes do not rewrite Local validity.
+
+Later Central validity changes are diagnosed through impact analysis and read models.
+
+## 7. Central Blueprint rules
 
 Central definitions are independent from Organization.
 
-Organization must not be a required parent or partition key for Central definitions.
+Organization is structural reference data and the anchor for Local Context; it is not a Central-prefixed organization application row.
 
-Process and Subprocess are distinct physical entities.
+`central_process` and `central_subprocess` are separate persistence structures.
 
-The UI may render Process and Subprocess together in one tree.
+Only `central_subprocess` is an eligible Scope or Coverage context.
 
-Risk Category and Risk Template are distinct physical entities.
+The UI may present Process and Subprocess as one combined tree DTO.
 
-Policy Group, Policy, and Policy Version are distinct physical entities.
+The UI presentation does not authorize combined persistence.
 
-Regulation Group, Regulation, and Regulation Requirement are distinct physical entities.
+Process hierarchy and other documented trees reject self-parenting in the database.
 
-Control Objective replaces any incompatible generic Objective usage within Master Data V2.
+Full hierarchy-cycle detection happens in the Backend before a revision is applied.
 
-Central definitions may be referenced by typed Central scope relations.
+`central_risk_category` and `central_risk_template` are separate structures.
 
-Central definition changes do not physically mutate Local data.
+Only `central_risk_template` is a valid risk Scope endpoint.
 
-Central definition deletion must protect valid dependent scope and document links according to the business command.
+`central_policy` and `central_policy_version` are separate structures.
 
-## 9. Central Blueprint rules
+Published policy content is immutable.
 
-The Central Blueprint is the approved central configuration for a Subprocess.
+A policy content change creates a new Policy Version.
 
-Central Scope is typed and begins from a Central Subprocess Scope.
+`central_control` and `central_control_objective` are independent definitions.
 
-Each scope relation names its exact target entity in its own table and API command.
+The Control definition has no generic objective text that duplicates Control Objective.
 
-Central Coverage is typed and connects approved scope members within one Central Subprocess Scope.
+Control and Control Objective connect only through typed context-aware Coverage.
 
-Central Coverage must never span different Subprocesses.
+Control has no direct relation to Regulation or Regulation Group.
 
-The same-subprocess rule is enforced by composite foreign keys or an equally strong relational constraint.
+Requirement–Control Coverage is the only approved compliance relation from Control to regulation content.
 
-Direct Control-to-Regulation coverage is prohibited.
+Account Group classification is a direct typed relation to Control or Control Objective.
 
-Regulatory coverage is expressed through Regulation Requirement and Requirement-Control Coverage.
+Account Group relationships are not stored in JSON arrays.
 
-Central Policy Scope is separate from generic policy assignment.
+## 8. Typed Scope, Classification, and Coverage rules
 
-Central Policy Scope references a Policy Version, never a mutable policy text snapshot.
+Scope means membership or applicability of a Central definition in a Subprocess or Local Context.
 
-Classification is explicit and typed; it is not encoded in a free-text relation type.
+Coverage means an explicit relationship between two typed Scope records.
 
-## 10. Local Context rules
+Core Scope and Coverage APIs and persistence are typed.
 
-Local data exists only inside an Organization plus Subprocess context.
+Generic CRUD for core Scope and Coverage is prohibited.
 
-`local_organization_subprocess_context` is the root of Local configuration.
+The four Central Scope tables are Control, Risk Template, Control Objective, and Regulation Requirement scope.
 
-The context uses a distinct Organization and Subprocess pair.
+The three Central Policy Scope tables point from Policy Version to Subprocess, exact Central Control Scope, or exact Central Requirement Scope.
 
-Local Scope is typed and belongs to exactly one Local Context.
+The two Account Group classifications are direct Control–Account Group and Control Objective–Account Group relationships.
 
-Local Coverage is typed and connects members of exactly one Local Context.
+The four Central Coverage types are Risk–Control, Risk–Control Objective, Control–Control Objective, and Requirement–Control.
 
-Local Coverage must never span Local Contexts.
+Each Central Coverage endpoint is a Scope, never a raw definition.
 
-Local Policy Scope belongs to exactly one Local Context.
+Both endpoints of a Central Coverage must belong to the same Central Subprocess.
 
-Local validity must fit inside the validity of its Central origin when an origin exists.
+That same-subprocess rule is guaranteed using `subprocess_id` and composite foreign keys in the database.
 
-No central update physically inserts, updates, soft-deletes, restores, or reorders Local rows.
+No three-way Coverage exists in this version.
 
-The user explicitly creates local data through Local business commands.
+No Coverage is generated transitively from other Coverage rows.
 
-Effective and Diagnostic queries determine the impact of central change without mutating Local data.
+No coverage stores a weight, percentage, score, or effectiveness result.
 
-## 11. Scope and coverage APIs
+## 9. Local Context and Local relation rules
 
-Core Scope and Coverage endpoints are use-case-oriented.
+Local data exists only under `local_organization_subprocess_scope`.
 
-They are not generic table CRUD endpoints.
+That parent is the approved Local Organization–Subprocess Context.
 
-A command clearly identifies the typed scope or typed coverage it manages.
+It has no `source_type` because it is inherently a Local decision.
 
-A command validates the enclosing Subprocess or Local Context before state changes.
+Each typed Local Scope points to its parent context and its Central definition.
 
-A coverage command validates both ends before it creates the relationship.
+The four Local Scope types are Control, Risk Template, Control Objective, and Regulation Requirement scope.
 
-Coverage commands reject cross-subprocess Central Coverage.
+Local Scope `source_type` is either `INHERITED_FROM_CENTRAL` or `LOCAL_ADDED`.
 
-Coverage commands reject cross-context Local Coverage.
+`INHERITED_FROM_CENTRAL` requires the matching typed Central Scope reference.
 
-Coverage commands reject deleted, inactive, or invalid components as specified by the domain rule.
+`LOCAL_ADDED` requires that typed Central Scope reference to be null.
 
-Each successful mutation returns the changed entity, revision identity, and new optimistic-lock version.
+`source_type` is historical and immutable after creation.
 
-## 12. Business Revision ownership
+Local Scope still always uses a Central definition; version one has no fully local definition catalog.
 
-The backend owns Business Revision creation.
+Actual control owner, frequency, execution method, test method, and Local note belong only to `local_subprocess_control_scope`.
 
-One successful Business Command creates one Business Revision.
+No Central definition is mutated to store Local execution configuration.
 
-The backend owns the database transaction that contains the business change and its revision.
+The four Local Coverage types parallel the four Central Coverage types.
 
-The frontend sends business commands only.
+Each Local Coverage owns exactly one `organization_subprocess_scope_id`.
 
-The frontend never creates Revision Content.
+Each Local Coverage endpoints two Local Scope records in that same context.
 
-The frontend never supplies a revision sequence number.
+Local Coverage intentionally does not store a repeated `subprocess_id`.
 
-The frontend never supplies before or after snapshots.
+Composite foreign keys guarantee same Local Context in the database.
 
-The frontend never controls transaction ordering.
+An inherited Local Coverage requires the matching typed Central Coverage reference.
 
-Revision Content is the only approved controlled-polymorphic business record besides Document Link.
+A Local-added Coverage requires that Central Coverage reference to be null.
 
-Revision Content is constrained to a closed allow-list of Master Data aggregate types.
+The origin of a Local Coverage is independent from the origin of its two endpoint Local Scopes.
 
-Revision domain mismatch is rejected before persistence.
+Central changes never physically create, mutate, delete, convert, or synchronize Local data.
 
-Missing Revision context is rejected before persistence.
+Central changes may affect Effective, Diagnostic, or impact-analysis results only.
 
-An applied Business Revision is immutable.
+## 10. Policy Scope and applicability rules
 
-## 13. Document and MinIO rules
+All Central and Local Policy Scope tables reference `central_policy_version`.
 
-Document creation begins with a temporary upload.
+Central Subprocess Policy Scope is the documented baseline inclusion.
 
-The technical `document_temp_upload` table records that temporary upload.
+Central Control and Requirement Policy Scope use exact Central Scope rows, never raw definitions.
 
-The API exposes a backend-owned `tempUploadId`, not a client-generated session identifier.
+There is no Central Organization Policy Scope.
 
-A Business Command consumes the temporary upload while creating or appending a Document Version.
+There is no Policy-to-Risk Scope.
 
-One temporary upload is consumed at most once.
+Local Organization Policy Scope may use `INCLUDE` or `EXCLUDE` and `DIRECT_ONLY` or `INCLUDE_DESCENDANTS`.
 
-An expired temporary upload cannot be consumed.
+Local Subprocess, Control, and Requirement Policy Scope records are precise Local decisions.
 
-An invalid temporary upload cannot be consumed.
+Subprocess policy can apply to Control and Requirement in that Local Context.
 
-The final Document is a business entity.
+Subprocess policy does not apply to Risk or Control Objective.
 
-Document Version is immutable after creation.
+Policy Scope validity must be compatible with Policy Version validity when it is saved.
 
-Document Link is the only approved document-target polymorphism.
+Policy Applicability is computed and read-only.
 
-Document Link uses a closed, typed allow-list and resource authorization.
+The precedence is exact Local Control/Requirement, exact Local Subprocess, nearest Local Organization, exact Central Control/Requirement, Central Subprocess, then `NOT_APPLICABLE`.
 
-The API never exposes a permanent MinIO object URL.
+No propagated child policy row is materialized.
 
-Secure download is authorized by the backend and produces a short-lived controlled response or URL.
+No policy workflow table is created.
+
+## 11. Business Revision and transaction ownership
+
+Business Revision is a Master Data domain concept.
+
+Business Revision is not a generic Audit Trail.
+
+The approved tables are `masterdata_revision` and `masterdata_revision_content`.
+
+The Backend owns Business Revision creation.
+
+The Backend owns the transaction.
+
+The Backend validates all revision contents before applying mutation.
+
+The Backend runs impact analysis where required before apply.
+
+The Backend applies all command mutations in one atomic transaction.
+
+One failing content causes rollback of the complete revision.
+
+Each Business Command receives one Backend-owned Revision and transaction.
+
+Compound Business Commands are required where a UI use case mutates multiple related entities.
+
+The Frontend sends Business Commands only.
+
+The Frontend never creates Revision Content.
+
+The Frontend never supplies a sequence number.
+
+The Frontend never supplies before or after snapshots.
+
+The Frontend never controls transaction order.
+
+The response includes at least `entityId`, `revisionId`, and `version`.
+
+Revision domain is `CENTRAL` or `LOCAL`.
+
+A Central revision changes only Central structures, definitions, Scope, Coverage, Classification, and Central Policy Scope.
+
+A Local revision belongs to exactly one Organization and changes only that Organization’s Local data.
+
+Central and Local changes never mix in one Revision.
+
+A Central impact may cause a separate Local remediation revision linked by `caused_by_revision_id`.
+
+That Local remediation revision is never generated automatically.
+
+Applied revisions and their snapshots are immutable.
+
+Correction is by compensating revision, not by overwriting an applied revision.
+
+## 12. Document and MinIO contract
+
+`document` is stable identity.
+
+`document_version` is immutable content and file metadata.
+
+`document_retention_policy` controls retention semantics.
+
+`document_hold` blocks eligible physical purge.
+
+`document_link` attaches an exact Document Version to a controlled target.
+
+The file path is: Temporary Upload → final Business Command → immutable Document Version → Document Link.
+
+The temporary table is exactly `document_temp_upload`.
+
+`tempUploadId` is the only upload identifier sent into a final document-aware command.
+
+A temporary upload is one-time consumable.
+
+It must be `AVAILABLE`.
+
+It must be unexpired.
+
+It must be authorized for the current user or permitted context.
+
+The Backend verifies MinIO object existence and checksum.
+
+The Frontend never supplies a final MinIO object key.
+
+The Frontend never performs a direct final Document upload.
+
+The Backend creates the immutable Document Version then marks the temporary upload `CONSUMED` in the authorized flow.
+
+Replacing a file creates a new Document Version.
+
+`storage_object_key` is a stable MinIO object identifier, not a permanent URL.
+
+The API never exposes a direct permanent MinIO URL.
+
+Secure download is delivered through a Backend-controlled stream or a short-lived authorized URL.
 
 There is no distributed transaction between Oracle and MinIO.
 
-The implementation must use an explicit compensating or recoverable state transition when storage and database steps do not both complete.
+The Backend uses validation, ordered operations, and best-effort cleanup to manage the boundary.
 
-Direct final upload into an arbitrary business target is prohibited.
+No Outbox is introduced for this version.
 
-## 14. Read-model rules
+Temporary objects are cleaned through MinIO lifecycle behavior.
 
-Effective is a read-only computed view for an `evaluationDate`.
+No Job or Scheduler table is introduced for temporary cleanup.
 
-Diagnostic is a read-only explanation of Effective resolution for the same `evaluationDate`.
+Retention and Hold metadata remain even though a final automated permanent-object purge can be delivered as a later operational behavior.
 
-Roll-up is a read-only aggregation query.
+Purge never removes Document Version metadata.
 
-Policy Applicability is a read-only query.
+## 13. Read-model contract
 
-These results are never command targets.
+Effective results are read-only.
 
-They have no materialized table.
+Diagnostic results are read-only.
 
-They do not create revisions when queried.
+Roll-up results are read-only.
 
-They do not mutate Central or Local state when queried.
+Policy Applicability results are read-only.
 
-Their source data is limited to approved Central, Local, Policy Scope, validity, lifecycle, and document facts.
+Derived outcomes are not physically stored as a table.
 
-## 15. Architecture and code quality
+Derived outcomes are not materialized for version one.
 
-Master Data business logic lives inside the Master Data domain and application layers.
+Derived outcomes are not cached for version one.
 
-Controllers remain thin adapters.
+Effective combines Central Blueprint, Local Context, stored status, validity, and dependency rules at one common `evaluation_date`.
 
-Repositories persist aggregates and typed relations without embedding business workflow.
+Diagnostic returns all simultaneous blockers and dependency-chain details.
 
-DTOs remain API-boundary objects and must not become persistence models.
+Roll-up preserves source Organization, source Subprocess, and source relation identifiers.
 
-There must be no unnecessary duplicate domain model and JPA model.
+Roll-up never changes child ownership.
 
-There must be no generic abstraction without multiple proven use cases.
+Policy Applicability follows the approved precedence order and never creates propagated Local rows.
 
-There must be no business logic hidden in UI stores or API repositories.
+Support staff use authorized read-only Diagnostic APIs, not direct source-table access.
 
-There must be no Master Data business logic in unrelated organization, document, audit, monitoring, or workflow modules.
+## 14. Architecture and code-quality rules
 
-Clean Code is required: clear naming, single-purpose commands, explicit validation, and focused tests.
+Master Data business logic lives inside the Master Data domain boundary.
 
-Clean Architecture is required: domain rules do not depend on HTTP, React, MinIO SDK details, or JPA controller DTOs.
+Document behavior needed by Master Data follows the documented shared Document domain contract.
 
-The delivery must be production-grade, including authorization, concurrency, error mapping, database constraints, and validation.
+No Master Data business logic is placed in unrelated UI, controller, generic utility, security, or integration layers.
 
-## 16. Security boundary
+Use Clean Architecture boundaries: controller/API adapter, application command/query service, domain policy, and persistence adapter have distinct responsibilities.
 
-Business permission checks occur at use-case boundaries.
+Use Clean Code: explicit names, small use-case services, typed commands, focused validation, and domain-specific errors.
 
-Resource authorization is checked for Central and Local reads and mutations when the security model requires it.
+Do not duplicate domain and JPA models without a demonstrated boundary reason.
 
-Document upload, consume, link, version, delete, restore, and download operations are separately authorized.
+Do not introduce a generic abstraction without at least two proven compatible use cases.
 
-Authorization must not rely solely on a target type supplied by the client.
+Do not hide a core business command behind automatic persistence behavior.
 
-The backend resolves authoritative resource identity before authorization.
+Do not use AOP or interceptors as a Revision Engine.
 
-No response exposes storage credentials, permanent object keys where unnecessary, or permanent MinIO URLs.
+Interceptors/AOP may guard mutation, establish metadata/context, or enforce audit boundaries only.
 
-## 17. Existing repository instruction conflicts
+Core Scope/Coverage mutation remains explicit, typed application logic.
 
-`grcpc-app/AGENTS.md` requires versioned Flyway migrations and Oracle compatibility; that is compatible with Day-Zero, provided later work creates a new coherent V2 migration set rather than edits an applied migration.
+## 15. Repository-instruction reconciliation
 
-The current `application.yml` preference for UUID JDBC type `VARCHAR` conflicts with the V2 `RAW(16)` requirement and must be changed only in a later implementation slice.
+The repository-wide instruction normally says to add a new Flyway migration rather than editing a migration that may already be applied.
 
-The document-module instruction to preserve `DocumentAttachmentEntity` and its generic attachment lifecycle conflicts with V2 Document, Document Version, Document Link, and `tempUploadId`; the V2 contract overrides that legacy shape.
+The approved Logical and Physical Models explicitly require a fresh Day-Zero Master Data and Document schema with no Legacy upgrade chain.
 
-The organization and process instructions preserve current assignment endpoints and tree models; V2 preserves the useful UI tree behavior but replaces generic and legacy assignment APIs with typed Scope and Coverage commands.
+For a later authorized implementation task, that greenfield model requirement governs the Master Data V2 migration baseline only.
 
-The current regulation instruction preserves one tree table and old node types; V2 physically separates Regulation Group, Regulation, and Regulation Requirement.
+It does not authorize modification of unrelated module migrations.
 
-The current policy instruction describes legacy lifecycle states including approval; V2 has immutable Policy Version but no policy approval workflow feature.
+It does not authorize a migration that drops, transforms, copies, or adapts Legacy data.
 
-The backend instruction to audit sensitive operations remains compatible only through the existing cross-domain audit facility; it does not authorize adding Master Data audit tables.
+The repository-wide requirement to keep `ddl-auto=validate` is compatible with the approved Physical Design and remains binding.
 
-The UI instructions to preserve FCL, tree expansion, selection, RTL, UI5, and i18n are compatible and remain binding where they do not recreate the legacy data flow.
+Current source configuration records UUID JDBC preference as `VARCHAR`; that is incompatible with the approved `RAW(16)` Oracle mapping and must be corrected only in a future authorized implementation slice.
 
-## 18. Implementation handoff rule
+Current document code has a direct-final-upload route, generic attachment target behavior, session-oriented temporary upload handling, and scheduled cleanup behavior.
 
-Every later prompt must cite this contract and the matching sections of the table catalog, API conventions, dependency map, legacy deletion map, UI compatibility map, and acceptance checklist.
+Those behaviors are incompatible with the approved temporary-upload-to-version flow and the exclusion of Scheduler infrastructure; they are replaced during the Document vertical slice, not preserved as compatibility behavior.
 
-No later task may broaden the table boundary merely because a legacy screen has an unsupported field or tab.
+Current UI tree, FCL, List Report, Object Page, RTL, i18n, search, selection, and expanded-state patterns are compatible presentation techniques and should be retained where the new typed data flow permits.
 
-Any requirement outside this contract must be classified as out of scope or must first receive an approved logical-model revision.
+This corrective planning task changes none of those application files.
+
+## 16. Contract exit condition for each later slice
+
+A later implementation slice is complete only when it uses exact approved table names.
+
+It must use typed foreign keys for Scope/Coverage rather than generic targets.
+
+It must send and validate optimistic-lock version values.
+
+It must create Backend-owned Revision data atomically for its business mutation.
+
+It must remove the Legacy behavior it replaces within that same slice.
+
+It must not leave a compatibility endpoint, dual write, or unused Legacy entity behind.
+
+It must preserve the 47 business table and one technical temporary-upload table limit.
+
+It must leave KPI and KRI outside Master Data V2.
+
+It must pass the relevant gates in [acceptance-checklist.md](acceptance-checklist.md).

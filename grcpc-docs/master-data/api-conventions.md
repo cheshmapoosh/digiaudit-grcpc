@@ -1,493 +1,520 @@
 # Master Data V2 API Conventions
 
-## 1. Purpose and scope
+## 1. Purpose and authority
 
-These conventions are the shared API contract for all later Master Data V2 backend and frontend tasks.
+These conventions turn the approved Master Data V2 model into a stable API discipline for later Backend and UI tasks.
 
-They apply to command DTOs, read DTOs, errors, concurrency, resource authorization, document upload, and read models.
+They follow the Final Logical Model §14–§16 and the Physical Design Reference §12–§18.
 
-They prohibit a compatibility API for legacy Master Data endpoints.
+Authoritative source files: `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`, `GRC_Master_Data_Logical_Model_Final_FA.docx`, and `GRC_Master_Data_Physical_Design_Reference_FA.docx`.
 
-They do not require a generic CRUD framework.
+Exact route prefixes may be finalized with the UI use cases, but endpoint meaning, typed commands, ownership, DTO separation, errors, and security boundaries in this document are binding.
 
-They define business commands owned by the Master Data application layer.
+An endpoint must not expose a Legacy table merely because that table still exists before its vertical slice is removed.
 
-## 2. Base-path and naming convention
+## 2. API design rules
 
-V2 endpoints use a new explicit Master Data V2 API namespace such as `/api/master-data/v2`.
+Use use-case-oriented endpoints.
 
-The exact gateway prefix may follow repository routing conventions, but it must not alias a legacy endpoint path.
+Use typed Business Commands.
 
-Resource nouns use plural kebab-case names.
+Use separate Create Commands.
 
-Business actions use explicit command suffixes such as `:create`, `:update`, `:delete`, `:restore`, `:include`, `:exclude`, `:cover`, and `:uncover`.
+Use separate Update Commands.
 
-No endpoint is named after a database table implementation detail.
+Use separate Read DTOs.
 
-No core Scope or Coverage endpoint accepts an arbitrary `targetType`, `referenceType`, `relationType`, or `targetId` field.
+Use separate Effective Read DTOs.
 
-No core Scope or Coverage endpoint represents generic table CRUD.
+Use separate Diagnostic DTOs.
 
-## 3. Command and read DTO separation
+Do not expose a generic table CRUD endpoint for core Scope or Coverage relations.
 
-Every creation use case has its own Create Command DTO.
+Do not accept a client-provided Unit of Work.
 
-Every update use case has its own Update Command DTO.
+Do not accept client-created Revision Content.
 
-Create Command does not accept a caller-supplied entity UUID.
+Do not accept a client-created sequence number.
 
-Update Command does not accept creation-only system fields.
+Do not accept client-provided before/after snapshots.
 
-Delete and restore each have their own command DTO.
+Do not accept a client-controlled transaction order.
 
-Status change has its own command DTO where status is an approved lifecycle change.
+Do not provide a compatibility API for Legacy generic assignments, generic attachments, direct Control–Regulation, or generic Objective.
 
-Each API has a dedicated Read DTO for normal entity reads.
+## 3. Wire formats
 
-Effective reads use a separate Effective Read DTO.
+| Concern | Convention |
+| --- | --- |
+| UUID | Canonical UUID text such as `550e8400-e29b-41d4-a716-446655440000`; Backend maps it to Oracle `RAW(16)`. |
+| Business date | `YYYY-MM-DD`, mapped to `LocalDate` and Oracle `DATE`. |
+| Technical timestamp | ISO-8601 offset timestamp, mapped to `Instant` and Oracle `TIMESTAMP(6) WITH TIME ZONE`. |
+| Enum | Explicit uppercase controlled string; no ordinal transport. |
+| Version | Integer JSON number mapped to optimistic-lock `NUMBER(19,0)`. |
+| JSON snapshot | Server-owned only; never supplied by the Frontend. |
+| Text | UTF-8 JSON; Persian/RTL values are preserved by normal i18n/UI presentation. |
 
-Diagnostic reads use a separate Diagnostic DTO.
+API fields use lower camel case.
 
-Read DTOs never expose JPA entities, MinIO credentials, database locators, raw snapshots, or internal authorization state.
+Database tables and columns use the approved lower snake_case vocabulary.
 
-Request DTOs never expose a persistence implementation abstraction.
+The API never leaks raw MinIO storage keys as permanent download URLs.
 
-## 4. Identifier, date, and timestamp formats
+## 4. Standard command and response shapes
 
-All UUIDs are canonical lowercase text UUIDs at the JSON boundary.
+### Create command
 
-The backend converts UUID text to Oracle `RAW(16)` internally.
+A create command contains only the business input for one typed use case.
 
-The frontend never sends Oracle RAW bytes or a database-specific UUID representation.
+It does not contain `revisionId`.
 
-Business dates use ISO `YYYY-MM-DD` strings.
+It does not contain `revisionContent`.
 
-Technical timestamps use ISO-8601 strings with an offset or `Z`.
+It does not contain `sequenceNumber`.
 
-Date-time comparisons use the backend clock and specified time zone rules; client clock is never authoritative.
+It does not contain server snapshot fields.
 
-Absent optional dates are JSON `null`, not an empty string or sentinel date.
+It does not contain a final MinIO object key.
 
-Date range validation occurs before any revision is created.
+It does not contain an arbitrary generic target type for Scope/Coverage.
 
-## 5. Standard mutation result
-
-Every successful mutating Business Command returns HTTP 200 or 201 with the same minimum envelope.
+Example shape:
 
 ```json
 {
-  "entityId": "018f62b9-2a7d-77c1-8f5f-7a4f44a90370",
-  "revisionId": "018f62b9-2a7d-77c2-a2c6-e7c300be2e84",
-  "version": 4
+  "code": "PROC-PAY",
+  "title": "Payments",
+  "parentProcessId": "550e8400-e29b-41d4-a716-446655440000",
+  "validFrom": "2026-08-01"
 }
 ```
 
-`entityId` identifies the primary aggregate or relation changed by the command.
+### Update command
 
-`revisionId` identifies the backend-owned Business Revision created by that command.
+An update command contains the expected current `version` and only fields permitted to change for that type.
 
-`version` is the new optimistic-lock value of the changed mutable entity.
-
-A compound command returns this envelope for its command root and may add a typed `affectedEntities` array with each id and version.
-
-The response never accepts or echoes frontend-generated revision sequence, before snapshot, after snapshot, or transaction order.
-
-## 6. Backend-owned Business Revision
-
-The backend creates exactly one Business Revision for each successful Business Command.
-
-The backend assigns revision sequence numbers.
-
-The backend builds Revision Content from authoritative persisted state.
-
-The backend owns the database transaction containing command mutation and revision writes.
-
-The frontend never creates Revision Content.
-
-The frontend never supplies Revision Content ids, aggregate types, snapshots, hashes, or sequences.
-
-The frontend never asks the backend to execute a partial transaction ordering plan.
-
-Business Revision read access, if exposed, is read-only and permission-bound.
-
-Revision Content is not a generic external audit-log write API.
-
-## 7. Optimistic locking
-
-Update, status change, delete, restore, include, exclude, cover, uncover, and policy-scope lifecycle commands require `version`.
-
-The required version is carried in the typed JSON command body.
-
-The backend compares it against the aggregate's current `version` in the same transaction.
-
-An absent version is a validation error, not an implicit overwrite request.
-
-A mismatched version returns HTTP 409 `VERSION_CONFLICT`.
-
-The version-conflict response includes a safe current version when resource authorization permits it.
-
-The frontend must refresh or explicitly rebase user input; it may not silently retry an update with a newer version.
-
-Create commands do not require a version because the backend creates identity and version zero/one state.
-
-Immutable Document Version and immutable Revision records are not updated with a general optimistic-lock endpoint.
-
-## 8. Safe idempotency
-
-The client may send `Idempotency-Key` for create, include, cover, document-consume, and other retry-sensitive commands.
-
-The key is scoped to authenticated actor, command type, and resource boundary.
-
-The backend stores a request fingerprint with the Business Revision result when idempotency applies.
-
-The same key and equivalent request return the originally created mutation result.
-
-The same key and different request return HTTP 409 `IDEMPOTENCY_KEY_REUSED`.
-
-Idempotency never turns an optimistic-lock failure into success.
-
-Idempotency never lets a temporary upload be consumed by two different Business Commands.
-
-GET and HEAD reads are naturally idempotent and require no idempotency key.
-
-## 9. Definition command shape
-
-Definition APIs use explicit aggregate commands.
-
-Examples include `POST /organizations:create`, `POST /processes:create`, and `POST /control-objectives:create`, with final route spelling documented in the implementation slice.
-
-An implementation may use `POST /organizations` for a dedicated Create Organization Command only when its DTO and semantics remain command-specific.
-
-An update is explicitly `POST /organizations/{id}:update` or an equivalent documented update command, not a loose table patch.
-
-Delete is explicitly `POST /organizations/{id}:delete` and includes version.
-
-Restore is explicitly `POST /organizations/{id}:restore` and includes version.
-
-Hierarchy move commands name the business action and validate cycles.
-
-Separate Process and Subprocess APIs remain separate even when a combined tree read endpoint is provided.
-
-Separate Risk Category/Risk Template, Regulation Group/Regulation/Requirement, and Policy Group/Policy/Policy Version APIs remain separate.
-
-No Generic Objective V2 endpoint is defined.
-
-## 10. Typed Central Scope APIs
-
-Central Scope starts at a Central Subprocess Scope.
-
-Create a Central Blueprint through a command such as `POST /central-subprocess-scopes:create`.
-
-Include a Control through a typed command such as `POST /central-subprocess-scopes/{scopeId}/controls:include`.
-
-Include a Control Objective through `.../control-objectives:include`.
-
-Include a Risk Template through `.../risk-templates:include`.
-
-Include a Regulation Requirement through `.../regulation-requirements:include`.
-
-Include an Account Group through `.../account-groups:include`.
-
-Each command accepts the exact typed id, validity, note, and expected version of its owning aggregate where required.
-
-No command accepts a generic target type or a legacy `scope|owner|participant` assignment type.
-
-Read endpoints may return a combined Central Blueprint DTO for UI navigation, but mutation endpoints remain typed.
-
-## 11. Typed Central Classification and Coverage APIs
-
-Classify a scoped Control under a scoped Control Objective through a command such as `POST /central-subprocess-scopes/{scopeId}/control-classifications:create`.
-
-Cover a Control Objective with a Risk Template through `.../control-objective-risk-coverages:create`.
-
-Cover a Control with a Risk Template through `.../control-risk-coverages:create`.
-
-Cover a Regulation Requirement with a Control through `.../requirement-control-coverages:create`.
-
-Cover a Control with an Account Group through `.../control-account-group-coverages:create`.
-
-Each coverage command requires the enclosing `centralSubprocessScopeId` and exact typed member ids.
-
-The backend verifies both member rows are in that same scope before mutation.
-
-The backend verifies coverage validity lies within its member validity intersection.
-
-Direct Control-to-Regulation command names and payloads do not exist.
-
-There is no generic `/coverages` endpoint that receives `sourceType` and `targetType` from the frontend.
-
-## 12. Central and Local Policy Scope APIs
-
-Central Policy Scope command binds one immutable `policyVersionId` to one `centralSubprocessScopeId`.
-
-It accepts validity, applicability note, and expected version of the scope command root.
-
-It does not accept policy workflow approval flags, people-target arrays, survey results, role result records, or generic target types.
-
-Local Policy Scope command binds one Central Policy Scope origin to one Local Context.
-
-It verifies the Central Policy Scope belongs to the Local Context's Central Blueprint.
-
-It verifies local validity is contained within Central Policy Scope validity.
-
-Policy Version content is never updated through Policy Scope APIs.
-
-Policy Applicability is read-only and is not a Policy Scope mutation endpoint.
-
-## 13. Local Context APIs
-
-Create Local Context through a command such as `POST /local-organization-subprocess-contexts:create`.
-
-The command accepts `organizationId`, `subprocessId`, matching `centralSubprocessScopeId`, business validity, descriptive fields, and idempotency key when appropriate.
-
-The backend checks that Central Scope belongs to that exact Subprocess.
-
-The backend rejects a generic Process id where a Subprocess id is required.
-
-The read DTO exposes Central Blueprint summary for navigation but does not treat it as mutable copied data.
-
-Delete and restore context commands require version and protect active local dependents according to business rules.
-
-There is no `/organization-process-assignments` V2 compatibility endpoint.
-
-## 14. Typed Local Scope APIs
-
-Local Scope commands are namespaced under a Local Context.
-
-Examples are `POST /local-contexts/{contextId}/controls:include`, `.../control-objectives:include`, `.../risk-templates:include`, `.../regulation-requirements:include`, and `.../account-groups:include`.
-
-Each command accepts the corresponding typed Central Scope origin id.
-
-The backend verifies origin scope matches the context Central Blueprint.
-
-The backend verifies Local validity is within Central origin validity.
-
-The command returns the Local Scope entity id, Business Revision id, and new version.
-
-No Local Scope endpoint accepts a direct Control, Risk, Regulation, Policy, or Account Group id without a typed Central Scope origin.
-
-No Local Scope endpoint accepts a generic reference type.
-
-## 15. Typed Local Classification and Coverage APIs
-
-Local Classification command uses typed Local Control Scope and Local Control Objective Scope ids.
-
-Local Control Objective–Risk Coverage command uses typed Local Objective Scope and Local Risk Scope ids.
-
-Local Control–Risk Coverage command uses typed Local Control Scope and Local Risk Scope ids.
-
-Local Requirement–Control Coverage command uses typed Local Requirement Scope and Local Control Scope ids.
-
-Local Control–Account Group Coverage command uses typed Local Control Scope and Local Account Group Scope ids.
-
-Every command includes `localContextId` in the path or body as a verified ownership boundary.
-
-Every command verifies both members belong to the same Local Context.
-
-Every command verifies member validity intersection and Central-origin containment.
-
-Cross-context coverage returns HTTP 422 `CROSS_LOCAL_CONTEXT_COVERAGE`.
-
-There is no generic `organization-reference-assignment` or generic `organization-risk-assignment` V2 endpoint.
-
-## 16. Document temporary-upload API
-
-Document upload begins with an authorized temporary-upload initiation command.
-
-The temporary-upload response returns backend-issued `tempUploadId`, allowed media constraints, maximum size, expiry timestamp, and an upload mechanism limited to the temporary object.
-
-A short-lived temporary upload URL may be returned when MinIO direct upload is used.
-
-That temporary URL is never a permanent final-document URL.
-
-The response never includes MinIO credentials.
-
-The response never includes final bucket/object metadata.
-
-The frontend does not create `tempSessionId`.
-
-The frontend does not call a generic `/documents/commit` API.
-
-The frontend supplies `tempUploadId` only to a documented parent Business Command.
-
-The parent command validates ownership, expiry, state, checksum, content metadata, and intended document/link target.
-
-## 17. Document creation, versioning, linking, and download
-
-Document identity is created by a use-case command, usually as part of an owning aggregate command.
-
-Adding a file creates an immutable Document Version.
-
-Linking a file creates a controlled Document Link to an allowed aggregate type.
-
-Changing file content always creates a new Document Version; it never mutates the old version.
-
-Changing a document link requires version-aware command semantics.
-
-Deleting a document link is explicit and may be restored where its lifecycle allows it.
-
-Purging a Document Version is a dedicated authorized retention command, not a generic delete.
-
-Downloading uses an endpoint such as `GET /documents/versions/{documentVersionId}/download`.
-
-The backend authorizes the caller against the linked resource before streaming bytes or issuing a short-lived controlled download.
-
-The download response never exposes permanent MinIO URLs, bucket name, credentials, or storage locator.
-
-If a version is purged, download returns HTTP 410 `DOCUMENT_VERSION_PURGED`.
-
-## 18. Effective, Diagnostic, Roll-up, and Policy Applicability reads
-
-Effective query endpoints are read-only.
-
-Diagnostic query endpoints are read-only.
-
-Roll-up query endpoints are read-only.
-
-Policy Applicability query endpoints are read-only.
-
-Every one of those query families accepts `evaluationDate` in `YYYY-MM-DD` format.
-
-Effective reads return resolved facts and provenance summaries without allowing mutation.
-
-Diagnostic reads return explanations of inclusion, exclusion, origin, validity, and Local/ Central precedence without creating revision content.
-
-Roll-up reads return aggregation over the requested approved hierarchy boundary without storing materialized results.
-
-Policy Applicability reads return applicable immutable Policy Version references and explanation without invoking approval workflow.
-
-These endpoints never refresh cache tables, emit side-effect mutations, or auto-create Local Scope.
-
-## 19. Pagination, filtering, and sorting
-
-Collection reads accept `page` and `size` parameters.
-
-`page` is zero-based unless a later API-wide convention explicitly supersedes it.
-
-`size` has a documented maximum to prevent accidental unbounded reads.
-
-Sorting accepts a finite allow-list of logical fields and direction, for example `sort=code,asc`.
-
-The API does not accept arbitrary SQL/JPQL property paths as sort values.
-
-Filters use typed query parameters such as `status`, `includeDeleted`, `parentId`, `subprocessId`, `contextId`, and `evaluationDate` where appropriate.
-
-Read DTOs return page metadata: `items`, `page`, `size`, `totalItems`, and `totalPages`.
-
-Tree projection endpoints may be unpaged only when bounded by a permission-checked hierarchy root and implementation-defined limit.
-
-## 20. Standard error response
-
-Every error response uses a stable envelope.
+Example shape:
 
 ```json
 {
-  "code": "VERSION_CONFLICT",
-  "messageKey": "masterData.error.versionConflict",
-  "message": "The record changed before your update was applied.",
-  "correlationId": "018f62bd-1297-7934-906c-f74aedca55a2",
-  "fieldErrors": [],
-  "details": {
-    "entityId": "018f62b9-2a7d-77c1-8f5f-7a4f44a90370",
-    "currentVersion": 4
-  }
+  "version": 7,
+  "title": "Payments and Settlements",
+  "description": "Updated official definition",
+  "validTo": null
 }
 ```
 
-`code` is a stable machine-readable code.
+### Standard mutation response
 
-`messageKey` is an i18n key suitable for frontend translation.
+Every successful mutation response contains at least the following fields.
 
-`message` is safe human-readable fallback text and contains no secret, bucket, object locator, or internal stack trace.
+```json
+{
+  "entityId": "550e8400-e29b-41d4-a716-446655440000",
+  "revisionId": "c3c1d6a1-7e4e-4a58-a60e-2791ea803b8d",
+  "version": 8
+}
+```
 
-`correlationId` links authorized diagnostics and server logs.
+The response may additionally contain a typed summary, status, and stable read representation.
 
-`fieldErrors` is used for command validation failures.
+The response must not expose internal Revision Content ordering or snapshots unless an authorized revision-history read use case needs a safe read projection.
 
-`details` contains only safe, authorized structured facts.
+### Status, delete, and restore commands
 
-## 21. Validation response
+Status changes, explicit delete, and explicit restore are separate typed commands.
 
-Validation failures return HTTP 422 unless a syntax/media/shape error belongs to HTTP 400.
+Each requires `version`.
 
-Each field error includes `field`, `code`, `messageKey`, and optional safe `rejectedValue`.
+Delete sets the business record to `DELETED` through the command service.
 
-Cross-field errors use a named command-level field such as `_command`.
+Restore uses the same entity identity and a new Business Revision.
 
-Database uniqueness exceptions are translated to a stable business error rather than returned as raw Oracle messages.
+No endpoint hides deletion behind a generic HTTP delete that bypasses revision creation.
 
-Validation is performed in the application layer and reinforced by database constraints.
+## 5. Revision and transaction boundary
 
-The frontend may prevalidate for usability but the backend is authoritative.
+The Backend owns `masterdata_revision`.
 
-## 22. Required domain error catalog
+The Backend owns `masterdata_revision_content`.
 
-| HTTP | Code | Required behavior |
+The Backend determines whether a command is `CENTRAL` or `LOCAL`.
+
+The Backend requires a Local command to be tied to exactly one Organization.
+
+The Backend rejects Central and Local changes in one Business Command/Revision.
+
+The Backend validates every intended content before applying any mutation.
+
+The Backend performs impact analysis before apply when Central validity/dependency changes require it.
+
+The Backend applies all related mutations in one transaction.
+
+Any content failure rolls back the full transaction.
+
+The Browser sends one compound Business Command for a multi-entity business action.
+
+The Browser never chains separate mutation APIs to construct a Unit of Work.
+
+Examples of compound command candidates are:
+
+- create Local Control Scope and its initial typed Coverages;
+- create a Central Scope and its permitted typed Coverage set;
+- add a Document Link as part of the business command that creates its target;
+- change a Central range after impact analysis and produce a discrete Local remediation revision only when a user explicitly commands it.
+
+Applied revisions and snapshots are immutable.
+
+Corrections are issued as compensating Business Commands, producing new revisions.
+
+## 6. Endpoint families for structural and Central definition use cases
+
+The following route shapes are conventions, not table-oriented generic CRUD contracts.
+
+| Feature | Create/update command route examples | Read route examples | Notes |
+| --- | --- | --- | --- |
+| Organization | `POST /api/master-data/organizations`; `PATCH /api/master-data/organizations/{id}`; `POST /{id}/restore` | `GET /api/master-data/organizations`; `GET /{id}`; tree query | Organization hierarchy is structural and revision-controlled. |
+| Process | `POST /api/master-data/central/processes`; `PATCH /central/processes/{id}`; move command | list/detail/tree query | Process hierarchy command validates cycles. |
+| Subprocess | `POST /api/master-data/central/subprocesses`; `PATCH /central/subprocesses/{id}` | list/detail/combined process tree query | It is a distinct entity, not a process node type. |
+| Control | `POST /api/master-data/central/controls`; typed update/status/restore commands | list/detail/value-help query | No direct regulation relation. |
+| Control Objective | `POST /api/master-data/central/control-objectives`; typed update/status/restore commands | list/detail/value-help query | Never expose generic objective endpoints. |
+| Risk Category/Template | typed category/tree and template commands | hierarchy/template query | Scope accepts Risk Template only. |
+| Account Group | typed hierarchy commands | tree/value-help query | Classifications use separate typed commands. |
+| Regulation Group/Regulation/Requirement | typed hierarchy commands | hierarchy/requirement query | Requirement is the scope/coverage endpoint. |
+| Policy Group/Policy/Policy Version | typed group/policy/version commands | hierarchy/version query | Published content is immutable; publication workflow is external. |
+
+Update, inactivate, delete, and restore paths can use command-style suffixes such as `/inactivate`, `/delete`, and `/restore` where that better expresses the UI use case.
+
+No path may expose the internal legacy combined-table name as a V2 resource.
+
+## 7. Typed Central Scope, Classification, Policy Scope, and Coverage APIs
+
+Central scope commands are explicitly type-specific.
+
+Examples:
+
+```text
+POST /api/master-data/central/subprocesses/{subprocessId}/control-scopes
+POST /api/master-data/central/subprocesses/{subprocessId}/risk-scopes
+POST /api/master-data/central/subprocesses/{subprocessId}/control-objective-scopes
+POST /api/master-data/central/subprocesses/{subprocessId}/requirement-scopes
+```
+
+Each command receives the matching definition ID, validity input, and required version data for updates.
+
+The Control Scope command alone may receive the documented recommendation-code fields.
+
+No scope command accepts an arbitrary `definitionType` + `definitionId` pair.
+
+Central classification commands are type-specific.
+
+```text
+POST /api/master-data/central/controls/{controlId}/account-groups/{accountGroupId}
+POST /api/master-data/central/control-objectives/{controlObjectiveId}/account-groups/{accountGroupId}
+```
+
+Central Policy Scope commands are type-specific.
+
+```text
+POST /api/master-data/central/policy-versions/{policyVersionId}/subprocess-scopes
+POST /api/master-data/central/policy-versions/{policyVersionId}/control-scope-links
+POST /api/master-data/central/policy-versions/{policyVersionId}/requirement-scope-links
+```
+
+The final two routes accept an exact Central Scope ID, never a raw Control or Requirement ID.
+
+Central Coverage commands are type-specific.
+
+```text
+POST /api/master-data/central/subprocesses/{subprocessId}/risk-control-coverages
+POST /api/master-data/central/subprocesses/{subprocessId}/risk-control-objective-coverages
+POST /api/master-data/central/subprocesses/{subprocessId}/control-control-objective-coverages
+POST /api/master-data/central/subprocesses/{subprocessId}/requirement-control-coverages
+```
+
+Each coverage command names exactly the two typed Scope IDs expected by its endpoint.
+
+The Backend verifies that each referenced scope belongs to `{subprocessId}`.
+
+No generic `/relations` endpoint replaces these commands.
+
+No direct `/controls/{id}/regulations/{id}` endpoint exists.
+
+## 8. Typed Local Context, Scope, Coverage, and Policy Scope APIs
+
+Create Local Context first.
+
+```text
+POST /api/master-data/local/organization-subprocess-scopes
+```
+
+Its create command contains `organizationId`, `subprocessId`, optional `contextNote`, and business validity input.
+
+It never contains `sourceType`.
+
+Typed Local Scope routes are grouped under the context:
+
+```text
+POST /api/master-data/local/organization-subprocess-scopes/{contextId}/control-scopes
+POST /api/master-data/local/organization-subprocess-scopes/{contextId}/risk-scopes
+POST /api/master-data/local/organization-subprocess-scopes/{contextId}/control-objective-scopes
+POST /api/master-data/local/organization-subprocess-scopes/{contextId}/requirement-scopes
+```
+
+Each Local Scope command contains the exact Central definition ID.
+
+Each contains `sourceType`.
+
+An inherited command contains the matching typed Central Scope ID.
+
+A local-added command omits that Central Scope ID.
+
+The Backend validates matching definition, matching Subprocess, source/reference conditionality, and inherited validity subset.
+
+Typed Local Coverage routes are also grouped under the context:
+
+```text
+POST /api/master-data/local/organization-subprocess-scopes/{contextId}/risk-control-coverages
+POST /api/master-data/local/organization-subprocess-scopes/{contextId}/risk-control-objective-coverages
+POST /api/master-data/local/organization-subprocess-scopes/{contextId}/control-control-objective-coverages
+POST /api/master-data/local/organization-subprocess-scopes/{contextId}/requirement-control-coverages
+```
+
+Each command contains exactly the expected Local Scope IDs.
+
+Each inherited command contains its matching typed Central Coverage ID.
+
+Each local-added command omits the Central Coverage ID.
+
+No Local Coverage payload carries a redundant `subprocessId`.
+
+The Backend proves every endpoint belongs to `{contextId}`.
+
+Local Policy Scope routes are type-specific:
+
+```text
+POST /api/master-data/local/organization-policy-scopes
+POST /api/master-data/local/organization-subprocess-scopes/{contextId}/policy-scopes
+POST /api/master-data/local/control-scopes/{localControlScopeId}/policy-scopes
+POST /api/master-data/local/requirement-scopes/{localRequirementScopeId}/policy-scopes
+```
+
+The organization command carries `scopeAction` and `propagationMode`.
+
+All Local Policy Scope commands reference exact `policyVersionId` values.
+
+No Local Policy Scope API targets Risk or Control Objective.
+
+## 9. Document and temporary-upload APIs
+
+Temporary staging is separate from final document creation.
+
+```text
+POST /api/master-data/document-temporary-uploads
+GET  /api/master-data/document-temporary-uploads/{tempUploadId}
+```
+
+The temporary-upload response returns a `tempUploadId` and allowed upload/staging information.
+
+The final command that needs a file accepts `tempUploadId` in its typed business payload.
+
+The final command does not call a generic upload-commit endpoint.
+
+The final command does not accept `tempSessionId`.
+
+The final command does not accept final `storageObjectKey`.
+
+The Backend checks status, expiry, ownership/context, MinIO object presence, and checksum before consuming the temporary upload.
+
+The Backend creates the exact immutable `document_version` and then marks the temporary upload `CONSUMED` in the authorized flow.
+
+Document identity and version APIs separate identity metadata from immutable file content.
+
+```text
+GET /api/master-data/documents/{documentId}
+GET /api/master-data/documents/{documentId}/versions
+GET /api/master-data/document-versions/{documentVersionId}
+POST /api/master-data/document-versions/{documentVersionId}/download
+```
+
+The download use case performs resource authorization and returns a controlled stream or short-lived authorized download response.
+
+It never returns a permanent MinIO URL.
+
+Document Link commands use a controlled target vocabulary validated by Document Service.
+
+Document Link must always name a precise Document Version.
+
+Document Hold commands are type-specific to a Document Version.
+
+Purge state/read information is read-only; clients cannot mutate `storageState`, `purgedAt`, or checksum values directly.
+
+## 10. Read APIs
+
+Effective, Diagnostic, Roll-up, and Policy Applicability are query APIs only.
+
+They do not expose create, update, delete, restore, or generic CRUD routes.
+
+Every as-of query takes one common `evaluationDate` using `YYYY-MM-DD`.
+
+If omitted by a current-state query, the server applies one documented current date consistently across the whole evaluation.
+
+Example families:
+
+```text
+GET /api/master-data/effective/... ?evaluationDate=2026-08-01
+GET /api/master-data/diagnostics/... ?evaluationDate=2026-08-01
+GET /api/master-data/roll-up/... ?evaluationDate=2026-08-01
+GET /api/master-data/policy-applicability/... ?evaluationDate=2026-08-01
+```
+
+An `EffectiveReadDto` returns the source entity/relationship projection, primary `effectiveStatus`, primary `effectiveStatusSource`, and the common evaluation date.
+
+A `DiagnosticDto` returns all blockers, dependency path, source IDs, and the common evaluation date.
+
+A Roll-up DTO retains `sourceOrganizationId`, `sourceSubprocessId`, and source relation IDs so data ownership is not obscured.
+
+A Policy Applicability DTO returns the selected scope source, whether it is propagated, the decision/action, precedence basis, and evaluation date.
+
+No read projection is materialized or cached for version one.
+
+## 11. Pagination and sorting
+
+Collection reads use explicit `page`, `size`, `sort`, and `direction` query parameters.
+
+The Backend permits only a whitelist of sortable fields for each DTO.
+
+The Backend applies a bounded server-side page size.
+
+The response includes items and page metadata sufficient for List Report paging.
+
+Tree reads may use a purpose-built tree DTO rather than page a flattened mixed Process/Subprocess persistence result.
+
+Value Help reads use typed feature endpoints and stable sort defaults.
+
+No pagination API accepts raw SQL, arbitrary database column names, or generic table names.
+
+## 12. Optimistic locking and idempotency
+
+Update, status change, delete, and restore commands require the current `version`.
+
+The Backend returns `VERSION_CONFLICT` when the supplied version no longer matches.
+
+The client refreshes the typed Read DTO and lets the user resolve the conflict; it does not retry a mutation with a different version silently.
+
+Create commands use approved business-key uniqueness plus explicit inactive reactivation/deleted restore behavior for safe duplicate handling.
+
+Compound commands must be retried only when their preconditions can be evaluated safely inside one Backend transaction.
+
+Temporary-upload finalization is safe against replay through optimistic locking and the one-time `CONSUMED` state.
+
+A repeat consume returns an explicit consumed/invalid upload error rather than producing another Document Version.
+
+An optional transport idempotency key may be supported only through an approved shared platform facility.
+
+Master Data V2 must not add an idempotency table, Cache table, Outbox, or generic request log merely to implement retries.
+
+## 13. Standard error response
+
+All errors return a stable envelope.
+
+```json
+{
+  "code": "CROSS_SUBPROCESS_COVERAGE",
+  "message": "The referenced scopes do not belong to the requested subprocess.",
+  "correlationId": "18a92c6e-5d06-4a0a-b0ca-5fcd0006f31d",
+  "timestamp": "2026-07-30T14:00:00Z",
+  "details": []
+}
+```
+
+Validation errors add field-level information.
+
+```json
+{
+  "code": "VALIDATION_FAILED",
+  "message": "The command is invalid.",
+  "correlationId": "18a92c6e-5d06-4a0a-b0ca-5fcd0006f31d",
+  "timestamp": "2026-07-30T14:00:00Z",
+  "details": [
+    {
+      "field": "validTo",
+      "code": "DATE_RANGE_INVALID",
+      "message": "validTo must be on or after validFrom."
+    }
+  ]
+}
+```
+
+Do not disclose raw database constraint names, MinIO credentials, or internal object-storage paths in an error response.
+
+## 14. Required domain error codes
+
+| Code | HTTP class | When it is returned |
 | --- | --- | --- |
-| 409 | `DUPLICATE_BUSINESS_KEY` | Reject code or natural-key reuse, including reuse after soft delete. |
-| 409 | `VERSION_CONFLICT` | Reject stale mutation version. |
-| 422 | `HIERARCHY_CYCLE` | Reject a hierarchy move or create that would create a cycle. |
-| 422 | `LOCAL_VALIDITY_OUTSIDE_CENTRAL_VALIDITY` | Reject Local Scope/Coverage validity outside its Central origin. |
-| 422 | `CROSS_SUBPROCESS_COVERAGE` | Reject Central Coverage whose members belong to different Subprocess Scopes. |
-| 422 | `CROSS_LOCAL_CONTEXT_COVERAGE` | Reject Local Coverage whose members belong to different Local Contexts. |
-| 422 | `REVISION_DOMAIN_MISMATCH` | Reject an internal revision-content aggregate/domain mismatch. |
-| 422 | `REVISION_CONTEXT_REQUIRED` | Reject a mutation path that cannot establish its required backend revision context. |
-| 410 | `DOCUMENT_VERSION_PURGED` | Reject download/read of a purged Document Version. |
-| 422 | `INVALID_TEMP_UPLOAD` | Reject unknown, unauthorized, corrupt, or metadata-invalid temporary upload. |
-| 410 | `TEMP_UPLOAD_EXPIRED` | Reject temporary upload after expiry. |
-| 409 | `TEMP_UPLOAD_ALREADY_CONSUMED` | Reject consumption by a different successful command. |
-| 409 | `IDEMPOTENCY_KEY_REUSED` | Reject one idempotency key with a different command fingerprint. |
-| 403 | `FORBIDDEN` | Reject a caller without required business permission or resource authorization. |
-| 404 | `NOT_FOUND` | Do not disclose unavailable resources to unauthorized callers. |
+| `DUPLICATE_RELATION` | 409 | A business key, typed Scope pair, Coverage pair, classification pair, policy target, or document link already exists. |
+| `VERSION_CONFLICT` | 409 | Optimistic lock version does not match the current mutable record. |
+| `HIERARCHY_CYCLE` | 422 | A process, organization, risk category, account group, regulation group, or policy group move would create a cycle. |
+| `LOCAL_VALIDITY_OUTSIDE_CENTRAL_VALIDITY` | 422 | An inherited Local Scope/Coverage validity range is outside its current typed Central reference range. |
+| `CROSS_SUBPROCESS_COVERAGE` | 422 | Central Coverage endpoints do not belong to the same Central Subprocess. |
+| `CROSS_LOCAL_CONTEXT_COVERAGE` | 422 | Local Coverage endpoints do not belong to the requested Local Organization–Subprocess Context. |
+| `REVISION_DOMAIN_MISMATCH` | 422 | A Central revision attempts Local content, a Local revision attempts Central content, or Local content uses a different Organization. |
+| `MASTERDATA_REVISION_REQUIRED` | 409 | A protected source mutation is attempted without the Backend revision context. |
+| `DOCUMENT_VERSION_PURGED` | 410 | A requested file version has been purged and only its metadata remains. |
+| `INVALID_TEMP_UPLOAD` | 422 | The temporary upload does not exist, is not authorized, has an invalid object/checksum, or is not valid for the command. |
+| `TEMP_UPLOAD_EXPIRED` | 410 | The temporary upload has passed `expiresAt`. |
+| `TEMP_UPLOAD_ALREADY_CONSUMED` | 409 | The temporary upload has already produced a Document Version. |
+| `POLICY_SCOPE_VALIDITY_CONFLICT` | 422 | A Policy Scope interval is incompatible with its Policy Version. |
+| `DOCUMENT_HOLD_ACTIVE` | 409 | An attempted eligible purge is blocked by an active hold. |
+| `FORBIDDEN` | 403 | The authenticated user lacks the feature or resource permission. |
+| `NOT_FOUND` | 404 | The requested authorized resource is absent. |
 
-## 23. Permission and resource authorization boundaries
+## 15. Validation boundaries
 
-Every command checks a business permission appropriate to its aggregate and action.
+Database constraints enforce single-row rules, unique business keys, safe enum values, date ordering, self-parent prevention, conditional source/reference shape, composite context rules, and required FK integrity.
 
-Every resource-specific mutation checks authorization for the actual resolved resource.
+Backend domain validation enforces hierarchy cycles, central/local domain separation, inherited definition/subprocess matching, inherited validity containment, authorization, impact analysis, and controlled polymorphic target validation.
 
-Central Blueprint commands check permission on the Central Scope and selected Central definitions.
+The Frontend provides early field feedback only.
 
-Local commands check permission on Organization, Local Context, and selected local resources as the authorization model requires.
+The Frontend does not become the final authority for validation.
 
-Document commands check upload/consume/link/version/download rights and the target resource boundary.
+The Frontend never computes Effective status as a substitute for the Backend query.
 
-Read models check access to the requested Organization/Subprocess/Context results before resolving effective data.
+## 16. Permission and resource authorization
 
-The backend does not authorize a request merely because a frontend-visible menu item was enabled.
+Every command requires feature action permission and resource authorization where the target belongs to an organization or controlled document target.
 
-The frontend uses permissions to hide unavailable actions but treats backend authorization as final.
+Central definition/relation commands require Central Master Data authorization.
 
-## 24. Prohibited API shapes
+Local commands require authorization for the exact Organization and Local Context.
 
-There is no V2 generic endpoint for `/assignments`.
+Document upload, consume, link, hold, and secure download require document/resource authorization.
 
-There is no V2 generic endpoint for `/relations`.
+Diagnostic read access uses a distinct read-only permission.
 
-There is no V2 generic endpoint for `/attachments` with arbitrary target type/id.
+Support users do not receive direct source-table database access as an API substitute.
 
-There is no direct final multipart `/documents` upload endpoint.
+Permissions are named and remapped per V2 vertical slice; Legacy permissions are removed with their old routes.
 
-There is no V2 `/documents/commit` session endpoint.
+## 17. API completion criteria
 
-There is no frontend endpoint for Revision Content creation.
+An endpoint set is complete only when it uses actual approved entity vocabulary.
 
-There is no KPI or KRI Master Data endpoint.
+It must return revision-aware mutation results.
 
-There is no risk assessment, likelihood, impact, score, control test result, control effectiveness, workflow, monitoring, job, scheduler, cache, or outbox endpoint within Master Data V2.
+It must require version where required.
 
-There is no direct Control–Regulation link endpoint.
+It must prevent generic Scope/Coverage target routing.
 
-## 25. Contract verification requirements
+It must prevent direct Control–Regulation operations.
 
-Every OpenAPI or API test added later must show required mutation `version` fields.
+It must prevent browser-owned Revision Content and transaction ordering.
 
-Every mutation test must assert `entityId`, `revisionId`, and `version` in the success response.
+It must use temporary upload before final Document Version creation.
 
-Every Scope/Coverage test must assert typed command shape and locality validation.
+It must protect downloads.
 
-Every document test must assert `tempUploadId` one-time consumption and no permanent storage data in API payloads.
+It must expose read-only Effective, Diagnostic, Roll-up, and Policy Applicability query APIs.
 
-Every read-model test must assert that the endpoint is read-only and accepts `evaluationDate`.
-
-Every UI API repository test or schema test must reject legacy generic attachment and assignment payload shapes.
+It must preserve KPI and KRI exclusions.
