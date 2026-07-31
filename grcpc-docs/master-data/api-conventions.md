@@ -66,6 +66,8 @@ Closed Master Data code vocabularies are explicit uppercase strings, not Java or
 
 The canonical stored/wire code source for controlled polymorphic values is [table-catalog.md](table-catalog.md#controlled-polymorphic-stored-code-vocabularies).
 
+Revision Entity Type contains exactly 43 stored codes. Document Link Target Type contains exactly 41 stored codes.
+
 The Browser never sends Revision Content, `RevisionEntityType`, Revision Content sequence numbers, snapshots, or Backend transaction ordering.
 
 The Browser must not supply arbitrary `entityType`, Java class names, full table names, or unbounded polymorphic target strings.
@@ -371,9 +373,7 @@ Normal Browser-facing Document Link commands are limited to the approved catalog
 
 Document Link must always name a precise Document Version.
 
-Document Hold commands are type-specific to a Document Version.
-
-Purge state/read information is read-only; clients cannot mutate `storageState`, `purgedAt`, or checksum values directly.
+No API command or response in this scope administers Retention Policy, Hold, purge eligibility, purge execution, purge failure, or permanent deletion.
 
 ## 10. Read APIs
 
@@ -486,12 +486,10 @@ Do not disclose raw database constraint names, MinIO credentials, or internal ob
 | `CROSS_LOCAL_CONTEXT_COVERAGE` | 422 | Local Coverage endpoints do not belong to the requested Local Organization–Subprocess Context. |
 | `REVISION_DOMAIN_MISMATCH` | 422 | A Central revision attempts Local content, a Local revision attempts Central content, or Local content uses a different Organization. |
 | `MASTERDATA_REVISION_REQUIRED` | 409 | A protected source mutation is attempted without the Backend revision context. |
-| `DOCUMENT_VERSION_PURGED` | 410 | A requested file version has been purged and only its metadata remains. |
 | `INVALID_TEMP_UPLOAD` | 422 | The temporary upload does not exist, is not authorized, has an invalid object/checksum, or is not valid for the command. |
 | `TEMP_UPLOAD_EXPIRED` | 410 | The temporary upload has passed `expiresAt`. |
 | `TEMP_UPLOAD_ALREADY_CONSUMED` | 409 | The temporary upload has already produced a Document Version. |
 | `POLICY_SCOPE_VALIDITY_CONFLICT` | 422 | A Policy Scope interval is incompatible with its Policy Version. |
-| `DOCUMENT_HOLD_ACTIVE` | 409 | An attempted eligible purge is blocked by an active hold. |
 | `FORBIDDEN` | 403 | The authenticated user lacks the feature or resource permission. |
 | `NOT_FOUND` | 404 | The requested authorized resource is absent. |
 
@@ -515,7 +513,7 @@ Central definition/relation commands require Central Master Data authorization.
 
 Local commands require authorization for the exact Organization and Local Context.
 
-Document upload, consume, link, hold, and secure download require document/resource authorization.
+Document upload, consume, link, and secure download require document/resource authorization.
 
 Diagnostic read access uses a distinct read-only permission.
 
@@ -538,6 +536,8 @@ It must prevent direct Control–Regulation operations.
 It must prevent browser-owned Revision Content and transaction ordering.
 
 It must use temporary upload before final Document Version creation.
+
+It must not expose Retention Policy, Hold, purge, or permanent-deletion APIs.
 
 It must protect downloads.
 

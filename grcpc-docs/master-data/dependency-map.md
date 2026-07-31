@@ -2,7 +2,7 @@
 
 ## Purpose and authority
 
-This map sequences the approved 47-business-table model and the one `document_temp_upload` technical table for Flyway, Backend, UI, revision processing, document handling, and read models.
+This map sequences the approved 45-business-table model and the one `document_temp_upload` technical table for 46 physical tables total across Flyway, Backend, UI, revision processing, document handling, and read models.
 
 Entity names and arrows follow the Final Logical Model §5–§14.
 
@@ -142,14 +142,12 @@ The dotted arrows identify inherited-reference validation and Effective dependen
 
 | Creation wave | Tables | Direct prerequisites | Dependency reason |
 | --- | --- | --- | --- |
-| D1 | `document_retention_policy` | Oracle conventions | Document retention parent. |
-| D2 | `document` | Document Retention Policy | Stable document identity. |
-| D3 | `document_version` | Document | Immutable version metadata and object key. |
-| D4 | `document_hold` | Document Version | Hold applies to exact immutable version. |
-| D5 | `document_link` | Document Version + controlled target vocabulary | Link references a precise version. |
-| D6 | `document_temp_upload` | Document Version FK target may be nullable | Technical staging metadata; it can exist before final version. |
-| D7 | `masterdata_revision` | Organization for Local domain; self parent optional | Revision header before contents. |
-| D8 | `masterdata_revision_content` | Master Data Revision | Ordered controlled mutation records. |
+| D1 | `document` | Oracle conventions | Stable document identity. |
+| D2 | `document_version` | Document | Immutable finalized version metadata and object key. |
+| D3 | `document_link` | Document Version + controlled target vocabulary | Link references a precise version. |
+| T1 | `document_temp_upload` | Document Version FK target may be nullable | Technical staging metadata; it can exist before final version. |
+| R1 | `masterdata_revision` | Organization for Local domain; self parent optional | Revision header before contents. |
+| R2 | `masterdata_revision_content` | Master Data Revision | Ordered controlled mutation records. |
 
 ## Scope-before-Coverage rule
 
@@ -180,7 +178,7 @@ The Physical Design Reference §16-1 provides the migration sequence.
 3. Create the remaining Central definitions and `central_policy_version`.
 4. Create Central Scope, Classification, Central Policy Scope, and Central Coverage tables.
 5. Create Local Context, Local Scope, Local Coverage, and Local Policy Scope tables.
-6. Create `document_retention_policy`, `document`, `document_version`, `document_hold`, and `document_link`.
+6. Create `document`, `document_version`, and `document_link`.
 7. Create `document_temp_upload`.
 8. Create `masterdata_revision` and `masterdata_revision_content`.
 9. Add supplementary unique constraints, composite foreign keys, checks, and indexes.
@@ -200,7 +198,7 @@ It is not a chain of Legacy `DROP`, `ALTER`, data-copy, or compatibility migrati
 | 4. Central relations | Central catalogs | Typed scopes, classifications, policy scopes, coverage commands | Same-subprocess composite FKs and typed validation. |
 | 5. Local context | Central relations | Local Context and typed Local Scope commands | Local inherited range and definition/context validation. |
 | 6. Local relations | Local context | Local Coverage and Local Policy Scope commands | Same-context composite FKs and precedence input. |
-| 7. Document + Revision | Shared foundation and targets | Temporary upload, document/version/hold/link, revision command coordination | One-time upload consume and immutable version. |
+| 7. Document + Revision | Shared foundation and targets | Temporary upload, document/version/link, revision command coordination | One-time upload consume and immutable version. |
 | 8. Read queries | Central/local/document sources | Effective, Diagnostic, Roll-up, Policy Applicability query services | No mutable endpoint or materialization. |
 | 9. Legacy removal | Each owning slice | Remove old endpoints/entities/services/permissions | No compatibility API or dual write remains. |
 
@@ -252,15 +250,15 @@ flowchart LR
     Version[immutable document_version]
     Consume[Temporary upload marked CONSUMED]
     Link[document_link to exact version]
-    Hold[document_hold when needed]
 
     Upload --> Verify --> Command
     Command --> Doc
     Doc --> Version
     Version --> Consume
     Version --> Link
-    Version --> Hold
 ```
+
+The technical temporary-upload flow remains separate and precedes final Document creation at runtime: `document_temp_upload -> final Business Command -> document/document_version/document_link`.
 
 The user-facing temporary-upload flow must never perform a direct permanent final upload.
 
@@ -292,7 +290,7 @@ No read model emits a Business Revision merely because a calculation changes.
 3. Replace generic catalog forms with Central Control Objective, Risk Category/Template, Regulation hierarchy, Policy/Version, and Account Group forms.
 4. Add Central Scope, Classification, Central Policy Scope, and Central Coverage screens/dialogs after the central relation APIs exist.
 5. Add Local Organization–Subprocess Context before Local Scope, Local Coverage, and Local Policy Scope workflows.
-6. Replace generic document attachment UI with temporary upload, immutable versions, exact links, hold, and secure download presentation.
+6. Replace generic document attachment UI with temporary upload, immutable versions, exact links, and secure download presentation.
 7. Add revision-aware mutation feedback containing entity/revision/version information.
 8. Add read-only Effective, Diagnostic, Roll-up, and Policy Applicability views after query APIs exist.
 9. Remove the Legacy tab, route, API repository, state, permission, and i18n element in the same vertical slice that replaces it.
@@ -306,7 +304,7 @@ No read model emits a Business Revision merely because a calculation changes.
 | Central catalog | Central definitions and Policy Version | Combined risk, regulation, policy, generic objective, and account-group JSON structures. |
 | Central relation | Central Scope, Classification, Policy Scope, Coverage | Generic process/reference/control relationship tables and direct Control–Regulation links. |
 | Local relation | Local Context, Local Scope/Coverage/Policy Scope | Generic organization-reference and organization-process-risk relationships. |
-| Document and revision | Retention, document/version/hold/link, temporary upload, revisions | Generic attachment, direct final upload, session-based upload/commit, legacy document tables. |
+| Document and revision | Document/version/link, temporary upload, revisions | Generic attachment, direct final upload, session-based upload/commit, legacy document tables. |
 | Read model | Effective, Diagnostic, Roll-up, Policy Applicability | Any mutable or cached substitute for derived outcomes. |
 | UI and integration | Compatible visual workflows and resource authorization | Dead routes, stores, API repos, permissions, i18n keys, DTOs, controllers, and services. |
 

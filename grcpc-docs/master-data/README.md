@@ -30,7 +30,7 @@ The Final Logical Model records `a773cbf37784a286e72d09dab506abe9b1d830a4` (`rel
 | Filename | Document title / version | Authority supplied by the document |
 | --- | --- | --- |
 | `GRC_Master_Data_Reference_Conceptual_Model_FA.docx` | *GRC Master Data Reference Model — Conceptual Design*, v1.0, approved | Business meaning, Central Blueprint, Local Context, Effective View, Roll-up, Policy Propagation, Document concepts, Business Revision, and domain boundaries. |
-| `GRC_Master_Data_Logical_Model_Final_FA.docx` | `سند مرجع نهایی مدل منطقی اطلاعات پایه سامانه GRC`, v2.0 Final, cycles 1–12 locked | Exact final entities, 47 business tables, typed relationships, local context, scope, coverage, policy applicability, document and revision structures. |
+| `GRC_Master_Data_Logical_Model_Final_FA.docx` | `سند مرجع نهایی مدل منطقی اطلاعات پایه سامانه GRC`, v2.0 Final, cycles 1–12 locked | Exact final entities, typed relationships, local context, scope, coverage, policy applicability, document and revision structures, subject to the Prompt 3.3 Document scope correction recorded below. |
 | `GRC_Master_Data_Physical_Design_Reference_FA.docx` | *GRC Master Data Physical Design Reference*, v1.0 | Oracle 19c physical rules, types, sizes, constraints, indexes, Flyway Day-Zero, MinIO, and the sole technical temporary-upload table. |
 
 ### Customer UI documents retained for compatibility analysis
@@ -52,7 +52,7 @@ Customer documents describe the existing customer-facing vocabulary and visual w
 ### Generated implementation documents
 
 1. [Implementation contract](implementation-contract.md) — non-negotiable architecture and ownership rules.
-2. [Table catalog](table-catalog.md) — the exact 47 business tables and one technical table.
+2. [Table catalog](table-catalog.md) — the exact 45 business tables and one technical table.
 3. [Dependency map](dependency-map.md) — schema, backend, UI, revision, document, and read-model sequencing.
 4. [Legacy deletion map](legacy-deletion-map.md) — current implementation inventory and slice-owned replacement/removal work.
 5. [API conventions](api-conventions.md) — use-case APIs, commands, DTOs, errors, authorization, documents, and read queries.
@@ -69,6 +69,8 @@ Customer documents describe the existing customer-facing vocabulary and visual w
 
 No customer mock-up or existing endpoint may introduce a Master Data concept absent from the approved model.
 
+Prompt 3.3 records an explicit project-owner scope correction for the exact Document physical scope. That correction governs the active implementation contract for Document tables: `document_retention_policy` and `document_hold` are not part of Master Data V2, and future prompts must not reintroduce them from older extracted material.
+
 ## Recommended reading order
 
 1. Read the three authoritative Word documents in the authority order above.
@@ -81,7 +83,7 @@ No customer mock-up or existing endpoint may introduce a Master Data concept abs
 
 ## Approved table baseline
 
-The Final Logical Model §5 is the counted schema authority. It defines exactly 47 business tables in four logical families.
+Prompt 3.3 records an explicit project-owner scope correction for the counted Document physical scope. The active implementation baseline is 45 business tables plus one technical temporary-upload table; this correction does not claim that the retained DOCX files already contained the four-table correction.
 
 ### 1. Structural and Central Definitions — 14
 
@@ -132,23 +134,24 @@ The Final Logical Model §5 is the counted schema authority. It defines exactly 
 39. `local_policy_control_scope`
 40. `local_policy_requirement_scope`
 
-### 4. Document and Business Revision — 7
+### 4. Document — 3
 
-41. `document_retention_policy`
-42. `document`
-43. `document_version`
-44. `document_hold`
-45. `document_link`
-46. `masterdata_revision`
-47. `masterdata_revision_content`
+41. `document`
+42. `document_version`
+43. `document_link`
 
-The Physical Design Reference §12 adds one—and only one—technical table outside the business-table count: `document_temp_upload`.
+### 5. Business Revision — 2
+
+44. `masterdata_revision`
+45. `masterdata_revision_content`
+
+The approved technical table outside the business-table count remains `document_temp_upload`.
 
 | Count | Value |
 | --- | ---: |
-| Business tables | 47 |
+| Business tables | 45 |
 | Technical temporary-upload tables | 1 |
-| Total physical tables in this redesign scope | 48 |
+| Total physical tables in this redesign scope | 46 |
 
 Effective, Diagnostic, Roll-up, and Policy Applicability are read-only derived views or specialized queries. They are not stored business tables, cache tables, or materialized results.
 
@@ -160,7 +163,7 @@ Effective, Diagnostic, Roll-up, and Policy Applicability are read-only derived v
 | 3 — Central catalog | Central definitions, hierarchies, policy/version, account-group classifications | Typed central catalogs and no combined Legacy persistence remain in the slice. |
 | 4 — Central relationship model | Central scope, central policy scope, central coverage, impact analysis | Same-subprocess constraints and typed APIs are demonstrable. |
 | 5 — Local context model | Local organization-subprocess scope, local scope, coverage, local policy scope | Same-context constraints and no Central-to-Local mutation are demonstrable. |
-| 6 — Document and revision | Retention, document/version/hold/link, temporary upload, revision command service | Immutable document versions and backend-owned atomic revisions work end to end. |
+| 6 — Document and revision | Document/version/link, temporary upload, revision command service | Immutable document versions and backend-owned atomic revisions work end to end. |
 | 7 — Read models | Effective, Diagnostic, Roll-up, Policy Applicability | Read-only, non-materialized results use a common evaluation date. |
 | 8 — UI replacement and cleanup | Compatible UI5/FCL flows, typed data flows, Legacy route/API/entity cleanup | Every replaced Legacy element is removed by its owning vertical slice. |
 | 9 — Full-stack acceptance | Security, browser UX, Oracle/MinIO integration, build and cleanup checks | All checks in the acceptance checklist pass. |

@@ -1,38 +1,9 @@
-create table document_retention_policy (
-    id raw(16) not null,
-    code varchar2(64 byte) not null,
-    title varchar2(255 char) not null,
-    purge_mode varchar2(32 byte) not null,
-    retention_days number(19,0),
-    status varchar2(32 byte) not null,
-    created_at timestamp(6) with time zone not null,
-    updated_at timestamp(6) with time zone not null,
-    created_by raw(16) not null,
-    updated_by raw(16) not null,
-    deleted_at timestamp(6) with time zone,
-    deleted_by raw(16),
-    version number(19,0) default 0 not null,
-    constraint pk_document_retention_policy primary key (id),
-    constraint uk_document_retention_policy_code unique (code),
-    constraint ck_doc_retention_policy_mode check (purge_mode in ('AFTER_RETENTION', 'NEVER_PURGE')),
-    constraint ck_doc_retention_policy_days check (
-        (purge_mode = 'AFTER_RETENTION' and retention_days is not null and retention_days > 0)
-        or (purge_mode = 'NEVER_PURGE' and retention_days is null)
-    ),
-    constraint ck_doc_retention_policy_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
-    constraint ck_doc_retention_policy_deleted check (
-        (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
-        or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
-    )
-);
-
 create table document (
     id raw(16) not null,
     code varchar2(64 byte),
     title varchar2(255 char) not null,
     description clob,
     document_category_code varchar2(64 byte),
-    retention_policy_id raw(16) not null,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -44,7 +15,6 @@ create table document (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_document primary key (id),
-    constraint fk_document_retention_policy foreign key (retention_policy_id) references document_retention_policy(id),
     constraint ck_document_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_document_valid_range check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_document_deleted check (
@@ -52,8 +22,6 @@ create table document (
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
     )
 );
-
-create index ix_document_retention_policy on document(retention_policy_id);
 
 create table document_version (
     id raw(16) not null,
@@ -65,10 +33,6 @@ create table document_version (
     storage_object_key varchar2(1024 byte) not null,
     checksum_algorithm varchar2(32 byte) not null,
     checksum_value varchar2(128 byte) not null,
-    storage_state varchar2(32 byte) not null,
-    purge_after date,
-    purged_at timestamp(6) with time zone,
-    purge_error_code varchar2(64 byte),
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -85,42 +49,13 @@ create table document_version (
     constraint fk_document_version_document foreign key (document_id) references document(id),
     constraint ck_document_version_number check (document_version_number > 0),
     constraint ck_document_version_size check (file_size >= 0),
-    constraint ck_document_version_storage check (storage_state in ('AVAILABLE', 'PENDING_PURGE', 'PURGED', 'PURGE_FAILED')),
     constraint ck_document_version_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_document_version_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_document_version_deleted check (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
-    ),
-    constraint ck_document_version_purged check (storage_state <> 'PURGED' or purged_at is not null),
-    constraint ck_document_version_purge_failed check (storage_state <> 'PURGE_FAILED' or purge_error_code is not null)
-);
-
-create table document_hold (
-    id raw(16) not null,
-    document_version_id raw(16) not null,
-    hold_type varchar2(32 byte) not null,
-    reason clob not null,
-    started_at timestamp(6) with time zone not null,
-    released_at timestamp(6) with time zone,
-    released_by raw(16),
-    status varchar2(32 byte) not null,
-    created_at timestamp(6) with time zone not null,
-    updated_at timestamp(6) with time zone not null,
-    created_by raw(16) not null,
-    updated_by raw(16) not null,
-    version number(19,0) default 0 not null,
-    constraint pk_document_hold primary key (id),
-    constraint fk_document_hold_version foreign key (document_version_id) references document_version(id),
-    constraint ck_document_hold_type check (hold_type in ('LEGAL', 'AUDIT', 'WORKFLOW', 'OTHER')),
-    constraint ck_document_hold_status check (status in ('ACTIVE', 'RELEASED')),
-    constraint ck_document_hold_release check (
-        (status = 'ACTIVE' and released_at is null and released_by is null)
-        or (status = 'RELEASED' and released_at is not null and released_by is not null)
     )
 );
-
-create index ix_document_hold_version on document_hold(document_version_id);
 
 create table document_link (
     id raw(16) not null,

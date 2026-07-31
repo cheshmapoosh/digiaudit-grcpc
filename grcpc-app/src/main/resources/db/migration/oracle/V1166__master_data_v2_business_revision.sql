@@ -112,10 +112,8 @@ create table masterdata_revision_content (
         'LOCAL_POLICY_SUBPROCESS',
         'LOCAL_POLICY_CONTROL',
         'LOCAL_POLICY_REQUIREMENT',
-        'DOCUMENT_RETENTION_POLICY',
         'DOCUMENT',
         'DOCUMENT_VERSION',
-        'DOCUMENT_HOLD',
         'DOCUMENT_LINK'
     )),
     constraint ck_masterdata_revision_content_op check (operation_type in ('CREATE', 'UPDATE', 'ACTIVATE', 'INACTIVATE', 'DELETE', 'RESTORE')),

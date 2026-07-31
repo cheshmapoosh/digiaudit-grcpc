@@ -38,7 +38,7 @@ No item is deferred merely to avoid cleanup.
 | P4 | Central catalog | All Central definitions, policy/version, and typed classification foundations. |
 | P5 | Central relation | Central Scope, Central Policy Scope, and Central Coverage. |
 | P6 | Local relation | Local Context, Local Scope, Local Coverage, and Local Policy Scope. |
-| P7 | Document and Revision | Retention, document/version/hold/link, temporary upload, business revision integration. |
+| P7 | Document and Revision | Document/version/link, temporary upload, business revision integration. |
 | P8 | Read models and UI integration | Effective/Diagnostic/Roll-up/Policy Applicability and V2 data-flow UI wiring. |
 | P9 | Slice-close cleanup | Remove unused routes, permissions, DTOs, entities, services, stores, and i18n keys left by the owning slice. |
 
@@ -74,7 +74,7 @@ All entries in this section are Legacy-removal decisions.
 | `DELETE` | `V1158__create_process_regulation_assignment.sql` / `process_regulation_assignment` | Process-to-Regulation assignment | Regulation itself is not a Scope endpoint; Requirement is. | None; use Requirement Scope/Coverage where applicable. | P5 |
 | `REPLACE` | `V1159__create_document_temp_upload.sql` / `document_temp_upload` | Session-oriented temporary upload tracking | Final name survives, but final fields, status, one-time consumption, object-key, checksum, and authorization rules differ. | Approved technical `document_temp_upload`. | P7 |
 | `DELETE` | `V1160__create_objective_organization_assignment.sql`, `V1161__extend_objective_organization_assignment.sql` / `objective_organization_assignment` | Generic Objective-to-Organization relation | Generic objective is removed and local application requires Organization + Subprocess context. | None; do not map to a generic organization relation. | P4–P6 |
-| `DELETE` | `V1080` / `document_attachment` | File and generic attachment target in one table | Final document identity, immutable version, hold, retention, and controlled link are separate. | `document_retention_policy`, `document`, `document_version`, `document_hold`, `document_link`. | P7 |
+| `DELETE` | `V1080` / `document_attachment` | File and generic attachment target in one table | Final document identity, immutable version, and controlled link are separate. | `document`, `document_version`, `document_link`. | P7 |
 
 ### Flyway rewrite guard
 
@@ -117,7 +117,7 @@ All rows below name current source evidence and the slice that must remove or re
 | `DELETE` | `modules/organization/**/OrganizationProcessRiskAssignment*` | Generic organization/process/risk relationship | Local risk applicability must use typed Local Scope/Coverage. | None. | P6 |
 | `DELETE` | `modules/organization/**/OrganizationReferenceAssignment*` | Generic reference-type assignment | Generic local relations are prohibited. | None. | P6 |
 | `DELETE` | `modules/organization/**/ObjectiveOrganizationAssignment*` | Generic objective-to-organization relationship | Generic objective has no V2 counterpart. | None. | P4–P6 |
-| `REPLACE` | `modules/document/domain/entity/DocumentAttachmentEntity.java` and repository/mapper | Generic attachment metadata and target | Lacks Document/Version/Hold/Retention/controlled link separation. | V2 Document aggregate persistence. | P7 |
+| `REPLACE` | `modules/document/domain/entity/DocumentAttachmentEntity.java` and repository/mapper | Generic attachment metadata and target | Lacks stable Document, immutable Version, and controlled Link separation. | V2 Document aggregate persistence. | P7 |
 | `REPLACE` | `modules/document/domain/entity/DocumentTempUploadEntity.java` and repository | Temporary upload entity | Keep table name but replace session/target/consume semantics with Physical Design. | V2 `document_temp_upload` entity. | P7 |
 | `REPLACE` | `modules/document/application/DocumentAttachmentService.java` | Direct final upload, generic target binding, commit flow, scheduled cleanup | Violates final command-owned upload/version/link and no scheduler infrastructure. | Document command service with one-time `tempUploadId` consumption and MinIO lifecycle cleanup. | P7 |
 | `REPLACE` | `modules/document/api/DocumentAttachmentController.java` | `/api/documents` direct final upload and generic attachment endpoints | Final API is use-case-oriented, secure, and version-specific. | Typed Document/temporary-upload endpoints. | P7 |
@@ -199,9 +199,9 @@ Classification: `REPLACE`.
 
 Current responsibility: one generic record combines file metadata and arbitrary target binding.
 
-Reason: V2 distinguishes stable document identity, immutable version, retention policy, hold, and controlled link to an exact version.
+Reason: V2 distinguishes stable document identity, immutable version, and controlled link to an exact version.
 
-Target: `document_retention_policy`, `document`, `document_version`, `document_hold`, and `document_link`.
+Target: `document`, `document_version`, and `document_link`.
 
 Owner: P7 Document and Revision.
 

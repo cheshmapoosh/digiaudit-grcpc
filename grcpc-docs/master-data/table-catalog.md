@@ -2,11 +2,13 @@
 
 ## Catalog authority and count rule
 
-This catalog is rebuilt from the Final Logical Model, §5, §6–§14, and the Physical Design Reference, §4–§20. The Logical Model is authoritative for the 47 business-table names and relationships. The Physical Design Reference is authoritative for physical types, sizes, keys, checks, indexes, Flyway, and the single technical table.
+This catalog is rebuilt from the Final Logical Model, §5, §6–§14, the Physical Design Reference, §4–§20, and the Prompt 3.3 project-owner Document scope correction. The correction governs the exact Document physical scope for implementation. The active catalog contains 45 business-table names and relationships. The Physical Design Reference is authoritative for physical types, sizes, keys, checks, indexes, Flyway, and the single technical table.
 
 Authoritative source files: `GRC_Master_Data_Logical_Model_Final_FA.docx` and `GRC_Master_Data_Physical_Design_Reference_FA.docx`; business meaning is cross-checked against `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`.
 
-No table below is inferred merely to satisfy a count. The business list is exactly the 14 + 13 + 13 + 5 + 2 structures in the Final Logical Model. The technical temporary-upload table is outside that count.
+No table below is inferred merely to satisfy a count. The business list is exactly the 14 + 13 + 13 + 3 + 2 active implementation structures. The technical temporary-upload table is outside that count.
+
+Document non-invention rule: there is no Retention Policy table, no Hold table, and no purge-state persistence model in Master Data V2. No future implementation prompt may recreate these concepts without a new explicit approved design decision.
 
 ### Shared physical profile and notation
 
@@ -45,7 +47,7 @@ Stored codes are stable uppercase ASCII values stored in `VARCHAR2(32 BYTE)`. Ev
 
 ### Revision Entity Type stored-code vocabulary
 
-`masterdata_revision_content.entity_type` uses exactly these 45 values. This is the only Revision Content entity-type vocabulary.
+`masterdata_revision_content.entity_type` uses exactly these 43 values. This is the only Revision Content entity-type vocabulary.
 
 | Stored code | Exact catalog table | Permitted Revision domain |
 | --- | --- | --- |
@@ -89,17 +91,15 @@ Stored codes are stable uppercase ASCII values stored in `VARCHAR2(32 BYTE)`. Ev
 | `LOCAL_POLICY_SUBPROCESS` | `local_policy_subprocess_scope` | `LOCAL` |
 | `LOCAL_POLICY_CONTROL` | `local_policy_control_scope` | `LOCAL` |
 | `LOCAL_POLICY_REQUIREMENT` | `local_policy_requirement_scope` | `LOCAL` |
-| `DOCUMENT_RETENTION_POLICY` | `document_retention_policy` | `CENTRAL` |
 | `DOCUMENT` | `document` | `CENTRAL` or `LOCAL`, according to owning Business Command context |
 | `DOCUMENT_VERSION` | `document_version` | `CENTRAL` or `LOCAL`, according to owning Business Command context |
-| `DOCUMENT_HOLD` | `document_hold` | `CENTRAL` or `LOCAL`, according to owning Business Command context |
 | `DOCUMENT_LINK` | `document_link` | `CENTRAL` or `LOCAL`, according to owning Business Command context |
 
 Revision Entity Type rules:
 
-- Codes mapped to catalog tables `01` through `27`, plus `DOCUMENT_RETENTION_POLICY`, are permitted in Central revisions according to the current domain enum.
+- Codes mapped to catalog tables `01` through `27` are permitted in Central revisions according to the current domain enum.
 - Codes mapped to catalog tables `28` through `40` are permitted in Local revisions.
-- `DOCUMENT`, `DOCUMENT_VERSION`, `DOCUMENT_HOLD`, and `DOCUMENT_LINK` may be represented in Central or Local revisions according to their owning Business Command context.
+- `DOCUMENT`, `DOCUMENT_VERSION`, and `DOCUMENT_LINK` may be represented in Central or Local revisions according to their owning Business Command context.
 - `MASTERDATA_REVISION` is not a Revision Content entity type.
 - `masterdata_revision` and `masterdata_revision_content` do not revise themselves.
 - `document_temp_upload` is technical and is not Revision Content.
@@ -108,6 +108,8 @@ Revision Entity Type rules:
 ### Document Link Target Type stored-code vocabulary
 
 `document_link.target_type` uses a separate vocabulary from `RevisionEntityType`. Reusing the same stored code for the same logical table does not make the two domain types interchangeable.
+
+`document_link.target_type` uses exactly these 41 values.
 
 | Stored code | Exact target table | Target class |
 | --- | --- | --- |
@@ -158,7 +160,7 @@ Document Link Target Type rules:
 - Document Link supports catalog tables `01` through `40` as normal Master Data targets, subject to command authorization and target-existence validation.
 - `MASTERDATA_REVISION` is the only exceptional target and is Backend-controlled metadata for the same owning DRAFT Revision.
 - The Browser must not independently choose or provide `MASTERDATA_REVISION` as a normal document target.
-- Document-family tables `41` through `45` are not permitted Document Link targets.
+- Document business tables `41` through `43` are not permitted Document Link targets.
 - `masterdata_revision_content` is not a permitted Document Link target.
 - `document_temp_upload` is not a permitted Document Link target.
 - Effective, Diagnostic, Roll-up, and Policy Applicability read models are not permitted targets.
@@ -885,81 +887,45 @@ Document Link Target Type rules:
 
 **Authority / non-invention note.** Final Logical Model §5-3 and §12-2; Requirement remains the approved policy/compliance endpoint.
 
-## 4. Document — 5 business tables
+## 4. Document — 3 business tables
 
-### 41. `document_retention_policy`
-
-**Purpose and family.** Controlled retention policy for Document Versions; it makes retention and `NEVER_PURGE` enforceable metadata rather than narrative guidance.
-
-**Fields.** `ID`; `code VARCHAR2(64 BYTE) NOT NULL`; `title VARCHAR2(255 CHAR) NOT NULL`; `purge_mode VARCHAR2(32 BYTE) NOT NULL`; nullable `retention_days NUMBER(19,0)`; `status VARCHAR2(32 BYTE) NOT NULL`; audit timestamps/actors and optimistic `version`.
-
-**Keys and relationships.** PK: `id`. Business key: unique `code`, including deleted/inactive records if the normal lifecycle is enabled. It is referenced by `document.retention_policy_id`.
-
-**Composite FKs.** None.
-
-**Lifecycle, validity, and lock.** Documented `status` and audit apply; no independent business-validity interval is specified. `version` controls mutation.
-
-**Constraints and indexes.** Check `purge_mode IN ('AFTER_RETENTION','NEVER_PURGE')`; check `(AFTER_RETENTION AND retention_days IS NOT NULL AND retention_days > 0) OR (NEVER_PURGE AND retention_days IS NULL)`; unique code; document-reference FK index is on `document`.
-
-**Mutability and Revision.** Central-domain Document policy change through a Backend revision when it is a Master Data business change. It does not itself purge objects.
-
-**Authority / non-invention note.** Final Logical Model §5-4 and §13-2; Physical Design §13 and Appendix A.
-
-### 42. `document`
+### 41. `document`
 
 **Purpose and family.** Stable Document identity; actual file content belongs only to immutable Document Versions.
 
-**Fields.** `ID`; optional `code VARCHAR2(64 BYTE)`; `title VARCHAR2(255 CHAR) NOT NULL`; optional `description CLOB`; optional `document_category_code VARCHAR2(64 BYTE)`; `retention_policy_id RAW(16) NOT NULL`; `L+V`.
+**Fields.** `ID`; optional `code VARCHAR2(64 BYTE)`; `title VARCHAR2(255 CHAR) NOT NULL`; optional `description CLOB`; optional `document_category_code VARCHAR2(64 BYTE)`; `L+V`.
 
-**Keys and relationships.** PK: `id`. The Logical Model documents optional code but does not prescribe an independent mandatory document business-key constraint. FK: `retention_policy_id -> document_retention_policy(id)`. One Document has many Document Versions.
+**Keys and relationships.** PK: `id`. The Logical Model documents optional code but does not prescribe an independent mandatory document business-key constraint. One Document has many Document Versions.
 
 **Composite FKs.** None.
 
 **Lifecycle, validity, and lock.** `L+V`; `version` governs identity metadata. File replacement is never an update to this row’s attached version.
 
-**Constraints and indexes.** Indexed retention-policy FK; shared checks. If optional code is implemented as a unique business key, its null/uniqueness semantics must be explicitly fixed in detailed design without creating an alternate document table.
+**Constraints and indexes.** Shared checks. If optional code is implemented as a unique business key, its null/uniqueness semantics must be explicitly fixed in detailed design without creating an alternate document table.
 
 **Mutability and Revision.** Document identity/link metadata changes that are business changes are revision-controlled; content change creates a new `document_version`.
 
 **Authority / non-invention note.** Final Logical Model §13-1; Physical Design §13. This table is not a generic attachment row.
 
-### 43. `document_version`
+### 42. `document_version`
 
 **Purpose and family.** Immutable actual file/content version of one Document, with Oracle metadata and a stable MinIO object key.
 
-**Fields.** `ID`; `document_id RAW(16) NOT NULL`; `document_version_number NUMBER(19,0) NOT NULL`; `file_name VARCHAR2(512 CHAR) NOT NULL`; `mime_type VARCHAR2(255 BYTE) NOT NULL`; `file_size NUMBER(19,0) NOT NULL`; `storage_object_key VARCHAR2(1024 BYTE) NOT NULL`; `checksum_algorithm VARCHAR2(32 BYTE) NOT NULL`; `checksum_value VARCHAR2(128 BYTE) NOT NULL`; `storage_state VARCHAR2(32 BYTE) NOT NULL`; nullable `purge_after DATE`; nullable `purged_at TIMESTAMP(6) WITH TIME ZONE`; nullable `purge_error_code VARCHAR2(64 BYTE)`; lifecycle/validity/audit and optimistic `version`.
+**Fields.** `ID`; `document_id RAW(16) NOT NULL`; `document_version_number NUMBER(19,0) NOT NULL`; `file_name VARCHAR2(512 CHAR) NOT NULL`; `mime_type VARCHAR2(255 BYTE) NOT NULL`; `file_size NUMBER(19,0) NOT NULL`; `storage_object_key VARCHAR2(1024 BYTE) NOT NULL`; `checksum_algorithm VARCHAR2(32 BYTE) NOT NULL`; `checksum_value VARCHAR2(128 BYTE) NOT NULL`; lifecycle/validity/audit and optimistic `version`.
 
-**Keys and relationships.** PK: `id`. Business key: unique `(document_id, document_version_number)`. FK: `document_id -> document(id)`. Referenced by Document Hold, Document Link, and the consumed temporary upload.
+**Keys and relationships.** PK: `id`. Business key: unique `(document_id, document_version_number)`. FK: `document_id -> document(id)`. Referenced by Document Link and the consumed temporary upload.
 
 **Composite FKs.** None.
 
-**Lifecycle, validity, and lock.** The file and content metadata are immutable after creation. `storage_state` is `AVAILABLE`, `PENDING_PURGE`, `PURGED`, or `PURGE_FAILED`; generic lifecycle status is not a means to overwrite a file.
+**Lifecycle, validity, and lock.** The file and content metadata are immutable after creation. Generic lifecycle status is not a means to overwrite a file.
 
-**Constraints and indexes.** Unique document/version pair; `file_size >= 0`; controlled storage-state check; indexed `document_id`; index references from hold/link/temp upload. `storage_object_key` is a stable key, never a permanent URL.
+**Constraints and indexes.** Unique document/version pair; `file_size >= 0`; indexed `document_id`; index references from link/temp upload. `storage_object_key` is a stable key, never a permanent URL.
 
-**Mutability and Revision.** Finalization from a valid temporary upload creates this row; a replacement file creates the next version. Purge removes the MinIO object only when retention/hold/reference conditions permit and leaves metadata intact.
+**Mutability and Revision.** Finalization from a valid temporary upload creates this row; a replacement file creates the next version. Failed temporary or permanent storage preparation does not create a completed Document Version row.
 
 **Authority / non-invention note.** Final Logical Model §13-1–§13-3; Physical Design §12–§13. No distributed Oracle–MinIO transaction exists.
 
-### 44. `document_hold`
-
-**Purpose and family.** Explicit hold on a Document Version that blocks eligible physical purge until released.
-
-**Fields.** `ID`; `document_version_id RAW(16) NOT NULL`; `hold_type VARCHAR2(32 BYTE) NOT NULL`; `reason CLOB NOT NULL`; `started_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; nullable `released_at TIMESTAMP(6) WITH TIME ZONE`; nullable logical-user `released_by RAW(16)`; `status VARCHAR2(32 BYTE) NOT NULL`; audit and optimistic `version`.
-
-**Keys and relationships.** PK: `id`. The Final Logical Model does not prescribe a natural unique hold key. FK: `document_version_id -> document_version(id)`.
-
-**Composite FKs.** None.
-
-**Lifecycle, validity, and lock.** `hold_type` is one of `LEGAL`, `AUDIT`, `WORKFLOW`, or `OTHER`; release fields are nullable until release. No generic business-validity interval is specified; `version` prevents races in release.
-
-**Constraints and indexes.** Controlled hold-type/status checks; release-consistency check; indexed `document_version_id`. Any active hold blocks eligible purge.
-
-**Mutability and Revision.** A hold/release is a Document-domain business action and must be auditable/revision-aware where it changes Master Data document state. It is not an Audit module table.
-
-**Authority / non-invention note.** Final Logical Model §5-4 and §13-2; Physical Design §13 and Appendix A.
-
-### 45. `document_link`
+### 43. `document_link`
 
 **Purpose and family.** Controlled polymorphic link from an exact immutable Document Version to a permitted Master Data target.
 
@@ -979,7 +945,7 @@ Document Link Target Type rules:
 
 ## 5. Business Revision — 2 business tables
 
-### 46. `masterdata_revision`
+### 44. `masterdata_revision`
 
 **Purpose and family.** Header for one identifiable, Backend-owned Unit of Work representing one Central or one Local Master Data business decision.
 
@@ -997,11 +963,11 @@ Document Link Target Type rules:
 
 **Authority / non-invention note.** Final Logical Model §5-4 and §14-1; Physical Design §14. This is not a general Audit Trail.
 
-### 47. `masterdata_revision_content`
+### 45. `masterdata_revision_content`
 
 **Purpose and family.** Ordered immutable change records belonging to one Master Data Revision; the controlled polymorphic reference identifies the changed entity.
 
-**Fields.** `ID`; `revision_id RAW(16) NOT NULL`; `sequence_number NUMBER(19,0) NOT NULL`; controlled `entity_type VARCHAR2(32 BYTE) NOT NULL`; `entity_id RAW(16) NOT NULL`; `operation_type VARCHAR2(32 BYTE) NOT NULL`; nullable `expected_version NUMBER(19,0)`; nullable `before_snapshot CLOB JSON`; nullable `after_snapshot CLOB JSON`; nullable `applied_entity_version NUMBER(19,0)`; nullable `validation_result CLOB JSON`; `created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `created_by RAW(16) NOT NULL`; `version NUMBER(19,0) NOT NULL`. `entity_type` uses the canonical 45-code Revision Entity Type vocabulary in this catalog.
+**Fields.** `ID`; `revision_id RAW(16) NOT NULL`; `sequence_number NUMBER(19,0) NOT NULL`; controlled `entity_type VARCHAR2(32 BYTE) NOT NULL`; `entity_id RAW(16) NOT NULL`; `operation_type VARCHAR2(32 BYTE) NOT NULL`; nullable `expected_version NUMBER(19,0)`; nullable `before_snapshot CLOB JSON`; nullable `after_snapshot CLOB JSON`; nullable `applied_entity_version NUMBER(19,0)`; nullable `validation_result CLOB JSON`; `created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `created_by RAW(16) NOT NULL`; `version NUMBER(19,0) NOT NULL`. `entity_type` uses the canonical 43-code Revision Entity Type vocabulary in this catalog.
 
 **Keys and relationships.** PK: `id`. Business key: unique `(revision_id, sequence_number)`. FK: `revision_id -> masterdata_revision(id)`. `entity_type/entity_id` is controlled polymorphism and must be domain-validated against the header.
 
@@ -1009,7 +975,7 @@ Document Link Target Type rules:
 
 **Lifecycle, validity, and lock.** Operation is one of `CREATE`, `UPDATE`, `ACTIVATE`, `INACTIVATE`, `DELETE`, or `RESTORE`. No generic status/validity interval is documented. Applied content/snapshots are immutable; `version` supports guarded draft handling only.
 
-**Constraints and indexes.** Unique revision/sequence; controlled operation/entity type checked against the canonical 45-code Revision Entity Type vocabulary; revision-domain compatibility enforced by Backend validation; indexed `revision_id` via the unique key and target lookup only when proven necessary. JSON values require `IS JSON` checks.
+**Constraints and indexes.** Unique revision/sequence; controlled operation/entity type checked against the canonical 43-code Revision Entity Type vocabulary; revision-domain compatibility enforced by Backend validation; indexed `revision_id` via the unique key and target lookup only when proven necessary. JSON values require `IS JSON` checks.
 
 **Mutability and Revision.** Generated, sequenced, snapshot-filled, validated, and atomically applied by the Backend. The Frontend never sends this object, its sequence number, snapshots, or transaction order.
 
@@ -1033,7 +999,7 @@ Document Link Target Type rules:
 
 **Mutability and Revision.** Backend validates object existence, checksum, expiry, status, user/context authorization, then consumes the row exactly once in the final document command. The Frontend sends `tempUploadId` only and never a final object key. MinIO lifecycle removes temporary objects; no technical Job/Scheduler table is added.
 
-**Authority / non-invention note.** Physical Design §12-1 through §12-4. It is technical, not one of the 47 business tables, and there is no distributed Oracle–MinIO transaction or Outbox.
+**Authority / non-invention note.** Physical Design §12-1 through §12-4. It is technical, not one of the 45 business tables, and there is no distributed Oracle–MinIO transaction or Outbox.
 
 ## Final count and verification rule
 
@@ -1042,12 +1008,12 @@ Document Link Target Type rules:
 | Structural and Central Definitions | 14 (`01`–`14`) |
 | Central Scope, Classification, Policy Scope, and Coverage | 13 (`15`–`27`) |
 | Local Context, Local Scope, Local Coverage, and Local Policy Scope | 13 (`28`–`40`) |
-| Document | 5 (`41`–`45`) |
-| Business Revision | 2 (`46`–`47`) |
-| **Business tables** | **47** |
+| Document | 3 (`41`–`43`) |
+| Business Revision | 2 (`44`–`45`) |
+| **Business tables** | **45** |
 | Technical Temporary Upload | 1 (`T1`) |
-| **Total physical tables in this redesign scope** | **48** |
+| **Total physical tables in this redesign scope** | **46** |
 
-Manual proof: the contiguous numbered business list starts at `01` and ends at `47` exactly once; `T1` is outside the business list. Programmatic gates for later implementation tasks must count Markdown headings in the form `### NN. table_name` and confirm 47 numbered business headings, plus exactly one `### T1.` heading.
+Manual proof: the contiguous numbered business list starts at `01` and ends at `45` exactly once; `T1` is outside the business list. Programmatic gates for later implementation tasks must count Markdown headings in the form `### NN. table_name` and confirm 45 numbered business headings, plus exactly one `### T1.` heading.
 
 No KPI, KRI, risk-assessment, control-test, workflow, monitoring, job, scheduler, cache, outbox, Audit, generic assignment, generic Scope, generic Coverage, or invented relationship table is part of this catalog.

@@ -274,9 +274,7 @@ Document target selection uses the closed `DocumentLinkTargetType` vocabulary de
 | --- | --- | --- | --- | --- |
 | Temporary upload first | `/api/documents/temp` plus session-oriented client state | `document_temp_upload` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Keep progress UI; replace session state with `tempUploadId`, expiry, and authorization feedback. |
 | No direct final upload | `POST /api/documents` direct upload | Final typed Business Command | `REMOVE` | Remove direct final-upload action; final save consumes temporary upload inside the command. |
-| Immutable Document Version list | Generic attachment list | `document` + `document_version` | `ADD` | Add version history, version number, file metadata, storage state, and immutable replacement action. |
-| Retention policy display | No current V2 equivalent | `document_retention_policy` | `ADD` | Add retention policy selection/read information where authorized. |
-| Document Hold display/action | No current V2 equivalent | `document_hold` | `ADD` | Add authorized hold/release panel and purge-block explanation. |
+| Immutable Document Version list | Generic attachment list | `document` + `document_version` | `ADD` | Add version history, version number, file metadata, and immutable replacement action. |
 | Controlled Document Link | Generic `targetType`/`targetId` binding | `document_link` | `REPLACE` | UI chooses an approved typed target context; it never exposes an open generic target list or internal revision metadata target. |
 | Secure download | Presigned download URL flow | Authorized document-version download use case | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain download button; request controlled stream/short-lived URL without exposing permanent key. |
 | Revision-aware mutation result | Current CRUD feedback only | `masterdata_revision` result | `ADD` | Show successful entity ID, revision ID, and new version; link to authorized revision summary if available. |
@@ -302,7 +300,7 @@ Document target selection uses the closed `DocumentLinkTargetType` vocabulary de
 | `/api/organization-risk-assignments` and generic reference endpoints | `REMOVE` | Replace only with typed Local Scope/Coverage/Policy Scope flows. |
 | `POST /api/documents` direct final upload | `REMOVE` | Temporary upload then document-aware business command. |
 | `/api/documents/temp` and `/api/documents/commit` session flow | `REPLACE` | `tempUploadId` staging and one-time server-side consumption. |
-| Generic document attachment storage | `REPLACE` | Document, immutable Version, Retention, Hold, controlled Link. |
+| Generic document attachment storage | `REPLACE` | Document, immutable Version, controlled Link. |
 
 ## 15. Explicit exclusions in target UI
 
@@ -318,6 +316,8 @@ The target Master Data V2 UI must not add a Policy approval workflow, task queue
 
 The target Master Data V2 UI must not add monitoring, jobs, scheduler, cache, outbox, or generic Audit management views.
 
+The target Master Data V2 UI must not add Retention Policy management, Hold management, hold release, purge status, purge retry, or purge administration.
+
 The target Master Data V2 UI must not expose a generic Objective feature.
 
 The target Master Data V2 UI must not expose a direct Control-to-Regulation relation.
@@ -332,7 +332,7 @@ Next deliver Central Scope/Classification/Coverage and Policy Scope screens.
 
 Next deliver Local Context before Local Scope/Coverage/Policy Scope screens.
 
-Next deliver Document Version/temporary-upload/hold/link UI and Revision-aware mutation feedback.
+Next deliver Document Version/temporary-upload/link UI and Revision-aware mutation feedback.
 
 Next deliver Effective, Diagnostic, Roll-up, and Policy Applicability read-only pages/panels.
 

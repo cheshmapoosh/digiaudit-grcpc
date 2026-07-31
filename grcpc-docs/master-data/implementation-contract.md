@@ -44,13 +44,15 @@ Other module migrations remain outside the Master Data V2 rewrite unless an expl
 
 ## 3. Fixed scope and count
 
-The final business-table count is exactly 47.
+The final business-table count is exactly 45.
 
 The sole technical temporary-upload table is `document_temp_upload`.
 
-The total physical table count inside this redesign scope is exactly 48.
+The total physical table count inside this redesign scope is exactly 46.
 
-The 47 business tables are the exact list in [table-catalog.md](table-catalog.md).
+The 45 business tables are the exact list in [table-catalog.md](table-catalog.md).
+
+The Document business-table count is exactly 3, and the final physical contract is `45 business tables + 1 technical table = 46 physical tables`.
 
 No additional Master Data table is authorized merely to simplify implementation.
 
@@ -106,7 +108,7 @@ No control-test result, effectiveness result, or operational evidence table is p
 
 No Policy approval workflow is part of Master Data V2.
 
-`document_hold.hold_type = AUDIT` or `WORKFLOW` is a controlled document-hold reason; it does not create Audit or Workflow table families.
+No Retention Policy table, Hold table, purge subsystem, scheduled purge, manual purge, purge-state persistence model, Job replacement, Scheduler replacement, or Outbox replacement is part of Master Data V2.
 
 ## 5. Oracle, identifiers, and schema ownership
 
@@ -393,13 +395,13 @@ The approved model permits exactly two controlled polymorphic relations:
 
 Each relation has its own closed stored-code vocabulary. These vocabularies must not be conflated, even where both reuse the same stored code for the same logical table.
 
-`RevisionEntityType` contains exactly 45 stored codes and is used only for Revision Content.
+`RevisionEntityType` contains exactly 43 stored codes and is used only for Revision Content.
 
 Document Link Target Type contains exactly 41 stored codes and is used only for Document Link target validation.
 
 Document Link allows catalog tables `01` through `40` plus the narrow `MASTERDATA_REVISION` exception.
 
-Document-family tables are revisionable where applicable, but `document_retention_policy`, `document`, `document_version`, `document_hold`, and `document_link` are not Document Link targets.
+Document-family tables are revisionable where applicable, but `document`, `document_version`, and `document_link` are not Document Link targets.
 
 `masterdata_revision_content`, `document_temp_upload`, Effective read models, Diagnostic read models, Roll-up read models, and Policy Applicability read models are not Document Link targets.
 
@@ -431,19 +433,19 @@ Persistence errors must not expose raw JSON payloads, raw Jackson diagnostics, S
 
 ## 12. Document and MinIO contract
 
-`document` is stable identity.
+The canonical Document flow is: `Temporary Upload -> Document -> Immutable Document Version -> Document Link`.
 
-`document_version` is immutable content and file metadata.
+`document` is stable identity and metadata.
 
-`document_retention_policy` controls retention semantics.
+`document_version` is immutable finalized-file identity and file metadata.
 
-`document_hold` blocks eligible physical purge.
+It is created only for a finalized permanent object.
 
 `document_link` attaches an exact Document Version to a controlled target.
 
-The file path is: Temporary Upload → final Business Command → immutable Document Version → Document Link.
+The final Business Command consumes a Temporary Upload, creates or updates Document identity as needed, creates the immutable Document Version, and creates the Document Link.
 
-The temporary table is exactly `document_temp_upload`.
+The temporary table is exactly `document_temp_upload`; it is technical and is consumed by a final Business Command.
 
 `tempUploadId` is the only upload identifier sent into a final document-aware command.
 
@@ -456,6 +458,8 @@ It must be unexpired.
 It must be authorized for the current user or permitted context.
 
 The Backend verifies MinIO object existence and checksum.
+
+Failed temporary or permanent storage preparation must not create a completed Document Version row; storage failure handling belongs to the future Document command flow.
 
 The Frontend never supplies a final MinIO object key.
 
@@ -481,9 +485,7 @@ Temporary objects are cleaned through MinIO lifecycle behavior.
 
 No Job or Scheduler table is introduced for temporary cleanup.
 
-Retention and Hold metadata remain even though a final automated permanent-object purge can be delivered as a later operational behavior.
-
-Purge never removes Document Version metadata.
+No Job, Scheduler, Outbox, Retention, Hold, or Purge subsystem is part of this scope.
 
 ## 13. Read-model contract
 
@@ -575,7 +577,7 @@ It must remove the Legacy behavior it replaces within that same slice.
 
 It must not leave a compatibility endpoint, dual write, or unused Legacy entity behind.
 
-It must preserve the 47 business table and one technical temporary-upload table limit.
+It must preserve the 45 business table and one technical temporary-upload table limit.
 
 It must leave KPI and KRI outside Master Data V2.
 

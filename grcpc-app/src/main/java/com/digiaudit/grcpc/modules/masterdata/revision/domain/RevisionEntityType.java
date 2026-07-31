@@ -46,10 +46,8 @@ public enum RevisionEntityType {
     LOCAL_POLICY_SUBPROCESS_SCOPE("LOCAL_POLICY_SUBPROCESS", EnumSet.of(RevisionDomain.LOCAL)),
     LOCAL_POLICY_CONTROL_SCOPE("LOCAL_POLICY_CONTROL", EnumSet.of(RevisionDomain.LOCAL)),
     LOCAL_POLICY_REQUIREMENT_SCOPE("LOCAL_POLICY_REQUIREMENT", EnumSet.of(RevisionDomain.LOCAL)),
-    DOCUMENT_RETENTION_POLICY("DOCUMENT_RETENTION_POLICY", EnumSet.of(RevisionDomain.CENTRAL)),
     DOCUMENT("DOCUMENT", EnumSet.of(RevisionDomain.CENTRAL, RevisionDomain.LOCAL)),
     DOCUMENT_VERSION("DOCUMENT_VERSION", EnumSet.of(RevisionDomain.CENTRAL, RevisionDomain.LOCAL)),
-    DOCUMENT_HOLD("DOCUMENT_HOLD", EnumSet.of(RevisionDomain.CENTRAL, RevisionDomain.LOCAL)),
     DOCUMENT_LINK("DOCUMENT_LINK", EnumSet.of(RevisionDomain.CENTRAL, RevisionDomain.LOCAL));
 
     private final String wireValue;

@@ -4,7 +4,7 @@
 
 This checklist is the completion gate for later Master Data V2 implementation prompts.
 
-The approved baseline is 47 business tables from the Final Logical Model and exactly one technical `document_temp_upload` table from the Physical Design Reference.
+The approved Prompt 3.3 project-owner scope correction sets the active baseline at 45 business tables and exactly one technical `document_temp_upload` table, for 46 physical tables total.
 
 Authoritative source files: `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`, `GRC_Master_Data_Logical_Model_Final_FA.docx`, and `GRC_Master_Data_Physical_Design_Reference_FA.docx`.
 
@@ -16,11 +16,12 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 
 - [ ] The implementation is Greenfield on a fresh Oracle database.
 - [ ] The implementation uses the three authoritative documents in the published authority order.
-- [ ] The Final Logical Model’s 47 business-table list is used verbatim.
+- [ ] The active corrected 45 business-table list is used.
 - [ ] The Physical Design’s sole technical table is named exactly `document_temp_upload`.
-- [ ] Total physical tables in the Master Data V2 redesign scope equal 48.
-- [ ] Business tables equal exactly 47.
+- [ ] Total physical tables in the Master Data V2 redesign scope equal 46.
+- [ ] Business tables equal exactly 45.
 - [ ] Technical temporary-upload tables equal exactly one.
+- [ ] Document business tables equal exactly three.
 - [ ] No additional Master Data table has been added for convenience.
 - [ ] No generic Scope table exists.
 - [ ] No generic Coverage table exists.
@@ -75,7 +76,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Flyway creates Central definitions and Policy Version before Central scopes/coverage.
 - [ ] Flyway creates Central Scope, Classification, Policy Scope, and Coverage before Local relations.
 - [ ] Flyway creates Local Context before Local Scope, Coverage, and Local Policy Scope.
-- [ ] Flyway creates Retention, Document, Version, Hold, and Link before dependent document actions.
+- [ ] Flyway creates Document, Version, and Link before dependent document actions.
 - [ ] Flyway creates `document_temp_upload` as the sole technical temporary-upload table.
 - [ ] Flyway creates `masterdata_revision` before `masterdata_revision_content`.
 - [ ] Flyway adds supplementary checks, unique constraints, composite FKs, and indexes after referenced tables exist.
@@ -244,11 +245,10 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 
 ## 12. Document acceptance
 
-- [ ] `document_retention_policy` exists.
 - [ ] `document` exists as stable identity.
 - [ ] `document_version` exists as immutable content/file version.
-- [ ] `document_hold` exists as a version-level purge blocker.
 - [ ] `document_link` exists as a precise-version controlled link.
+- [ ] Document business table count is exactly 3.
 - [ ] A Document can have more than one Document Version.
 - [ ] A Document Version has unique `(document_id, document_version_number)`.
 - [ ] A file replacement creates a new Document Version.
@@ -261,20 +261,24 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Document Link Target Type Oracle check count is exactly 41.
 - [ ] The future Java `DocumentLinkTargetType` enum count is exactly 41.
 - [ ] Document Link Target Type values correspond exactly to catalog entries `01` through `40` plus `MASTERDATA_REVISION`.
-- [ ] `DOCUMENT_RETENTION_POLICY`, `DOCUMENT`, `DOCUMENT_VERSION`, `DOCUMENT_HOLD`, and `DOCUMENT_LINK` are absent from the Document Link target vocabulary.
+- [ ] `DOCUMENT`, `DOCUMENT_VERSION`, and `DOCUMENT_LINK` are absent from the Document Link target vocabulary.
+- [ ] `DOCUMENT_RETENTION_POLICY` and `DOCUMENT_HOLD` are absent from the Document Link target vocabulary.
 - [ ] `MASTERDATA_REVISION_CONTENT` and `DOCUMENT_TEMP_UPLOAD` are absent from the Document Link target vocabulary.
 - [ ] Effective, Diagnostic, Roll-up, Policy Applicability, Audit, workflow, monitoring, job, scheduler, cache, outbox, KPI, and KRI concepts are absent from the Document Link target vocabulary.
 - [ ] Every Document Link target value is unique, uppercase ASCII, and at most 32 bytes.
 - [ ] Arbitrary Document Link target strings are rejected.
 - [ ] `MASTERDATA_REVISION` is Backend-controlled and limited to same-DRAFT-Revision metadata context; it is not a normal Browser-selectable target.
 - [ ] Document Link is not an unrestricted generic attachment API.
-- [ ] Retention policy supports only `AFTER_RETENTION` and `NEVER_PURGE`.
-- [ ] Retention days are present and positive only for `AFTER_RETENTION`.
-- [ ] A Document Hold uses an approved hold type.
-- [ ] An active Document Hold blocks eligible purge.
-- [ ] Purging preserves Document Version metadata.
-- [ ] A purged file produces `DOCUMENT_VERSION_PURGED` on content download.
 - [ ] `storage_object_key` is never rendered as a permanent public URL.
+- [ ] No `document_retention_policy` table exists.
+- [ ] No `document_hold` table exists.
+- [ ] No `retention_policy_id` column exists on `document`.
+- [ ] No Retention/Purge columns exist on `document_version`.
+- [ ] No Retention/Hold Revision entity type exists.
+- [ ] No Retention/Hold API exists.
+- [ ] No Retention/Hold UI exists.
+- [ ] No scheduled purge, manual purge, purge state, purge error, retention days, hold release, or hold type behavior exists in this scope.
+- [ ] No Job, Scheduler, or Outbox is introduced as a replacement.
 
 ## 13. Temporary-upload and MinIO acceptance
 
@@ -318,12 +322,13 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Revision Content operations use only approved operation values.
 - [ ] Revision Content controlled entity references are domain-validated.
 - [ ] Revision Entity Type is documented once canonically in `table-catalog.md`.
-- [ ] Revision Entity Type documented count is exactly 45.
-- [ ] Java `RevisionEntityType` enum count is exactly 45.
-- [ ] Oracle `ck_masterdata_revision_content_entity` count is exactly 45.
+- [ ] Revision Entity Type documented count is exactly 43.
+- [ ] Java `RevisionEntityType` enum count is exactly 43.
+- [ ] Oracle `ck_masterdata_revision_content_entity` count is exactly 43.
 - [ ] Documented, Java, and Oracle Revision Entity Type value sets are identical.
 - [ ] Every Revision Entity Type value is unique, uppercase ASCII, and at most 32 bytes.
 - [ ] `MASTERDATA_REVISION`, `MASTERDATA_REVISION_CONTENT`, and `DOCUMENT_TEMP_UPLOAD` are absent from the Revision Entity Type vocabulary.
+- [ ] `DOCUMENT_RETENTION_POLICY` and `DOCUMENT_HOLD` are absent from the Revision Entity Type vocabulary.
 - [ ] Effective, Diagnostic, Roll-up, Policy Applicability, Audit, workflow, monitoring, job, scheduler, cache, outbox, KPI, and KRI concepts are absent from the Revision Entity Type vocabulary.
 - [ ] The Backend creates one Business Revision per Business Command.
 - [ ] The Backend owns the transaction for the Business Command.
@@ -436,7 +441,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 
 - [ ] Every Central mutation requires Central Master Data authorization.
 - [ ] Every Local mutation checks authorization against its exact Organization/Local Context.
-- [ ] Document upload/consume/link/hold/download checks the appropriate resource authorization.
+- [ ] Document upload/consume/link/download checks the appropriate resource authorization.
 - [ ] Download authorization is checked before streaming or issuing a short-lived URL.
 - [ ] Diagnostic reads have a separate permission.
 - [ ] No normal application user gets direct database source-table access.
@@ -478,7 +483,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 ## 21. Final full-stack acceptance
 
 - [ ] Fresh Oracle initialization produces exactly the approved V2 table inventory.
-- [ ] The schema count proof reports 47 business tables and one technical temporary-upload table.
+- [ ] The schema count proof reports 45 business tables and one technical temporary-upload table, 46 physical tables total.
 - [ ] Backend startup validates the Flyway-owned schema successfully.
 - [ ] Central catalog create/update/status/delete/restore paths create a Backend-owned Revision.
 - [ ] Central Coverage rejects cross-Subprocess endpoints at both validation and database constraint levels.
