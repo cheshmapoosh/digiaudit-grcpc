@@ -1,4 +1,4 @@
-﻿import { Fragment, useMemo, useState, type CSSProperties } from "react";
+import { Fragment, useMemo, useState, type CSSProperties } from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,7 +13,7 @@ import {
 
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
-import { DocumentManager } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 import type { ObjectiveNode, ObjectiveStatus, ObjectiveType } from "../domain/objective.model";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
@@ -186,7 +186,6 @@ function SimpleTable({
 
 export default function ObjectiveSummaryPanel({
     value,
-    busy = false,
     error,
     onClose,
 }: ObjectiveSummaryPanelProps) {
@@ -286,18 +285,7 @@ export default function ObjectiveSummaryPanel({
     };
 
     const renderDocuments = () => (
-        <DocumentManager
-            title={t("objective.tabs.documents", {
-                defaultValue: "مستندات",
-            })}
-            targetType="CENTRAL_CONTROL_OBJECTIVE_DEF"
-            targetId={value.id}
-            busy={busy}
-            readOnly
-            viewHint={t("objective.documents.viewHint", {
-                defaultValue: "مستندات ثبت‌شده برای این هدف",
-            })}
-        />
+        <DocumentIntegrationDeferredMessage />
     );
     const renderActiveTab = () => {
         if (activeTab === "relatedOrganizations") {

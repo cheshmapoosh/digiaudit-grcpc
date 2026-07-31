@@ -3,9 +3,10 @@ package com.digiaudit.grcpc.modules.document.api;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentAddVersionRequest;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentCreateRequest;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentDetailResponse;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentLifecycleCommandRequest;
-import com.digiaudit.grcpc.modules.document.api.dto.DocumentLinkSummaryResponse;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentMetadataUpdateRequest;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentVersionResponse;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommands;
 import com.digiaudit.grcpc.modules.document.application.DocumentFailures;
@@ -55,13 +56,13 @@ public class DocumentController {
 
     @GetMapping("/{documentId}")
     @PreAuthorize("hasAuthority('DOCUMENT_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public List<DocumentLinkSummaryResponse> get(@PathVariable UUID documentId) {
+    public DocumentDetailResponse get(@PathVariable UUID documentId) {
         return readService.getDocument(documentId);
     }
 
     @GetMapping("/{documentId}/versions")
     @PreAuthorize("hasAuthority('DOCUMENT_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public List<DocumentLinkSummaryResponse> versions(@PathVariable UUID documentId) {
+    public List<DocumentVersionResponse> versions(@PathVariable UUID documentId) {
         return readService.listVersions(documentId);
     }
 

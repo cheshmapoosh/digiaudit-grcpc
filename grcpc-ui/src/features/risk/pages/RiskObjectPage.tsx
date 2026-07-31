@@ -1,4 +1,4 @@
-﻿import {
+import {
     useMemo,
     useState,
     type CSSProperties,
@@ -35,7 +35,7 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
-import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 
 export type RiskObjectMode = "create" | "edit" | "view";
 
@@ -362,10 +362,6 @@ function defaultTabs(nodeType: RiskNodeType): RiskTabKey[] {
     return ["general", "riskSummary", "kriTemplate", "documents"];
 }
 
-function resolveDocumentTargetType(nodeType: RiskNodeType): DocumentLinkTargetType {
-    return nodeType === "riskTemplate" ? "CENTRAL_RISK_TEMPLATE" : "CENTRAL_RISK_CATEGORY";
-}
-
 function resolveTabLabel(tab: RiskTabKey, t: ReturnType<typeof useTranslation>["t"]): string {
     const labels: Record<RiskTabKey, string> = {
         general: t("risk.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
@@ -500,7 +496,6 @@ export default function RiskObjectPage({
         : t("common.none", { defaultValue: "Ù†Ø¯Ø§Ø±Ø¯" });
     const headerType = resolveNodeTypeLabel(form.nodeType, t);
     const headerStatus = resolveStatusLabel(form.status, t);
-    const currentRiskId = value?.id ?? null;
 
     const handleChange = <K extends keyof RiskFormState>(
         key: K,
@@ -886,18 +881,7 @@ export default function RiskObjectPage({
         }
 
         return (
-            <DocumentManager
-                key={currentRiskId ?? "unsaved-risk-documents"}
-                title={t("risk.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
-                targetType={resolveDocumentTargetType(form.nodeType)}
-                targetId={currentRiskId}
-                busy={busy}
-                readOnly={readOnly}
-                saveFirstMessage={t("risk.documents.saveFirst", {
-                    defaultValue:
-                        "Ø§Ø¨ØªØ¯Ø§ Ø¢ÛŒØªÙ… Ø±ÛŒØ³Ú© Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯ØŒ Ø³Ù¾Ø³ Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø±Ø§ Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ÛŒØ¯.",
-                })}
-            />
+            <DocumentIntegrationDeferredMessage />
         );
     };
 

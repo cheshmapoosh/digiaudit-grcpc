@@ -4,6 +4,7 @@ import type {
     DocumentAddVersionPayload,
     DocumentCommandResponse,
     DocumentCreatePayload,
+    DocumentDetail,
     DocumentDownloadAccess,
     DocumentLifecyclePayload,
     DocumentLinkLifecyclePayload,
@@ -11,6 +12,7 @@ import type {
     DocumentLinkTargetType,
     DocumentMetadataUpdatePayload,
     DocumentTemporaryUpload,
+    DocumentVersion,
 } from "../domain/document.model";
 import { DocumentApiRepo } from "../infra/document.api.repo";
 
@@ -27,6 +29,9 @@ interface DocumentState {
         onProgress?: (progress: number) => void,
     ): Promise<DocumentTemporaryUpload>;
     getTemporaryUpload(tempUploadId: string): Promise<DocumentTemporaryUpload>;
+    getDocument(documentId: string): Promise<DocumentDetail>;
+    listVersions(documentId: string): Promise<DocumentVersion[]>;
+    getVersion(documentVersionId: string): Promise<DocumentVersion>;
     createDocument(payload: DocumentCreatePayload): Promise<DocumentCommandResponse>;
     addVersion(
         documentId: string,
@@ -110,6 +115,18 @@ export const useDocumentState = create<DocumentState>((set) => ({
         return upload;
     },
 
+    async getDocument(documentId) {
+        return documentRepo.getDocument(documentId);
+    },
+
+    async listVersions(documentId) {
+        return documentRepo.listVersions(documentId);
+    },
+
+    async getVersion(documentVersionId) {
+        return documentRepo.getVersion(documentVersionId);
+    },
+
     async createDocument(payload) {
         const response = await documentRepo.createDocument(payload);
         set((state) => ({
@@ -140,13 +157,11 @@ export const useDocumentState = create<DocumentState>((set) => ({
 
     async updateMetadata(documentId, payload) {
         const response = await documentRepo.updateMetadata(documentId, payload);
+        const rows = await documentRepo.listByTarget(payload.targetType, payload.targetId);
         set((state) => ({
             linkedDocumentsByTarget: {
                 ...state.linkedDocumentsByTarget,
-                [targetKey(payload.targetType, payload.targetId)]: updateTargetRows(
-                    state.linkedDocumentsByTarget[targetKey(payload.targetType, payload.targetId)] ?? [],
-                    response,
-                ),
+                [targetKey(payload.targetType, payload.targetId)]: rows,
             },
         }));
         return response;

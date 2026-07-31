@@ -1,4 +1,4 @@
-﻿import {
+import {
     Fragment,
     useEffect,
     useMemo,
@@ -28,7 +28,7 @@ import type {
 } from "../domain/regulation.model";
 import { regulationService } from "../service/regulation.service";
 import { formatPersianDate } from "@/shared/utils/date.utils";
-import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 import RegulationRequirementsSummaryTab from "./tabs/RegulationRequirementsSummaryTab";
 
 export interface RegulationSummaryPanelProps {
@@ -217,14 +217,6 @@ function getTabs(
     return tabs;
 }
 
-function resolveDocumentTargetType(nodeType: RegulationNodeType): DocumentLinkTargetType {
-    if (nodeType === "lawGroup") {
-        return "CENTRAL_REGULATION_GROUP";
-    }
-
-    return nodeType === "law" ? "CENTRAL_REGULATION" : "CENTRAL_REQUIREMENT";
-}
-
 function RegulationTabs({
     tabs,
     activeTab,
@@ -326,7 +318,6 @@ function TabBody({
     details: RegulationNode;
     activeTab: RegulationDetailTabKey;
 }) {
-    const { t } = useTranslation();
 
     if (activeTab === "general") {
         return <GeneralTab value={details} />;
@@ -342,19 +333,7 @@ function TabBody({
     }
 
     return (
-        <DocumentManager
-            key={`${details.id}:documents`}
-            targetType={resolveDocumentTargetType(details.nodeType)}
-            targetId={details.id}
-            readOnly
-            showActions={false}
-            title={t("regulation.tabs.documents", {
-                defaultValue: "مستندات",
-            })}
-            viewHint={t("regulation.documents.viewHint", {
-                defaultValue: "مستندات ثبت‌شده برای این آیتم",
-            })}
-        />
+        <DocumentIntegrationDeferredMessage />
     );
 }
 

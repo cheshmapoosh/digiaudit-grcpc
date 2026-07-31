@@ -13,6 +13,7 @@ import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.StatObjectArgs;
 import io.minio.StatObjectResponse;
+import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -67,7 +68,7 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
         } catch (DocumentStorageException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new DocumentStorageException("DOCUMENT_STORAGE_UNAVAILABLE", "Document temporary upload failed", ex);
+            throw classifyStorageFailure(ex, "DOCUMENT_STORAGE_UNAVAILABLE", "Document temporary upload failed");
         }
     }
 
@@ -88,12 +89,12 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
         } catch (DocumentStorageException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new DocumentStorageException("DOCUMENT_OBJECT_MISSING", "Document storage object was not found", ex);
+            throw classifyStorageFailure(ex, "DOCUMENT_STORAGE_UNAVAILABLE", "Document storage object could not be inspected");
         }
     }
 
     @Override
-    public PromotionResult promoteTemporaryObject(
+    public PermanentObjectPromotionResult promoteTemporaryObject(
             String temporaryObjectKey,
             String permanentObjectKey,
             DocumentObjectMetadata expectedMetadata
@@ -103,14 +104,15 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
         Objects.requireNonNull(expectedMetadata, "expectedMetadata is required");
         try {
             DocumentObjectMetadata existingPermanent = inspectObject(permanentObjectKey);
-            verifyMetadata(existingPermanent, expectedMetadata);
-            return new PromotionResult(false);
+            verifyMetadata(existingPermanent, expectedMetadata, "PERMANENT_OBJECT_CONFLICT");
+            return new PermanentObjectPromotionResult(permanentObjectKey, false, existingPermanent);
         } catch (DocumentStorageException ex) {
             if (!"DOCUMENT_OBJECT_MISSING".equals(ex.errorCode())) {
                 throw ex;
             }
         }
 
+        boolean copied = false;
         try {
             MinioClient client = client();
             ensureBucket(client);
@@ -122,24 +124,34 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
                             .object(temporaryObjectKey)
                             .build())
                     .build());
-            verifyPermanentObject(permanentObjectKey, expectedMetadata);
-            return new PromotionResult(true);
+            copied = true;
+            DocumentObjectMetadata verified = verifiedPermanentMetadata(permanentObjectKey, expectedMetadata);
+            return new PermanentObjectPromotionResult(permanentObjectKey, true, verified);
         } catch (DocumentStorageException ex) {
+            if (copied) {
+                removeNewPermanentBestEffort(permanentObjectKey);
+            }
             throw ex;
         } catch (Exception ex) {
-            throw new DocumentStorageException("PERMANENT_PROMOTION_FAILURE", "Document permanent object promotion failed", ex);
+            if (copied) {
+                removeNewPermanentBestEffort(permanentObjectKey);
+            }
+            throw classifyStorageFailure(ex, "PERMANENT_PROMOTION_FAILURE", "Document permanent object promotion failed");
         }
     }
 
     @Override
     public void verifyPermanentObject(String permanentObjectKey, DocumentObjectMetadata expectedMetadata) {
-        verifyMetadata(inspectObject(permanentObjectKey), expectedMetadata);
+        verifiedPermanentMetadata(permanentObjectKey, expectedMetadata);
     }
 
     @Override
     public DocumentDownloadAccess createDownloadAccess(String permanentObjectKey, String fileName, String mimeType) {
         int expiryMinutes = Math.max(1, properties.presignedUrlExpiryMinutes());
         try {
+            if (!properties.enabled()) {
+                throw new DocumentStorageException("DOCUMENT_STORAGE_DISABLED", "Document storage is disabled");
+            }
             String url = presignedClient().getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
                     .method(Method.GET)
                     .bucket(properties.bucket())
@@ -147,8 +159,10 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
                     .expiry(expiryMinutes, TimeUnit.MINUTES)
                     .build());
             return new DocumentDownloadAccess(url, Instant.now(clock).plus(Duration.ofMinutes(expiryMinutes)));
+        } catch (DocumentStorageException ex) {
+            throw ex;
         } catch (Exception ex) {
-            throw new DocumentStorageException("DOCUMENT_STORAGE_UNAVAILABLE", "Document download access could not be created", ex);
+            throw classifyStorageFailure(ex, "DOCUMENT_DOWNLOAD_PREPARATION_FAILED", "Document download access could not be created");
         }
     }
 
@@ -162,14 +176,30 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
         removeObject(temporaryObjectKey);
     }
 
+    private DocumentObjectMetadata verifiedPermanentMetadata(String permanentObjectKey, DocumentObjectMetadata expectedMetadata) {
+        DocumentObjectMetadata actual = inspectObject(permanentObjectKey);
+        verifyMetadata(actual, expectedMetadata, "DOCUMENT_OBJECT_METADATA_MISMATCH");
+        return actual;
+    }
+
+    private void removeNewPermanentBestEffort(String permanentObjectKey) {
+        try {
+            removeObject(permanentObjectKey);
+        } catch (RuntimeException ignored) {
+            // Rollback retry safety comes from the deterministic permanent key and metadata checks.
+        }
+    }
+
     private void removeObject(String objectKey) {
         try {
             client().removeObject(RemoveObjectArgs.builder()
                     .bucket(properties.bucket())
                     .object(objectKey)
                     .build());
+        } catch (DocumentStorageException ex) {
+            throw ex;
         } catch (Exception ex) {
-            throw new DocumentStorageException("DOCUMENT_STORAGE_UNAVAILABLE", "Document storage object removal failed", ex);
+            throw classifyStorageFailure(ex, "DOCUMENT_STORAGE_UNAVAILABLE", "Document storage object removal failed");
         }
     }
 
@@ -227,13 +257,41 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
         return normalized;
     }
 
-    private void verifyMetadata(DocumentObjectMetadata actual, DocumentObjectMetadata expected) {
+    private void verifyMetadata(DocumentObjectMetadata actual, DocumentObjectMetadata expected, String errorCode) {
         if (actual.fileSize() != expected.fileSize()
                 || !sameText(actual.mimeType(), expected.mimeType())
                 || !sameText(actual.checksumAlgorithm(), expected.checksumAlgorithm())
                 || !sameText(actual.checksumValue(), expected.checksumValue())) {
-            throw new DocumentStorageException("TEMPORARY_OBJECT_METADATA_MISMATCH", "Document storage object metadata mismatch");
+            throw new DocumentStorageException(errorCode, "Document storage object metadata mismatch");
         }
+    }
+
+    private DocumentStorageException classifyStorageFailure(Exception ex, String fallbackCode, String message) {
+        if (ex instanceof ErrorResponseException responseException) {
+            String code = responseException.errorResponse() == null
+                    ? ""
+                    : responseException.errorResponse().code();
+            if (isObjectNotFound(code)) {
+                return new DocumentStorageException("DOCUMENT_OBJECT_MISSING", "Document storage object was not found", ex);
+            }
+            if (isAccessOrConfigurationFailure(code)) {
+                return new DocumentStorageException("DOCUMENT_STORAGE_ACCESS_DENIED", "Document storage access is denied or misconfigured", ex);
+            }
+        }
+        return new DocumentStorageException(fallbackCode, message, ex);
+    }
+
+    private boolean isObjectNotFound(String minioCode) {
+        return "NoSuchKey".equals(minioCode)
+                || "NoSuchObject".equals(minioCode)
+                || "NotFound".equals(minioCode);
+    }
+
+    private boolean isAccessOrConfigurationFailure(String minioCode) {
+        return "AccessDenied".equals(minioCode)
+                || "InvalidAccessKeyId".equals(minioCode)
+                || "SignatureDoesNotMatch".equals(minioCode)
+                || "NoSuchBucket".equals(minioCode);
     }
 
     private static boolean sameText(String left, String right) {

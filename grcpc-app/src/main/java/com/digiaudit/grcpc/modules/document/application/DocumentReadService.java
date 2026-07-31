@@ -1,8 +1,9 @@
 package com.digiaudit.grcpc.modules.document.application;
 
-import com.digiaudit.grcpc.common.exception.ForbiddenException;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentDetailResponse;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentDownloadResponse;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentLinkSummaryResponse;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentVersionResponse;
 import com.digiaudit.grcpc.modules.document.domain.DocumentLifecycleStatus;
 import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
 import com.digiaudit.grcpc.modules.document.domain.DocumentTargetContext;
@@ -17,6 +18,7 @@ import com.digiaudit.grcpc.modules.securityacl.application.ResourceAuthorization
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -70,26 +72,51 @@ public class DocumentReadService {
                 .toList();
     }
 
-    public List<DocumentLinkSummaryResponse> getDocument(UUID documentId) {
-        if (!documentRepository.existsById(documentId)) {
+    public DocumentDetailResponse getDocument(UUID documentId) {
+        DocumentEntity document = documentRepository.findById(documentId)
+                .orElseThrow(() -> DocumentFailures.notFound("DOCUMENT_NOT_FOUND", "Document was not found"));
+        if (document.getStatus() == DocumentLifecycleStatus.DELETED) {
             throw DocumentFailures.notFound("DOCUMENT_NOT_FOUND", "Document was not found");
         }
-        List<DocumentLinkReadProjection> rows = linkRepository.findLinkedDocumentsForDocument(documentId, DocumentLifecycleStatus.DELETED);
-        requireAtLeastOneAccessiblePublicLink(rows, VIEW_PERMISSION);
-        return rows.stream().map(responseMapper::toLinkSummary).toList();
+        requireAtLeastOneAccessiblePublicLink(documentId, VIEW_PERMISSION);
+        return responseMapper.toDocumentDetail(document);
     }
 
-    public List<DocumentLinkSummaryResponse> listVersions(UUID documentId) {
-        return getDocument(documentId);
+    public List<DocumentVersionResponse> listVersions(UUID documentId) {
+        DocumentEntity document = documentRepository.findById(documentId)
+                .orElseThrow(() -> DocumentFailures.notFound("DOCUMENT_NOT_FOUND", "Document was not found"));
+        if (document.getStatus() == DocumentLifecycleStatus.DELETED) {
+            throw DocumentFailures.notFound("DOCUMENT_NOT_FOUND", "Document was not found");
+        }
+        requireAtLeastOneAccessiblePublicLink(documentId, VIEW_PERMISSION);
+
+        List<DocumentVersionResponse> authorizedVersions = new ArrayList<>();
+        for (DocumentVersionEntity version : versionRepository.findByDocumentIdOrderByDocumentVersionNumberAsc(documentId)) {
+            if (version.getStatus() == DocumentLifecycleStatus.DELETED) {
+                continue;
+            }
+            if (hasAccessibleActivePublicLink(version.getId(), VIEW_PERMISSION)) {
+                authorizedVersions.add(responseMapper.toDocumentVersion(version));
+            }
+        }
+        return authorizedVersions;
     }
 
-    public List<DocumentLinkSummaryResponse> getDocumentVersion(UUID documentVersionId) {
-        if (!versionRepository.existsById(documentVersionId)) {
+    public DocumentVersionResponse getDocumentVersion(UUID documentVersionId) {
+        DocumentVersionEntity version = versionRepository.findById(documentVersionId)
+                .orElseThrow(() -> DocumentFailures.notFound("DOCUMENT_VERSION_NOT_FOUND", "Document version was not found"));
+        if (version.getStatus() == DocumentLifecycleStatus.DELETED) {
             throw DocumentFailures.notFound("DOCUMENT_VERSION_NOT_FOUND", "Document version was not found");
         }
-        List<DocumentLinkReadProjection> rows = linkRepository.findLinkedDocumentsForVersion(documentVersionId, DocumentLifecycleStatus.DELETED);
-        requireAtLeastOneAccessiblePublicLink(rows, VIEW_PERMISSION);
-        return rows.stream().map(responseMapper::toLinkSummary).toList();
+        DocumentEntity document = documentRepository.findById(version.getDocumentId())
+                .orElseThrow(() -> DocumentFailures.notFound("DOCUMENT_NOT_FOUND", "Document was not found"));
+        if (document.getStatus() == DocumentLifecycleStatus.DELETED) {
+            throw DocumentFailures.notFound("DOCUMENT_NOT_FOUND", "Document was not found");
+        }
+        if (!hasAccessibleActivePublicLink(documentVersionId, VIEW_PERMISSION)) {
+            throw DocumentFailures.forbidden("DOCUMENT_ACCESS_DENIED", "Document version is not accessible for the current user");
+        }
+        return responseMapper.toDocumentVersion(version);
     }
 
     public DocumentLinkSummaryResponse findSummaryByLinkId(UUID linkId) {
@@ -101,40 +128,26 @@ public class DocumentReadService {
     public DocumentDownloadResponse createDownload(UUID documentVersionId) {
         DocumentVersionEntity version = versionRepository.findById(documentVersionId)
                 .orElseThrow(() -> DocumentFailures.notFound("DOCUMENT_VERSION_NOT_FOUND", "Document version was not found"));
-        if (version.getStatus() == DocumentLifecycleStatus.DELETED) {
+        if (version.getStatus() != DocumentLifecycleStatus.ACTIVE) {
             throw DocumentFailures.notFound("DOCUMENT_VERSION_NOT_FOUND", "Document version was not found");
         }
         DocumentEntity document = documentRepository.findById(version.getDocumentId())
                 .orElseThrow(() -> DocumentFailures.notFound("DOCUMENT_NOT_FOUND", "Document was not found"));
-        if (document.getStatus() == DocumentLifecycleStatus.DELETED) {
+        if (document.getStatus() != DocumentLifecycleStatus.ACTIVE) {
             throw DocumentFailures.notFound("DOCUMENT_NOT_FOUND", "Document was not found");
         }
-
-        boolean allowed = false;
-        for (DocumentLinkEntity link : linkRepository.findActiveLinksForVersion(documentVersionId, DocumentLifecycleStatus.ACTIVE)) {
-            if (!link.getTargetType().isPublicSelectable()) {
-                continue;
-            }
-            try {
-                DocumentTargetContext targetContext = targetContextResolver.resolvePublic(link.getTargetType(), link.getTargetId());
-                authorizationService.assertCanAccess(
-                        targetContext.authorizationResourceType(),
-                        targetContext.authorizationResourceId(),
-                        DOWNLOAD_PERMISSION
-                );
-                allowed = true;
-                break;
-            } catch (ForbiddenException ex) {
-                // Try another active public link for this immutable version.
-            } catch (RuntimeException ex) {
-                // Deleted or invalid targets cannot authorize download, but another link may.
-            }
-        }
-        if (!allowed) {
+        if (!hasAccessibleActivePublicLink(documentVersionId, DOWNLOAD_PERMISSION)) {
             throw DocumentFailures.forbidden("DOWNLOAD_DENIED", "Document download is not allowed for the current user");
         }
 
+        DocumentStoragePort.DocumentObjectMetadata expectedMetadata = new DocumentStoragePort.DocumentObjectMetadata(
+                version.getMimeType(),
+                version.getFileSize(),
+                version.getChecksumAlgorithm(),
+                version.getChecksumValue()
+        );
         try {
+            storagePort.verifyPermanentObject(version.getStorageObjectKey(), expectedMetadata);
             DocumentStoragePort.DocumentDownloadAccess access = storagePort.createDownloadAccess(
                     version.getStorageObjectKey(),
                     version.getFileName(),
@@ -142,7 +155,7 @@ public class DocumentReadService {
             );
             return new DocumentDownloadResponse(access.downloadUrl(), access.expiresAt(), version.getFileName(), version.getMimeType());
         } catch (DocumentStorageException ex) {
-            throw DocumentTemporaryUploadService.storageFailure(ex);
+            throw downloadStorageFailure(ex);
         }
     }
 
@@ -154,28 +167,52 @@ public class DocumentReadService {
         }
     }
 
-    private void requireAtLeastOneAccessiblePublicLink(List<DocumentLinkReadProjection> rows, String permission) {
+    private void requireAtLeastOneAccessiblePublicLink(UUID documentId, String permission) {
+        List<DocumentLinkReadProjection> rows = linkRepository.findLinkedDocumentsForDocument(documentId, DocumentLifecycleStatus.DELETED);
         if (rows.isEmpty()) {
             throw DocumentFailures.notFound("DOCUMENT_LINK_NOT_FOUND", "Document link was not found");
         }
         for (DocumentLinkReadProjection row : rows) {
-            if (!row.targetType().isPublicSelectable() || row.linkStatus() != DocumentLifecycleStatus.ACTIVE) {
+            if (row.linkStatus() != DocumentLifecycleStatus.ACTIVE || !row.targetType().isPublicSelectable()) {
                 continue;
             }
-            try {
-                DocumentTargetContext targetContext = targetContextResolver.resolvePublic(row.targetType(), row.targetId());
-                authorizationService.assertCanAccess(
-                        targetContext.authorizationResourceType(),
-                        targetContext.authorizationResourceId(),
-                        permission
-                );
+            DocumentTargetContext targetContext = targetContextResolver.resolvePublic(row.targetType(), row.targetId());
+            if (authorizationService.canAccess(
+                    targetContext.authorizationResourceType(),
+                    targetContext.authorizationResourceId(),
+                    permission
+            )) {
                 return;
-            } catch (ForbiddenException ex) {
-                // Continue scanning active public links.
-            } catch (RuntimeException ex) {
-                // Ignore invalid/deleted target contexts while looking for another accessible link.
             }
         }
         throw DocumentFailures.forbidden("DOCUMENT_ACCESS_DENIED", "Document is not accessible for the current user");
+    }
+
+    private boolean hasAccessibleActivePublicLink(UUID documentVersionId, String permission) {
+        for (DocumentLinkEntity link : linkRepository.findActiveLinksForVersion(documentVersionId, DocumentLifecycleStatus.ACTIVE)) {
+            if (!link.getTargetType().isPublicSelectable()) {
+                continue;
+            }
+            DocumentTargetContext targetContext = targetContextResolver.resolvePublic(link.getTargetType(), link.getTargetId());
+            if (authorizationService.canAccess(
+                    targetContext.authorizationResourceType(),
+                    targetContext.authorizationResourceId(),
+                    permission
+            )) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private RuntimeException downloadStorageFailure(DocumentStorageException ex) {
+        return switch (ex.errorCode()) {
+            case "DOCUMENT_STORAGE_DISABLED" -> DocumentFailures.conflict("DOCUMENT_STORAGE_DISABLED", "Document storage is not configured");
+            case "DOCUMENT_OBJECT_MISSING" -> DocumentFailures.conflict("DOCUMENT_VERSION_OBJECT_MISSING", "Document version object was not found");
+            case "DOCUMENT_OBJECT_METADATA_MISMATCH" -> DocumentFailures.conflict("DOCUMENT_OBJECT_METADATA_MISMATCH", "Document version object metadata mismatch");
+            case "DOCUMENT_STORAGE_ACCESS_DENIED" -> DocumentFailures.conflict("DOCUMENT_STORAGE_ACCESS_DENIED", "Document storage access is denied or misconfigured");
+            case "DOCUMENT_DOWNLOAD_PREPARATION_FAILED" -> DocumentFailures.conflict("DOCUMENT_DOWNLOAD_PREPARATION_FAILED", "Document download access could not be created");
+            default -> DocumentFailures.conflict("DOCUMENT_STORAGE_UNAVAILABLE", "Document storage is unavailable");
+        };
     }
 }

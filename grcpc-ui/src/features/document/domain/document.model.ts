@@ -63,6 +63,40 @@ export interface DocumentTemporaryUpload {
     version: number;
 }
 
+export interface DocumentDetail {
+    documentId: string;
+    code?: string | null;
+    title: string;
+    description?: string | null;
+    documentCategoryCode?: string | null;
+    status: DocumentLifecycleStatus;
+    validFrom?: string | null;
+    validTo?: string | null;
+    version: number;
+    createdAt: string;
+    createdBy?: string | null;
+    updatedAt: string;
+    updatedBy?: string | null;
+}
+
+export interface DocumentVersion {
+    documentVersionId: string;
+    documentId: string;
+    documentVersionNumber: number;
+    fileName: string;
+    mimeType?: string | null;
+    fileSize: number;
+    checksumAlgorithm?: string | null;
+    status: DocumentLifecycleStatus;
+    validFrom?: string | null;
+    validTo?: string | null;
+    version: number;
+    createdAt: string;
+    createdBy?: string | null;
+    updatedAt: string;
+    updatedBy?: string | null;
+}
+
 export interface DocumentLinkSummary {
     documentId: string;
     documentVersion: number;
@@ -80,12 +114,11 @@ export interface DocumentLinkSummary {
     versionStatus: DocumentLifecycleStatus;
     documentLinkId: string;
     linkVersion: number;
+    targetType: DocumentLinkTargetType;
+    targetId: string;
     linkStatus: DocumentLifecycleStatus;
-    createdAt: string;
     uploadedAt: string;
-    createdBy?: string | null;
-    updatedAt?: string | null;
-    updatedBy?: string | null;
+    uploadedBy?: string | null;
 }
 
 export interface DocumentCommandResponse {

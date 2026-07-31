@@ -1,4 +1,4 @@
-﻿import {
+import {
     useCallback,
     useMemo,
     useState,
@@ -42,7 +42,7 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
-import { DocumentManager } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 import type { OrganizationNode } from "@/features/organization";
 
 export type ObjectiveObjectMode = "create" | "edit" | "view";
@@ -551,7 +551,6 @@ export default function ObjectiveObjectPage({
         : t("common.none", { defaultValue: "Ù†Ø¯Ø§Ø±Ø¯" });
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerType = resolveObjectiveTypeLabel(form.objectiveType, t);
-    const currentObjectiveId = value?.id ?? null;
 
     const handleChange = <K extends keyof ObjectiveFormState>(
         key: K,
@@ -973,18 +972,7 @@ export default function ObjectiveObjectPage({
         }
 
         return (
-            <DocumentManager
-                key={currentObjectiveId ?? "unsaved-objective-documents"}
-                title={t("objective.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
-                targetType="CENTRAL_CONTROL_OBJECTIVE_DEF"
-                targetId={currentObjectiveId}
-                busy={busy}
-                readOnly={readOnly}
-                saveFirstMessage={t("objective.documents.saveFirst", {
-                    defaultValue:
-                        "Ø§Ø¨ØªØ¯Ø§ Ù‡Ø¯Ù Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯ØŒ Ø³Ù¾Ø³ Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø±Ø§ Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ÛŒØ¯.",
-                })}
-            />
+            <DocumentIntegrationDeferredMessage />
         );
     };
 

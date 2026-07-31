@@ -123,35 +123,52 @@ public class DocumentTempUploadEntity {
         );
     }
 
-    public void markAvailable() {
-        if (uploadStatus == DocumentTempUploadStatus.CONSUMED) {
-            throw new IllegalStateException("Consumed temporary upload cannot become available");
+    public void markAvailable(Instant now) {
+        Objects.requireNonNull(now, "now is required");
+        if (uploadStatus != DocumentTempUploadStatus.UPLOADING) {
+            throw new IllegalStateException("Only uploading temporary uploads can become available");
+        }
+        if (!now.isBefore(expiresAt)) {
+            uploadStatus = DocumentTempUploadStatus.EXPIRED;
+            throw new IllegalStateException("Expired temporary upload cannot become available");
         }
         uploadStatus = DocumentTempUploadStatus.AVAILABLE;
     }
 
     public void markFailed() {
-        if (uploadStatus != DocumentTempUploadStatus.CONSUMED) {
-            uploadStatus = DocumentTempUploadStatus.FAILED;
+        if (uploadStatus != DocumentTempUploadStatus.UPLOADING) {
+            throw new IllegalStateException("Only uploading temporary uploads can fail");
         }
+        uploadStatus = DocumentTempUploadStatus.FAILED;
     }
 
-    public void markExpired() {
-        if (uploadStatus == DocumentTempUploadStatus.AVAILABLE || uploadStatus == DocumentTempUploadStatus.UPLOADING) {
+    public void markExpired(Instant now) {
+        Objects.requireNonNull(now, "now is required");
+        if (uploadStatus == DocumentTempUploadStatus.CONSUMED) {
+            return;
+        }
+        if ((uploadStatus == DocumentTempUploadStatus.AVAILABLE || uploadStatus == DocumentTempUploadStatus.UPLOADING)
+                && !now.isBefore(expiresAt)) {
             uploadStatus = DocumentTempUploadStatus.EXPIRED;
         }
     }
 
     public void consume(UUID completedDocumentVersionId, Instant now) {
+        Objects.requireNonNull(now, "now is required");
+        Objects.requireNonNull(completedDocumentVersionId, "documentVersionId is required");
         if (uploadStatus != DocumentTempUploadStatus.AVAILABLE) {
             throw new IllegalStateException("Only available temporary uploads can be consumed");
+        }
+        if (!now.isBefore(expiresAt)) {
+            uploadStatus = DocumentTempUploadStatus.EXPIRED;
+            throw new IllegalStateException("Expired temporary upload cannot be consumed");
         }
         if (consumedAt != null || documentVersionId != null) {
             throw new IllegalStateException("Temporary upload was already consumed");
         }
         uploadStatus = DocumentTempUploadStatus.CONSUMED;
-        consumedAt = Objects.requireNonNull(now, "now is required");
-        documentVersionId = Objects.requireNonNull(completedDocumentVersionId, "documentVersionId is required");
+        consumedAt = now;
+        documentVersionId = completedDocumentVersionId;
     }
 
     public UUID getId() {

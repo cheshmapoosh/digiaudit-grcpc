@@ -84,7 +84,7 @@ public class DocumentTemporaryUploadService {
                     file::getInputStream
             ));
             verifyStorageMetadata(storagePort.inspectObject(temporaryObjectKey), uploading);
-            DocumentTempUploadEntity available = stateService.markAvailable(tempUploadId);
+            DocumentTempUploadEntity available = stateService.markAvailable(tempUploadId, Instant.now(clock));
             return responseMapper.toTemporaryUploadResponse(available);
         } catch (DocumentStorageException ex) {
             markFailedAndRemoveTemporary(tempUploadId, temporaryObjectKey);
@@ -129,7 +129,11 @@ public class DocumentTemporaryUploadService {
             case "DOCUMENT_STORAGE_DISABLED" -> DocumentFailures.conflict("DOCUMENT_STORAGE_DISABLED", "Document storage is not configured");
             case "DOCUMENT_OBJECT_MISSING" -> DocumentFailures.conflict("TEMPORARY_OBJECT_MISSING", "Temporary upload object was not found");
             case "TEMPORARY_OBJECT_METADATA_MISMATCH" -> DocumentFailures.conflict("TEMPORARY_OBJECT_METADATA_MISMATCH", "Temporary upload object metadata mismatch");
+            case "DOCUMENT_OBJECT_METADATA_MISMATCH" -> DocumentFailures.conflict("DOCUMENT_OBJECT_METADATA_MISMATCH", "Document storage object metadata mismatch");
+            case "PERMANENT_OBJECT_CONFLICT" -> DocumentFailures.conflict("PERMANENT_OBJECT_CONFLICT", "Document permanent object identity conflicts with existing content");
             case "PERMANENT_PROMOTION_FAILURE" -> DocumentFailures.conflict("PERMANENT_PROMOTION_FAILURE", "Document permanent object promotion failed");
+            case "DOCUMENT_STORAGE_ACCESS_DENIED" -> DocumentFailures.conflict("DOCUMENT_STORAGE_ACCESS_DENIED", "Document storage access is denied or misconfigured");
+            case "DOCUMENT_DOWNLOAD_PREPARATION_FAILED" -> DocumentFailures.conflict("DOCUMENT_DOWNLOAD_PREPARATION_FAILED", "Document download access could not be created");
             default -> DocumentFailures.conflict("DOCUMENT_STORAGE_UNAVAILABLE", "Document storage is unavailable");
         };
     }

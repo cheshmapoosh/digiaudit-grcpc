@@ -4,6 +4,7 @@ import type {
     DocumentAddVersionPayload,
     DocumentCommandResponse,
     DocumentCreatePayload,
+    DocumentDetail,
     DocumentDownloadAccess,
     DocumentLifecyclePayload,
     DocumentLinkLifecyclePayload,
@@ -11,6 +12,7 @@ import type {
     DocumentLinkTargetType,
     DocumentMetadataUpdatePayload,
     DocumentTemporaryUpload,
+    DocumentVersion,
 } from "../domain/document.model";
 
 const API_BASE = "/api/master-data";
@@ -166,18 +168,18 @@ export class DocumentApiRepo {
         );
     }
 
-    getDocument(documentId: string): Promise<DocumentLinkSummary> {
-        return httpClient.get<DocumentLinkSummary>(`${API_BASE}/documents/${documentId}`);
+    getDocument(documentId: string): Promise<DocumentDetail> {
+        return httpClient.get<DocumentDetail>(`${API_BASE}/documents/${documentId}`);
     }
 
-    listVersions(documentId: string): Promise<DocumentLinkSummary[]> {
-        return httpClient.get<DocumentLinkSummary[]>(
+    listVersions(documentId: string): Promise<DocumentVersion[]> {
+        return httpClient.get<DocumentVersion[]>(
             `${API_BASE}/documents/${documentId}/versions`,
         );
     }
 
-    getVersion(documentVersionId: string): Promise<DocumentLinkSummary> {
-        return httpClient.get<DocumentLinkSummary>(
+    getVersion(documentVersionId: string): Promise<DocumentVersion> {
+        return httpClient.get<DocumentVersion>(
             `${API_BASE}/document-versions/${documentVersionId}`,
         );
     }

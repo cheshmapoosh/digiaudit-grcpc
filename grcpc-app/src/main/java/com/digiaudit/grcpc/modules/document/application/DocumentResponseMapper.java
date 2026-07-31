@@ -1,9 +1,13 @@
 package com.digiaudit.grcpc.modules.document.application;
 
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentDetailResponse;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentLinkSummaryResponse;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentTemporaryUploadResponse;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentVersionResponse;
+import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentEntity;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentLinkReadProjection;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentTempUploadEntity;
+import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentVersionEntity;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,6 +22,44 @@ public class DocumentResponseMapper {
                 entity.getUploadedAt(),
                 entity.getExpiresAt(),
                 entity.getVersion()
+        );
+    }
+
+    public DocumentDetailResponse toDocumentDetail(DocumentEntity entity) {
+        return new DocumentDetailResponse(
+                entity.getId(),
+                entity.getCode(),
+                entity.getTitle(),
+                entity.getDescription(),
+                entity.getDocumentCategoryCode(),
+                entity.getStatus(),
+                entity.getValidFrom(),
+                entity.getValidTo(),
+                entity.getVersion(),
+                entity.getCreatedAt(),
+                entity.getCreatedBy(),
+                entity.getUpdatedAt(),
+                entity.getUpdatedBy()
+        );
+    }
+
+    public DocumentVersionResponse toDocumentVersion(DocumentVersionEntity entity) {
+        return new DocumentVersionResponse(
+                entity.getId(),
+                entity.getDocumentId(),
+                entity.getDocumentVersionNumber(),
+                entity.getFileName(),
+                entity.getMimeType(),
+                entity.getFileSize(),
+                entity.getChecksumAlgorithm(),
+                entity.getStatus(),
+                entity.getValidFrom(),
+                entity.getValidTo(),
+                entity.getVersion(),
+                entity.getCreatedAt(),
+                entity.getCreatedBy(),
+                entity.getUpdatedAt(),
+                entity.getUpdatedBy()
         );
     }
 

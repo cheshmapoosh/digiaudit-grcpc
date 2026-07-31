@@ -24,7 +24,7 @@ import ProcessControlsTab from "./tabs/ProcessControlsTab";
 import ProcessObjectivesTab from "./tabs/ProcessObjectivesTab";
 import ProcessRegulationsTab from "./tabs/ProcessRegulationsTab";
 import ProcessRisksTab from "./tabs/ProcessRisksTab";
-import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface ProcessSummaryPanelProps {
@@ -194,10 +194,6 @@ function getTabs(
     ];
 }
 
-function resolveDocumentTargetType(nodeType: ProcessNodeType): DocumentLinkTargetType {
-    return nodeType === "subProcess" ? "CENTRAL_SUBPROCESS" : "CENTRAL_PROCESS";
-}
-
 function ProcessTabs({
                          tabs,
                          activeTab,
@@ -293,7 +289,6 @@ function TabBody({
     activeTab: ProcessDetailTabKey;
     controlsCount?: number;
 }) {
-    const { t } = useTranslation();
 
     if (activeTab === "general") {
         return <GeneralTab value={value} controlsCount={controlsCount} />;
@@ -358,19 +353,7 @@ function TabBody({
     }
 
     return (
-        <DocumentManager
-            key={`${value.id}:documents`}
-            targetType={resolveDocumentTargetType(value.nodeType)}
-            targetId={value.id}
-            readOnly
-            showActions={false}
-            title={t("process.tabs.documents", {
-                defaultValue: "مستندات",
-            })}
-            viewHint={t("process.documents.viewHint", {
-                defaultValue: "مستندات ثبت‌شده برای این زیر فرآیند",
-            })}
-        />
+        <DocumentIntegrationDeferredMessage />
     );
 }
 

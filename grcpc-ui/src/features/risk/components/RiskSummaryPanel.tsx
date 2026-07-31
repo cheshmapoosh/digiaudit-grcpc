@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, type CSSProperties, type ReactNode, Fragment } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode, Fragment } from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,7 +19,7 @@ import type {
     RiskStatus,
     RiskTemplateType,
 } from "../domain/risk.model";
-import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface RiskSummaryPanelProps {
@@ -298,10 +298,6 @@ function getTabs(
     ];
 }
 
-function resolveDocumentTargetType(nodeType: RiskNodeType): DocumentLinkTargetType {
-    return nodeType === "riskTemplate" ? "CENTRAL_RISK_TEMPLATE" : "CENTRAL_RISK_CATEGORY";
-}
-
 function RiskTabs({
                       tabs,
                       activeTab,
@@ -399,11 +395,9 @@ function GeneralTab({ value }: { value: RiskNode }) {
 function TabBody({
                      value,
                      activeTab,
-                     busy,
                  }: {
     value: RiskNode;
     activeTab: RiskDetailTabKey;
-    busy: boolean;
 }) {
     const { t } = useTranslation();
 
@@ -413,14 +407,7 @@ function TabBody({
 
     if (activeTab === "documents") {
         return (
-            <DocumentManager
-                key={value.id}
-                title={t("risk.tabs.documents", { defaultValue: "مستندات" })}
-                targetType={resolveDocumentTargetType(value.nodeType)}
-                targetId={value.id}
-                busy={busy}
-                readOnly
-            />
+            <DocumentIntegrationDeferredMessage />
         );
     }
 
@@ -575,7 +562,6 @@ export default function RiskSummaryPanel({
                             <TabBody
                                 value={value}
                                 activeTab={effectiveActiveTab}
-                                busy={busy}
                             />
                         </div>
                     </div>

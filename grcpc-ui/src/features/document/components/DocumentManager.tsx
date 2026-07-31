@@ -71,6 +71,12 @@ interface UploadFlowItem {
     expiresAt?: string;
     existingDocument?: DocumentLinkSummary;
     error?: string;
+    title: string;
+    code: string;
+    description: string;
+    documentCategoryCode: string;
+    validFrom: string;
+    validTo: string;
 }
 
 type ActionMessageDesign = "Information" | "Positive" | "Negative";
@@ -146,6 +152,13 @@ const UPLOAD_ITEM_TITLE_STYLE: CSSProperties = {
 const UPLOAD_ITEM_NAME_STYLE: CSSProperties = {
     fontWeight: 600,
     overflowWrap: "anywhere",
+};
+
+const STAGED_METADATA_STYLE: CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))",
+    gap: "0.5rem",
+    alignItems: "end",
 };
 
 const META_TEXT_STYLE: CSSProperties = {
@@ -232,6 +245,16 @@ function normalizeVisibleProgress(progress: number): number {
 
 function isExpired(expiresAt?: string): boolean {
     return Boolean(expiresAt && Date.parse(expiresAt) <= Date.now());
+}
+
+function initialTitle(fileName: string): string {
+    const withoutExtension = fileName.replace(/\.[^.]+$/, "").trim();
+    return withoutExtension || fileName;
+}
+
+function optionalText(value: string): string | null {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
 }
 
 function deriveFailureState(error: unknown, expiresAt?: string): UploadFailureState {
@@ -367,6 +390,16 @@ export default function DocumentManager({
         );
     }, []);
 
+    const updateStagedField = useCallback((
+        rowId: string,
+        field: "title" | "code" | "description" | "documentCategoryCode" | "validFrom" | "validTo",
+        value: string,
+    ) => {
+        setUploadItems((current) =>
+            current.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
+        );
+    }, []);
+
     const clearUploadProgressFallback = useCallback((rowId: string) => {
         const intervalId = progressFallbackTimersRef.current.get(rowId);
         if (!intervalId) {
@@ -451,15 +484,29 @@ export default function DocumentManager({
                     expectedDocumentVersion: item.existingDocument.documentVersion,
                     targetType,
                     targetId,
+                    validFrom: optionalText(item.validFrom),
+                    validTo: optionalText(item.validTo),
                 });
                 return;
             }
 
+            const titleValue = item.title.trim();
+            if (!titleValue) {
+                throw new Error(t("document.errors.titleRequired", {
+                    defaultValue: "Document title is required.",
+                }));
+            }
+
             await createDocument({
                 tempUploadId: upload.tempUploadId,
-                title: upload.originalFileName,
+                code: optionalText(item.code),
+                title: titleValue,
+                description: optionalText(item.description),
+                documentCategoryCode: optionalText(item.documentCategoryCode),
                 targetType,
                 targetId,
+                validFrom: optionalText(item.validFrom),
+                validTo: optionalText(item.validTo),
             });
         },
         [
@@ -475,16 +522,6 @@ export default function DocumentManager({
 
     const uploadAndFinalize = useCallback(
         async (file: File, existingDocument?: DocumentLinkSummary) => {
-            if (!targetId) {
-                setActionMessage({
-                    design: "Information",
-                    text: saveFirstMessage ?? t("document.saveFirst", {
-                        defaultValue: "Save the item first, then upload documents.",
-                    }),
-                });
-                return;
-            }
-
             const rowId = createUploadRowId();
             const initialItem: UploadFlowItem = {
                 id: rowId,
@@ -495,6 +532,12 @@ export default function DocumentManager({
                 progress: 1,
                 state: "SELECTED",
                 existingDocument,
+                title: existingDocument?.title ?? initialTitle(file.name),
+                code: existingDocument?.code ?? "",
+                description: existingDocument?.description ?? "",
+                documentCategoryCode: existingDocument?.documentCategoryCode ?? "",
+                validFrom: "",
+                validTo: "",
             };
 
             setUploadItems((current) => [...current, initialItem]);
@@ -536,22 +579,13 @@ export default function DocumentManager({
                     fileSize: upload.fileSize,
                 };
                 updateUploadItem(rowId, availableItem);
-
-                await finalizeUpload(availableItem, upload);
-
-                updateUploadItem(rowId, {
-                    state: "CONSUMED",
-                    failureState: undefined,
-                    error: undefined,
-                });
                 setActionMessage({
                     design: "Positive",
-                    text: t("document.upload.success", {
-                        defaultValue: "File \"{{fileName}}\" uploaded successfully.",
+                    text: t("document.upload.staged", {
+                        defaultValue: "File \"{{fileName}}\" is uploaded temporarily. Review metadata, then save the document.",
                         fileName: file.name,
                     }),
                 });
-                scheduleSuccessfulUploadRemoval(rowId);
             } catch (error) {
                 clearUploadProgressFallback(rowId);
                 const message =
@@ -586,12 +620,8 @@ export default function DocumentManager({
         },
         [
             clearUploadProgressFallback,
-            finalizeUpload,
-            saveFirstMessage,
-            scheduleSuccessfulUploadRemoval,
             startUploadProgressFallback,
             t,
-            targetId,
             updateUploadItem,
             uploadTemporary,
         ],
@@ -948,11 +978,26 @@ export default function DocumentManager({
                     const progressValue =
                         item.state === "CONSUMED" || item.failureState ? 100 : progress;
                     const statusText = renderUploadStatusText(item);
-                    const canRetry =
+                    const staged =
                         item.state === "AVAILABLE" &&
-                        item.tempUploadId &&
-                        item.failureState === "FINALIZATION_FAILED" &&
-                        !isExpired(item.expiresAt);
+                        Boolean(item.tempUploadId) &&
+                        !isExpired(item.expiresAt) &&
+                        item.failureState !== "UPLOAD_FAILED" &&
+                        item.failureState !== "EXPIRED";
+                    const titleMissing = !item.existingDocument && !item.title.trim();
+                    const canFinalize =
+                        staged &&
+                        Boolean(targetId) &&
+                        !busy &&
+                        !readOnly &&
+                        !titleMissing;
+                    const showMetadata =
+                        item.state === "AVAILABLE" ||
+                        item.state === "FINALIZING" ||
+                        item.failureState === "FINALIZATION_FAILED";
+                    const finalizeText = item.failureState === "FINALIZATION_FAILED"
+                        ? t("document.upload.retryFinalize", { defaultValue: "Retry" })
+                        : t("document.actions.finalize", { defaultValue: "Save Document" });
 
                     return (
                         <div key={item.id} style={UPLOAD_ITEM_STYLE}>
@@ -966,16 +1011,21 @@ export default function DocumentManager({
                                     </span>
                                 </div>
                                 <div style={ACTIONS_STYLE}>
-                                    {canRetry ? (
+                                    {showMetadata ? (
                                         <Button
-                                            design="Transparent"
+                                            design="Emphasized"
+                                            icon="save"
+                                            disabled={!canFinalize}
+                                            tooltip={
+                                                targetId
+                                                    ? undefined
+                                                    : saveFirstText
+                                            }
                                             onClick={() => {
                                                 void retryFinalization(item);
                                             }}
                                         >
-                                            {t("document.upload.retryFinalize", {
-                                                defaultValue: "Retry",
-                                            })}
+                                            {finalizeText}
                                         </Button>
                                     ) : null}
                                     {item.failureState || item.state === "CONSUMED" ? (
@@ -990,6 +1040,100 @@ export default function DocumentManager({
                                     ) : null}
                                 </div>
                             </div>
+
+                            {showMetadata ? (
+                                <div style={STAGED_METADATA_STYLE}>
+                                    {!item.existingDocument ? (
+                                        <>
+                                            <Input
+                                                accessibleName={t("document.fields.title", {
+                                                    defaultValue: "Title",
+                                                })}
+                                                placeholder={t("document.fields.title", {
+                                                    defaultValue: "Title",
+                                                })}
+                                                value={item.title}
+                                                maxlength={255}
+                                                disabled={busy || item.state === "FINALIZING"}
+                                                valueState={titleMissing ? "Negative" : "None"}
+                                                onInput={(event) =>
+                                                    updateStagedField(item.id, "title", readInputValue(event))
+                                                }
+                                            />
+                                            <Input
+                                                accessibleName={t("document.fields.code", {
+                                                    defaultValue: "Code",
+                                                })}
+                                                placeholder={t("document.fields.code", {
+                                                    defaultValue: "Code",
+                                                })}
+                                                value={item.code}
+                                                maxlength={64}
+                                                disabled={busy || item.state === "FINALIZING"}
+                                                onInput={(event) =>
+                                                    updateStagedField(item.id, "code", readInputValue(event))
+                                                }
+                                            />
+                                            <Input
+                                                accessibleName={t("document.fields.category", {
+                                                    defaultValue: "Category",
+                                                })}
+                                                placeholder={t("document.fields.category", {
+                                                    defaultValue: "Category",
+                                                })}
+                                                value={item.documentCategoryCode}
+                                                maxlength={64}
+                                                disabled={busy || item.state === "FINALIZING"}
+                                                onInput={(event) =>
+                                                    updateStagedField(item.id, "documentCategoryCode", readInputValue(event))
+                                                }
+                                            />
+                                            <Input
+                                                accessibleName={t("document.fields.description", {
+                                                    defaultValue: "Description",
+                                                })}
+                                                placeholder={t("document.fields.description", {
+                                                    defaultValue: "Description",
+                                                })}
+                                                value={item.description}
+                                                maxlength={1000}
+                                                disabled={busy || item.state === "FINALIZING"}
+                                                onInput={(event) =>
+                                                    updateStagedField(item.id, "description", readInputValue(event))
+                                                }
+                                            />
+                                        </>
+                                    ) : null}
+                                    <Input
+                                        accessibleName={t("document.fields.validFrom", {
+                                            defaultValue: "Valid From",
+                                        })}
+                                        placeholder={t("document.fields.validFrom", {
+                                            defaultValue: "Valid From",
+                                        })}
+                                        value={item.validFrom}
+                                        maxlength={10}
+                                        disabled={busy || item.state === "FINALIZING"}
+                                        onInput={(event) =>
+                                            updateStagedField(item.id, "validFrom", readInputValue(event))
+                                        }
+                                    />
+                                    <Input
+                                        accessibleName={t("document.fields.validTo", {
+                                            defaultValue: "Valid To",
+                                        })}
+                                        placeholder={t("document.fields.validTo", {
+                                            defaultValue: "Valid To",
+                                        })}
+                                        value={item.validTo}
+                                        maxlength={10}
+                                        disabled={busy || item.state === "FINALIZING"}
+                                        onInput={(event) =>
+                                            updateStagedField(item.id, "validTo", readInputValue(event))
+                                        }
+                                    />
+                                </div>
+                            ) : null}
 
                             <ProgressIndicator
                                 accessibleName={statusText}
@@ -1029,10 +1173,9 @@ export default function DocumentManager({
               defaultValue: "Select a file to add a document.",
           });
     const saveFirstText = saveFirstMessage ?? t("document.saveFirst", {
-        defaultValue: "Save the item first, then upload documents.",
+        defaultValue: "Save the item first, then finalize uploaded documents.",
     });
-    const canUploadDocuments =
-        showActions && !readOnly && !busy && Boolean(targetId);
+    const canUploadDocuments = showActions && !readOnly && !busy;
     const activeBusy = busy || loading;
     const noDataText = t("document.empty", {
         defaultValue: "No document has been added.",

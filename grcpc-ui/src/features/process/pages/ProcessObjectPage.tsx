@@ -1,4 +1,4 @@
-﻿import {
+import {
     useMemo,
     useState,
     type CSSProperties,
@@ -34,7 +34,7 @@ import ProcessAccountGroupsTab from "../components/tabs/ProcessAccountGroupsTab"
 import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
 import ProcessRegulationsTab from "../components/tabs/ProcessRegulationsTab";
 import ProcessRisksTab from "../components/tabs/ProcessRisksTab";
-import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
@@ -314,10 +314,6 @@ function defaultTabs(nodeType: ProcessNodeType): ProcessTabKey[] {
     }
 
     return ["general", "objectives", "accountGroups", "risks", "documents"];
-}
-
-function resolveDocumentTargetType(nodeType: ProcessNodeType): DocumentLinkTargetType {
-    return nodeType === "subProcess" ? "CENTRAL_SUBPROCESS" : "CENTRAL_PROCESS";
 }
 
 function resolveTabLabel(tab: ProcessTabKey, t: ReturnType<typeof useTranslation>["t"]): string {
@@ -738,18 +734,7 @@ export default function ProcessObjectPage({
         }
 
         return (
-            <DocumentManager
-                key={currentProcessId ?? "unsaved-process-documents"}
-                title={t("process.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
-                targetType={resolveDocumentTargetType(form.nodeType)}
-                targetId={currentProcessId}
-                busy={busy}
-                readOnly={readOnly}
-                saveFirstMessage={t("document.saveFirst.process", {
-                    defaultValue:
-                        "Ø§Ø¨ØªØ¯Ø§ Ø¢ÛŒØªÙ… ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯ØŒ Ø³Ù¾Ø³ Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø±Ø§ Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ÛŒØ¯.",
-                })}
-            />
+            <DocumentIntegrationDeferredMessage />
         );
     };
 

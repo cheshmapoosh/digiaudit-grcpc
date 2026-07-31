@@ -21,7 +21,7 @@ import type {
     PolicyNodeType,
     PolicyStatus,
 } from "../domain/policy.model";
-import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface PolicySummaryPanelProps {
@@ -121,10 +121,6 @@ function readSelectedTabKey(event: unknown): PolicyDetailTabKey | null {
     }).detail?.tab;
 
     return selectedTab?.getAttribute("data-tab-key") as PolicyDetailTabKey | null;
-}
-
-function resolveDocumentTargetType(nodeType: PolicyNodeType): DocumentLinkTargetType {
-    return nodeType === "policyGroup" ? "CENTRAL_POLICY_GROUP" : "CENTRAL_POLICY";
 }
 
 function resolveNodeTypeLabel(
@@ -460,11 +456,9 @@ function GeneralTab({ value }: { value: PolicyNode }) {
 function TabBody({
     value,
     activeTab,
-    busy,
 }: {
     value: PolicyNode;
     activeTab: PolicyDetailTabKey;
-    busy: boolean;
 }) {
     const { t } = useTranslation();
 
@@ -474,14 +468,7 @@ function TabBody({
 
     if (activeTab === "documents") {
         return (
-            <DocumentManager
-                key={value.id}
-                title={t("policy.tabs.documents", { defaultValue: "مستندات" })}
-                targetType={resolveDocumentTargetType(value.nodeType)}
-                targetId={value.id}
-                busy={busy}
-                readOnly
-            />
+            <DocumentIntegrationDeferredMessage />
         );
     }
 
@@ -653,7 +640,6 @@ export default function PolicySummaryPanel({
                             <TabBody
                                 value={value}
                                 activeTab={effectiveActiveTab}
-                                busy={busy}
                             />
                         </div>
                     </div>

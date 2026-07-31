@@ -38,12 +38,12 @@ public final class DocumentCommands {
             Long expectedVersion,
             DocumentLinkTargetType targetType,
             UUID targetId,
-            String code,
-            String title,
-            String description,
-            String documentCategoryCode,
-            LocalDate validFrom,
-            LocalDate validTo
+            PatchValue<String> code,
+            PatchValue<String> title,
+            PatchValue<String> description,
+            PatchValue<String> documentCategoryCode,
+            PatchValue<LocalDate> validFrom,
+            PatchValue<LocalDate> validTo
     ) {
     }
 

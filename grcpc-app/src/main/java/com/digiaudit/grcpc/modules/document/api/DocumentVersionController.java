@@ -3,7 +3,7 @@ package com.digiaudit.grcpc.modules.document.api;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentDownloadResponse;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentLinkCreateRequest;
-import com.digiaudit.grcpc.modules.document.api.dto.DocumentLinkSummaryResponse;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentVersionResponse;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommands;
 import com.digiaudit.grcpc.modules.document.application.DocumentFailures;
@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @Validated
@@ -36,7 +35,7 @@ public class DocumentVersionController {
 
     @GetMapping("/{documentVersionId}")
     @PreAuthorize("hasAuthority('DOCUMENT_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public List<DocumentLinkSummaryResponse> get(@PathVariable UUID documentVersionId) {
+    public DocumentVersionResponse get(@PathVariable UUID documentVersionId) {
         return readService.getDocumentVersion(documentVersionId);
     }
 

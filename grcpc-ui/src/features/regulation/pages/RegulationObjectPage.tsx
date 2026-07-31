@@ -1,4 +1,4 @@
-﻿import {
+import {
     Fragment,
     useMemo,
     useState,
@@ -39,7 +39,7 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
-import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 import { sortRegulations } from "../utils/regulation.tree";
 
 export type RegulationObjectMode = "create" | "edit" | "view";
@@ -385,14 +385,6 @@ function resolveParentLabel(
     }
 
     return t("regulation.fields.parentRequirement", { defaultValue: "ÙˆØ§Ù„Ø¯ Ù‚Ø§Ù†ÙˆÙ†" });
-}
-
-function resolveDocumentTargetType(nodeType: RegulationNodeType): DocumentLinkTargetType {
-    if (nodeType === "lawGroup") {
-        return "CENTRAL_REGULATION_GROUP";
-    }
-
-    return nodeType === "law" ? "CENTRAL_REGULATION" : "CENTRAL_REQUIREMENT";
 }
 
 export default function RegulationObjectPage({
@@ -834,17 +826,7 @@ export default function RegulationObjectPage({
         }
 
         return (
-            <DocumentManager
-                title={t("regulation.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
-                targetType={resolveDocumentTargetType(form.nodeType)}
-                targetId={currentRegulationId}
-                busy={busy}
-                readOnly={readOnly}
-                saveFirstMessage={t("regulation.documents.saveFirst", {
-                    defaultValue:
-                        "Ø§Ø¨ØªØ¯Ø§ Ø¢ÛŒØªÙ… Ù‚Ø§Ù†ÙˆÙ† Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯ØŒ Ø³Ù¾Ø³ Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø±Ø§ Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ÛŒØ¯.",
-                })}
-            />
+            <DocumentIntegrationDeferredMessage />
         );
     };
 

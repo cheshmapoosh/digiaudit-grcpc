@@ -1,4 +1,4 @@
-﻿import {
+import {
     useMemo,
     useState,
     type CSSProperties,
@@ -36,7 +36,7 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
-import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 
 export type PolicyObjectMode = "create" | "edit" | "view";
 
@@ -418,10 +418,6 @@ function defaultTabs(nodeType: PolicyNodeType): PolicyTabKey[] {
     ];
 }
 
-function resolveDocumentTargetType(nodeType: PolicyNodeType): DocumentLinkTargetType {
-    return nodeType === "policyGroup" ? "CENTRAL_POLICY_GROUP" : "CENTRAL_POLICY";
-}
-
 function resolveTabLabel(tab: PolicyTabKey, t: ReturnType<typeof useTranslation>["t"]): string {
     const labels: Record<PolicyTabKey, string> = {
         general: t("policy.tabs.general", {defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ"}),
@@ -560,7 +556,6 @@ export default function PolicyObjectPage({
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerCategory = resolveCategoryLabel(form.policyCategory, t);
     const headerCommunication = resolveCommunicationMethodLabel(form.communicationMethod, t);
-    const currentPolicyId = value?.id ?? null;
 
     const handleChange = <K extends keyof PolicyFormState>(
         key: K,
@@ -1229,18 +1224,7 @@ export default function PolicyObjectPage({
 
         if (tab === "documents") {
             return (
-                <DocumentManager
-                    key={currentPolicyId ?? "unsaved-policy-documents"}
-                    title={t("policy.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
-                    targetType={resolveDocumentTargetType(form.nodeType)}
-                    targetId={currentPolicyId}
-                    busy={busy}
-                    readOnly={readOnly}
-                    saveFirstMessage={t("policy.documents.saveFirst", {
-                        defaultValue:
-                            "Ø§Ø¨ØªØ¯Ø§ Ø¢ÛŒØªÙ… Ø³ÛŒØ§Ø³Øª Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯ØŒ Ø³Ù¾Ø³ Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø±Ø§ Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ÛŒØ¯.",
-                    })}
-                />
+                <DocumentIntegrationDeferredMessage />
             );
         }
     };

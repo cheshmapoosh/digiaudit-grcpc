@@ -225,19 +225,33 @@ public class DocumentRevisionParticipant {
     ) {
         assertTargetMatchesRevision(context, targetContext);
         validation.requireExpectedVersion(command.expectedVersion());
-        validation.validateDateRange(command.validFrom(), command.validTo());
         Instant now = Instant.now(clock);
         DocumentEntity document = lockDocument(command.documentId());
         requireVersion(document.getVersion(), command.expectedVersion());
         requireActiveDocumentLink(document.getId(), targetContext);
         JsonNode before = documentSnapshot(document);
+        String nextCode = command.code().isPresent()
+                ? validation.nullableText(command.code().value(), 64, "INVALID_DOCUMENT_CODE", "Document code")
+                : document.getCode();
+        String nextTitle = command.title().isPresent()
+                ? validation.requiredText(command.title().value(), 255, "INVALID_DOCUMENT_TITLE", "Document title")
+                : document.getTitle();
+        String nextDescription = command.description().isPresent()
+                ? normalizeText(command.description().value())
+                : document.getDescription();
+        String nextCategory = command.documentCategoryCode().isPresent()
+                ? validation.nullableText(command.documentCategoryCode().value(), 64, "INVALID_DOCUMENT_CATEGORY", "Document category")
+                : document.getDocumentCategoryCode();
+        LocalDate nextValidFrom = command.validFrom().isPresent() ? command.validFrom().value() : document.getValidFrom();
+        LocalDate nextValidTo = command.validTo().isPresent() ? command.validTo().value() : document.getValidTo();
+        validation.validateDateRange(nextValidFrom, nextValidTo);
         document.updateMetadata(
-                command.code() == null ? document.getCode() : validation.nullableText(command.code(), 64, "INVALID_DOCUMENT_CODE", "Document code"),
-                command.title() == null ? document.getTitle() : validation.requiredText(command.title(), 255, "INVALID_DOCUMENT_TITLE", "Document title"),
-                command.description() == null ? document.getDescription() : normalizeText(command.description()),
-                command.documentCategoryCode() == null ? document.getDocumentCategoryCode() : validation.nullableText(command.documentCategoryCode(), 64, "INVALID_DOCUMENT_CATEGORY", "Document category"),
-                command.validFrom(),
-                command.validTo(),
+                nextCode,
+                nextTitle,
+                nextDescription,
+                nextCategory,
+                nextValidFrom,
+                nextValidTo,
                 actorId,
                 now
         );
@@ -385,16 +399,15 @@ public class DocumentRevisionParticipant {
         try {
             verifyStorageMetadata(storagePort.inspectObject(tempUpload.getStorageObjectKey()), expectedMetadata);
             String permanentObjectKey = objectKeyService.permanentKey(tempUpload.getId(), tempUpload.getOriginalFileName());
-            DocumentStoragePort.PromotionResult promotion = storagePort.promoteTemporaryObject(
+            DocumentStoragePort.PermanentObjectPromotionResult promotion = storagePort.promoteTemporaryObject(
                     tempUpload.getStorageObjectKey(),
                     permanentObjectKey,
                     expectedMetadata
             );
-            storagePort.verifyPermanentObject(permanentObjectKey, expectedMetadata);
             if (promotion.createdByThisAttempt()) {
-                rollbackRegistry.removePermanentObjectOnRollback(permanentObjectKey, tempUpload.getId(), documentVersionId);
+                rollbackRegistry.removePermanentObjectOnRollback(promotion.permanentObjectKey(), tempUpload.getId(), documentVersionId);
             }
-            return new PromotedUpload(tempUpload, permanentObjectKey);
+            return new PromotedUpload(tempUpload, promotion.permanentObjectKey());
         } catch (DocumentStorageException ex) {
             throw DocumentTemporaryUploadService.storageFailure(ex);
         }

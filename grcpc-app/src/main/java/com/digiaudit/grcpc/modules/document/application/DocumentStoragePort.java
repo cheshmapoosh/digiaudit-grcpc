@@ -9,7 +9,7 @@ public interface DocumentStoragePort {
 
     DocumentObjectMetadata inspectObject(String objectKey);
 
-    PromotionResult promoteTemporaryObject(String temporaryObjectKey, String permanentObjectKey, DocumentObjectMetadata expectedMetadata);
+    PermanentObjectPromotionResult promoteTemporaryObject(String temporaryObjectKey, String permanentObjectKey, DocumentObjectMetadata expectedMetadata);
 
     void verifyPermanentObject(String permanentObjectKey, DocumentObjectMetadata expectedMetadata);
 
@@ -43,7 +43,11 @@ public interface DocumentStoragePort {
     ) {
     }
 
-    record PromotionResult(boolean createdByThisAttempt) {
+    record PermanentObjectPromotionResult(
+            String permanentObjectKey,
+            boolean createdByThisAttempt,
+            DocumentObjectMetadata verifiedMetadata
+    ) {
     }
 
     record DocumentDownloadAccess(

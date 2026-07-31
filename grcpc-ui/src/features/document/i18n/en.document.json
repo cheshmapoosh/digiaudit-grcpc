@@ -7,7 +7,8 @@
       "saveTitle": "Save",
       "download": "Download",
       "delete": "Remove Link",
-      "addVersion": "Add Version"
+      "addVersion": "Add Version",
+      "finalize": "Save Document"
     },
     "upload": {
       "fileInProgress": "Uploading",
@@ -22,7 +23,8 @@
       "retryFinalize": "Retry",
       "consumed": "Document saved",
       "expired": "Temporary upload expired",
-      "accessDenied": "Access denied"
+      "accessDenied": "Access denied",
+      "staged": "File \"{{fileName}}\" is uploaded temporarily. Review metadata, then save the document."
     },
     "titleSave": {
       "success": "Document title saved successfully."
@@ -35,7 +37,12 @@
       "size": "Size",
       "status": "Status",
       "uploadedAt": "Uploaded At",
-      "actions": "Actions"
+      "actions": "Actions",
+      "code": "Code",
+      "category": "Category",
+      "description": "Description",
+      "validFrom": "Valid From",
+      "validTo": "Valid To"
     },
     "status": {
       "active": "Saved",
@@ -56,12 +63,16 @@
       "updateTitle": "Failed to save document title",
       "download": "Failed to prepare document download",
       "expired": "The temporary upload has expired. Upload the file again.",
-      "storageDisabled": "Document storage is not configured. Enable MinIO."
+      "storageDisabled": "Document storage is not configured. Enable MinIO.",
+      "titleRequired": "Document title is required."
     },
     "delete": {
       "title": "Remove Document Link",
       "confirm": "Remove document \"{{title}}\" from this item?",
       "success": "Document link was removed."
+    },
+    "integrationDeferred": {
+      "message": "Document integration for this feature is deferred until its Master Data V2 target table owns the displayed ID."
     }
   }
 }

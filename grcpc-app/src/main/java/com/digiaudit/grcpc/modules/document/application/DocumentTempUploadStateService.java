@@ -37,18 +37,29 @@ public class DocumentTempUploadStateService {
     }
 
     @Transactional
-    public DocumentTempUploadEntity markAvailable(UUID id) {
+    public DocumentTempUploadEntity markAvailable(UUID id, Instant now) {
         DocumentTempUploadEntity entity = repository.lockById(id)
                 .orElseThrow(() -> DocumentFailures.notFound("TEMPORARY_UPLOAD_NOT_FOUND", "Temporary upload was not found"));
-        entity.markAvailable();
+        try {
+            entity.markAvailable(now);
+        } catch (IllegalStateException ex) {
+            if (entity.getUploadStatus() == DocumentTempUploadStatus.EXPIRED) {
+                throw DocumentFailures.conflict("TEMPORARY_UPLOAD_EXPIRED", "Temporary upload has expired");
+            }
+            throw DocumentFailures.conflict("TEMPORARY_UPLOAD_UNAVAILABLE", "Temporary upload is not available");
+        }
         return repository.saveAndFlush(entity);
     }
 
     @Transactional
     public void markFailed(UUID id) {
         repository.lockById(id).ifPresent(entity -> {
-            entity.markFailed();
-            repository.saveAndFlush(entity);
+            try {
+                entity.markFailed();
+                repository.saveAndFlush(entity);
+            } catch (IllegalStateException ignored) {
+                // The one-way transition rules intentionally preserve terminal rows.
+            }
         });
     }
 
@@ -74,11 +85,7 @@ public class DocumentTempUploadStateService {
     }
 
     private void expireIfNeeded(DocumentTempUploadEntity entity, Instant now) {
-        if ((entity.getUploadStatus() == DocumentTempUploadStatus.AVAILABLE
-                || entity.getUploadStatus() == DocumentTempUploadStatus.UPLOADING)
-                && !now.isBefore(entity.getExpiresAt())) {
-            entity.markExpired();
-        }
+        entity.markExpired(now);
     }
 
     private void validateConsumable(DocumentTempUploadEntity entity, UUID actorId, boolean internalFlow) {

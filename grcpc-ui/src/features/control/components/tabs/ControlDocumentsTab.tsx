@@ -1,6 +1,4 @@
-import { useTranslation } from "react-i18next";
-
-import { DocumentManager } from "@/features/document";
+import { DocumentIntegrationDeferredMessage } from "@/features/document";
 
 export interface ControlDocumentsTabProps {
     controlId: string;
@@ -8,20 +6,8 @@ export interface ControlDocumentsTabProps {
     showActions?: boolean;
 }
 
-export default function ControlDocumentsTab({
-    controlId,
-    readOnly = false,
-    showActions = true,
-}: ControlDocumentsTabProps) {
-    const { t } = useTranslation();
+export default function ControlDocumentsTab(props: ControlDocumentsTabProps) {
+    void props;
 
-    return (
-        <DocumentManager
-            title={t("control.tabs.documents", { defaultValue: "مستندات" })}
-            targetType="CENTRAL_CONTROL"
-            targetId={controlId}
-            readOnly={readOnly}
-            showActions={showActions}
-        />
-    );
+    return <DocumentIntegrationDeferredMessage />;
 }
