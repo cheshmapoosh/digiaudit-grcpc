@@ -268,6 +268,8 @@ These approved capabilities are not implemented in the current UI and must be cl
 
 ## 13. Document, Business Revision, and read-model UX additions
 
+Document target selection uses the closed `DocumentLinkTargetType` vocabulary defined in [table-catalog.md](table-catalog.md#document-link-target-type-stored-code-vocabulary). The UI may expose only approved normal targets that are relevant to the current feature context. It must not display internal Document-family targets, `MASTERDATA_REVISION`, arbitrary table names, Java class names, or legacy generic attachment target strings as normal user choices. Revision metadata linking is Backend-owned and may appear only as a result of the owning Business Command flow.
+
 | Required target capability | Current UI/API/storage | Approved entity/use case | Status | Required target UI |
 | --- | --- | --- | --- | --- |
 | Temporary upload first | `/api/documents/temp` plus session-oriented client state | `document_temp_upload` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Keep progress UI; replace session state with `tempUploadId`, expiry, and authorization feedback. |
@@ -275,7 +277,7 @@ These approved capabilities are not implemented in the current UI and must be cl
 | Immutable Document Version list | Generic attachment list | `document` + `document_version` | `ADD` | Add version history, version number, file metadata, storage state, and immutable replacement action. |
 | Retention policy display | No current V2 equivalent | `document_retention_policy` | `ADD` | Add retention policy selection/read information where authorized. |
 | Document Hold display/action | No current V2 equivalent | `document_hold` | `ADD` | Add authorized hold/release panel and purge-block explanation. |
-| Controlled Document Link | Generic `targetType`/`targetId` binding | `document_link` | `REPLACE` | UI chooses an approved typed target context; it never exposes an open generic target list. |
+| Controlled Document Link | Generic `targetType`/`targetId` binding | `document_link` | `REPLACE` | UI chooses an approved typed target context; it never exposes an open generic target list or internal revision metadata target. |
 | Secure download | Presigned download URL flow | Authorized document-version download use case | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain download button; request controlled stream/short-lived URL without exposing permanent key. |
 | Revision-aware mutation result | Current CRUD feedback only | `masterdata_revision` result | `ADD` | Show successful entity ID, revision ID, and new version; link to authorized revision summary if available. |
 | Business Revision history | No current V2 UI | `masterdata_revision` and read projection | `ADD` | Add read-only revision panel separated from generic Audit Trail. |

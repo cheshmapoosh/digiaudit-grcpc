@@ -49,9 +49,12 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Business codes use `VARCHAR2(64 BYTE)` where the approved model uses a code.
 - [ ] Titles/labels use `VARCHAR2(255 CHAR)`.
 - [ ] Controlled enum/status values use `VARCHAR2(32 BYTE)`.
+- [ ] Implementation-locked polymorphic stored codes are uppercase ASCII, unique inside their vocabulary, non-blank, and at most 32 bytes.
 - [ ] Short notes use `VARCHAR2(1000 CHAR)`.
 - [ ] Long descriptions/content use `CLOB`.
 - [ ] JSON snapshots use `CLOB` with `IS JSON` checks.
+- [ ] Revision JSON persistence uses the Spring-managed application `ObjectMapper`; no independent `new ObjectMapper()` exists in Revision persistence.
+- [ ] Revision JSON conversion preserves nulls, defensively copies `JsonNode` values, and raises a focused internal persistence error for invalid stored JSON.
 - [ ] Business dates use `DATE` and are truncated to the day.
 - [ ] Technical timestamps use `TIMESTAMP(6) WITH TIME ZONE`.
 - [ ] Versions and file sizes use `NUMBER(19,0)`.
@@ -253,6 +256,17 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Document Link always points to a precise Document Version.
 - [ ] Document Link unique key is `(document_version_id, target_type, target_id)`.
 - [ ] Document Link target type is controlled and target ID is validated by Document Service.
+- [ ] Document Link Target Type is documented once canonically in `table-catalog.md`.
+- [ ] Document Link Target Type documented count is exactly 41.
+- [ ] Document Link Target Type Oracle check count is exactly 41.
+- [ ] The future Java `DocumentLinkTargetType` enum count is exactly 41.
+- [ ] Document Link Target Type values correspond exactly to catalog entries `01` through `40` plus `MASTERDATA_REVISION`.
+- [ ] `DOCUMENT_RETENTION_POLICY`, `DOCUMENT`, `DOCUMENT_VERSION`, `DOCUMENT_HOLD`, and `DOCUMENT_LINK` are absent from the Document Link target vocabulary.
+- [ ] `MASTERDATA_REVISION_CONTENT` and `DOCUMENT_TEMP_UPLOAD` are absent from the Document Link target vocabulary.
+- [ ] Effective, Diagnostic, Roll-up, Policy Applicability, Audit, workflow, monitoring, job, scheduler, cache, outbox, KPI, and KRI concepts are absent from the Document Link target vocabulary.
+- [ ] Every Document Link target value is unique, uppercase ASCII, and at most 32 bytes.
+- [ ] Arbitrary Document Link target strings are rejected.
+- [ ] `MASTERDATA_REVISION` is Backend-controlled and limited to same-DRAFT-Revision metadata context; it is not a normal Browser-selectable target.
 - [ ] Document Link is not an unrestricted generic attachment API.
 - [ ] Retention policy supports only `AFTER_RETENTION` and `NEVER_PURGE`.
 - [ ] Retention days are present and positive only for `AFTER_RETENTION`.
@@ -303,6 +317,14 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Revision Content sequence is unique within the Revision.
 - [ ] Revision Content operations use only approved operation values.
 - [ ] Revision Content controlled entity references are domain-validated.
+- [ ] Revision Entity Type is documented once canonically in `table-catalog.md`.
+- [ ] Revision Entity Type documented count is exactly 45.
+- [ ] Java `RevisionEntityType` enum count is exactly 45.
+- [ ] Oracle `ck_masterdata_revision_content_entity` count is exactly 45.
+- [ ] Documented, Java, and Oracle Revision Entity Type value sets are identical.
+- [ ] Every Revision Entity Type value is unique, uppercase ASCII, and at most 32 bytes.
+- [ ] `MASTERDATA_REVISION`, `MASTERDATA_REVISION_CONTENT`, and `DOCUMENT_TEMP_UPLOAD` are absent from the Revision Entity Type vocabulary.
+- [ ] Effective, Diagnostic, Roll-up, Policy Applicability, Audit, workflow, monitoring, job, scheduler, cache, outbox, KPI, and KRI concepts are absent from the Revision Entity Type vocabulary.
 - [ ] The Backend creates one Business Revision per Business Command.
 - [ ] The Backend owns the transaction for the Business Command.
 - [ ] The Backend validates all Revision Content before applying any content.
@@ -475,6 +497,8 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] UI lint is successful.
 - [ ] UI build is successful.
 - [ ] Full-stack smoke tests cover Central, Local, Document, Revision, and read-model permissions.
+- [ ] Live Oracle smoke validation is marked passed only when there is actual execution evidence from a clean Oracle schema.
+- [ ] Documentation alignment alone is not treated as proof that Flyway migration or Hibernate validation ran successfully.
 
 ## 22. Acceptance-to-prompt mapping
 

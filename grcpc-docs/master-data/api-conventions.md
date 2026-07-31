@@ -60,6 +60,30 @@ Database tables and columns use the approved lower snake_case vocabulary.
 
 The API never leaks raw MinIO storage keys as permanent download URLs.
 
+### Controlled wire and stored-code values
+
+Closed Master Data code vocabularies are explicit uppercase strings, not Java ordinals.
+
+The canonical stored/wire code source for controlled polymorphic values is [table-catalog.md](table-catalog.md#controlled-polymorphic-stored-code-vocabularies).
+
+The Browser never sends Revision Content, `RevisionEntityType`, Revision Content sequence numbers, snapshots, or Backend transaction ordering.
+
+The Browser must not supply arbitrary `entityType`, Java class names, full table names, or unbounded polymorphic target strings.
+
+Normal Document Link commands use a typed `DocumentLinkTargetType`.
+
+Normal Document Link commands may select only approved catalog target codes for tables `01` through `40`, subject to command authorization and Backend target-existence validation.
+
+`MASTERDATA_REVISION` is Backend-owned Revision metadata and is not an ordinary Browser-selectable Document Link target.
+
+Unknown, unsupported, or context-forbidden target codes are rejected by the Backend.
+
+API DTOs use closed typed values rather than unbounded strings for these vocabularies.
+
+Stored-code renaming is a versioned compatibility change across API, Java mapping, and Oracle constraints; it is not treated as an internal refactor.
+
+Internal Revision snapshots, Revision Content details, sequence allocation, persistence exceptions, and arbitrary polymorphic target resolution are never exposed as API contracts.
+
 ## 4. Standard command and response shapes
 
 ### Create command
@@ -341,7 +365,9 @@ The download use case performs resource authorization and returns a controlled s
 
 It never returns a permanent MinIO URL.
 
-Document Link commands use a controlled target vocabulary validated by Document Service.
+Document Link commands use the closed `DocumentLinkTargetType` vocabulary from [table-catalog.md](table-catalog.md#document-link-target-type-stored-code-vocabulary), validated by Document Service.
+
+Normal Browser-facing Document Link commands are limited to the approved catalog targets `01` through `40`; `MASTERDATA_REVISION` is reserved for Backend-owned same-revision metadata and is not shown as a normal user-selectable target.
 
 Document Link must always name a precise Document Version.
 

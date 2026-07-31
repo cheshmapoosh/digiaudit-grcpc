@@ -384,6 +384,51 @@ Applied revisions and their snapshots are immutable.
 
 Correction is by compensating revision, not by overwriting an applied revision.
 
+### Implementation-locked controlled-polymorphism vocabularies
+
+The approved model permits exactly two controlled polymorphic relations:
+
+- `masterdata_revision_content.entity_type/entity_id`;
+- `document_link.target_type/target_id`.
+
+Each relation has its own closed stored-code vocabulary. These vocabularies must not be conflated, even where both reuse the same stored code for the same logical table.
+
+`RevisionEntityType` contains exactly 45 stored codes and is used only for Revision Content.
+
+Document Link Target Type contains exactly 41 stored codes and is used only for Document Link target validation.
+
+Document Link allows catalog tables `01` through `40` plus the narrow `MASTERDATA_REVISION` exception.
+
+Document-family tables are revisionable where applicable, but `document_retention_policy`, `document`, `document_version`, `document_hold`, and `document_link` are not Document Link targets.
+
+`masterdata_revision_content`, `document_temp_upload`, Effective read models, Diagnostic read models, Roll-up read models, and Policy Applicability read models are not Document Link targets.
+
+The Backend owns polymorphic target validation and verifies the target exists and is allowed for the command context.
+
+The Browser must not send arbitrary target strings, Java class names, table names, Revision Content entity types, Revision Content snapshots, sequence numbers, or transaction ordering.
+
+The canonical stored-code lists are the implementation-locked physical/application contract recorded in [table-catalog.md](table-catalog.md#controlled-polymorphic-stored-code-vocabularies).
+
+Persisted stored codes are stable compatibility contracts. Renaming a stored code is a versioned schema/API compatibility change, not a local refactor.
+
+No generic polymorphism, generic relation, generic target lookup, or generic attachment framework is introduced to implement these relations.
+
+### Revision JSON persistence convention
+
+Revision JSON values are stored in Oracle `CLOB` columns protected by `IS JSON` constraints.
+
+JPA conversion for Revision JSON must reuse the Spring-managed application `ObjectMapper`.
+
+Creating an independent mapper with `new ObjectMapper()` inside Revision persistence is prohibited.
+
+The converter preserves database `NULL` values as null JSON values.
+
+The converter defensively copies `JsonNode` values when serializing and deserializing.
+
+Invalid persisted JSON produces a focused internal Revision persistence exception.
+
+Persistence errors must not expose raw JSON payloads, raw Jackson diagnostics, SQL internals, or database object names to API clients.
+
 ## 12. Document and MinIO contract
 
 `document` is stable identity.

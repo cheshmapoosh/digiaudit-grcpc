@@ -32,6 +32,139 @@ Unless a table entry states a narrower rule, the following are binding physical 
 - `created_by`, `updated_by`, `deleted_by`, and `actual_owner_id` are logical user identifiers, not forced cross-module foreign keys.
 - “No undocumented attributes” means the approved models do not prescribe additional field names. Customer UI fields may be assessed later, but they do not authorize a new column or relation without a compatible detailed design decision.
 
+## Controlled polymorphic stored-code vocabularies
+
+The approved models authorize exactly two controlled polymorphic relations in the Master Data V2 physical scope:
+
+- `document_link.target_type` + `document_link.target_id`;
+- `masterdata_revision_content.entity_type` + `masterdata_revision_content.entity_id`.
+
+The Conceptual, Logical, and Physical reference documents define the controlled polymorphic boundaries and require controlled type values. They do not enumerate the final persisted stored-code strings. The stored-code values below are the implementation-locked physical/application contract accepted by the Oracle and Java implementation after Prompt 3 and Prompt 3.1. This decision does not add a table, entity, relationship, read model, or business capability.
+
+Stored codes are stable uppercase ASCII values stored in `VARCHAR2(32 BYTE)`. Every stored code must be unique inside its own vocabulary, non-blank, and at most 32 ASCII bytes. A persisted stored-code rename is a compatibility-sensitive schema and application-contract change, not a harmless Java refactor. Java class names, full table names, browser-supplied strings, and dynamic entity-name inference are not valid substitutes for these locked values.
+
+### Revision Entity Type stored-code vocabulary
+
+`masterdata_revision_content.entity_type` uses exactly these 45 values. This is the only Revision Content entity-type vocabulary.
+
+| Stored code | Exact catalog table | Permitted Revision domain |
+| --- | --- | --- |
+| `ORG` | `organization` | `CENTRAL` |
+| `CENTRAL_PROCESS` | `central_process` | `CENTRAL` |
+| `CENTRAL_SUBPROCESS` | `central_subprocess` | `CENTRAL` |
+| `CENTRAL_CONTROL` | `central_control` | `CENTRAL` |
+| `CENTRAL_CONTROL_OBJECTIVE_DEF` | `central_control_objective` | `CENTRAL` |
+| `CENTRAL_RISK_CATEGORY` | `central_risk_category` | `CENTRAL` |
+| `CENTRAL_RISK_TEMPLATE` | `central_risk_template` | `CENTRAL` |
+| `CENTRAL_ACCOUNT_GROUP` | `central_account_group` | `CENTRAL` |
+| `CENTRAL_REGULATION_GROUP` | `central_regulation_group` | `CENTRAL` |
+| `CENTRAL_REGULATION` | `central_regulation` | `CENTRAL` |
+| `CENTRAL_REQUIREMENT` | `central_regulation_requirement` | `CENTRAL` |
+| `CENTRAL_POLICY_GROUP` | `central_policy_group` | `CENTRAL` |
+| `CENTRAL_POLICY` | `central_policy` | `CENTRAL` |
+| `CENTRAL_POLICY_VERSION` | `central_policy_version` | `CENTRAL` |
+| `CENTRAL_CONTROL_SCOPE` | `central_subprocess_control_scope` | `CENTRAL` |
+| `CENTRAL_RISK_SCOPE` | `central_subprocess_risk_scope` | `CENTRAL` |
+| `CENTRAL_OBJECTIVE_SCOPE` | `central_subprocess_control_objective_scope` | `CENTRAL` |
+| `CENTRAL_REQUIREMENT_SCOPE` | `central_subprocess_requirement_scope` | `CENTRAL` |
+| `CENTRAL_POLICY_SUBPROCESS` | `central_policy_version_subprocess_scope` | `CENTRAL` |
+| `CENTRAL_POLICY_CONTROL` | `central_policy_version_control_scope` | `CENTRAL` |
+| `CENTRAL_POLICY_REQUIREMENT` | `central_policy_version_requirement_scope` | `CENTRAL` |
+| `CENTRAL_CONTROL_ACCOUNT_GROUP` | `central_control_account_group` | `CENTRAL` |
+| `CENTRAL_OBJECTIVE_ACCOUNT_GROUP` | `central_control_objective_account_group` | `CENTRAL` |
+| `CENTRAL_RISK_CONTROL_COV` | `central_subprocess_risk_control_coverage` | `CENTRAL` |
+| `CENTRAL_RISK_OBJECTIVE_COV` | `central_subprocess_risk_control_objective_coverage` | `CENTRAL` |
+| `CENTRAL_CONTROL_OBJECTIVE_COV` | `central_subprocess_control_control_objective_coverage` | `CENTRAL` |
+| `CENTRAL_REQUIREMENT_CONTROL_COV` | `central_subprocess_requirement_control_coverage` | `CENTRAL` |
+| `LOCAL_CONTEXT` | `local_organization_subprocess_scope` | `LOCAL` |
+| `LOCAL_CONTROL_SCOPE` | `local_subprocess_control_scope` | `LOCAL` |
+| `LOCAL_RISK_SCOPE` | `local_subprocess_risk_scope` | `LOCAL` |
+| `LOCAL_OBJECTIVE_SCOPE` | `local_subprocess_control_objective_scope` | `LOCAL` |
+| `LOCAL_REQUIREMENT_SCOPE` | `local_subprocess_requirement_scope` | `LOCAL` |
+| `LOCAL_RISK_CONTROL_COV` | `local_subprocess_risk_control_coverage` | `LOCAL` |
+| `LOCAL_RISK_OBJECTIVE_COV` | `local_subprocess_risk_control_objective_coverage` | `LOCAL` |
+| `LOCAL_CONTROL_OBJECTIVE_COV` | `local_subprocess_control_control_objective_coverage` | `LOCAL` |
+| `LOCAL_REQUIREMENT_CONTROL_COV` | `local_subprocess_requirement_control_coverage` | `LOCAL` |
+| `LOCAL_POLICY_ORG` | `local_policy_organization_scope` | `LOCAL` |
+| `LOCAL_POLICY_SUBPROCESS` | `local_policy_subprocess_scope` | `LOCAL` |
+| `LOCAL_POLICY_CONTROL` | `local_policy_control_scope` | `LOCAL` |
+| `LOCAL_POLICY_REQUIREMENT` | `local_policy_requirement_scope` | `LOCAL` |
+| `DOCUMENT_RETENTION_POLICY` | `document_retention_policy` | `CENTRAL` |
+| `DOCUMENT` | `document` | `CENTRAL` or `LOCAL`, according to owning Business Command context |
+| `DOCUMENT_VERSION` | `document_version` | `CENTRAL` or `LOCAL`, according to owning Business Command context |
+| `DOCUMENT_HOLD` | `document_hold` | `CENTRAL` or `LOCAL`, according to owning Business Command context |
+| `DOCUMENT_LINK` | `document_link` | `CENTRAL` or `LOCAL`, according to owning Business Command context |
+
+Revision Entity Type rules:
+
+- Codes mapped to catalog tables `01` through `27`, plus `DOCUMENT_RETENTION_POLICY`, are permitted in Central revisions according to the current domain enum.
+- Codes mapped to catalog tables `28` through `40` are permitted in Local revisions.
+- `DOCUMENT`, `DOCUMENT_VERSION`, `DOCUMENT_HOLD`, and `DOCUMENT_LINK` may be represented in Central or Local revisions according to their owning Business Command context.
+- `MASTERDATA_REVISION` is not a Revision Content entity type.
+- `masterdata_revision` and `masterdata_revision_content` do not revise themselves.
+- `document_temp_upload` is technical and is not Revision Content.
+- Effective, Diagnostic, Roll-up, and Policy Applicability read models are not Revision Content types.
+
+### Document Link Target Type stored-code vocabulary
+
+`document_link.target_type` uses a separate vocabulary from `RevisionEntityType`. Reusing the same stored code for the same logical table does not make the two domain types interchangeable.
+
+| Stored code | Exact target table | Target class |
+| --- | --- | --- |
+| `ORG` | `organization` | Normal Master Data |
+| `CENTRAL_PROCESS` | `central_process` | Normal Master Data |
+| `CENTRAL_SUBPROCESS` | `central_subprocess` | Normal Master Data |
+| `CENTRAL_CONTROL` | `central_control` | Normal Master Data |
+| `CENTRAL_CONTROL_OBJECTIVE_DEF` | `central_control_objective` | Normal Master Data |
+| `CENTRAL_RISK_CATEGORY` | `central_risk_category` | Normal Master Data |
+| `CENTRAL_RISK_TEMPLATE` | `central_risk_template` | Normal Master Data |
+| `CENTRAL_ACCOUNT_GROUP` | `central_account_group` | Normal Master Data |
+| `CENTRAL_REGULATION_GROUP` | `central_regulation_group` | Normal Master Data |
+| `CENTRAL_REGULATION` | `central_regulation` | Normal Master Data |
+| `CENTRAL_REQUIREMENT` | `central_regulation_requirement` | Normal Master Data |
+| `CENTRAL_POLICY_GROUP` | `central_policy_group` | Normal Master Data |
+| `CENTRAL_POLICY` | `central_policy` | Normal Master Data |
+| `CENTRAL_POLICY_VERSION` | `central_policy_version` | Normal Master Data |
+| `CENTRAL_CONTROL_SCOPE` | `central_subprocess_control_scope` | Normal Master Data |
+| `CENTRAL_RISK_SCOPE` | `central_subprocess_risk_scope` | Normal Master Data |
+| `CENTRAL_OBJECTIVE_SCOPE` | `central_subprocess_control_objective_scope` | Normal Master Data |
+| `CENTRAL_REQUIREMENT_SCOPE` | `central_subprocess_requirement_scope` | Normal Master Data |
+| `CENTRAL_POLICY_SUBPROCESS` | `central_policy_version_subprocess_scope` | Normal Master Data |
+| `CENTRAL_POLICY_CONTROL` | `central_policy_version_control_scope` | Normal Master Data |
+| `CENTRAL_POLICY_REQUIREMENT` | `central_policy_version_requirement_scope` | Normal Master Data |
+| `CENTRAL_CONTROL_ACCOUNT_GROUP` | `central_control_account_group` | Normal Master Data |
+| `CENTRAL_OBJECTIVE_ACCOUNT_GROUP` | `central_control_objective_account_group` | Normal Master Data |
+| `CENTRAL_RISK_CONTROL_COV` | `central_subprocess_risk_control_coverage` | Normal Master Data |
+| `CENTRAL_RISK_OBJECTIVE_COV` | `central_subprocess_risk_control_objective_coverage` | Normal Master Data |
+| `CENTRAL_CONTROL_OBJECTIVE_COV` | `central_subprocess_control_control_objective_coverage` | Normal Master Data |
+| `CENTRAL_REQUIREMENT_CONTROL_COV` | `central_subprocess_requirement_control_coverage` | Normal Master Data |
+| `LOCAL_CONTEXT` | `local_organization_subprocess_scope` | Normal Master Data |
+| `LOCAL_CONTROL_SCOPE` | `local_subprocess_control_scope` | Normal Master Data |
+| `LOCAL_RISK_SCOPE` | `local_subprocess_risk_scope` | Normal Master Data |
+| `LOCAL_OBJECTIVE_SCOPE` | `local_subprocess_control_objective_scope` | Normal Master Data |
+| `LOCAL_REQUIREMENT_SCOPE` | `local_subprocess_requirement_scope` | Normal Master Data |
+| `LOCAL_RISK_CONTROL_COV` | `local_subprocess_risk_control_coverage` | Normal Master Data |
+| `LOCAL_RISK_OBJECTIVE_COV` | `local_subprocess_risk_control_objective_coverage` | Normal Master Data |
+| `LOCAL_CONTROL_OBJECTIVE_COV` | `local_subprocess_control_control_objective_coverage` | Normal Master Data |
+| `LOCAL_REQUIREMENT_CONTROL_COV` | `local_subprocess_requirement_control_coverage` | Normal Master Data |
+| `LOCAL_POLICY_ORG` | `local_policy_organization_scope` | Normal Master Data |
+| `LOCAL_POLICY_SUBPROCESS` | `local_policy_subprocess_scope` | Normal Master Data |
+| `LOCAL_POLICY_CONTROL` | `local_policy_control_scope` | Normal Master Data |
+| `LOCAL_POLICY_REQUIREMENT` | `local_policy_requirement_scope` | Normal Master Data |
+| `MASTERDATA_REVISION` | `masterdata_revision` | Backend-owned Revision metadata |
+
+Document Link Target Type rules:
+
+- Document Link supports catalog tables `01` through `40` as normal Master Data targets, subject to command authorization and target-existence validation.
+- `MASTERDATA_REVISION` is the only exceptional target and is Backend-controlled metadata for the same owning DRAFT Revision.
+- The Browser must not independently choose or provide `MASTERDATA_REVISION` as a normal document target.
+- Document-family tables `41` through `45` are not permitted Document Link targets.
+- `masterdata_revision_content` is not a permitted Document Link target.
+- `document_temp_upload` is not a permitted Document Link target.
+- Effective, Diagnostic, Roll-up, and Policy Applicability read models are not permitted targets.
+- Workflow, Audit, monitoring, job, scheduler, cache, outbox, KPI, KRI, arbitrary table names, Java class names, and browser free text are not permitted targets.
+- Backend validation must verify that the target exists and is allowed for the current command context.
+
 ## 1. Structural and Central Definitions — 14 business tables
 
 ### 01. `organization`
@@ -830,7 +963,7 @@ Unless a table entry states a narrower rule, the following are binding physical 
 
 **Purpose and family.** Controlled polymorphic link from an exact immutable Document Version to a permitted Master Data target.
 
-**Fields.** `ID`; `document_version_id RAW(16) NOT NULL`; controlled `target_type VARCHAR2(32 BYTE) NOT NULL`; `target_id RAW(16) NOT NULL`; lifecycle/audit/optimistic-lock fields compatible with the stored relationship. Link-role semantics such as `PRIMARY_DOCUMENT` are controlled by the Document domain; the final models do not prescribe a separate field name.
+**Fields.** `ID`; `document_version_id RAW(16) NOT NULL`; controlled `target_type VARCHAR2(32 BYTE) NOT NULL`; `target_id RAW(16) NOT NULL`; lifecycle/audit/optimistic-lock fields compatible with the stored relationship. Link-role semantics such as `PRIMARY_DOCUMENT` are controlled by the Document domain; the final models do not prescribe a separate field name. `target_type` uses the canonical 41-code Document Link Target Type vocabulary in this catalog.
 
 **Keys and relationships.** PK: `id`. Business key: unique `(document_version_id, target_type, target_id)`. FK: `document_version_id -> document_version(id)`. `target_id` is validated by Document Service against the controlled `target_type` rather than an unbounded generic target table.
 
@@ -838,7 +971,7 @@ Unless a table entry states a narrower rule, the following are binding physical 
 
 **Lifecycle, validity, and lock.** Link mutation is versioned and explicit. The link always names the precise version so a newer document file never silently changes historical evidence.
 
-**Constraints and indexes.** Unique link triple; target-type check against the approved target vocabulary; indexed `document_version_id` via the unique index and an appropriate target lookup index if not covered. The target cannot be an arbitrary legacy attachment target.
+**Constraints and indexes.** Unique link triple; target-type check against the canonical 41-code Document Link Target Type vocabulary; indexed `document_version_id` via the unique index and an appropriate target lookup index if not covered. The target cannot be an arbitrary legacy attachment target.
 
 **Mutability and Revision.** Linking to a Master Data target is revision-controlled. The narrow exception is a link to its own DRAFT `masterdata_revision`, which is metadata of that same revision and must not create a recursive revision.
 
@@ -868,7 +1001,7 @@ Unless a table entry states a narrower rule, the following are binding physical 
 
 **Purpose and family.** Ordered immutable change records belonging to one Master Data Revision; the controlled polymorphic reference identifies the changed entity.
 
-**Fields.** `ID`; `revision_id RAW(16) NOT NULL`; `sequence_number NUMBER(19,0) NOT NULL`; controlled `entity_type VARCHAR2(32 BYTE) NOT NULL`; `entity_id RAW(16) NOT NULL`; `operation_type VARCHAR2(32 BYTE) NOT NULL`; nullable `expected_version NUMBER(19,0)`; nullable `before_snapshot CLOB JSON`; nullable `after_snapshot CLOB JSON`; nullable `applied_entity_version NUMBER(19,0)`; nullable `validation_result CLOB JSON`; `created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `created_by RAW(16) NOT NULL`; `version NUMBER(19,0) NOT NULL`.
+**Fields.** `ID`; `revision_id RAW(16) NOT NULL`; `sequence_number NUMBER(19,0) NOT NULL`; controlled `entity_type VARCHAR2(32 BYTE) NOT NULL`; `entity_id RAW(16) NOT NULL`; `operation_type VARCHAR2(32 BYTE) NOT NULL`; nullable `expected_version NUMBER(19,0)`; nullable `before_snapshot CLOB JSON`; nullable `after_snapshot CLOB JSON`; nullable `applied_entity_version NUMBER(19,0)`; nullable `validation_result CLOB JSON`; `created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `created_by RAW(16) NOT NULL`; `version NUMBER(19,0) NOT NULL`. `entity_type` uses the canonical 45-code Revision Entity Type vocabulary in this catalog.
 
 **Keys and relationships.** PK: `id`. Business key: unique `(revision_id, sequence_number)`. FK: `revision_id -> masterdata_revision(id)`. `entity_type/entity_id` is controlled polymorphism and must be domain-validated against the header.
 
@@ -876,7 +1009,7 @@ Unless a table entry states a narrower rule, the following are binding physical 
 
 **Lifecycle, validity, and lock.** Operation is one of `CREATE`, `UPDATE`, `ACTIVATE`, `INACTIVATE`, `DELETE`, or `RESTORE`. No generic status/validity interval is documented. Applied content/snapshots are immutable; `version` supports guarded draft handling only.
 
-**Constraints and indexes.** Unique revision/sequence; controlled operation/entity type; revision-domain compatibility enforced by Backend validation; indexed `revision_id` via the unique key and target lookup only when proven necessary. JSON values require `IS JSON` checks.
+**Constraints and indexes.** Unique revision/sequence; controlled operation/entity type checked against the canonical 45-code Revision Entity Type vocabulary; revision-domain compatibility enforced by Backend validation; indexed `revision_id` via the unique key and target lookup only when proven necessary. JSON values require `IS JSON` checks.
 
 **Mutability and Revision.** Generated, sequenced, snapshot-filled, validated, and atomically applied by the Backend. The Frontend never sends this object, its sequence number, snapshots, or transaction order.
 
@@ -915,6 +1048,6 @@ Unless a table entry states a narrower rule, the following are binding physical 
 | Technical Temporary Upload | 1 (`T1`) |
 | **Total physical tables in this redesign scope** | **48** |
 
-Manual proof: the contiguous numbered business list starts at `01` and ends at `47` exactly once; `T1` is outside the business list. Programmatic gate for a later implementation task is `rg -n '^### [0-9]{2}\\. `' grcpc-docs/master-data/table-catalog.md`, which must yield 47 headings, plus exactly one `### T1.` heading.
+Manual proof: the contiguous numbered business list starts at `01` and ends at `47` exactly once; `T1` is outside the business list. Programmatic gates for later implementation tasks must count Markdown headings in the form `### NN. table_name` and confirm 47 numbered business headings, plus exactly one `### T1.` heading.
 
 No KPI, KRI, risk-assessment, control-test, workflow, monitoring, job, scheduler, cache, outbox, Audit, generic assignment, generic Scope, generic Coverage, or invented relationship table is part of this catalog.
