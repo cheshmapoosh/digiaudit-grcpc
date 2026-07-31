@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type ReactNode, Fragment } from "react";
+﻿import { useMemo, useState, type CSSProperties, type ReactNode, Fragment } from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,7 +19,7 @@ import type {
     RiskStatus,
     RiskTemplateType,
 } from "../domain/risk.model";
-import { DocumentAttachmentsManager } from "@/features/document";
+import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface RiskSummaryPanelProps {
@@ -128,8 +128,8 @@ function resolveNodeTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const labels: Record<RiskNodeType, string> = {
-        riskCategory: t("risk.nodeType.riskCategory", { defaultValue: "طبقه ریسک" }),
-        riskTemplate: t("risk.nodeType.riskTemplate", { defaultValue: "الگوی ریسک" }),
+        riskCategory: t("risk.nodeType.riskCategory", { defaultValue: "Ø·Ø¨Ù‚Ù‡ Ø±ÛŒØ³Ú©" }),
+        riskTemplate: t("risk.nodeType.riskTemplate", { defaultValue: "Ø§Ù„Ú¯ÙˆÛŒ Ø±ÛŒØ³Ú©" }),
     };
 
     return labels[nodeType];
@@ -140,8 +140,8 @@ function resolveStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     return status === "active"
-        ? t("common.active", { defaultValue: "فعال" })
-        : t("common.inactive", { defaultValue: "غیرفعال" });
+        ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+        : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
 }
 
 function resolveRiskTypeLabel(
@@ -153,14 +153,14 @@ function resolveRiskTypeLabel(
     }
 
     const labels: Record<RiskTemplateType, string> = {
-        operational: t("risk.riskType.operational", { defaultValue: "عملیاتی" }),
-        financial: t("risk.riskType.financial", { defaultValue: "مالی" }),
-        strategic: t("risk.riskType.strategic", { defaultValue: "استراتژیک" }),
-        compliance: t("risk.riskType.compliance", { defaultValue: "انطباق" }),
-        technology: t("risk.riskType.technology", { defaultValue: "فناوری" }),
-        reputation: t("risk.riskType.reputation", { defaultValue: "شهرت" }),
-        safety: t("risk.riskType.safety", { defaultValue: "ایمنی" }),
-        other: t("risk.riskType.other", { defaultValue: "سایر" }),
+        operational: t("risk.riskType.operational", { defaultValue: "Ø¹Ù…Ù„ÛŒØ§ØªÛŒ" }),
+        financial: t("risk.riskType.financial", { defaultValue: "Ù…Ø§Ù„ÛŒ" }),
+        strategic: t("risk.riskType.strategic", { defaultValue: "Ø§Ø³ØªØ±Ø§ØªÚ˜ÛŒÚ©" }),
+        compliance: t("risk.riskType.compliance", { defaultValue: "Ø§Ù†Ø·Ø¨Ø§Ù‚" }),
+        technology: t("risk.riskType.technology", { defaultValue: "ÙÙ†Ø§ÙˆØ±ÛŒ" }),
+        reputation: t("risk.riskType.reputation", { defaultValue: "Ø´Ù‡Ø±Øª" }),
+        safety: t("risk.riskType.safety", { defaultValue: "Ø§ÛŒÙ…Ù†ÛŒ" }),
+        other: t("risk.riskType.other", { defaultValue: "Ø³Ø§ÛŒØ±" }),
     };
 
     return labels[riskType];
@@ -171,7 +171,7 @@ function boolLabel(value: boolean | undefined, t: ReturnType<typeof useTranslati
         return "-";
     }
 
-    return value ? t("common.yes", { defaultValue: "بله" }) : t("common.no", { defaultValue: "خیر" });
+    return value ? t("common.yes", { defaultValue: "Ø¨Ù„Ù‡" }) : t("common.no", { defaultValue: "Ø®ÛŒØ±" });
 }
 
 function DetailRow({ label, value }: { label: string; value?: ReactNode }) {
@@ -234,9 +234,9 @@ function SimpleTable({
 function EffectsTable({ value }: { value: RiskNode }) {
     const { t } = useTranslation();
     const columns = [
-        t("risk.fields.effect", { defaultValue: "اثر" }),
-        t("risk.fields.effectCategory", { defaultValue: "طبقه اثر" }),
-        t("risk.fields.effectCategoryDescription", { defaultValue: "شرح طبقه اثر" }),
+        t("risk.fields.effect", { defaultValue: "Ø§Ø«Ø±" }),
+        t("risk.fields.effectCategory", { defaultValue: "Ø·Ø¨Ù‚Ù‡ Ø§Ø«Ø±" }),
+        t("risk.fields.effectCategoryDescription", { defaultValue: "Ø´Ø±Ø­ Ø·Ø¨Ù‚Ù‡ Ø§Ø«Ø±" }),
     ];
 
     return (
@@ -281,21 +281,25 @@ function getTabs(
 ): DetailTabDefinition[] {
     if (nodeType === "riskTemplate") {
         return [
-            { key: "general", label: t("risk.tabs.general", { defaultValue: "اطلاعات کلی" }) },
-            { key: "impacts", label: t("risk.tabs.impacts", { defaultValue: "محرک‌ها و اثرات" }) },
-            { key: "existingRisks", label: t("risk.tabs.existingRisks", { defaultValue: "ریسک موجود" }) },
-            { key: "responsePattern", label: t("risk.tabs.responsePattern", { defaultValue: "الگوی پاسخ" }) },
-            { key: "controlCenter", label: t("risk.tabs.controlCenter", { defaultValue: "مرکز کنترل" }) },
-            { key: "documents", label: t("risk.tabs.documents", { defaultValue: "مستندات" }) },
+            { key: "general", label: t("risk.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }) },
+            { key: "impacts", label: t("risk.tabs.impacts", { defaultValue: "Ù…Ø­Ø±Ú©â€ŒÙ‡Ø§ Ùˆ Ø§Ø«Ø±Ø§Øª" }) },
+            { key: "existingRisks", label: t("risk.tabs.existingRisks", { defaultValue: "Ø±ÛŒØ³Ú© Ù…ÙˆØ¬ÙˆØ¯" }) },
+            { key: "responsePattern", label: t("risk.tabs.responsePattern", { defaultValue: "Ø§Ù„Ú¯ÙˆÛŒ Ù¾Ø§Ø³Ø®" }) },
+            { key: "controlCenter", label: t("risk.tabs.controlCenter", { defaultValue: "Ù…Ø±Ú©Ø² Ú©Ù†ØªØ±Ù„" }) },
+            { key: "documents", label: t("risk.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }) },
         ];
     }
 
     return [
-        { key: "general", label: t("risk.tabs.general", { defaultValue: "اطلاعات کلی" }) },
-        { key: "riskSummary", label: t("risk.tabs.riskSummary", { defaultValue: "خلاصه ریسک" }) },
-        { key: "kriTemplate", label: t("risk.tabs.kriTemplate", { defaultValue: "قالب KRI" }) },
-        { key: "documents", label: t("risk.tabs.documents", { defaultValue: "مستندات" }) },
+        { key: "general", label: t("risk.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }) },
+        { key: "riskSummary", label: t("risk.tabs.riskSummary", { defaultValue: "Ø®Ù„Ø§ØµÙ‡ Ø±ÛŒØ³Ú©" }) },
+        { key: "kriTemplate", label: t("risk.tabs.kriTemplate", { defaultValue: "Ù‚Ø§Ù„Ø¨ KRI" }) },
+        { key: "documents", label: t("risk.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }) },
     ];
+}
+
+function resolveDocumentTargetType(nodeType: RiskNodeType): DocumentLinkTargetType {
+    return nodeType === "riskTemplate" ? "CENTRAL_RISK_TEMPLATE" : "CENTRAL_RISK_CATEGORY";
 }
 
 function RiskTabs({
@@ -341,51 +345,51 @@ function GeneralTab({ value }: { value: RiskNode }) {
     return (
         <div style={{ display: "grid", gap: "0.75rem" }}>
             <DetailRow
-                label={t("risk.fields.description", { defaultValue: "شرح" })}
+                label={t("risk.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                 value={value.description}
             />
             <DetailRow
-                label={t("risk.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
+                label={t("risk.fields.createdAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" })}
                 value={formatPersianDate(value.createdAt)}
             />
             <DetailRow
-                label={t("risk.fields.validFrom", { defaultValue: "تاریخ شروع اعتبار" })}
+                label={t("risk.fields.validFrom", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø´Ø±ÙˆØ¹ Ø§Ø¹ØªØ¨Ø§Ø±" })}
                 value={formatPersianDate(value.validFrom)}
             />
             <DetailRow
-                label={t("risk.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
+                label={t("risk.fields.validTo", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" })}
                 value={formatPersianDate(value.validTo)}
             />
             <DetailRow
-                label={t("risk.fields.status", { defaultValue: "وضعیت" })}
+                label={t("risk.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}
                 value={resolveStatusLabel(value.status, t)}
             />
             <DetailRow
-                label={t("risk.fields.allowReference", { defaultValue: "مجوز ارجاع" })}
+                label={t("risk.fields.allowReference", { defaultValue: "Ù…Ø¬ÙˆØ² Ø§Ø±Ø¬Ø§Ø¹" })}
                 value={boolLabel(value.allowReference, t)}
             />
             <DetailRow
-                label={t("risk.fields.analysisProfile", { defaultValue: "پروفایل تحلیل" })}
+                label={t("risk.fields.analysisProfile", { defaultValue: "Ù¾Ø±ÙˆÙØ§ÛŒÙ„ ØªØ­Ù„ÛŒÙ„" })}
                 value={value.analysisProfile}
             />
             {value.nodeType === "riskTemplate" ? (
                 <>
                     <DetailRow
-                        label={t("risk.fields.companyOperation", { defaultValue: "شرکت / عملیات" })}
+                        label={t("risk.fields.companyOperation", { defaultValue: "Ø´Ø±Ú©Øª / Ø¹Ù…Ù„ÛŒØ§Øª" })}
                         value={value.companyOperation}
                     />
                     <DetailRow
-                        label={t("risk.fields.riskType", { defaultValue: "نوع ریسک" })}
+                        label={t("risk.fields.riskType", { defaultValue: "Ù†ÙˆØ¹ Ø±ÛŒØ³Ú©" })}
                         value={resolveRiskTypeLabel(value.riskType, t)}
                     />
                     <DetailRow
-                        label={t("risk.fields.causes", { defaultValue: "محرک‌ها" })}
+                        label={t("risk.fields.causes", { defaultValue: "Ù…Ø­Ø±Ú©â€ŒÙ‡Ø§" })}
                         value={value.causes}
                     />
                 </>
             ) : null}
             <DetailRow
-                label={t("risk.fields.documents", { defaultValue: "مستندات" })}
+                label={t("risk.fields.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
                 value={String(value.documentsCount ?? 0)}
             />
         </div>
@@ -409,12 +413,11 @@ function TabBody({
 
     if (activeTab === "documents") {
         return (
-            <DocumentAttachmentsManager
+            <DocumentManager
                 key={value.id}
                 title={t("risk.tabs.documents", { defaultValue: "مستندات" })}
-                targetType="RISK_NODE"
+                targetType={resolveDocumentTargetType(value.nodeType)}
                 targetId={value.id}
-                stagingMode="direct"
                 busy={busy}
                 readOnly
             />
@@ -429,12 +432,12 @@ function TabBody({
         return (
             <SimpleTable
                 columns={[
-                    t("risk.fields.name", { defaultValue: "نام" }),
-                    t("risk.fields.orgUnit", { defaultValue: "واحد سازمانی" }),
-                    t("risk.fields.activity", { defaultValue: "فعالیت" }),
-                    t("risk.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                    t("risk.fields.validTo", { defaultValue: "تاریخ اعتبار" }),
-                    t("risk.fields.publishMethod", { defaultValue: "روش انتشار" }),
+                    t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" }),
+                    t("risk.fields.orgUnit", { defaultValue: "ÙˆØ§Ø­Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†ÛŒ" }),
+                    t("risk.fields.activity", { defaultValue: "ÙØ¹Ø§Ù„ÛŒØª" }),
+                    t("risk.fields.createdAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" }),
+                    t("risk.fields.validTo", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" }),
+                    t("risk.fields.publishMethod", { defaultValue: "Ø±ÙˆØ´ Ø§Ù†ØªØ´Ø§Ø±" }),
                 ]}
             />
         );
@@ -444,11 +447,11 @@ function TabBody({
         return (
             <SimpleTable
                 columns={[
-                    t("risk.fields.name", { defaultValue: "نام" }),
-                    t("risk.fields.type", { defaultValue: "نوع" }),
-                    t("risk.fields.objective", { defaultValue: "هدف" }),
-                    t("risk.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                    t("risk.fields.validTo", { defaultValue: "تاریخ اعتبار" }),
+                    t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" }),
+                    t("risk.fields.type", { defaultValue: "Ù†ÙˆØ¹" }),
+                    t("risk.fields.objective", { defaultValue: "Ù‡Ø¯Ù" }),
+                    t("risk.fields.createdAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" }),
+                    t("risk.fields.validTo", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" }),
                 ]}
             />
         );
@@ -458,9 +461,9 @@ function TabBody({
         return (
             <SimpleTable
                 columns={[
-                    t("risk.fields.name", { defaultValue: "نام" }),
-                    t("risk.fields.owner", { defaultValue: "مالک" }),
-                    t("risk.fields.description", { defaultValue: "شرح" }),
+                    t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" }),
+                    t("risk.fields.owner", { defaultValue: "Ù…Ø§Ù„Ú©" }),
+                    t("risk.fields.description", { defaultValue: "Ø´Ø±Ø­" }),
                 ]}
             />
         );
@@ -470,8 +473,8 @@ function TabBody({
         return (
             <SimpleTable
                 columns={[
-                    t("risk.fields.name", { defaultValue: "نام" }),
-                    t("risk.fields.description", { defaultValue: "شرح" }),
+                    t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" }),
+                    t("risk.fields.description", { defaultValue: "Ø´Ø±Ø­" }),
                 ]}
             />
         );
@@ -480,9 +483,9 @@ function TabBody({
     return (
         <SimpleTable
             columns={[
-                t("risk.fields.name", { defaultValue: "نام" }),
-                t("risk.fields.type", { defaultValue: "نوع" }),
-                t("risk.fields.description", { defaultValue: "شرح" }),
+                t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" }),
+                t("risk.fields.type", { defaultValue: "Ù†ÙˆØ¹" }),
+                t("risk.fields.description", { defaultValue: "Ø´Ø±Ø­" }),
             ]}
         />
     );
@@ -522,7 +525,7 @@ export default function RiskSummaryPanel({
                         {value?.title
                             ? `${value.code} - ${value.title}`
                             : t("risk.object.summaryTitle", {
-                                defaultValue: "جزئیات ریسک",
+                                defaultValue: "Ø¬Ø²Ø¦ÛŒØ§Øª Ø±ÛŒØ³Ú©",
                             })}
                     </Title>
                 }
@@ -549,15 +552,15 @@ export default function RiskSummaryPanel({
                             }}
                         >
                             <DetailRow
-                                label={t("risk.fields.name", { defaultValue: "نام" })}
+                                label={t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" })}
                                 value={value.title}
                             />
                             <DetailRow
-                                label={t("risk.fields.code", { defaultValue: "کد" })}
+                                label={t("risk.fields.code", { defaultValue: "Ú©Ø¯" })}
                                 value={value.code}
                             />
                             <DetailRow
-                                label={t("risk.fields.type", { defaultValue: "نوع" })}
+                                label={t("risk.fields.type", { defaultValue: "Ù†ÙˆØ¹" })}
                                 value={resolveNodeTypeLabel(value.nodeType, t)}
                             />
                         </div>
@@ -579,7 +582,7 @@ export default function RiskSummaryPanel({
                 ) : (
                     <MessageStrip design="Information" hideCloseButton>
                         {t("risk.object.selectPrompt", {
-                            defaultValue: "برای مشاهده جزئیات، یک آیتم ریسک را انتخاب کنید.",
+                            defaultValue: "Ø¨Ø±Ø§ÛŒ Ù…Ø´Ø§Ù‡Ø¯Ù‡ Ø¬Ø²Ø¦ÛŒØ§ØªØŒ ÛŒÚ© Ø¢ÛŒØªÙ… Ø±ÛŒØ³Ú© Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯.",
                         })}
                     </MessageStrip>
                 )}
@@ -593,7 +596,7 @@ export default function RiskSummaryPanel({
                         style={ACTION_BUTTON_STYLE}
                         onClick={onCancel}
                     >
-                        {t("common.close", { defaultValue: "بستن" })}
+                        {t("common.close", { defaultValue: "Ø¨Ø³ØªÙ†" })}
                     </Button>
                 }
             />

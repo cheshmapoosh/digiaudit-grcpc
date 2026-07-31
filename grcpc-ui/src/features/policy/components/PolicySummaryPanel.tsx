@@ -21,7 +21,7 @@ import type {
     PolicyNodeType,
     PolicyStatus,
 } from "../domain/policy.model";
-import { DocumentAttachmentsManager } from "@/features/document";
+import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface PolicySummaryPanelProps {
@@ -121,6 +121,10 @@ function readSelectedTabKey(event: unknown): PolicyDetailTabKey | null {
     }).detail?.tab;
 
     return selectedTab?.getAttribute("data-tab-key") as PolicyDetailTabKey | null;
+}
+
+function resolveDocumentTargetType(nodeType: PolicyNodeType): DocumentLinkTargetType {
+    return nodeType === "policyGroup" ? "CENTRAL_POLICY_GROUP" : "CENTRAL_POLICY";
 }
 
 function resolveNodeTypeLabel(
@@ -470,12 +474,11 @@ function TabBody({
 
     if (activeTab === "documents") {
         return (
-            <DocumentAttachmentsManager
+            <DocumentManager
                 key={value.id}
                 title={t("policy.tabs.documents", { defaultValue: "مستندات" })}
-                targetType="POLICY_NODE"
+                targetType={resolveDocumentTargetType(value.nodeType)}
                 targetId={value.id}
-                stagingMode="direct"
                 busy={busy}
                 readOnly
             />

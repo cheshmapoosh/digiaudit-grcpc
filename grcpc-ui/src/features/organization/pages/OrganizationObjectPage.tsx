@@ -1,6 +1,4 @@
-import {
-    useCallback,
-    useRef,
+﻿import {
     useState,
     type CSSProperties,
     type ReactNode,
@@ -51,11 +49,7 @@ import type {
     OrganizationObjectiveOption,
     OrganizationObjectiveView,
 } from "../domain/organization-objective-assignment.model";
-import type { DocumentAttachment, DocumentUploadPolicy } from "@/features/document";
-import {
-    DocumentAttachmentsTab,
-    type DocumentBeforeParentSubmitHandler,
-} from "@/features/document";
+import { DocumentManager } from "@/features/document";
 import ParentValueHelpDialog from "../components/ParentValueHelpDialog";
 import {
     formatPersianDate,
@@ -108,14 +102,9 @@ export interface OrganizationObjectPageProps {
     availableObjectives?: OrganizationObjectiveOption[];
     risks?: OrganizationRiskAssignment[];
     availableRisks?: OrganizationRiskOption[];
-    documents?: DocumentAttachment[];
-    tempDocuments?: DocumentAttachment[];
-    documentUploadPolicy?: DocumentUploadPolicy;
-    documentTempSessionId?: string;
     subProcessesBusy?: boolean;
     relationshipsBusy?: boolean;
     referencesBusy?: boolean;
-    documentsBusy?: boolean;
     busy?: boolean;
     error?: string | null;
     onErrorClose?: () => void;
@@ -136,16 +125,6 @@ export interface OrganizationObjectPageProps {
     ) => Promise<void> | void;
     onAssignObjective?: (objectiveNodeId: string) => Promise<void> | void;
     onRemoveObjectiveAssignment?: (assignmentId: string) => Promise<void> | void;
-    onUploadDocument?: (
-        file: File,
-        onProgress?: (progress: number) => void,
-    ) => Promise<void> | void;
-    onUpdateDocumentTitle?: (
-        documentId: string,
-        title: string,
-    ) => Promise<void> | void;
-    onDeleteDocument?: (documentId: string) => Promise<void> | void;
-    onDownloadDocument?: (documentId: string) => Promise<void> | void;
     onActiveTabChange?: (tab: OrganizationTabKey) => void;
 }
 
@@ -459,17 +438,17 @@ function resolveTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<OrganizationType, string> = {
-        holding: t("organization.type.holding", { defaultValue: "هلدینگ" }),
-        company: t("organization.type.company", { defaultValue: "شرکت" }),
-        deputy: t("organization.type.deputy", { defaultValue: "معاونت" }),
-        office: t("organization.type.office", { defaultValue: "اداره" }),
-        unit: t("organization.type.unit", { defaultValue: "واحد" }),
-        committee: t("organization.type.committee", { defaultValue: "کمیته" }),
-        group: t("organization.type.group", { defaultValue: "گروه" }),
-        department: t("organization.type.department", { defaultValue: "دپارتمان" }),
-        management: t("organization.type.management", { defaultValue: "مدیریت" }),
-        branch: t("organization.type.branch", { defaultValue: "شعبه" }),
-        other: t("organization.type.other", { defaultValue: "سایر" }),
+        holding: t("organization.type.holding", { defaultValue: "Ù‡Ù„Ø¯ÛŒÙ†Ú¯" }),
+        company: t("organization.type.company", { defaultValue: "Ø´Ø±Ú©Øª" }),
+        deputy: t("organization.type.deputy", { defaultValue: "Ù…Ø¹Ø§ÙˆÙ†Øª" }),
+        office: t("organization.type.office", { defaultValue: "Ø§Ø¯Ø§Ø±Ù‡" }),
+        unit: t("organization.type.unit", { defaultValue: "ÙˆØ§Ø­Ø¯" }),
+        committee: t("organization.type.committee", { defaultValue: "Ú©Ù…ÛŒØªÙ‡" }),
+        group: t("organization.type.group", { defaultValue: "Ú¯Ø±ÙˆÙ‡" }),
+        department: t("organization.type.department", { defaultValue: "Ø¯Ù¾Ø§Ø±ØªÙ…Ø§Ù†" }),
+        management: t("organization.type.management", { defaultValue: "Ù…Ø¯ÛŒØ±ÛŒØª" }),
+        branch: t("organization.type.branch", { defaultValue: "Ø´Ø¹Ø¨Ù‡" }),
+        other: t("organization.type.other", { defaultValue: "Ø³Ø§ÛŒØ±" }),
     };
 
     return map[type] ?? type;
@@ -480,10 +459,10 @@ function resolveStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     if (status === "inactive") {
-        return t("common.inactive", { defaultValue: "غیرفعال" });
+        return t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
     }
 
-    return t("common.active", { defaultValue: "فعال" });
+    return t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" });
 }
 
 function resolveAssignmentTypeLabel(
@@ -491,10 +470,10 @@ function resolveAssignmentTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<OrganizationProcessAssignmentType, string> = {
-        scope: t("organization.assignmentType.scope", { defaultValue: "محدوده" }),
-        owner: t("organization.assignmentType.owner", { defaultValue: "مالک" }),
+        scope: t("organization.assignmentType.scope", { defaultValue: "Ù…Ø­Ø¯ÙˆØ¯Ù‡" }),
+        owner: t("organization.assignmentType.owner", { defaultValue: "Ù…Ø§Ù„Ú©" }),
         participant: t("organization.assignmentType.participant", {
-            defaultValue: "مشارکت کننده",
+            defaultValue: "Ù…Ø´Ø§Ø±Ú©Øª Ú©Ù†Ù†Ø¯Ù‡",
         }),
     };
 
@@ -546,19 +525,19 @@ function resolveTabLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const labels: Record<OrganizationTabKey, string> = {
-        general: t("organization.tabs.general", { defaultValue: "اطلاعات کلی" }),
-        subProcesses: t("organization.tabs.subProcesses", { defaultValue: "زیر فرآیند" }),
-        risks: t("organization.tabs.risks", { defaultValue: "ریسک ها" }),
-        controls: t("organization.tabs.controls", { defaultValue: "کنترل ها" }),
-        rules: t("organization.tabs.rules", { defaultValue: "قوانین" }),
-        policies: t("organization.tabs.policies", { defaultValue: "سیاست ها" }),
-        goals: t("organization.tabs.goals.label", { defaultValue: "اهداف" }),
+        general: t("organization.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
+        subProcesses: t("organization.tabs.subProcesses", { defaultValue: "Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯" }),
+        risks: t("organization.tabs.risks", { defaultValue: "Ø±ÛŒØ³Ú© Ù‡Ø§" }),
+        controls: t("organization.tabs.controls", { defaultValue: "Ú©Ù†ØªØ±Ù„ Ù‡Ø§" }),
+        rules: t("organization.tabs.rules", { defaultValue: "Ù‚ÙˆØ§Ù†ÛŒÙ†" }),
+        policies: t("organization.tabs.policies", { defaultValue: "Ø³ÛŒØ§Ø³Øª Ù‡Ø§" }),
+        goals: t("organization.tabs.goals.label", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù" }),
         kpi: "KPI",
         kri: "KRI",
-        riskAppetite: t("organization.tabs.riskAppetite", { defaultValue: "اشتهای ریسک" }),
-        owner: t("organization.tabs.owner", { defaultValue: "مالک" }),
-        documents: t("organization.tabs.documents", { defaultValue: "مستندات" }),
-        performance: t("organization.tabs.performance", { defaultValue: "ارزیابی عملکرد" }),
+        riskAppetite: t("organization.tabs.riskAppetite", { defaultValue: "Ø§Ø´ØªÙ‡Ø§ÛŒ Ø±ÛŒØ³Ú©" }),
+        owner: t("organization.tabs.owner", { defaultValue: "Ù…Ø§Ù„Ú©" }),
+        documents: t("organization.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }),
+        performance: t("organization.tabs.performance", { defaultValue: "Ø§Ø±Ø²ÛŒØ§Ø¨ÛŒ Ø¹Ù…Ù„Ú©Ø±Ø¯" }),
     };
 
     return labels[tab];
@@ -676,14 +655,9 @@ export default function OrganizationObjectPage({
     availableObjectives = [],
     risks = [],
     availableRisks = [],
-    documents = [],
-    tempDocuments = [],
-    documentUploadPolicy,
-    documentTempSessionId,
     subProcessesBusy = false,
     relationshipsBusy = false,
     referencesBusy = false,
-    documentsBusy = false,
     busy = false,
     error,
     onErrorClose,
@@ -698,10 +672,6 @@ export default function OrganizationObjectPage({
     onRemoveReferenceAssignment,
     onAssignObjective,
     onRemoveObjectiveAssignment,
-    onUploadDocument,
-    onUpdateDocumentTitle,
-    onDeleteDocument,
-    onDownloadDocument,
     onActiveTabChange,
 }: OrganizationObjectPageProps) {
     const { t } = useTranslation();
@@ -733,8 +703,6 @@ export default function OrganizationObjectPage({
     >(EMPTY_SELECTED_REFERENCES);
     const [selectedObjectiveId, setSelectedObjectiveId] = useState("");
     const [selectedObjectiveSearchValue, setSelectedObjectiveSearchValue] = useState("");
-    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
-    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
     const activeTab = controlledActiveTab ?? internalActiveTab;
 
     const handleActiveTabChange = (tab: OrganizationTabKey) => {
@@ -745,29 +713,21 @@ export default function OrganizationObjectPage({
         onActiveTabChange?.(tab);
     };
 
-    const handleDocumentBeforeParentSubmitChange = useCallback(
-        (handler: DocumentBeforeParentSubmitHandler | null) => {
-            documentBeforeSubmitRef.current = handler;
-        },
-        [],
-    );
-
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? null
         : null;
 
     const selectedParentTitle = selectedParent
         ? `${selectedParent.code} - ${selectedParent.name}`
-        : t("common.none", { defaultValue: "ندارد" });
+        : t("common.none", { defaultValue: "Ù†Ø¯Ø§Ø±Ø¯" });
 
     const headerName = form.name || value?.name || "";
     const headerParent = selectedParent
         ? selectedParent.name
-        : t("common.none", { defaultValue: "ندارد" });
+        : t("common.none", { defaultValue: "Ù†Ø¯Ø§Ø±Ø¯" });
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerType = resolveTypeLabel(form.type, t);
     const headerLocation = form.location || value?.location || "";
-    const headerDocumentsCount = documents.length + tempDocuments.length;
 
     const handleChange = <K extends keyof OrganizationFormState>(
         key: K,
@@ -783,7 +743,7 @@ export default function OrganizationObjectPage({
         if (!form.code.trim()) {
             setValidationError(
                 t("organization.validation.codeRequired", {
-                    defaultValue: "کد الزامی است",
+                    defaultValue: "Ú©Ø¯ Ø§Ù„Ø²Ø§Ù…ÛŒ Ø§Ø³Øª",
                 }),
             );
             return false;
@@ -792,7 +752,7 @@ export default function OrganizationObjectPage({
         if (!form.name.trim()) {
             setValidationError(
                 t("organization.validation.nameRequired", {
-                    defaultValue: "نام الزامی است",
+                    defaultValue: "Ù†Ø§Ù… Ø§Ù„Ø²Ø§Ù…ÛŒ Ø§Ø³Øª",
                 }),
             );
             return false;
@@ -801,7 +761,7 @@ export default function OrganizationObjectPage({
         if (form.location.length > 255) {
             setValidationError(
                 t("organization.validation.locationMaxLength", {
-                    defaultValue: "موقعیت نمی‌تواند بیشتر از 255 کاراکتر باشد",
+                    defaultValue: "Ù…ÙˆÙ‚Ø¹ÛŒØª Ù†Ù…ÛŒâ€ŒØªÙˆØ§Ù†Ø¯ Ø¨ÛŒØ´ØªØ± Ø§Ø² 255 Ú©Ø§Ø±Ø§Ú©ØªØ± Ø¨Ø§Ø´Ø¯",
                 }),
             );
             return false;
@@ -810,7 +770,7 @@ export default function OrganizationObjectPage({
         if (form.validFrom && form.validTo && form.validFrom > form.validTo) {
             setValidationError(
                 t("organization.validation.validRange", {
-                    defaultValue: "تاریخ شروع باید قبل از تاریخ پایان باشد",
+                    defaultValue: "ØªØ§Ø±ÛŒØ® Ø´Ø±ÙˆØ¹ Ø¨Ø§ÛŒØ¯ Ù‚Ø¨Ù„ Ø§Ø² ØªØ§Ø±ÛŒØ® Ù¾Ø§ÛŒØ§Ù† Ø¨Ø§Ø´Ø¯",
                 }),
             );
             return false;
@@ -822,20 +782,6 @@ export default function OrganizationObjectPage({
 
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
-            return;
-        }
-
-        if (hasPendingDocumentUploads) {
-            setValidationError(t("document.validation.waitForUpload", {
-                defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
-            }));
-            handleActiveTabChange("documents");
-            return;
-        }
-
-        const documentsReady = await documentBeforeSubmitRef.current?.();
-        if (documentsReady === false) {
-            handleActiveTabChange("documents");
             return;
         }
 
@@ -864,7 +810,7 @@ export default function OrganizationObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={onEdit}
                     >
-                        {t("common.edit", { defaultValue: "ویرایش" })}
+                        {t("common.edit", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´" })}
                     </Button>
 
                     <Button
@@ -873,7 +819,7 @@ export default function OrganizationObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={onCancel}
                     >
-                        {t("common.close", { defaultValue: "بستن" })}
+                        {t("common.close", { defaultValue: "Ø¨Ø³ØªÙ†" })}
                     </Button>
                 </>
             );
@@ -887,7 +833,7 @@ export default function OrganizationObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={handleSubmit}
                 >
-                    {t("common.save", { defaultValue: "ثبت" })}
+                    {t("common.save", { defaultValue: "Ø«Ø¨Øª" })}
                 </Button>
 
                 <Button
@@ -896,7 +842,7 @@ export default function OrganizationObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={onCancel}
                 >
-                    {t("common.cancel", { defaultValue: "انصراف" })}
+                    {t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
                 </Button>
             </>
         );
@@ -1049,7 +995,7 @@ export default function OrganizationObjectPage({
     const renderGeneralTab = () => (
         <div style={FORM_GRID_STYLE}>
             <FormField
-                label={t("organization.fields.code", { defaultValue: "کد" })}
+                label={t("organization.fields.code", { defaultValue: "Ú©Ø¯" })}
                 required
             >
                 <Input
@@ -1060,7 +1006,7 @@ export default function OrganizationObjectPage({
             </FormField>
 
             <FormField
-                label={t("organization.fields.name", { defaultValue: "نام" })}
+                label={t("organization.fields.name", { defaultValue: "Ù†Ø§Ù…" })}
                 required
             >
                 <Input
@@ -1071,7 +1017,7 @@ export default function OrganizationObjectPage({
             </FormField>
 
             <FormField
-                label={t("organization.fields.type", { defaultValue: "نوع سازمان" })}
+                label={t("organization.fields.type", { defaultValue: "Ù†ÙˆØ¹ Ø³Ø§Ø²Ù…Ø§Ù†" })}
             >
                 <Select
                     disabled={readOnly || busy}
@@ -1081,43 +1027,43 @@ export default function OrganizationObjectPage({
                     }}
                 >
                     <Option data-value="holding" selected={form.type === "holding"}>
-                        {t("organization.type.holding", { defaultValue: "هلدینگ" })}
+                        {t("organization.type.holding", { defaultValue: "Ù‡Ù„Ø¯ÛŒÙ†Ú¯" })}
                     </Option>
                     <Option data-value="company" selected={form.type === "company"}>
-                        {t("organization.type.company", { defaultValue: "شرکت" })}
+                        {t("organization.type.company", { defaultValue: "Ø´Ø±Ú©Øª" })}
                     </Option>
                     <Option data-value="deputy" selected={form.type === "deputy"}>
-                        {t("organization.type.deputy", { defaultValue: "معاونت" })}
+                        {t("organization.type.deputy", { defaultValue: "Ù…Ø¹Ø§ÙˆÙ†Øª" })}
                     </Option>
                     <Option data-value="office" selected={form.type === "office"}>
-                        {t("organization.type.office", { defaultValue: "اداره" })}
+                        {t("organization.type.office", { defaultValue: "Ø§Ø¯Ø§Ø±Ù‡" })}
                     </Option>
                     <Option data-value="unit" selected={form.type === "unit"}>
-                        {t("organization.type.unit", { defaultValue: "واحد" })}
+                        {t("organization.type.unit", { defaultValue: "ÙˆØ§Ø­Ø¯" })}
                     </Option>
                     <Option data-value="committee" selected={form.type === "committee"}>
-                        {t("organization.type.committee", { defaultValue: "کمیته" })}
+                        {t("organization.type.committee", { defaultValue: "Ú©Ù…ÛŒØªÙ‡" })}
                     </Option>
                     <Option data-value="group" selected={form.type === "group"}>
-                        {t("organization.type.group", { defaultValue: "گروه" })}
+                        {t("organization.type.group", { defaultValue: "Ú¯Ø±ÙˆÙ‡" })}
                     </Option>
                     <Option data-value="department" selected={form.type === "department"}>
-                        {t("organization.type.department", { defaultValue: "دپارتمان" })}
+                        {t("organization.type.department", { defaultValue: "Ø¯Ù¾Ø§Ø±ØªÙ…Ø§Ù†" })}
                     </Option>
                     <Option data-value="management" selected={form.type === "management"}>
-                        {t("organization.type.management", { defaultValue: "مدیریت" })}
+                        {t("organization.type.management", { defaultValue: "Ù…Ø¯ÛŒØ±ÛŒØª" })}
                     </Option>
                     <Option data-value="branch" selected={form.type === "branch"}>
-                        {t("organization.type.branch", { defaultValue: "شعبه" })}
+                        {t("organization.type.branch", { defaultValue: "Ø´Ø¹Ø¨Ù‡" })}
                     </Option>
                     <Option data-value="other" selected={form.type === "other"}>
-                        {t("organization.type.other", { defaultValue: "سایر" })}
+                        {t("organization.type.other", { defaultValue: "Ø³Ø§ÛŒØ±" })}
                     </Option>
                 </Select>
             </FormField>
 
             <FormField
-                label={t("organization.fields.status", { defaultValue: "وضعیت" })}
+                label={t("organization.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}
             >
                 <Select
                     disabled={readOnly || busy}
@@ -1127,16 +1073,16 @@ export default function OrganizationObjectPage({
                     }}
                 >
                     <Option data-value="active" selected={form.status === "active"}>
-                        {t("common.active", { defaultValue: "فعال" })}
+                        {t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })}
                     </Option>
                     <Option data-value="inactive" selected={form.status === "inactive"}>
-                        {t("common.inactive", { defaultValue: "غیرفعال" })}
+                        {t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" })}
                     </Option>
                 </Select>
             </FormField>
 
             <FormField
-                label={t("organization.fields.parent", { defaultValue: "والد سازمان" })}
+                label={t("organization.fields.parent", { defaultValue: "ÙˆØ§Ù„Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†" })}
                 fullWidth
             >
                 <div style={PARENT_PICKER_STYLE}>
@@ -1147,7 +1093,7 @@ export default function OrganizationObjectPage({
                         disabled={readOnly || busy}
                         onClick={() => setParentDialogOpen(true)}
                     >
-                        {t("common.select", { defaultValue: "انتخاب" })}
+                        {t("common.select", { defaultValue: "Ø§Ù†ØªØ®Ø§Ø¨" })}
                     </Button>
 
                     <Button
@@ -1155,13 +1101,13 @@ export default function OrganizationObjectPage({
                         disabled={readOnly || busy || !form.parentId}
                         onClick={() => handleChange("parentId", null)}
                     >
-                        {t("common.clear", { defaultValue: "پاک کردن" })}
+                        {t("common.clear", { defaultValue: "Ù¾Ø§Ú© Ú©Ø±Ø¯Ù†" })}
                     </Button>
                 </div>
             </FormField>
 
             <FormField
-                label={t("organization.fields.validFrom", { defaultValue: "اعتبار از" })}
+                label={t("organization.fields.validFrom", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø± Ø§Ø²" })}
             >
                 <DatePicker
                     value={form.validFrom}
@@ -1169,7 +1115,7 @@ export default function OrganizationObjectPage({
                     displayFormat={DATE_DISPLAY_FORMAT}
                     primaryCalendarType="Persian"
                     placeholder={t("organization.fields.datePlaceholder", {
-                        defaultValue: "سال/ماه/روز",
+                        defaultValue: "Ø³Ø§Ù„/Ù…Ø§Ù‡/Ø±ÙˆØ²",
                     })}
                     disabled={readOnly || busy}
                     onChange={(event) =>
@@ -1179,7 +1125,7 @@ export default function OrganizationObjectPage({
             </FormField>
 
             <FormField
-                label={t("organization.fields.validTo", { defaultValue: "اعتبار تا" })}
+                label={t("organization.fields.validTo", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø± ØªØ§" })}
             >
                 <DatePicker
                     value={form.validTo}
@@ -1187,7 +1133,7 @@ export default function OrganizationObjectPage({
                     displayFormat={DATE_DISPLAY_FORMAT}
                     primaryCalendarType="Persian"
                     placeholder={t("organization.fields.datePlaceholder", {
-                        defaultValue: "سال/ماه/روز",
+                        defaultValue: "Ø³Ø§Ù„/Ù…Ø§Ù‡/Ø±ÙˆØ²",
                     })}
                     disabled={readOnly || busy}
                     onChange={(event) =>
@@ -1197,7 +1143,7 @@ export default function OrganizationObjectPage({
             </FormField>
 
             <FormField
-                label={t("organization.fields.location", { defaultValue: "موقعیت جغرافیایی" })}
+                label={t("organization.fields.location", { defaultValue: "Ù…ÙˆÙ‚Ø¹ÛŒØª Ø¬ØºØ±Ø§ÙÛŒØ§ÛŒÛŒ" })}
             >
                 <Input
                     value={form.location}
@@ -1207,7 +1153,7 @@ export default function OrganizationObjectPage({
             </FormField>
 
             <FormField
-                label={t("organization.fields.description", { defaultValue: "شرح" })}
+                label={t("organization.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                 fullWidth
             >
                 <TextArea
@@ -1234,7 +1180,7 @@ export default function OrganizationObjectPage({
             <div style={TABLE_PANEL_STYLE}>
                 <Title level="H5">
                     {t("organization.tabs.subProcesses.title", {
-                        defaultValue: "زیر فرآیندهای مرتبط با سازمان",
+                        defaultValue: "Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯Ù‡Ø§ÛŒ Ù…Ø±ØªØ¨Ø· Ø¨Ø§ Ø³Ø§Ø²Ù…Ø§Ù†",
                     })}
                 </Title>
 
@@ -1242,11 +1188,11 @@ export default function OrganizationObjectPage({
                     {value?.id
                         ? t("organization.tabs.subProcesses.hint", {
                               defaultValue:
-                                  "زیر فرآیندها از فیچر فرآیند خوانده می شوند و رابطه آن ها با سازمان جداگانه ذخیره می شود.",
+                                  "Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯Ù‡Ø§ Ø§Ø² ÙÛŒÚ†Ø± ÙØ±Ø¢ÛŒÙ†Ø¯ Ø®ÙˆØ§Ù†Ø¯Ù‡ Ù…ÛŒ Ø´ÙˆÙ†Ø¯ Ùˆ Ø±Ø§Ø¨Ø·Ù‡ Ø¢Ù† Ù‡Ø§ Ø¨Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø¬Ø¯Ø§Ú¯Ø§Ù†Ù‡ Ø°Ø®ÛŒØ±Ù‡ Ù…ÛŒ Ø´ÙˆØ¯.",
                           })
                         : t("organization.tabs.subProcesses.saveFirstHint", {
                               defaultValue:
-                                  "برای تخصیص زیر فرآیند، ابتدا سازمان را ذخیره کنید.",
+                                  "Ø¨Ø±Ø§ÛŒ ØªØ®ØµÛŒØµ Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯ØŒ Ø§Ø¨ØªØ¯Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯.",
                           })}
                 </div>
 
@@ -1258,7 +1204,7 @@ export default function OrganizationObjectPage({
                             showClearIcon
                             value={subProcessComboBoxValue}
                             placeholder={t("organization.subProcesses.selectPlaceholder", {
-                                defaultValue: "انتخاب زیر فرآیند",
+                                defaultValue: "Ø§Ù†ØªØ®Ø§Ø¨ Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯",
                             })}
                             disabled={!canSelectSubProcess}
                             onInput={(event) => {
@@ -1304,7 +1250,7 @@ export default function OrganizationObjectPage({
                                 void handleAssignSubProcess();
                             }}
                         >
-                            {t("organization.actions.add", { defaultValue: "اضافه نمودن" })}
+                            {t("organization.actions.add", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡ Ù†Ù…ÙˆØ¯Ù†" })}
                         </Button>
                     </div>
                 ) : null}
@@ -1312,37 +1258,37 @@ export default function OrganizationObjectPage({
                 <Table
                     style={TABLE_STYLE}
                     noDataText={t("organization.subProcesses.noData", {
-                        defaultValue: "برای این سازمان زیر فرآیندی تخصیص داده نشده است.",
+                        defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒÙ† Ø³Ø§Ø²Ù…Ø§Ù† Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ ØªØ®ØµÛŒØµ Ø¯Ø§Ø¯Ù‡ Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª.",
                     })}
                     headerRow={
                         <TableHeaderRow>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
                                 {t("organization.fields.subProcess", {
-                                    defaultValue: "رابطه / وضعیت",
+                                    defaultValue: "Ø±Ø§Ø¨Ø·Ù‡ / ÙˆØ¶Ø¹ÛŒØª",
                                     })}
                                 </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
                                 {t("organization.fields.parentProcess", {
-                                    defaultValue: "فرآیند والد",
+                                    defaultValue: "ÙØ±Ø¢ÛŒÙ†Ø¯ ÙˆØ§Ù„Ø¯",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
                                 {t("organization.fields.controlsCount", {
-                                    defaultValue: "تعداد کنترل",
+                                    defaultValue: "ØªØ¹Ø¯Ø§Ø¯ Ú©Ù†ØªØ±Ù„",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
                                 {t("organization.fields.assignmentAndStatus", {
-                                    defaultValue: "رابطه / وضعیت",
+                                    defaultValue: "Ø±Ø§Ø¨Ø·Ù‡ / ÙˆØ¶Ø¹ÛŒØª",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
                                 {t("organization.fields.validity", {
-                                    defaultValue: "اعتبار",
+                                    defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø±",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.actions", { defaultValue: "عملیات" })}
+                                {t("organization.fields.actions", { defaultValue: "Ø¹Ù…Ù„ÛŒØ§Øª" })}
                             </TableHeaderCell>
                         </TableHeaderRow>
                     }
@@ -1379,9 +1325,9 @@ export default function OrganizationObjectPage({
                                     </span>
                                     <span style={TABLE_INLINE_META_STYLE}>
                                         {subProcess.isActive
-                                            ? t("common.active", { defaultValue: "فعال" })
+                                            ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
                                             : t("common.inactive", {
-                                                  defaultValue: "غیرفعال",
+                                                  defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„",
                                               })}
                                     </span>
                                 </div>
@@ -1404,7 +1350,7 @@ export default function OrganizationObjectPage({
                                         );
                                     }}
                                 >
-                                    {t("organization.actions.delete", { defaultValue: "حذف" })}
+                                    {t("organization.actions.delete", { defaultValue: "Ø­Ø°Ù" })}
                                 </Button>
                             </TableCell>
                         </TableRow>
@@ -1428,17 +1374,17 @@ export default function OrganizationObjectPage({
         return (
             <div style={TABLE_PANEL_STYLE}>
                 <Title level="H5">
-                    {t("organization.tabs.risks", { defaultValue: "ریسک ها" })}
+                    {t("organization.tabs.risks", { defaultValue: "Ø±ÛŒØ³Ú© Ù‡Ø§" })}
                 </Title>
 
                 <div style={TABLE_HINT_STYLE}>
                     {value?.id
                         ? t("organization.tabs.risks.hint", {
                               defaultValue:
-                                  "ریسک ها به زیرفرآیندهای تخصیص داده شده به سازمان وصل می شوند.",
+                                  "Ø±ÛŒØ³Ú© Ù‡Ø§ Ø¨Ù‡ Ø²ÛŒØ±ÙØ±Ø¢ÛŒÙ†Ø¯Ù‡Ø§ÛŒ ØªØ®ØµÛŒØµ Ø¯Ø§Ø¯Ù‡ Ø´Ø¯Ù‡ Ø¨Ù‡ Ø³Ø§Ø²Ù…Ø§Ù† ÙˆØµÙ„ Ù…ÛŒ Ø´ÙˆÙ†Ø¯.",
                           })
                         : t("organization.tabs.risks.saveFirstHint", {
-                              defaultValue: "برای تخصیص ریسک، ابتدا سازمان را ذخیره کنید.",
+                              defaultValue: "Ø¨Ø±Ø§ÛŒ ØªØ®ØµÛŒØµ Ø±ÛŒØ³Ú©ØŒ Ø§Ø¨ØªØ¯Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯.",
                           })}
                 </div>
 
@@ -1449,7 +1395,7 @@ export default function OrganizationObjectPage({
                             filter="Contains"
                             value={riskSubProcessComboBoxValue}
                             placeholder={t("organization.risks.selectSubProcess", {
-                                defaultValue: "انتخاب زیر فرآیند",
+                                defaultValue: "Ø§Ù†ØªØ®Ø§Ø¨ Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯",
                             })}
                             disabled={!canSelectRisk}
                             onSelectionChange={(event) => {
@@ -1477,7 +1423,7 @@ export default function OrganizationObjectPage({
                             showClearIcon
                             value={riskComboBoxValue}
                             placeholder={t("organization.risks.selectRisk", {
-                                defaultValue: "انتخاب ریسک",
+                                defaultValue: "Ø§Ù†ØªØ®Ø§Ø¨ Ø±ÛŒØ³Ú©",
                             })}
                             disabled={!canSelectRisk || !selectedRiskSubProcessId}
                             onInput={(event) => {
@@ -1522,7 +1468,7 @@ export default function OrganizationObjectPage({
                                 void handleAssignRisk();
                             }}
                         >
-                            {t("organization.actions.add", { defaultValue: "اضافه نمودن" })}
+                            {t("organization.actions.add", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡ Ù†Ù…ÙˆØ¯Ù†" })}
                         </Button>
                     </div>
                 ) : null}
@@ -1530,27 +1476,27 @@ export default function OrganizationObjectPage({
                 <Table
                     style={TABLE_STYLE}
                     noDataText={t("organization.risks.noData", {
-                        defaultValue: "برای این سازمان ریسکی تخصیص داده نشده است.",
+                        defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒÙ† Ø³Ø§Ø²Ù…Ø§Ù† Ø±ÛŒØ³Ú©ÛŒ ØªØ®ØµÛŒØµ Ø¯Ø§Ø¯Ù‡ Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª.",
                     })}
                     headerRow={
                         <TableHeaderRow>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.subProcessName", { defaultValue: "نام زیر فرآیند" })}
+                                {t("organization.fields.subProcessName", { defaultValue: "Ù†Ø§Ù… Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.riskName", { defaultValue: "نام ریسک" })}
+                                {t("organization.fields.riskName", { defaultValue: "Ù†Ø§Ù… Ø±ÛŒØ³Ú©" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.riskDescription", { defaultValue: "شرح ریسک" })}
+                                {t("organization.fields.riskDescription", { defaultValue: "Ø´Ø±Ø­ Ø±ÛŒØ³Ú©" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.riskType", { defaultValue: "نوع ریسک" })}
+                                {t("organization.fields.riskType", { defaultValue: "Ù†ÙˆØ¹ Ø±ÛŒØ³Ú©" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.assignmentAndStatus", { defaultValue: "رابطه / وضعیت" })}
+                                {t("organization.fields.assignmentAndStatus", { defaultValue: "Ø±Ø§Ø¨Ø·Ù‡ / ÙˆØ¶Ø¹ÛŒØª" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.actions", { defaultValue: "عملیات" })}
+                                {t("organization.fields.actions", { defaultValue: "Ø¹Ù…Ù„ÛŒØ§Øª" })}
                             </TableHeaderCell>
                         </TableHeaderRow>
                     }
@@ -1580,8 +1526,8 @@ export default function OrganizationObjectPage({
                                     <span>{resolveAssignmentTypeLabel(risk.assignmentType, t)}</span>
                                     <span style={TABLE_INLINE_META_STYLE}>
                                         {risk.isActive
-                                            ? t("common.active", { defaultValue: "فعال" })
-                                            : t("common.inactive", { defaultValue: "غیرفعال" })}
+                                            ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+                                            : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" })}
                                     </span>
                                 </div>
                             </TableCell>
@@ -1598,7 +1544,7 @@ export default function OrganizationObjectPage({
                                         void onRemoveRiskAssignment?.(risk.id);
                                     }}
                                 >
-                                    {t("organization.actions.delete", { defaultValue: "حذف" })}
+                                    {t("organization.actions.delete", { defaultValue: "Ø­Ø°Ù" })}
                                 </Button>
                             </TableCell>
                         </TableRow>
@@ -1717,7 +1663,7 @@ export default function OrganizationObjectPage({
                                 void handleAssignReference(referenceType, unassignedOptions);
                             }}
                         >
-                            {t("organization.actions.add", { defaultValue: "اضافه نمودن" })}
+                            {t("organization.actions.add", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡ Ù†Ù…ÙˆØ¯Ù†" })}
                         </Button>
                     </div>
                 ) : null}
@@ -1731,21 +1677,21 @@ export default function OrganizationObjectPage({
                                 {entityLabel}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.description", { defaultValue: "شرح" })}
+                                {t("organization.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.owner", { defaultValue: "مالک / نوع" })}
+                                {t("organization.fields.owner", { defaultValue: "Ù…Ø§Ù„Ú© / Ù†ÙˆØ¹" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
                                 {t("organization.fields.assignmentAndStatus", {
-                                    defaultValue: "رابطه / وضعیت",
+                                    defaultValue: "Ø±Ø§Ø¨Ø·Ù‡ / ÙˆØ¶Ø¹ÛŒØª",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.validity", { defaultValue: "اعتبار" })}
+                                {t("organization.fields.validity", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø±" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.actions", { defaultValue: "عملیات" })}
+                                {t("organization.fields.actions", { defaultValue: "Ø¹Ù…Ù„ÛŒØ§Øª" })}
                             </TableHeaderCell>
                         </TableHeaderRow>
                     }
@@ -1785,9 +1731,9 @@ export default function OrganizationObjectPage({
                                     </span>
                                     <span style={TABLE_INLINE_META_STYLE}>
                                         {assignment.isActive
-                                            ? t("common.active", { defaultValue: "فعال" })
+                                            ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
                                             : t("common.inactive", {
-                                                  defaultValue: "غیرفعال",
+                                                  defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„",
                                               })}
                                         {assignment.status ? ` / ${assignment.status}` : ""}
                                     </span>
@@ -1812,7 +1758,7 @@ export default function OrganizationObjectPage({
                                         );
                                     }}
                                 >
-                                    {t("organization.actions.delete", { defaultValue: "حذف" })}
+                                    {t("organization.actions.delete", { defaultValue: "Ø­Ø°Ù" })}
                                 </Button>
                             </TableCell>
                         </TableRow>
@@ -1925,7 +1871,7 @@ export default function OrganizationObjectPage({
                                 void handleAssignObjective(unassignedOptions);
                             }}
                         >
-                            {t("organization.actions.add", { defaultValue: "اضافه نمودن" })}
+                            {t("organization.actions.add", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡ Ù†Ù…ÙˆØ¯Ù†" })}
                         </Button>
                     </div>
                 ) : null}
@@ -1939,21 +1885,21 @@ export default function OrganizationObjectPage({
                                 {entityLabel}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.description", { defaultValue: "شرح" })}
+                                {t("organization.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.owner", { defaultValue: "مالک / نوع" })}
+                                {t("organization.fields.owner", { defaultValue: "Ù…Ø§Ù„Ú© / Ù†ÙˆØ¹" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
                                 {t("organization.fields.assignmentAndStatus", {
-                                    defaultValue: "رابطه / وضعیت",
+                                    defaultValue: "Ø±Ø§Ø¨Ø·Ù‡ / ÙˆØ¶Ø¹ÛŒØª",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.validity", { defaultValue: "اعتبار" })}
+                                {t("organization.fields.validity", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø±" })}
                             </TableHeaderCell>
                             <TableHeaderCell style={TABLE_TEXT_CELL_STYLE}>
-                                {t("organization.fields.actions", { defaultValue: "عملیات" })}
+                                {t("organization.fields.actions", { defaultValue: "Ø¹Ù…Ù„ÛŒØ§Øª" })}
                             </TableHeaderCell>
                         </TableHeaderRow>
                     }
@@ -1980,9 +1926,9 @@ export default function OrganizationObjectPage({
                                 <div style={TABLE_CELL_CONTENT_STYLE}>
                                     <span style={TABLE_INLINE_META_STYLE}>
                                         {assignment.active
-                                            ? t("common.active", { defaultValue: "فعال" })
+                                            ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
                                             : t("common.inactive", {
-                                                  defaultValue: "غیرفعال",
+                                                  defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„",
                                               })}
                                         {assignment.status ? ` / ${assignment.status}` : ""}
                                     </span>
@@ -2006,7 +1952,7 @@ export default function OrganizationObjectPage({
                                         );
                                     }}
                                 >
-                                    {t("organization.actions.delete", { defaultValue: "حذف" })}
+                                    {t("organization.actions.delete", { defaultValue: "Ø­Ø°Ù" })}
                                 </Button>
                             </TableCell>
                         </TableRow>
@@ -2019,117 +1965,101 @@ export default function OrganizationObjectPage({
     const renderControlsTab = () =>
         renderReferenceAssignmentTab({
             referenceType: "CONTROL",
-            title: t("organization.tabs.controls", { defaultValue: "کنترل ها" }),
-            entityLabel: t("organization.fields.controlName", { defaultValue: "نام کنترل" }),
+            title: t("organization.tabs.controls", { defaultValue: "Ú©Ù†ØªØ±Ù„ Ù‡Ø§" }),
+            entityLabel: t("organization.fields.controlName", { defaultValue: "Ù†Ø§Ù… Ú©Ù†ØªØ±Ù„" }),
             options: availableControlReferences,
             assignments: controlReferences,
             selectPlaceholder: t("organization.controls.selectPlaceholder", {
-                defaultValue: "انتخاب کنترل",
+                defaultValue: "Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ØªØ±Ù„",
             }),
             noDataText: t("organization.controls.noData", {
-                defaultValue: "برای این سازمان کنترلی تخصیص داده نشده است.",
+                defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒÙ† Ø³Ø§Ø²Ù…Ø§Ù† Ú©Ù†ØªØ±Ù„ÛŒ ØªØ®ØµÛŒØµ Ø¯Ø§Ø¯Ù‡ Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª.",
             }),
             hint: t("organization.tabs.controls.hint", {
-                defaultValue: "کنترل ها از فیچر کنترل خوانده می شوند و رابطه آن ها با سازمان ذخیره می شود.",
+                defaultValue: "Ú©Ù†ØªØ±Ù„ Ù‡Ø§ Ø§Ø² ÙÛŒÚ†Ø± Ú©Ù†ØªØ±Ù„ Ø®ÙˆØ§Ù†Ø¯Ù‡ Ù…ÛŒ Ø´ÙˆÙ†Ø¯ Ùˆ Ø±Ø§Ø¨Ø·Ù‡ Ø¢Ù† Ù‡Ø§ Ø¨Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø°Ø®ÛŒØ±Ù‡ Ù…ÛŒ Ø´ÙˆØ¯.",
             }),
             saveFirstHint: t("organization.tabs.controls.saveFirstHint", {
-                defaultValue: "برای تخصیص کنترل، ابتدا سازمان را ذخیره کنید.",
+                defaultValue: "Ø¨Ø±Ø§ÛŒ ØªØ®ØµÛŒØµ Ú©Ù†ØªØ±Ù„ØŒ Ø§Ø¨ØªØ¯Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯.",
             }),
         });
 
     const renderRulesTab = () =>
         renderReferenceAssignmentTab({
             referenceType: "REGULATION",
-            title: t("organization.tabs.rules", { defaultValue: "قوانین" }),
-            entityLabel: t("organization.fields.rule", { defaultValue: "قانون" }),
+            title: t("organization.tabs.rules", { defaultValue: "Ù‚ÙˆØ§Ù†ÛŒÙ†" }),
+            entityLabel: t("organization.fields.rule", { defaultValue: "Ù‚Ø§Ù†ÙˆÙ†" }),
             options: availableRegulationReferences,
             assignments: regulationReferences,
             selectPlaceholder: t("organization.rules.selectPlaceholder", {
-                defaultValue: "انتخاب قانون",
+                defaultValue: "Ø§Ù†ØªØ®Ø§Ø¨ Ù‚Ø§Ù†ÙˆÙ†",
             }),
             noDataText: t("organization.rules.noData", {
-                defaultValue: "برای این سازمان قانونی تخصیص داده نشده است.",
+                defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒÙ† Ø³Ø§Ø²Ù…Ø§Ù† Ù‚Ø§Ù†ÙˆÙ†ÛŒ ØªØ®ØµÛŒØµ Ø¯Ø§Ø¯Ù‡ Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª.",
             }),
             hint: t("organization.tabs.rules.hint", {
-                defaultValue: "قوانین از فیچر قوانین و مقررات خوانده می شوند و رابطه آن ها با سازمان ذخیره می شود.",
+                defaultValue: "Ù‚ÙˆØ§Ù†ÛŒÙ† Ø§Ø² ÙÛŒÚ†Ø± Ù‚ÙˆØ§Ù†ÛŒÙ† Ùˆ Ù…Ù‚Ø±Ø±Ø§Øª Ø®ÙˆØ§Ù†Ø¯Ù‡ Ù…ÛŒ Ø´ÙˆÙ†Ø¯ Ùˆ Ø±Ø§Ø¨Ø·Ù‡ Ø¢Ù† Ù‡Ø§ Ø¨Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø°Ø®ÛŒØ±Ù‡ Ù…ÛŒ Ø´ÙˆØ¯.",
             }),
             saveFirstHint: t("organization.tabs.rules.saveFirstHint", {
-                defaultValue: "برای تخصیص قانون، ابتدا سازمان را ذخیره کنید.",
+                defaultValue: "Ø¨Ø±Ø§ÛŒ ØªØ®ØµÛŒØµ Ù‚Ø§Ù†ÙˆÙ†ØŒ Ø§Ø¨ØªØ¯Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯.",
             }),
         });
 
     const renderPoliciesTab = () =>
         renderReferenceAssignmentTab({
             referenceType: "POLICY",
-            title: t("organization.tabs.policies", { defaultValue: "سیاست ها" }),
-            entityLabel: t("organization.fields.policy", { defaultValue: "سیاست" }),
+            title: t("organization.tabs.policies", { defaultValue: "Ø³ÛŒØ§Ø³Øª Ù‡Ø§" }),
+            entityLabel: t("organization.fields.policy", { defaultValue: "Ø³ÛŒØ§Ø³Øª" }),
             options: availablePolicyReferences,
             assignments: policyReferences,
             selectPlaceholder: t("organization.policies.selectPlaceholder", {
-                defaultValue: "انتخاب سیاست",
+                defaultValue: "Ø§Ù†ØªØ®Ø§Ø¨ Ø³ÛŒØ§Ø³Øª",
             }),
             noDataText: t("organization.policies.noData", {
-                defaultValue: "برای این سازمان سیاستی تخصیص داده نشده است.",
+                defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒÙ† Ø³Ø§Ø²Ù…Ø§Ù† Ø³ÛŒØ§Ø³ØªÛŒ ØªØ®ØµÛŒØµ Ø¯Ø§Ø¯Ù‡ Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª.",
             }),
             hint: t("organization.tabs.policies.hint", {
-                defaultValue: "سیاست ها از فیچر سیاست ها خوانده می شوند و رابطه آن ها با سازمان ذخیره می شود.",
+                defaultValue: "Ø³ÛŒØ§Ø³Øª Ù‡Ø§ Ø§Ø² ÙÛŒÚ†Ø± Ø³ÛŒØ§Ø³Øª Ù‡Ø§ Ø®ÙˆØ§Ù†Ø¯Ù‡ Ù…ÛŒ Ø´ÙˆÙ†Ø¯ Ùˆ Ø±Ø§Ø¨Ø·Ù‡ Ø¢Ù† Ù‡Ø§ Ø¨Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø°Ø®ÛŒØ±Ù‡ Ù…ÛŒ Ø´ÙˆØ¯.",
             }),
             saveFirstHint: t("organization.tabs.policies.saveFirstHint", {
-                defaultValue: "برای تخصیص سیاست، ابتدا سازمان را ذخیره کنید.",
+                defaultValue: "Ø¨Ø±Ø§ÛŒ ØªØ®ØµÛŒØµ Ø³ÛŒØ§Ø³ØªØŒ Ø§Ø¨ØªØ¯Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯.",
             }),
         });
 
     const renderGoalsTab = () =>
         renderObjectiveAssignmentTab({
-            title: t("organization.tabs.goals.title", { defaultValue: "اهداف" }),
-            entityLabel: t("organization.fields.goal", { defaultValue: "هدف" }),
+            title: t("organization.tabs.goals.title", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù" }),
+            entityLabel: t("organization.fields.goal", { defaultValue: "Ù‡Ø¯Ù" }),
             options: availableObjectives,
             assignments: objectiveAssignments,
             selectPlaceholder: t("organization.goals.selectPlaceholder", {
-                defaultValue: "انتخاب هدف",
+                defaultValue: "Ø§Ù†ØªØ®Ø§Ø¨ Ù‡Ø¯Ù",
             }),
             noDataText: t("organization.goals.noData", {
-                defaultValue: "برای این سازمان هدفی تخصیص داده نشده است.",
+                defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒÙ† Ø³Ø§Ø²Ù…Ø§Ù† Ù‡Ø¯ÙÛŒ ØªØ®ØµÛŒØµ Ø¯Ø§Ø¯Ù‡ Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª.",
             }),
             hint: t("organization.tabs.goals.hint", {
-                defaultValue: "اهداف از فیچر اهداف کنترلی خوانده می شوند و رابطه آن ها با سازمان ذخیره می شود.",
+                defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø§Ø² ÙÛŒÚ†Ø± Ø§Ù‡Ø¯Ø§Ù Ú©Ù†ØªØ±Ù„ÛŒ Ø®ÙˆØ§Ù†Ø¯Ù‡ Ù…ÛŒ Ø´ÙˆÙ†Ø¯ Ùˆ Ø±Ø§Ø¨Ø·Ù‡ Ø¢Ù† Ù‡Ø§ Ø¨Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø°Ø®ÛŒØ±Ù‡ Ù…ÛŒ Ø´ÙˆØ¯.",
             }),
             saveFirstHint: t("organization.tabs.goals.saveFirstHint", {
-                defaultValue: "برای تخصیص هدف، ابتدا سازمان را ذخیره کنید.",
+                defaultValue: "Ø¨Ø±Ø§ÛŒ ØªØ®ØµÛŒØµ Ù‡Ø¯ÙØŒ Ø§Ø¨ØªØ¯Ø§ Ø³Ø§Ø²Ù…Ø§Ù† Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯.",
             }),
         });
 
     const renderDocumentsTab = () => (
-        <DocumentAttachmentsTab
+        <DocumentManager
             title={t("organization.tabs.documents", { defaultValue: "مستندات" })}
-            targetType="ORGANIZATION"
+            targetType="ORG"
             targetId={value?.id ?? null}
-            tempSessionId={documentTempSessionId}
-            documents={documents}
-            tempDocuments={tempDocuments}
-            uploadPolicy={documentUploadPolicy}
-            busy={busy || documentsBusy}
+            busy={busy}
             readOnly={readOnly}
-            uploadRequiresTempSession
-            tempSessionMissingMessage={t("document.errors.missingTempSession", {
-                defaultValue: "نشست موقت بارگذاری مستندات آماده نیست.",
-            })}
             viewHint={t("organization.documents.viewHint", {
-                defaultValue: "مستندات ذخیره‌شده سازمان",
+                defaultValue: "مستندات ذخیره شده سازمان",
             })}
             editHint={t("organization.documents.editHint", {
-                defaultValue:
-                    "فایل‌ها تا زمان ذخیره فرم به صورت موقت نگهداری می‌شوند.",
+                defaultValue: "فایل انتخابی ابتدا موقت بارگذاری و سپس برای این سازمان نهایی می‌شود.",
             })}
-            onUploadDocument={onUploadDocument}
-            onUpdateDocumentTitle={onUpdateDocumentTitle}
-            onDeleteDocument={onDeleteDocument}
-            onDownloadDocument={onDownloadDocument}
-            onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
-            onPendingUploadsChange={setHasPendingDocumentUploads}
         />
     );
-
     const renderTabContent = () => {
         if (activeTab === "general") {
             return renderGeneralTab();
@@ -2164,13 +2094,13 @@ export default function OrganizationObjectPage({
                 <TablePlaceholder
                     title="KPI"
                     actions={tabActionButtons([
-                        t("organization.actions.addRow", { defaultValue: "اضافه ردیف" }),
-                        t("organization.actions.deleteRow", { defaultValue: "حذف ردیف" }),
+                        t("organization.actions.addRow", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡ Ø±Ø¯ÛŒÙ" }),
+                        t("organization.actions.deleteRow", { defaultValue: "Ø­Ø°Ù Ø±Ø¯ÛŒÙ" }),
                     ])}
                     columns={[
-                        t("organization.fields.kpiName", { defaultValue: "نام شاخص" }),
-                        t("organization.fields.validFrom", { defaultValue: "اعتبار از" }),
-                        t("organization.fields.validTo", { defaultValue: "اعتبار تا" }),
+                        t("organization.fields.kpiName", { defaultValue: "Ù†Ø§Ù… Ø´Ø§Ø®Øµ" }),
+                        t("organization.fields.validFrom", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø± Ø§Ø²" }),
+                        t("organization.fields.validTo", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø± ØªØ§" }),
                     ]}
                 />
             );
@@ -2181,13 +2111,13 @@ export default function OrganizationObjectPage({
                 <TablePlaceholder
                     title="KRI"
                     actions={tabActionButtons([
-                        t("organization.actions.addRow", { defaultValue: "اضافه ردیف" }),
-                        t("organization.actions.deleteRow", { defaultValue: "حذف ردیف" }),
+                        t("organization.actions.addRow", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡ Ø±Ø¯ÛŒÙ" }),
+                        t("organization.actions.deleteRow", { defaultValue: "Ø­Ø°Ù Ø±Ø¯ÛŒÙ" }),
                     ])}
                     columns={[
-                        t("organization.fields.kriName", { defaultValue: "نام شاخص" }),
-                        t("organization.fields.validFrom", { defaultValue: "اعتبار از" }),
-                        t("organization.fields.validTo", { defaultValue: "اعتبار تا" }),
+                        t("organization.fields.kriName", { defaultValue: "Ù†Ø§Ù… Ø´Ø§Ø®Øµ" }),
+                        t("organization.fields.validFrom", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø± Ø§Ø²" }),
+                        t("organization.fields.validTo", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø± ØªØ§" }),
                     ]}
                 />
             );
@@ -2196,16 +2126,16 @@ export default function OrganizationObjectPage({
         if (activeTab === "riskAppetite") {
             return (
                 <TablePlaceholder
-                    title={t("organization.tabs.riskAppetite", { defaultValue: "اشتهای ریسک" })}
+                    title={t("organization.tabs.riskAppetite", { defaultValue: "Ø§Ø´ØªÙ‡Ø§ÛŒ Ø±ÛŒØ³Ú©" })}
                     actions={tabActionButtons([
-                        t("organization.actions.add", { defaultValue: "اضافه" }),
-                        t("organization.actions.delete", { defaultValue: "حذف" }),
+                        t("organization.actions.add", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡" }),
+                        t("organization.actions.delete", { defaultValue: "Ø­Ø°Ù" }),
                     ])}
                     columns={[
-                        t("organization.fields.subProcessRisk", { defaultValue: "زیر فرآیندها/ ریسک" }),
-                        t("organization.fields.goalType", { defaultValue: "نوع هدف" }),
-                        t("organization.fields.description", { defaultValue: "شرح" }),
-                        t("organization.fields.riskTemplate", { defaultValue: "الگوی ریسک" }),
+                        t("organization.fields.subProcessRisk", { defaultValue: "Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯Ù‡Ø§/ Ø±ÛŒØ³Ú©" }),
+                        t("organization.fields.goalType", { defaultValue: "Ù†ÙˆØ¹ Ù‡Ø¯Ù" }),
+                        t("organization.fields.description", { defaultValue: "Ø´Ø±Ø­" }),
+                        t("organization.fields.riskTemplate", { defaultValue: "Ø§Ù„Ú¯ÙˆÛŒ Ø±ÛŒØ³Ú©" }),
                     ]}
                 />
             );
@@ -2214,16 +2144,16 @@ export default function OrganizationObjectPage({
         if (activeTab === "owner") {
             return (
                 <TablePlaceholder
-                    title={t("organization.tabs.owner", { defaultValue: "مالک" })}
+                    title={t("organization.tabs.owner", { defaultValue: "Ù…Ø§Ù„Ú©" })}
                     actions={tabActionButtons([
-                        t("organization.actions.addRow", { defaultValue: "اضافه ردیف" }),
-                        t("organization.actions.deleteRow", { defaultValue: "حذف ردیف" }),
+                        t("organization.actions.addRow", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡ Ø±Ø¯ÛŒÙ" }),
+                        t("organization.actions.deleteRow", { defaultValue: "Ø­Ø°Ù Ø±Ø¯ÛŒÙ" }),
                     ])}
                     columns={[
-                        t("organization.fields.positionName", { defaultValue: "نام پست سازمانی" }),
-                        t("organization.fields.userId", { defaultValue: "شناسه کاربر" }),
-                        t("organization.fields.updatedAt", { defaultValue: "تاریخ بروز رسانی" }),
-                        t("organization.fields.nextUpdate", { defaultValue: "تاریخ بروز رسانی بعدی" }),
+                        t("organization.fields.positionName", { defaultValue: "Ù†Ø§Ù… Ù¾Ø³Øª Ø³Ø§Ø²Ù…Ø§Ù†ÛŒ" }),
+                        t("organization.fields.userId", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡ Ú©Ø§Ø±Ø¨Ø±" }),
+                        t("organization.fields.updatedAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø¨Ø±ÙˆØ² Ø±Ø³Ø§Ù†ÛŒ" }),
+                        t("organization.fields.nextUpdate", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø¨Ø±ÙˆØ² Ø±Ø³Ø§Ù†ÛŒ Ø¨Ø¹Ø¯ÛŒ" }),
                     ]}
                 />
             );
@@ -2235,15 +2165,15 @@ export default function OrganizationObjectPage({
 
         return (
             <TablePlaceholder
-                title={t("organization.tabs.performance", { defaultValue: "ارزیابی عملکرد" })}
+                title={t("organization.tabs.performance", { defaultValue: "Ø§Ø±Ø²ÛŒØ§Ø¨ÛŒ Ø¹Ù…Ù„Ú©Ø±Ø¯" })}
                 actions={tabActionButtons([
-                    t("organization.actions.addRow", { defaultValue: "اضافه ردیف" }),
-                    t("organization.actions.deleteRow", { defaultValue: "حذف ردیف" }),
+                    t("organization.actions.addRow", { defaultValue: "Ø§Ø¶Ø§ÙÙ‡ Ø±Ø¯ÛŒÙ" }),
+                    t("organization.actions.deleteRow", { defaultValue: "Ø­Ø°Ù Ø±Ø¯ÛŒÙ" }),
                 ])}
                 columns={[
-                    t("organization.fields.kpiName", { defaultValue: "نام شاخص" }),
-                    t("organization.fields.validFrom", { defaultValue: "اعتبار از" }),
-                    t("organization.fields.validTo", { defaultValue: "اعتبار تا" }),
+                    t("organization.fields.kpiName", { defaultValue: "Ù†Ø§Ù… Ø´Ø§Ø®Øµ" }),
+                    t("organization.fields.validFrom", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø± Ø§Ø²" }),
+                    t("organization.fields.validTo", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø± ØªØ§" }),
                 ]}
             />
         );
@@ -2254,42 +2184,38 @@ export default function OrganizationObjectPage({
             <div style={HEADER_STYLE}>
                 <div style={HEADER_TITLE_STYLE}>
                     <Title level="H4">
-                        {t("organization.object.modalTitle", { defaultValue: "سازمان" })}
+                        {t("organization.object.modalTitle", { defaultValue: "Ø³Ø§Ø²Ù…Ø§Ù†" })}
                     </Title>
                 </div>
 
                 <div style={HEADER_GRID_STYLE}>
                     <HeaderItem
-                        label={t("organization.fields.name", { defaultValue: "نام سازمان" })}
+                        label={t("organization.fields.name", { defaultValue: "Ù†Ø§Ù… Ø³Ø§Ø²Ù…Ø§Ù†" })}
                         value={headerName}
                     />
                     <HeaderItem
-                        label={t("organization.fields.parent", { defaultValue: "والد سازمان" })}
+                        label={t("organization.fields.parent", { defaultValue: "ÙˆØ§Ù„Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†" })}
                         value={headerParent}
                     />
                     <HeaderItem
-                        label={t("organization.fields.identifier", { defaultValue: "شناسه" })}
+                        label={t("organization.fields.identifier", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡" })}
                         value={value?.id}
                     />
                     <HeaderItem
-                        label={t("organization.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
+                        label={t("organization.fields.createdAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" })}
                         value={formatPersianDate(value?.createdAt)}
                     />
                     <HeaderItem
-                        label={t("organization.fields.status", { defaultValue: "وضعیت" })}
+                        label={t("organization.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}
                         value={headerStatus}
                     />
                     <HeaderItem
-                        label={t("organization.fields.location", { defaultValue: "موقعیت" })}
+                        label={t("organization.fields.location", { defaultValue: "Ù…ÙˆÙ‚Ø¹ÛŒØª" })}
                         value={headerLocation}
                     />
                     <HeaderItem
-                        label={t("organization.fields.type", { defaultValue: "نوع سازمان" })}
+                        label={t("organization.fields.type", { defaultValue: "Ù†ÙˆØ¹ Ø³Ø§Ø²Ù…Ø§Ù†" })}
                         value={headerType}
-                    />
-                    <HeaderItem
-                        label={t("organization.fields.documents", { defaultValue: "مستندات" })}
-                        value={String(headerDocumentsCount)}
                     />
                 </div>
             </div>

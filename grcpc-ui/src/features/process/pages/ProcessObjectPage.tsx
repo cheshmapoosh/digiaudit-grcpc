@@ -1,7 +1,5 @@
-import {
-    useCallback,
+﻿import {
     useMemo,
-    useRef,
     useState,
     type CSSProperties,
     type ReactNode,
@@ -36,10 +34,7 @@ import ProcessAccountGroupsTab from "../components/tabs/ProcessAccountGroupsTab"
 import ProcessControlsTab from "../components/tabs/ProcessControlsTab";
 import ProcessRegulationsTab from "../components/tabs/ProcessRegulationsTab";
 import ProcessRisksTab from "../components/tabs/ProcessRisksTab";
-import {
-    DocumentAttachmentsManager,
-    type DocumentBeforeParentSubmitHandler,
-} from "@/features/document";
+import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
@@ -75,7 +70,6 @@ export interface ProcessObjectPageProps {
     requestedNodeType?: ProcessNodeType;
     busy?: boolean;
     error?: string | null;
-    documentTempSessionId?: string;
     onErrorClose?: () => void;
     onSubmit: (payload: ProcessNodeCreate | ProcessNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
@@ -273,8 +267,8 @@ function resolveNodeTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<ProcessNodeType, string> = {
-        process: t("process.nodeType.process", { defaultValue: "فرآیند" }),
-        subProcess: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
+        process: t("process.nodeType.process", { defaultValue: "ÙØ±Ø¢ÛŒÙ†Ø¯" }),
+        subProcess: t("process.nodeType.subProcess", { defaultValue: "Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯" }),
     };
 
     return map[nodeType];
@@ -285,8 +279,8 @@ function resolveStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     return status === "active"
-        ? t("common.active", { defaultValue: "فعال" })
-        : t("common.inactive", { defaultValue: "غیرفعال" });
+        ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+        : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
 }
 
 function resolveCategoryLabel(
@@ -294,13 +288,13 @@ function resolveCategoryLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<ProcessCategory, string> = {
-        operational: t("process.category.operational", { defaultValue: "عملیاتی" }),
-        support: t("process.category.support", { defaultValue: "پشتیبانی" }),
-        strategic: t("process.category.strategic", { defaultValue: "استراتژیک" }),
-        financial: t("process.category.financial", { defaultValue: "مالی" }),
-        compliance: t("process.category.compliance", { defaultValue: "انطباق" }),
-        it: t("process.category.it", { defaultValue: "فناوری اطلاعات" }),
-        other: t("process.category.other", { defaultValue: "سایر" }),
+        operational: t("process.category.operational", { defaultValue: "Ø¹Ù…Ù„ÛŒØ§ØªÛŒ" }),
+        support: t("process.category.support", { defaultValue: "Ù¾Ø´ØªÛŒØ¨Ø§Ù†ÛŒ" }),
+        strategic: t("process.category.strategic", { defaultValue: "Ø§Ø³ØªØ±Ø§ØªÚ˜ÛŒÚ©" }),
+        financial: t("process.category.financial", { defaultValue: "Ù…Ø§Ù„ÛŒ" }),
+        compliance: t("process.category.compliance", { defaultValue: "Ø§Ù†Ø·Ø¨Ø§Ù‚" }),
+        it: t("process.category.it", { defaultValue: "ÙÙ†Ø§ÙˆØ±ÛŒ Ø§Ø·Ù„Ø§Ø¹Ø§Øª" }),
+        other: t("process.category.other", { defaultValue: "Ø³Ø§ÛŒØ±" }),
     };
 
     return map[category];
@@ -322,15 +316,19 @@ function defaultTabs(nodeType: ProcessNodeType): ProcessTabKey[] {
     return ["general", "objectives", "accountGroups", "risks", "documents"];
 }
 
+function resolveDocumentTargetType(nodeType: ProcessNodeType): DocumentLinkTargetType {
+    return nodeType === "subProcess" ? "CENTRAL_SUBPROCESS" : "CENTRAL_PROCESS";
+}
+
 function resolveTabLabel(tab: ProcessTabKey, t: ReturnType<typeof useTranslation>["t"]): string {
     const labels: Record<ProcessTabKey, string> = {
-        general: t("process.tabs.general", { defaultValue: "اطلاعات کلی" }),
-        rules: t("process.tabs.rules", { defaultValue: "قوانین" }),
-        objectives: t("process.tabs.objectives", { defaultValue: "اهداف" }),
-        accountGroups: t("process.tabs.accountGroups", { defaultValue: "گروه حساب" }),
-        risks: t("process.tabs.risks", { defaultValue: "ریسک" }),
-        documents: t("process.tabs.documents", { defaultValue: "مستندات" }),
-        controls: t("process.tabs.controls", { defaultValue: "کنترل‌ها" }),
+        general: t("process.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
+        rules: t("process.tabs.rules", { defaultValue: "Ù‚ÙˆØ§Ù†ÛŒÙ†" }),
+        objectives: t("process.tabs.objectives", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù" }),
+        accountGroups: t("process.tabs.accountGroups", { defaultValue: "Ú¯Ø±ÙˆÙ‡ Ø­Ø³Ø§Ø¨" }),
+        risks: t("process.tabs.risks", { defaultValue: "Ø±ÛŒØ³Ú©" }),
+        documents: t("process.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }),
+        controls: t("process.tabs.controls", { defaultValue: "Ú©Ù†ØªØ±Ù„â€ŒÙ‡Ø§" }),
     };
 
     return labels[tab];
@@ -390,7 +388,6 @@ export default function ProcessObjectPage({
                                               requestedNodeType,
                                               busy = false,
                                               error,
-                                              documentTempSessionId,
                                               onErrorClose,
                                               onSubmit,
                                               onCancel,
@@ -402,8 +399,8 @@ export default function ProcessObjectPage({
     const readOnly = mode === "view";
 
     /*
-     * این state با key در ProcessesFclShellPage ریست می‌شود.
-     * برای جلوگیری از خطای react-hooks/set-state-in-effect اینجا useEffect sync نگذار.
+     * Ø§ÛŒÙ† state Ø¨Ø§ key Ø¯Ø± ProcessesFclShellPage Ø±ÛŒØ³Øª Ù…ÛŒâ€ŒØ´ÙˆØ¯.
+     * Ø¨Ø±Ø§ÛŒ Ø¬Ù„ÙˆÚ¯ÛŒØ±ÛŒ Ø§Ø² Ø®Ø·Ø§ÛŒ react-hooks/set-state-in-effect Ø§ÛŒÙ†Ø¬Ø§ useEffect sync Ù†Ú¯Ø°Ø§Ø±.
      */
     const [form, setForm] = useState<ProcessFormState>(() =>
         toFormState(value, parent, requestedNodeType),
@@ -412,8 +409,6 @@ export default function ProcessObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(form.nodeType), [form.nodeType]);
     const [activeTab, setActiveTab] = useState<ProcessTabKey>("general");
-    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
-    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? parent ?? null
@@ -423,7 +418,7 @@ export default function ProcessObjectPage({
     const headerTitle = form.title || value?.title || "";
     const headerParent = selectedParent
         ? `${selectedParent.code} - ${selectedParent.title}`
-        : t("common.none", { defaultValue: "ندارد" });
+        : t("common.none", { defaultValue: "Ù†Ø¯Ø§Ø±Ø¯" });
     const headerType = resolveNodeTypeLabel(form.nodeType, t);
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerCategory = resolveCategoryLabel(form.processCategory, t);
@@ -441,14 +436,14 @@ export default function ProcessObjectPage({
     const validate = (): boolean => {
         if (!form.code.trim()) {
             setValidationError(
-                t("process.validation.codeRequired", { defaultValue: "کد الزامی است" }),
+                t("process.validation.codeRequired", { defaultValue: "Ú©Ø¯ Ø§Ù„Ø²Ø§Ù…ÛŒ Ø§Ø³Øª" }),
             );
             return false;
         }
 
         if (!form.title.trim()) {
             setValidationError(
-                t("process.validation.titleRequired", { defaultValue: "نام الزامی است" }),
+                t("process.validation.titleRequired", { defaultValue: "Ù†Ø§Ù… Ø§Ù„Ø²Ø§Ù…ÛŒ Ø§Ø³Øª" }),
             );
             return false;
         }
@@ -456,7 +451,7 @@ export default function ProcessObjectPage({
         if (form.sortOrder.trim() && parseSortOrder(form.sortOrder) === undefined) {
             setValidationError(
                 t("process.validation.sortOrderInvalid", {
-                    defaultValue: "ترتیب نمایش باید عدد صحیح نامنفی باشد",
+                    defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´ Ø¨Ø§ÛŒØ¯ Ø¹Ø¯Ø¯ ØµØ­ÛŒØ­ Ù†Ø§Ù…Ù†ÙÛŒ Ø¨Ø§Ø´Ø¯",
                 }),
             );
             return false;
@@ -466,31 +461,8 @@ export default function ProcessObjectPage({
         return true;
     };
 
-    const handleDocumentBeforeParentSubmitChange = useCallback(
-        (handler: DocumentBeforeParentSubmitHandler | null) => {
-            documentBeforeSubmitRef.current = handler;
-        },
-        [],
-    );
-
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
-            return;
-        }
-
-        if (hasPendingDocumentUploads) {
-            setValidationError(
-                t("document.validation.waitForUpload", {
-                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
-                }),
-            );
-            setActiveTab("documents");
-            return;
-        }
-
-        const documentsReady = await documentBeforeSubmitRef.current?.();
-        if (documentsReady === false) {
-            setActiveTab("documents");
             return;
         }
 
@@ -518,7 +490,7 @@ export default function ProcessObjectPage({
     const renderGeneralTab = () => (
         <>
             <div style={FORM_GRID_STYLE}>
-                <FormField label={t("process.fields.code", { defaultValue: "شناسه" })} required>
+                <FormField label={t("process.fields.code", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡" })} required>
                     <Input
                         value={form.code}
                         disabled={readOnly || busy}
@@ -526,7 +498,7 @@ export default function ProcessObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("process.fields.name", { defaultValue: "نام" })} required>
+                <FormField label={t("process.fields.name", { defaultValue: "Ù†Ø§Ù…" })} required>
                     <Input
                         value={form.title}
                         disabled={readOnly || busy}
@@ -534,17 +506,17 @@ export default function ProcessObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("process.fields.parent", { defaultValue: "والد" })}>
+                <FormField label={t("process.fields.parent", { defaultValue: "ÙˆØ§Ù„Ø¯" })}>
                     <Input value={headerParent} readonly />
                 </FormField>
 
-                <FormField label={t("process.fields.type", { defaultValue: "نوع" })}>
+                <FormField label={t("process.fields.type", { defaultValue: "Ù†ÙˆØ¹" })}>
                     <Input value={headerType} readonly />
                 </FormField>
 
                 <FormField
                     label={t("process.fields.processCategory", {
-                        defaultValue: "نوع فرآیند",
+                        defaultValue: "Ù†ÙˆØ¹ ÙØ±Ø¢ÛŒÙ†Ø¯",
                     })}
                 >
                     <Select
@@ -558,39 +530,39 @@ export default function ProcessObjectPage({
                             data-value="operational"
                             selected={form.processCategory === "operational"}
                         >
-                            {t("process.category.operational", { defaultValue: "عملیاتی" })}
+                            {t("process.category.operational", { defaultValue: "Ø¹Ù…Ù„ÛŒØ§ØªÛŒ" })}
                         </Option>
                         <Option data-value="support" selected={form.processCategory === "support"}>
-                            {t("process.category.support", { defaultValue: "پشتیبانی" })}
+                            {t("process.category.support", { defaultValue: "Ù¾Ø´ØªÛŒØ¨Ø§Ù†ÛŒ" })}
                         </Option>
                         <Option
                             data-value="strategic"
                             selected={form.processCategory === "strategic"}
                         >
-                            {t("process.category.strategic", { defaultValue: "استراتژیک" })}
+                            {t("process.category.strategic", { defaultValue: "Ø§Ø³ØªØ±Ø§ØªÚ˜ÛŒÚ©" })}
                         </Option>
                         <Option
                             data-value="financial"
                             selected={form.processCategory === "financial"}
                         >
-                            {t("process.category.financial", { defaultValue: "مالی" })}
+                            {t("process.category.financial", { defaultValue: "Ù…Ø§Ù„ÛŒ" })}
                         </Option>
                         <Option
                             data-value="compliance"
                             selected={form.processCategory === "compliance"}
                         >
-                            {t("process.category.compliance", { defaultValue: "انطباق" })}
+                            {t("process.category.compliance", { defaultValue: "Ø§Ù†Ø·Ø¨Ø§Ù‚" })}
                         </Option>
                         <Option data-value="it" selected={form.processCategory === "it"}>
-                            {t("process.category.it", { defaultValue: "فناوری اطلاعات" })}
+                            {t("process.category.it", { defaultValue: "ÙÙ†Ø§ÙˆØ±ÛŒ Ø§Ø·Ù„Ø§Ø¹Ø§Øª" })}
                         </Option>
                         <Option data-value="other" selected={form.processCategory === "other"}>
-                            {t("process.category.other", { defaultValue: "سایر" })}
+                            {t("process.category.other", { defaultValue: "Ø³Ø§ÛŒØ±" })}
                         </Option>
                     </Select>
                 </FormField>
 
-                <FormField label={t("process.fields.status", { defaultValue: "وضعیت" })}>
+                <FormField label={t("process.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}>
                     <Select
                         disabled={readOnly || busy}
                         onChange={(event) => {
@@ -599,16 +571,16 @@ export default function ProcessObjectPage({
                         }}
                     >
                         <Option data-value="active" selected={form.status === "active"}>
-                            {t("common.active", { defaultValue: "فعال" })}
+                            {t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })}
                         </Option>
                         <Option data-value="inactive" selected={form.status === "inactive"}>
-                            {t("common.inactive", { defaultValue: "غیرفعال" })}
+                            {t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" })}
                         </Option>
                     </Select>
                 </FormField>
 
                 <FormField
-                    label={t("process.fields.sortOrder", { defaultValue: "ترتیب نمایش" })}
+                    label={t("process.fields.sortOrder", { defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´" })}
                 >
                     <Input
                         value={form.sortOrder}
@@ -617,7 +589,7 @@ export default function ProcessObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("process.fields.owner", { defaultValue: "مسئول" })}>
+                <FormField label={t("process.fields.owner", { defaultValue: "Ù…Ø³Ø¦ÙˆÙ„" })}>
                     <Input
                         value={form.ownerName}
                         disabled={readOnly || busy}
@@ -627,7 +599,7 @@ export default function ProcessObjectPage({
 
                 <FormField
                     label={t("process.fields.operationCycle", {
-                        defaultValue: "دوره عملیاتی",
+                        defaultValue: "Ø¯ÙˆØ±Ù‡ Ø¹Ù…Ù„ÛŒØ§ØªÛŒ",
                     })}
                 >
                     <Input
@@ -640,7 +612,7 @@ export default function ProcessObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("process.fields.objective", { defaultValue: "هدف" })}
+                    label={t("process.fields.objective", { defaultValue: "Ù‡Ø¯Ù" })}
                     fullWidth
                 >
                     <TextArea
@@ -652,7 +624,7 @@ export default function ProcessObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("process.fields.description", { defaultValue: "شرح" })}
+                    label={t("process.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                     fullWidth
                 >
                     <TextArea
@@ -675,7 +647,7 @@ export default function ProcessObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={onEdit}
                 >
-                    {t("common.edit", { defaultValue: "ویرایش" })}
+                    {t("common.edit", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´" })}
                 </Button>
             ) : (
                 <Button
@@ -684,7 +656,7 @@ export default function ProcessObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={handleSubmit}
                 >
-                    {t("common.save", { defaultValue: "ذخیره" })}
+                    {t("common.save", { defaultValue: "Ø°Ø®ÛŒØ±Ù‡" })}
                 </Button>
             )}
 
@@ -695,8 +667,8 @@ export default function ProcessObjectPage({
                 onClick={onCancel}
             >
                 {mode === "view"
-                    ? t("common.close", { defaultValue: "بستن" })
-                    : t("common.cancel", { defaultValue: "انصراف" })}
+                    ? t("common.close", { defaultValue: "Ø¨Ø³ØªÙ†" })
+                    : t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
             </Button>
         </div>
     );
@@ -766,21 +738,17 @@ export default function ProcessObjectPage({
         }
 
         return (
-            <DocumentAttachmentsManager
+            <DocumentManager
                 key={currentProcessId ?? "unsaved-process-documents"}
-                title={t("process.tabs.documents", { defaultValue: "مستندات" })}
-                targetType="PROCESS_NODE"
+                title={t("process.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
+                targetType={resolveDocumentTargetType(form.nodeType)}
                 targetId={currentProcessId}
-                tempSessionId={documentTempSessionId}
-                stagingMode="tempUntilParentSave"
                 busy={busy}
                 readOnly={readOnly}
                 saveFirstMessage={t("document.saveFirst.process", {
                     defaultValue:
-                        "ابتدا آیتم فرآیندی را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
+                        "Ø§Ø¨ØªØ¯Ø§ Ø¢ÛŒØªÙ… ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯ØŒ Ø³Ù¾Ø³ Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø±Ø§ Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ÛŒØ¯.",
                 })}
-                onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
-                onPendingUploadsChange={setHasPendingDocumentUploads}
             />
         );
     };
@@ -791,10 +759,10 @@ export default function ProcessObjectPage({
                 <div style={HEADER_TITLE_STYLE}>
                     <Title level="H4">
                         {mode === "create"
-                            ? t("process.object.createModalTitle", { defaultValue: "ایجاد" })
+                            ? t("process.object.createModalTitle", { defaultValue: "Ø§ÛŒØ¬Ø§Ø¯" })
                             : headerTitle ||
                               t("process.object.modalTitle", {
-                                  defaultValue: "مرکز فرآیند",
+                                  defaultValue: "Ù…Ø±Ú©Ø² ÙØ±Ø¢ÛŒÙ†Ø¯",
                               })}
                     </Title>
                 </div>
@@ -802,30 +770,30 @@ export default function ProcessObjectPage({
                 <div style={HEADER_GRID_STYLE}>
                     <HeaderItem
                         label={t("process.fields.parentProcess", {
-                            defaultValue: "والد فرآیند",
+                            defaultValue: "ÙˆØ§Ù„Ø¯ ÙØ±Ø¢ÛŒÙ†Ø¯",
                         })}
                         value={headerParent}
                     />
                     <HeaderItem
-                        label={t("process.fields.identifier", { defaultValue: "شناسه" })}
+                        label={t("process.fields.identifier", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡" })}
                         value={form.code || value?.id}
                     />
                     <HeaderItem
-                        label={t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
+                        label={t("process.fields.createdAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" })}
                         value={formatPersianDate(value?.createdAt)}
                     />
                     <HeaderItem
                         label={t("process.fields.processCategory", {
-                            defaultValue: "نوع فرآیند",
+                            defaultValue: "Ù†ÙˆØ¹ ÙØ±Ø¢ÛŒÙ†Ø¯",
                         })}
                         value={headerCategory}
                     />
                     <HeaderItem
-                        label={t("process.fields.nodeType", { defaultValue: "نوع آیتم" })}
+                        label={t("process.fields.nodeType", { defaultValue: "Ù†ÙˆØ¹ Ø¢ÛŒØªÙ…" })}
                         value={headerType}
                     />
                     <HeaderItem
-                        label={t("process.fields.status", { defaultValue: "وضعیت" })}
+                        label={t("process.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}
                         value={headerStatus}
                     />
                 </div>

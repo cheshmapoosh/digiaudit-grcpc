@@ -1,16 +1,20 @@
 import { httpClient, HttpError } from "@/shared/infra/http.client";
 import i18n from "@/i18n/i18n";
 import type {
-    DocumentAttachment,
-    DocumentCommitPayload,
-    DocumentDownloadUrl,
-    DocumentTempUploadPayload,
-    DocumentUploadPayload,
-    DocumentUploadPolicy,
+    DocumentAddVersionPayload,
+    DocumentCommandResponse,
+    DocumentCreatePayload,
+    DocumentDownloadAccess,
+    DocumentLifecyclePayload,
+    DocumentLinkLifecyclePayload,
+    DocumentLinkSummary,
+    DocumentLinkTargetType,
+    DocumentMetadataUpdatePayload,
+    DocumentTemporaryUpload,
 } from "../domain/document.model";
 
-const BASE_URL = "/api/documents";
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
+const API_BASE = "/api/master-data";
+const BROWSER_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
 
 interface ApiErrorPayload {
     message?: unknown;
@@ -26,17 +30,20 @@ function buildUrl(path: string): string {
         return path;
     }
 
-    const normalizedBase = API_BASE_URL.replace(/\/+$/, "");
+    const normalizedBase = BROWSER_API_BASE_URL.replace(/\/+$/, "");
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
     return normalizedBase ? `${normalizedBase}${normalizedPath}` : normalizedPath;
 }
 
-function appendQuery(path: string, params: Record<string, string | undefined>): string {
+function appendQuery(
+    path: string,
+    params: Record<string, string | number | undefined | null>,
+): string {
     const query = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
-        if (value) {
-            query.set(key, value);
+        if (value !== undefined && value !== null && `${value}`.trim()) {
+            query.set(key, `${value}`);
         }
     });
 
@@ -94,11 +101,7 @@ function uploadWithProgress<T>(
         xhr.setRequestHeader("Accept-Language", getCurrentLanguage());
 
         xhr.upload.onprogress = (event) => {
-            if (!event.lengthComputable || !onProgress) {
-                return;
-            }
-
-            if (event.total <= 0) {
+            if (!event.lengthComputable || !onProgress || event.total <= 0) {
                 return;
             }
 
@@ -109,10 +112,8 @@ function uploadWithProgress<T>(
         xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
                 onProgress?.(100);
-                const payload = xhr.responseText
-                    ? JSON.parse(xhr.responseText) as T
-                    : undefined as T;
-                resolve(payload);
+                const payload = xhr.responseText ? (JSON.parse(xhr.responseText) as T) : undefined;
+                resolve(payload as T);
                 return;
             }
 
@@ -126,7 +127,9 @@ function uploadWithProgress<T>(
         };
 
         xhr.onerror = () => {
-            reject(new Error("Upload failed"));
+            reject(new Error(i18n.t("document.errors.upload", {
+                defaultValue: "File upload failed",
+            })));
         };
 
         xhr.send(formData);
@@ -134,78 +137,116 @@ function uploadWithProgress<T>(
 }
 
 export class DocumentApiRepo {
-    list(targetType: string, targetId: string): Promise<DocumentAttachment[]> {
-        return httpClient.get<DocumentAttachment[]>(
-            appendQuery(BASE_URL, { targetType, targetId }),
-        );
-    }
-
-    listTemp(targetType: string, tempSessionId: string): Promise<DocumentAttachment[]> {
-        return httpClient.get<DocumentAttachment[]>(
-            appendQuery(`${BASE_URL}/temp`, { targetType, tempSessionId }),
-        );
-    }
-
-    uploadPolicy(targetType: string): Promise<DocumentUploadPolicy> {
-        return httpClient.get<DocumentUploadPolicy>(
-            appendQuery(`${BASE_URL}/upload-policy`, { targetType }),
-        );
-    }
-
-    upload(
-        payload: DocumentUploadPayload,
+    uploadTemporary(
+        file: File,
         onProgress?: (progress: number) => void,
-    ): Promise<DocumentAttachment> {
+    ): Promise<DocumentTemporaryUpload> {
         const formData = new FormData();
-        formData.append("targetType", payload.targetType);
-        formData.append("targetId", payload.targetId);
-        if (payload.title) {
-            formData.append("title", payload.title);
-        }
-        formData.append("file", payload.file);
+        formData.append("file", file);
 
-        return uploadWithProgress<DocumentAttachment>(
-            BASE_URL,
+        return uploadWithProgress<DocumentTemporaryUpload>(
+            `${API_BASE}/document-temporary-uploads`,
             formData,
             onProgress,
         );
     }
 
-    uploadTemp(
-        payload: DocumentTempUploadPayload,
-        onProgress?: (progress: number) => void,
-    ): Promise<DocumentAttachment> {
-        const formData = new FormData();
-        formData.append("targetType", payload.targetType);
-        formData.append("tempSessionId", payload.tempSessionId);
-        if (payload.targetId) {
-            formData.append("targetId", payload.targetId);
-        }
-        if (payload.title) {
-            formData.append("title", payload.title);
-        }
-        formData.append("file", payload.file);
-
-        return uploadWithProgress<DocumentAttachment>(
-            `${BASE_URL}/temp`,
-            formData,
-            onProgress,
+    getTemporaryUpload(tempUploadId: string): Promise<DocumentTemporaryUpload> {
+        return httpClient.get<DocumentTemporaryUpload>(
+            `${API_BASE}/document-temporary-uploads/${tempUploadId}`,
         );
     }
 
-    commitTemp(payload: DocumentCommitPayload): Promise<DocumentAttachment[]> {
-        return httpClient.post<DocumentAttachment[]>(`${BASE_URL}/commit`, payload);
+    listByTarget(
+        targetType: DocumentLinkTargetType,
+        targetId: string,
+    ): Promise<DocumentLinkSummary[]> {
+        return httpClient.get<DocumentLinkSummary[]>(
+            appendQuery(`${API_BASE}/document-links`, { targetType, targetId }),
+        );
     }
 
-    updateTitle(id: string, title: string): Promise<DocumentAttachment> {
-        return httpClient.patch<DocumentAttachment>(`${BASE_URL}/${id}/title`, { title });
+    getDocument(documentId: string): Promise<DocumentLinkSummary> {
+        return httpClient.get<DocumentLinkSummary>(`${API_BASE}/documents/${documentId}`);
     }
 
-    delete(id: string): Promise<void> {
-        return httpClient.delete<void>(`${BASE_URL}/${id}`);
+    listVersions(documentId: string): Promise<DocumentLinkSummary[]> {
+        return httpClient.get<DocumentLinkSummary[]>(
+            `${API_BASE}/documents/${documentId}/versions`,
+        );
     }
 
-    createDownloadUrl(id: string): Promise<DocumentDownloadUrl> {
-        return httpClient.get<DocumentDownloadUrl>(`${BASE_URL}/${id}/download-url`);
+    getVersion(documentVersionId: string): Promise<DocumentLinkSummary> {
+        return httpClient.get<DocumentLinkSummary>(
+            `${API_BASE}/document-versions/${documentVersionId}`,
+        );
+    }
+
+    createDocument(payload: DocumentCreatePayload): Promise<DocumentCommandResponse> {
+        return httpClient.post<DocumentCommandResponse>(
+            `${API_BASE}/documents`,
+            payload,
+        );
+    }
+
+    addVersion(
+        documentId: string,
+        payload: DocumentAddVersionPayload,
+    ): Promise<DocumentCommandResponse> {
+        return httpClient.post<DocumentCommandResponse>(
+            `${API_BASE}/documents/${documentId}/versions`,
+            payload,
+        );
+    }
+
+    updateMetadata(
+        documentId: string,
+        payload: DocumentMetadataUpdatePayload,
+    ): Promise<DocumentCommandResponse> {
+        return httpClient.patch<DocumentCommandResponse>(
+            `${API_BASE}/documents/${documentId}`,
+            payload,
+        );
+    }
+
+    documentLifecycle(
+        documentId: string,
+        action: "activate" | "inactivate" | "delete" | "restore",
+        payload: DocumentLifecyclePayload,
+    ): Promise<DocumentCommandResponse> {
+        return httpClient.post<DocumentCommandResponse>(
+            `${API_BASE}/documents/${documentId}/${action}`,
+            payload,
+        );
+    }
+
+    createLink(
+        documentVersionId: string,
+        targetType: DocumentLinkTargetType,
+        targetId: string,
+    ): Promise<DocumentCommandResponse> {
+        return httpClient.post<DocumentCommandResponse>(
+            `${API_BASE}/document-versions/${documentVersionId}/links`,
+            { targetType, targetId },
+        );
+    }
+
+    linkLifecycle(
+        documentLinkId: string,
+        action: "activate" | "inactivate" | "delete" | "restore",
+        payload: DocumentLinkLifecyclePayload,
+    ): Promise<DocumentCommandResponse> {
+        return httpClient.post<DocumentCommandResponse>(
+            `${API_BASE}/document-links/${documentLinkId}/${action}`,
+            payload,
+        );
+    }
+
+    createDownloadAccess(documentVersionId: string): Promise<DocumentDownloadAccess> {
+        return httpClient.post<DocumentDownloadAccess>(
+            `${API_BASE}/document-versions/${documentVersionId}/download`,
+            undefined,
+            { successMessage: false },
+        );
     }
 }

@@ -24,7 +24,7 @@ import ProcessControlsTab from "./tabs/ProcessControlsTab";
 import ProcessObjectivesTab from "./tabs/ProcessObjectivesTab";
 import ProcessRegulationsTab from "./tabs/ProcessRegulationsTab";
 import ProcessRisksTab from "./tabs/ProcessRisksTab";
-import { DocumentAttachmentsManager } from "@/features/document";
+import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface ProcessSummaryPanelProps {
@@ -194,6 +194,10 @@ function getTabs(
     ];
 }
 
+function resolveDocumentTargetType(nodeType: ProcessNodeType): DocumentLinkTargetType {
+    return nodeType === "subProcess" ? "CENTRAL_SUBPROCESS" : "CENTRAL_PROCESS";
+}
+
 function ProcessTabs({
                          tabs,
                          activeTab,
@@ -354,9 +358,9 @@ function TabBody({
     }
 
     return (
-        <DocumentAttachmentsManager
+        <DocumentManager
             key={`${value.id}:documents`}
-            targetType="PROCESS_NODE"
+            targetType={resolveDocumentTargetType(value.nodeType)}
             targetId={value.id}
             readOnly
             showActions={false}

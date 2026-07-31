@@ -1,4 +1,4 @@
-import {
+﻿import {
     Fragment,
     useEffect,
     useMemo,
@@ -28,7 +28,7 @@ import type {
 } from "../domain/regulation.model";
 import { regulationService } from "../service/regulation.service";
 import { formatPersianDate } from "@/shared/utils/date.utils";
-import { DocumentAttachmentsManager } from "@/features/document";
+import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
 import RegulationRequirementsSummaryTab from "./tabs/RegulationRequirementsSummaryTab";
 
 export interface RegulationSummaryPanelProps {
@@ -50,7 +50,6 @@ interface DetailLoadState {
     error: string | null;
 }
 
-const REGULATION_DOCUMENT_TARGET_TYPE = "REGULATION_NODE";
 const REGULATION_SUMMARY_TAB_CLASS = "regulationSummaryTabs";
 
 addCustomCSS(
@@ -137,10 +136,10 @@ function resolveNodeTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const labels: Record<RegulationNodeType, string> = {
-        lawGroup: t("regulation.nodeType.lawGroup", { defaultValue: "گروه قانون" }),
-        law: t("regulation.nodeType.law", { defaultValue: "قانون" }),
+        lawGroup: t("regulation.nodeType.lawGroup", { defaultValue: "Ú¯Ø±ÙˆÙ‡ Ù‚Ø§Ù†ÙˆÙ†" }),
+        law: t("regulation.nodeType.law", { defaultValue: "Ù‚Ø§Ù†ÙˆÙ†" }),
         lawRequirement: t("regulation.nodeType.lawRequirement", {
-            defaultValue: "الزامات قانون",
+            defaultValue: "Ø§Ù„Ø²Ø§Ù…Ø§Øª Ù‚Ø§Ù†ÙˆÙ†",
         }),
     };
 
@@ -152,8 +151,8 @@ function resolveStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     return status === "active"
-        ? t("common.active", { defaultValue: "فعال" })
-        : t("common.inactive", { defaultValue: "غیرفعال" });
+        ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+        : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
 }
 
 function displayText(value?: string | number | null): string {
@@ -199,23 +198,31 @@ function getTabs(
     const tabs: DetailTabDefinition[] = [
         {
             key: "general",
-            label: t("regulation.tabs.general", { defaultValue: "اطلاعات کلی" }),
+            label: t("regulation.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
         },
     ];
 
     if (nodeType === "law") {
         tabs.push({
             key: "requirements",
-            label: t("regulation.tabs.requirements", { defaultValue: "الزامات" }),
+            label: t("regulation.tabs.requirements", { defaultValue: "Ø§Ù„Ø²Ø§Ù…Ø§Øª" }),
         });
     }
 
     tabs.push({
         key: "documents",
-        label: t("regulation.tabs.documents", { defaultValue: "مستندات" }),
+        label: t("regulation.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }),
     });
 
     return tabs;
+}
+
+function resolveDocumentTargetType(nodeType: RegulationNodeType): DocumentLinkTargetType {
+    if (nodeType === "lawGroup") {
+        return "CENTRAL_REGULATION_GROUP";
+    }
+
+    return nodeType === "law" ? "CENTRAL_REGULATION" : "CENTRAL_REQUIREMENT";
 }
 
 function RegulationTabs({
@@ -261,51 +268,51 @@ function GeneralTab({ value }: { value: RegulationNode }) {
     return (
         <div style={{ display: "grid", gap: "0.75rem" }}>
             <DetailRow
-                label={t("regulation.fields.code", { defaultValue: "کد" })}
+                label={t("regulation.fields.code", { defaultValue: "Ú©Ø¯" })}
                 value={value.code}
             />
             <DetailRow
-                label={t("regulation.fields.name", { defaultValue: "نام" })}
+                label={t("regulation.fields.name", { defaultValue: "Ù†Ø§Ù…" })}
                 value={value.title}
             />
             <DetailRow
-                label={t("regulation.fields.type", { defaultValue: "نوع" })}
+                label={t("regulation.fields.type", { defaultValue: "Ù†ÙˆØ¹" })}
                 value={resolveNodeTypeLabel(value.nodeType, t)}
             />
             <DetailRow
-                label={t("regulation.fields.parent", { defaultValue: "والد" })}
+                label={t("regulation.fields.parent", { defaultValue: "ÙˆØ§Ù„Ø¯" })}
                 value={displayText(value.parentId)}
             />
             <DetailRow
-                label={t("regulation.fields.status", { defaultValue: "وضعیت" })}
+                label={t("regulation.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}
                 value={resolveStatusLabel(value.status, t)}
             />
             <DetailRow
-                label={t("regulation.fields.sortOrder", { defaultValue: "ترتیب نمایش" })}
+                label={t("regulation.fields.sortOrder", { defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´" })}
                 value={displayText(value.sortOrder)}
             />
             <DetailRow
-                label={t("regulation.fields.description", { defaultValue: "شرح" })}
+                label={t("regulation.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                 value={value.description}
             />
             <DetailRow
-                label={t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" })}
+                label={t("regulation.fields.effectiveDate", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" })}
                 value={displayDate(value.effectiveDate)}
             />
             <DetailRow
-                label={t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
+                label={t("regulation.fields.validTo", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" })}
                 value={displayDate(value.validTo)}
             />
             <DetailRow
-                label={t("regulation.fields.issuer", { defaultValue: "مرجع صادرکننده" })}
+                label={t("regulation.fields.issuer", { defaultValue: "Ù…Ø±Ø¬Ø¹ ØµØ§Ø¯Ø±Ú©Ù†Ù†Ø¯Ù‡" })}
                 value={value.issuer}
             />
             <DetailRow
-                label={t("regulation.fields.owner", { defaultValue: "مالک" })}
+                label={t("regulation.fields.owner", { defaultValue: "Ù…Ø§Ù„Ú©" })}
                 value={value.ownerName}
             />
             <DetailRow
-                label={t("regulation.fields.documents", { defaultValue: "مستندات" })}
+                label={t("regulation.fields.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
                 value={String(value.documentsCount ?? 0)}
             />
         </div>
@@ -335,9 +342,9 @@ function TabBody({
     }
 
     return (
-        <DocumentAttachmentsManager
+        <DocumentManager
             key={`${details.id}:documents`}
-            targetType={REGULATION_DOCUMENT_TARGET_TYPE}
+            targetType={resolveDocumentTargetType(details.nodeType)}
             targetId={details.id}
             readOnly
             showActions={false}
@@ -381,7 +388,7 @@ export default function RegulationSummaryPanel({
                         status: "error",
                         details: null,
                         error: t("regulation.errors.notFound", {
-                            defaultValue: "آیتم موردنظر یافت نشد",
+                            defaultValue: "Ø¢ÛŒØªÙ… Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯",
                         }),
                     });
                     return;
@@ -404,7 +411,7 @@ export default function RegulationSummaryPanel({
                     error: mapLoadError(
                         error,
                         t("regulation.details.loadError", {
-                            defaultValue: "خطا در بارگذاری جزئیات قانون",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø¬Ø²Ø¦ÛŒØ§Øª Ù‚Ø§Ù†ÙˆÙ†",
                         }),
                     ),
                 });
@@ -428,7 +435,7 @@ export default function RegulationSummaryPanel({
         : tabs[0]?.key ?? "general";
 
     const title = details?.title ?? t("regulation.object.summaryTitle", {
-        defaultValue: "جزئیات قانون",
+        defaultValue: "Ø¬Ø²Ø¦ÛŒØ§Øª Ù‚Ø§Ù†ÙˆÙ†",
     });
 
     return (
@@ -453,7 +460,7 @@ export default function RegulationSummaryPanel({
                 {!value ? (
                     <MessageStrip design="Information" hideCloseButton>
                         {t("regulation.object.selectPrompt", {
-                            defaultValue: "برای مشاهده جزئیات، یک آیتم قانون را انتخاب کنید.",
+                            defaultValue: "Ø¨Ø±Ø§ÛŒ Ù…Ø´Ø§Ù‡Ø¯Ù‡ Ø¬Ø²Ø¦ÛŒØ§ØªØŒ ÛŒÚ© Ø¢ÛŒØªÙ… Ù‚Ø§Ù†ÙˆÙ† Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯.",
                         })}
                     </MessageStrip>
                 ) : (
@@ -461,15 +468,15 @@ export default function RegulationSummaryPanel({
                         {details ? (
                             <div style={HEADER_GRID_STYLE}>
                                 <DetailRow
-                                    label={t("regulation.fields.name", { defaultValue: "نام" })}
+                                    label={t("regulation.fields.name", { defaultValue: "Ù†Ø§Ù…" })}
                                     value={details.title}
                                 />
                                 <DetailRow
-                                    label={t("regulation.fields.code", { defaultValue: "کد" })}
+                                    label={t("regulation.fields.code", { defaultValue: "Ú©Ø¯" })}
                                     value={details.code}
                                 />
                                 <DetailRow
-                                    label={t("regulation.fields.type", { defaultValue: "نوع" })}
+                                    label={t("regulation.fields.type", { defaultValue: "Ù†ÙˆØ¹" })}
                                     value={resolveNodeTypeLabel(details.nodeType, t)}
                                 />
                             </div>
@@ -511,7 +518,7 @@ export default function RegulationSummaryPanel({
                         onClick={onClose}
                     >
                         {t("common.close", {
-                            defaultValue: "بستن",
+                            defaultValue: "Ø¨Ø³ØªÙ†",
                         })}
                     </Button>
                 }

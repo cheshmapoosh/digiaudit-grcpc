@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+﻿import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -23,13 +23,11 @@ import RegulationsListReport from "./RegulationsListReport";
 import RegulationObjectPage from "./RegulationObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
-import { useDocumentAttachmentState } from "@/features/document";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 
 const DIALOG_WIDTH = "90vw";
-const REGULATION_DOCUMENT_TARGET_TYPE = "REGULATION_NODE";
 
 function useRegulationRouteMode(): RouteMode {
     const { regulationId } = useParams();
@@ -54,14 +52,6 @@ function isRegulationNodeType(value: string | null): value is RegulationNodeType
     return value === "lawGroup" || value === "law" || value === "lawRequirement";
 }
 
-function createDocumentTempSessionId(): string {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-        return crypto.randomUUID();
-    }
-
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 function mapError(
     error: unknown,
     fallback: string,
@@ -71,19 +61,19 @@ function mapError(
         switch (error.message) {
             case "NOT_FOUND":
                 return t("regulation.errors.notFound", {
-                    defaultValue: "آیتم موردنظر یافت نشد",
+                    defaultValue: "Ø¢ÛŒØªÙ… Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯",
                 });
             case "PARENT_NOT_FOUND":
                 return t("regulation.errors.parentNotFound", {
-                    defaultValue: "والد انتخاب‌شده یافت نشد",
+                    defaultValue: "ÙˆØ§Ù„Ø¯ Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯",
                 });
             case "HAS_CHILDREN":
                 return t("regulation.errors.hasChildren", {
-                    defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+                    defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù Ø¢ÛŒØªÙ…ÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
                 });
             case "INVALID_HIERARCHY":
                 return t("regulation.errors.invalidHierarchy", {
-                    defaultValue: "ساختار انتخاب‌شده برای قوانین معتبر نیست",
+                    defaultValue: "Ø³Ø§Ø®ØªØ§Ø± Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ Ù‚ÙˆØ§Ù†ÛŒÙ† Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª",
                 });
             default:
                 return error.message;
@@ -158,15 +148,15 @@ function resolveDialogTitle(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     if (routeMode === "create") {
-        return t("regulation.create.title", { defaultValue: "ایجاد آیتم قانون" });
+        return t("regulation.create.title", { defaultValue: "Ø§ÛŒØ¬Ø§Ø¯ Ø¢ÛŒØªÙ… Ù‚Ø§Ù†ÙˆÙ†" });
     }
 
     if (routeMode === "edit") {
-        return t("regulation.edit.title", { defaultValue: "ویرایش آیتم قانون" });
+        return t("regulation.edit.title", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´ Ø¢ÛŒØªÙ… Ù‚Ø§Ù†ÙˆÙ†" });
     }
 
     if (routeMode === "view") {
-        return t("regulation.view.title", { defaultValue: "نمایش آیتم قانون" });
+        return t("regulation.view.title", { defaultValue: "Ù†Ù…Ø§ÛŒØ´ Ø¢ÛŒØªÙ… Ù‚Ø§Ù†ÙˆÙ†" });
     }
 
     return "";
@@ -223,18 +213,18 @@ function resolveInvalidCreateMessage(
 ): string {
     if (nodeType === "law") {
         return t("regulation.errors.selectLawGroupParent", {
-            defaultValue: "برای ایجاد قانون، ابتدا یک گروه قانون یا قانون همان والد را انتخاب کنید.",
+            defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒØ¬Ø§Ø¯ Ù‚Ø§Ù†ÙˆÙ†ØŒ Ø§Ø¨ØªØ¯Ø§ ÛŒÚ© Ú¯Ø±ÙˆÙ‡ Ù‚Ø§Ù†ÙˆÙ† ÛŒØ§ Ù‚Ø§Ù†ÙˆÙ† Ù‡Ù…Ø§Ù† ÙˆØ§Ù„Ø¯ Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯.",
         });
     }
 
     if (nodeType === "lawRequirement") {
         return t("regulation.errors.selectLawParent", {
-            defaultValue: "برای ایجاد الزام قانون، ابتدا یک قانون یا الزام همان قانون را انتخاب کنید.",
+            defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒØ¬Ø§Ø¯ Ø§Ù„Ø²Ø§Ù… Ù‚Ø§Ù†ÙˆÙ†ØŒ Ø§Ø¨ØªØ¯Ø§ ÛŒÚ© Ù‚Ø§Ù†ÙˆÙ† ÛŒØ§ Ø§Ù„Ø²Ø§Ù… Ù‡Ù…Ø§Ù† Ù‚Ø§Ù†ÙˆÙ† Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯.",
         });
     }
 
     return t("regulation.errors.invalidHierarchy", {
-        defaultValue: "ساختار انتخاب‌شده برای قوانین معتبر نیست",
+        defaultValue: "Ø³Ø§Ø®ØªØ§Ø± Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ Ù‚ÙˆØ§Ù†ÛŒÙ† Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª",
     });
 }
 
@@ -252,11 +242,6 @@ export default function RegulationsFclShellPage() {
     const createNode = useRegulationState((state) => state.createNode);
     const updateNode = useRegulationState((state) => state.updateNode);
     const removeNode = useRegulationState((state) => state.removeNode);
-    const tempDocumentsBySession = useDocumentAttachmentState(
-        (state) => state.tempDocumentsBySession,
-    );
-    const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
-    const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -265,10 +250,6 @@ export default function RegulationsFclShellPage() {
     const [submitting, setSubmitting] = useState(false);
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
-    const [regulationDocumentTempSessionId, setRegulationDocumentTempSessionId] = useState(
-        createDocumentTempSessionId,
-    );
-
     const items = useMemo(() => sortRegulations(Object.values(nodesById)), [nodesById]);
 
     const selectedRouteItem = regulationId ? nodesById[regulationId] ?? null : null;
@@ -288,17 +269,6 @@ export default function RegulationsFclShellPage() {
         return defaultChildType(selectedParentForCreate?.nodeType ?? null);
     }, [queryNodeType, selectedParentForCreate]);
 
-    const documentScopeKey = useMemo(() => {
-        if (routeMode === "create") {
-            return `create:${queryParentId ?? "root"}:${requestedNodeType}`;
-        }
-
-        if ((routeMode === "view" || routeMode === "edit") && regulationId) {
-            return `regulation:${regulationId}`;
-        }
-
-        return "none";
-    }, [queryParentId, regulationId, requestedNodeType, routeMode]);
 
     useEffect(() => {
         void loadChildren(ROOT_PARENT).catch((error: unknown) => {
@@ -306,7 +276,7 @@ export default function RegulationsFclShellPage() {
                 mapError(
                     error,
                     t("regulation.errors.loadList", {
-                        defaultValue: "خطا در بارگذاری ساختار قانون",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø³Ø§Ø®ØªØ§Ø± Ù‚Ø§Ù†ÙˆÙ†",
                     }),
                     t,
                 ),
@@ -314,29 +284,7 @@ export default function RegulationsFclShellPage() {
         });
     }, [loadChildren, t]);
 
-    useEffect(() => {
-        setRegulationDocumentTempSessionId(createDocumentTempSessionId());
-    }, [documentScopeKey]);
 
-    useEffect(() => {
-        if (!regulationId) {
-            return;
-        }
-
-        void loadDocumentsForTarget(REGULATION_DOCUMENT_TARGET_TYPE, regulationId).catch(
-            (error: unknown) => {
-                setObjectError(
-                    mapError(
-                        error,
-                        t("document.errors.load", {
-                            defaultValue: "خطا در بارگذاری مستندات",
-                        }),
-                        t,
-                    ),
-                );
-            },
-        );
-    }, [loadDocumentsForTarget, regulationId, t]);
 
     const treeSelectedId = useMemo(() => {
         if (routeMode === "create") {
@@ -447,7 +395,7 @@ export default function RegulationsFclShellPage() {
 
             if (!target) {
                 setPageError(
-                    t("regulation.errors.notFound", { defaultValue: "آیتم موردنظر یافت نشد" }),
+                    t("regulation.errors.notFound", { defaultValue: "Ø¢ÛŒØªÙ… Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯" }),
                 );
                 return;
             }
@@ -455,7 +403,7 @@ export default function RegulationsFclShellPage() {
             if (hasChildren(items, id)) {
                 setPageError(
                     t("regulation.errors.hasChildren", {
-                        defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+                        defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù Ø¢ÛŒØªÙ…ÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
                     }),
                 );
                 return;
@@ -464,37 +412,6 @@ export default function RegulationsFclShellPage() {
             setDeleteCandidate(target);
         },
         [items, nodesById, t],
-    );
-
-    const commitRegulationTempDocuments = useCallback(
-        async (targetId: string) => {
-            const tempDocuments =
-                tempDocumentsBySession[regulationDocumentTempSessionId] ?? [];
-
-            if (tempDocuments.length === 0) {
-                return;
-            }
-
-            await commitTempDocuments({
-                tempSessionId: regulationDocumentTempSessionId,
-                targetType: REGULATION_DOCUMENT_TARGET_TYPE,
-                targetId,
-                documentIds: tempDocuments.map((documentItem) => documentItem.id),
-                documentTitles: Object.fromEntries(
-                    tempDocuments.map((documentItem) => [
-                        documentItem.id,
-                        documentItem.title || documentItem.originalFileName,
-                    ]),
-                ),
-            });
-            await loadDocumentsForTarget(REGULATION_DOCUMENT_TARGET_TYPE, targetId);
-        },
-        [
-            commitTempDocuments,
-            loadDocumentsForTarget,
-            regulationDocumentTempSessionId,
-            tempDocumentsBySession,
-        ],
     );
 
     const handleConfirmDelete = useCallback(async () => {
@@ -526,7 +443,7 @@ export default function RegulationsFclShellPage() {
                 mapError(
                     error,
                     t("regulation.errors.delete", {
-                        defaultValue: "خطا در حذف آیتم قانون",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù Ø¢ÛŒØªÙ… Ù‚Ø§Ù†ÙˆÙ†",
                     }),
                     t,
                 ),
@@ -546,7 +463,6 @@ export default function RegulationsFclShellPage() {
                 if (routeMode === "create") {
                     const createPayload = payload as RegulationNodeCreate;
                     const created = await createNode(createPayload.parentId ?? null, createPayload);
-                    await commitRegulationTempDocuments(created.id);
 
                     setSelectedTreeId(created.id);
                     setTreeExpansionAnchorId(created.id);
@@ -556,7 +472,6 @@ export default function RegulationsFclShellPage() {
 
                 if (routeMode === "edit" && regulationId) {
                     await updateNode(regulationId, payload as RegulationNodeUpdate);
-                    await commitRegulationTempDocuments(regulationId);
                     setSelectedTreeId(regulationId);
                     setTreeExpansionAnchorId(regulationId);
                     navigate(`/regulations/${regulationId}`);
@@ -566,7 +481,7 @@ export default function RegulationsFclShellPage() {
                     mapError(
                         error,
                         t("regulation.errors.save", {
-                            defaultValue: "خطا در ذخیره آیتم قانون",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø°Ø®ÛŒØ±Ù‡ Ø¢ÛŒØªÙ… Ù‚Ø§Ù†ÙˆÙ†",
                         }),
                         t,
                     ),
@@ -576,7 +491,6 @@ export default function RegulationsFclShellPage() {
             }
         },
         [
-            commitRegulationTempDocuments,
             createNode,
             navigate,
             regulationId,
@@ -762,7 +676,6 @@ export default function RegulationsFclShellPage() {
                             requestedNodeType={requestedNodeType}
                             busy={loading || submitting}
                             error={objectError}
-                            documentTempSessionId={regulationDocumentTempSessionId}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
@@ -774,7 +687,7 @@ export default function RegulationsFclShellPage() {
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
                             {t("regulation.object.notFound", {
-                                defaultValue: "آیتم قانون انتخاب‌شده یافت نشد.",
+                                defaultValue: "Ø¢ÛŒØªÙ… Ù‚Ø§Ù†ÙˆÙ† Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯.",
                             })}
                         </MessageStrip>
                     )}
@@ -783,13 +696,13 @@ export default function RegulationsFclShellPage() {
 
             <DeleteConfirmDialog
                 open={Boolean(deleteCandidate)}
-                title={t("regulation.delete.title", { defaultValue: "حذف آیتم قانون" })}
+                title={t("regulation.delete.title", { defaultValue: "Ø­Ø°Ù Ø¢ÛŒØªÙ… Ù‚Ø§Ù†ÙˆÙ†" })}
                 message={t("regulation.delete.confirm", {
-                    defaultValue: "آیا از حذف \"{{title}}\" مطمئن هستید؟",
+                    defaultValue: "Ø¢ÛŒØ§ Ø§Ø² Ø­Ø°Ù \"{{title}}\" Ù…Ø·Ù…Ø¦Ù† Ù‡Ø³ØªÛŒØ¯ØŸ",
                     title: deleteCandidate?.title ?? "",
                 })}
-                confirmText={t("common.delete", { defaultValue: "حذف" })}
-                cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+                confirmText={t("common.delete", { defaultValue: "Ø­Ø°Ù" })}
+                cancelText={t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
                 loading={submitting}
                 onClose={() => setDeleteCandidate(null)}
                 onConfirm={() => {

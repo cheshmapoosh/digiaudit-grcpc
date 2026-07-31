@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type CSSProperties } from "react";
+﻿import { Fragment, useMemo, useState, type CSSProperties } from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,14 +13,12 @@ import {
 
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 
-import { DocumentAttachmentsTab, type DocumentAttachment } from "@/features/document";
+import { DocumentManager } from "@/features/document";
 import type { ObjectiveNode, ObjectiveStatus, ObjectiveType } from "../domain/objective.model";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface ObjectiveSummaryPanelProps {
     value?: ObjectiveNode | null;
-    documents?: DocumentAttachment[];
-    documentsBusy?: boolean;
     busy?: boolean;
     error?: string | null;
     onClose: () => void;
@@ -114,8 +112,8 @@ function resolveStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     return status === "active"
-        ? t("common.active", { defaultValue: "فعال" })
-        : t("common.inactive", { defaultValue: "غیرفعال" });
+        ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+        : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
 }
 
 function resolveObjectiveTypeLabel(
@@ -127,12 +125,12 @@ function resolveObjectiveTypeLabel(
     }
 
     const labels: Record<ObjectiveType, string> = {
-        operational: t("objective.type.operational", { defaultValue: "اهداف عملیاتی" }),
-        compliance: t("objective.type.compliance", { defaultValue: "اهداف رعایتی" }),
-        strategic: t("objective.type.strategic", { defaultValue: "اهداف استراتژیک" }),
-        financial: t("objective.type.financial", { defaultValue: "اهداف مالی" }),
-        reporting: t("objective.type.reporting", { defaultValue: "اهداف گزارشگری" }),
-        market: t("objective.type.market", { defaultValue: "اهداف بازار" }),
+        operational: t("objective.type.operational", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø¹Ù…Ù„ÛŒØ§ØªÛŒ" }),
+        compliance: t("objective.type.compliance", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø±Ø¹Ø§ÛŒØªÛŒ" }),
+        strategic: t("objective.type.strategic", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø§Ø³ØªØ±Ø§ØªÚ˜ÛŒÚ©" }),
+        financial: t("objective.type.financial", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ù…Ø§Ù„ÛŒ" }),
+        reporting: t("objective.type.reporting", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ú¯Ø²Ø§Ø±Ø´Ú¯Ø±ÛŒ" }),
+        market: t("objective.type.market", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø¨Ø§Ø²Ø§Ø±" }),
     };
 
     return labels[objectiveType];
@@ -188,8 +186,7 @@ function SimpleTable({
 
 export default function ObjectiveSummaryPanel({
     value,
-    documents = [],
-    documentsBusy = false,
+    busy = false,
     error,
     onClose,
 }: ObjectiveSummaryPanelProps) {
@@ -200,7 +197,7 @@ export default function ObjectiveSummaryPanel({
         () => [
             {
                 key: "general",
-                label: t("objective.tabs.general", { defaultValue: "اطلاعات کلی" }),
+                label: t("objective.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
             },
             {
                 key: "relatedOrganizations",
@@ -208,7 +205,7 @@ export default function ObjectiveSummaryPanel({
             },
             {
                 key: "documents",
-                label: t("objective.tabs.documents", { defaultValue: "مستندات" }),
+                label: t("objective.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }),
             },
         ],
         [t],
@@ -218,7 +215,7 @@ export default function ObjectiveSummaryPanel({
         return (
             <MessageStrip design="Information" hideCloseButton>
                 {t("objective.object.selectPrompt", {
-                    defaultValue: "برای مشاهده جزئیات، یک هدف را انتخاب کنید.",
+                    defaultValue: "Ø¨Ø±Ø§ÛŒ Ù…Ø´Ø§Ù‡Ø¯Ù‡ Ø¬Ø²Ø¦ÛŒØ§ØªØŒ ÛŒÚ© Ù‡Ø¯Ù Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯.",
                 })}
             </MessageStrip>
         );
@@ -226,38 +223,38 @@ export default function ObjectiveSummaryPanel({
 
     const renderGeneral = () => (
         <div style={FIELD_GRID_STYLE}>
-            <DetailField label={t("objective.fields.code", { defaultValue: "شناسه" })} value={value.code} />
-            <DetailField label={t("objective.fields.name", { defaultValue: "نام" })} value={value.title} />
+            <DetailField label={t("objective.fields.code", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡" })} value={value.code} />
+            <DetailField label={t("objective.fields.name", { defaultValue: "Ù†Ø§Ù…" })} value={value.title} />
             <DetailField
-                label={t("objective.fields.strategy", { defaultValue: "استراتژی" })}
+                label={t("objective.fields.strategy", { defaultValue: "Ø§Ø³ØªØ±Ø§ØªÚ˜ÛŒ" })}
                 value={value.strategy}
             />
             <DetailField
-                label={t("objective.fields.description", { defaultValue: "شرح" })}
+                label={t("objective.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                 value={value.description}
             />
             <DetailField
-                label={t("objective.fields.objectiveType", { defaultValue: "نوع هدف" })}
+                label={t("objective.fields.objectiveType", { defaultValue: "Ù†ÙˆØ¹ Ù‡Ø¯Ù" })}
                 value={resolveObjectiveTypeLabel(value.objectiveType, t)}
             />
             <DetailField
-                label={t("objective.fields.objectiveClass", { defaultValue: "طبقه هدف" })}
+                label={t("objective.fields.objectiveClass", { defaultValue: "Ø·Ø¨Ù‚Ù‡ Ù‡Ø¯Ù" })}
                 value={value.objectiveClass}
             />
             <DetailField
-                label={t("objective.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
+                label={t("objective.fields.createdAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" })}
                 value={formatPersianDate(value.createdAt)}
             />
             <DetailField
-                label={t("objective.fields.validUntil", { defaultValue: "تاریخ اعتبار" })}
+                label={t("objective.fields.validUntil", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" })}
                 value={formatPersianDate(value.validUntil)}
             />
             <DetailField
-                label={t("objective.fields.documents", { defaultValue: "مستندات" })}
+                label={t("objective.fields.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
                 value={value.documentsCount ?? 0}
             />
             <DetailField
-                label={t("objective.fields.status", { defaultValue: "وضعیت" })}
+                label={t("objective.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}
                 value={resolveStatusLabel(value.status, t)}
             />
         </div>
@@ -289,21 +286,19 @@ export default function ObjectiveSummaryPanel({
     };
 
     const renderDocuments = () => (
-        <DocumentAttachmentsTab
+        <DocumentManager
             title={t("objective.tabs.documents", {
                 defaultValue: "مستندات",
             })}
-            targetType="OBJECTIVE_NODE"
+            targetType="CENTRAL_CONTROL_OBJECTIVE_DEF"
             targetId={value.id}
-            documents={documents}
-            busy={documentsBusy}
+            busy={busy}
             readOnly
             viewHint={t("objective.documents.viewHint", {
                 defaultValue: "مستندات ثبت‌شده برای این هدف",
             })}
         />
     );
-
     const renderActiveTab = () => {
         if (activeTab === "relatedOrganizations") {
             return renderRelatedOrganizations();
@@ -328,7 +323,7 @@ export default function ObjectiveSummaryPanel({
             <Bar
                 startContent={
                     <Title level="H4">
-                        {t("objective.object.summaryTitle", { defaultValue: "جزئیات هدف" })}
+                        {t("objective.object.summaryTitle", { defaultValue: "Ø¬Ø²Ø¦ÛŒØ§Øª Ù‡Ø¯Ù" })}
                     </Title>
                 }
             />
@@ -383,7 +378,7 @@ export default function ObjectiveSummaryPanel({
                         onClick={onClose}
                     >
                         {t("common.close", {
-                            defaultValue: "بستن",
+                            defaultValue: "Ø¨Ø³ØªÙ†",
                         })}
                     </Button>
                 }

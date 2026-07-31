@@ -1,42 +1,27 @@
 import { useTranslation } from "react-i18next";
 
-import {
-    DocumentAttachmentsManager,
-    type DocumentBeforeParentSubmitHandler,
-} from "@/features/document";
+import { DocumentManager } from "@/features/document";
 
 export interface ControlDocumentsTabProps {
-    controlAssignmentId: string;
-    tempSessionId?: string;
+    controlId: string;
     readOnly?: boolean;
     showActions?: boolean;
-    onBeforeParentSubmitChange?: (
-        handler: DocumentBeforeParentSubmitHandler | null,
-    ) => void;
-    onPendingUploadsChange?: (hasPendingUploads: boolean) => void;
 }
 
 export default function ControlDocumentsTab({
-    controlAssignmentId,
-    tempSessionId,
+    controlId,
     readOnly = false,
     showActions = true,
-    onBeforeParentSubmitChange,
-    onPendingUploadsChange,
 }: ControlDocumentsTabProps) {
     const { t } = useTranslation();
 
     return (
-        <DocumentAttachmentsManager
+        <DocumentManager
             title={t("control.tabs.documents", { defaultValue: "مستندات" })}
-            targetType="CONTROL_ASSIGNMENT"
-            targetId={controlAssignmentId}
-            tempSessionId={tempSessionId}
-            stagingMode="tempUntilParentSave"
+            targetType="CENTRAL_CONTROL"
+            targetId={controlId}
             readOnly={readOnly}
             showActions={showActions}
-            onBeforeParentSubmitChange={onBeforeParentSubmitChange}
-            onPendingUploadsChange={onPendingUploadsChange}
         />
     );
 }

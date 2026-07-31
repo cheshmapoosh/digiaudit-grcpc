@@ -1,4 +1,4 @@
-import {
+﻿import {
     createElement,
     useCallback,
     useEffect,
@@ -63,8 +63,6 @@ import {
     useObjectiveState,
 } from "@/features/objective";
 import { controlService, type ControlSummary } from "@/features/control";
-import type { DocumentAttachment, DocumentUploadPolicy } from "@/features/document";
-import { useDocumentAttachmentState } from "@/features/document";
 
 import { useOrganizationState, ROOT_PARENT } from "../state/organization.state";
 import { useOrganizationProcessAssignmentState } from "../state/organization-process-assignment.state";
@@ -88,8 +86,6 @@ const EMPTY_ASSIGNMENTS: OrganizationProcessAssignment[] = [];
 const EMPTY_RISKS: OrganizationRiskAssignment[] = [];
 const EMPTY_REFERENCE_ASSIGNMENTS: OrganizationReferenceAssignment[] = [];
 const EMPTY_OBJECTIVE_ASSIGNMENTS: OrganizationObjectiveAssignment[] = [];
-const EMPTY_DOCUMENTS: DocumentAttachment[] = [];
-const DOCUMENT_TARGET_TYPE = "ORGANIZATION";
 const REFERENCE_TYPES: readonly OrganizationReferenceType[] = [
     "CONTROL",
     "REGULATION",
@@ -120,13 +116,13 @@ function mapError(error: unknown, fallback: string): string {
     if (error instanceof Error && error.message) {
         switch (error.message) {
             case "NOT_FOUND":
-                return "آیتم موردنظر یافت نشد";
+                return "Ø¢ÛŒØªÙ… Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯";
             case "HAS_CHILDREN":
-                return "امکان حذف واحدی که زیرمجموعه دارد وجود ندارد";
+                return "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù ÙˆØ§Ø­Ø¯ÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯";
             case "PARENT_NOT_FOUND":
-                return "والد انتخاب‌شده یافت نشد";
+                return "ÙˆØ§Ù„Ø¯ Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯";
             case "INVALID_HIERARCHY":
-                return "ساختار سلسله‌مراتبی سازمان معتبر نیست";
+                return "Ø³Ø§Ø®ØªØ§Ø± Ø³Ù„Ø³Ù„Ù‡â€ŒÙ…Ø±Ø§ØªØ¨ÛŒ Ø³Ø§Ø²Ù…Ø§Ù† Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª";
             default:
                 return error.message;
         }
@@ -202,19 +198,19 @@ function resolveDialogTitle(
 ): string {
     if (routeMode === "create") {
         return t("organization.create.title", {
-            defaultValue: "ایجاد سازمان",
+            defaultValue: "Ø§ÛŒØ¬Ø§Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†",
         });
     }
 
     if (routeMode === "edit") {
         return t("organization.edit.title", {
-            defaultValue: "ویرایش سازمان",
+            defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´ Ø³Ø§Ø²Ù…Ø§Ù†",
         });
     }
 
     if (routeMode === "view") {
         return t("organization.view.title", {
-            defaultValue: "نمایش سازمان",
+            defaultValue: "Ù†Ù…Ø§ÛŒØ´ Ø³Ø§Ø²Ù…Ø§Ù†",
         });
     }
 
@@ -454,18 +450,6 @@ function getReferenceAssignments(
         EMPTY_REFERENCE_ASSIGNMENTS;
 }
 
-function createDocumentTempSessionId(): string {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-        return crypto.randomUUID();
-    }
-
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function getDocumentTargetKey(targetType: string, targetId: string | undefined): string | null {
-    return targetId ? `${targetType}:${targetId}` : null;
-}
-
 export default function OrganizationsFclShellPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -555,26 +539,6 @@ export default function OrganizationsFclShellPage() {
     const removeReferenceFromOrganization = useOrganizationReferenceAssignmentState(
         (state) => state.removeAssignment,
     );
-    const documentsByTarget = useDocumentAttachmentState((state) => state.documentsByTarget);
-    const tempDocumentsBySession = useDocumentAttachmentState(
-        (state) => state.tempDocumentsBySession,
-    );
-    const documentUploadPoliciesByTargetType = useDocumentAttachmentState(
-        (state) => state.uploadPoliciesByTargetType,
-    );
-    const documentsLoading = useDocumentAttachmentState((state) => state.loading);
-    const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
-    const loadTempDocuments = useDocumentAttachmentState((state) => state.loadTemp);
-    const loadDocumentUploadPolicy = useDocumentAttachmentState(
-        (state) => state.loadUploadPolicy,
-    );
-    const uploadTempDocument = useDocumentAttachmentState((state) => state.uploadTemp);
-    const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
-    const updateDocumentTitle = useDocumentAttachmentState((state) => state.updateTitle);
-    const deleteDocument = useDocumentAttachmentState((state) => state.deleteDocument);
-    const createDocumentDownloadUrl = useDocumentAttachmentState(
-        (state) => state.createDownloadUrl,
-    );
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -586,16 +550,13 @@ export default function OrganizationsFclShellPage() {
 
     /**
      * selectedTreeId:
-     * نودی که در درخت انتخاب شده و پنل جزئیات کناری را کنترل می‌کند.
+     * Ù†ÙˆØ¯ÛŒ Ú©Ù‡ Ø¯Ø± Ø¯Ø±Ø®Øª Ø§Ù†ØªØ®Ø§Ø¨ Ø´Ø¯Ù‡ Ùˆ Ù¾Ù†Ù„ Ø¬Ø²Ø¦ÛŒØ§Øª Ú©Ù†Ø§Ø±ÛŒ Ø±Ø§ Ú©Ù†ØªØ±Ù„ Ù…ÛŒâ€ŒÚ©Ù†Ø¯.
      *
      * route organizationId:
-     * نودی که داخل modal نمایش/ویرایش می‌شود.
-     */
+     * Ù†ÙˆØ¯ÛŒ Ú©Ù‡ Ø¯Ø§Ø®Ù„ modal Ù†Ù…Ø§ÛŒØ´/ÙˆÛŒØ±Ø§ÛŒØ´ Ù…ÛŒâ€ŒØ´ÙˆØ¯.
+    */
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
-    const [documentTempSessionId, setDocumentTempSessionId] = useState(
-        createDocumentTempSessionId,
-    );
     const [controlItems, setControlItems] = useState<ControlSummary[]>([]);
     const [controlLoading, setControlLoading] = useState(false);
 
@@ -679,7 +640,7 @@ export default function OrganizationsFclShellPage() {
                 mapError(
                     error,
                     t("organization.errors.loadList", {
-                        defaultValue: "خطا در بارگذاری واحدهای سازمانی",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ ÙˆØ§Ø­Ø¯Ù‡Ø§ÛŒ Ø³Ø§Ø²Ù…Ø§Ù†ÛŒ",
                     }),
                 ),
             );
@@ -688,7 +649,6 @@ export default function OrganizationsFclShellPage() {
 
     useEffect(() => {
         setObjectActiveTab("general");
-        setDocumentTempSessionId(createDocumentTempSessionId());
     }, [objectTabScopeKey]);
 
     useEffect(() => {
@@ -697,7 +657,7 @@ export default function OrganizationsFclShellPage() {
                 mapError(
                     error,
                     t("process.errors.loadList", {
-                        defaultValue: "خطا در بارگذاری فرآیندها",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ ÙØ±Ø¢ÛŒÙ†Ø¯Ù‡Ø§",
                     }),
                 ),
             );
@@ -710,7 +670,7 @@ export default function OrganizationsFclShellPage() {
                 mapError(
                     error,
                     t("risk.errors.loadList", {
-                        defaultValue: "خطا در بارگذاری ریسک‌ها",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø±ÛŒØ³Ú©â€ŒÙ‡Ø§",
                     }),
                 ),
             );
@@ -734,7 +694,7 @@ export default function OrganizationsFclShellPage() {
                         mapError(
                             error,
                             t("control.errors.loadList", {
-                                defaultValue: "خطا در بارگذاری کنترل‌ها",
+                                defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ØªØ±Ù„â€ŒÙ‡Ø§",
                             }),
                         ),
                     );
@@ -761,45 +721,19 @@ export default function OrganizationsFclShellPage() {
                 mapError(
                     error,
                     t("organization.references.errors.loadCatalog", {
-                        defaultValue: "خطا در بارگذاری قوانین، سیاست ها و اهداف",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ù‚ÙˆØ§Ù†ÛŒÙ†ØŒ Ø³ÛŒØ§Ø³Øª Ù‡Ø§ Ùˆ Ø§Ù‡Ø¯Ø§Ù",
                     }),
                 ),
             );
         });
     }, [loadObjectiveChildren, loadPolicyChildren, loadRegulationChildren, t]);
 
-    useEffect(() => {
-        void loadDocumentUploadPolicy(DOCUMENT_TARGET_TYPE).catch((error: unknown) => {
-            setPageError(
-                mapError(
-                    error,
-                    t("organization.documents.errors.loadPolicy", {
-                        defaultValue: "خطا در بارگذاری تنظیمات آپلود مستندات",
-                    }),
-                ),
-            );
-        });
-    }, [loadDocumentUploadPolicy, t]);
 
-    useEffect(() => {
-        void loadTempDocuments(DOCUMENT_TARGET_TYPE, documentTempSessionId).catch(
-            (error: unknown) => {
-                setObjectError(
-                    mapError(
-                        error,
-                        t("organization.documents.errors.loadTemp", {
-                            defaultValue: "خطا در بارگذاری مستندات موقت",
-                        }),
-                    ),
-                );
-            },
-        );
-    }, [documentTempSessionId, loadTempDocuments, t]);
 
     /**
-     * در حالت create child، درخت باید parent را انتخاب/باز کند.
-     * در حالت view/edit modal، درخت روی همان organizationId فوکوس می‌کند.
-     * در حالت list، روی selectedTreeId می‌ماند.
+     * Ø¯Ø± Ø­Ø§Ù„Øª create childØŒ Ø¯Ø±Ø®Øª Ø¨Ø§ÛŒØ¯ parent Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨/Ø¨Ø§Ø² Ú©Ù†Ø¯.
+     * Ø¯Ø± Ø­Ø§Ù„Øª view/edit modalØŒ Ø¯Ø±Ø®Øª Ø±ÙˆÛŒ Ù‡Ù…Ø§Ù† organizationId ÙÙˆÚ©ÙˆØ³ Ù…ÛŒâ€ŒÚ©Ù†Ø¯.
+     * Ø¯Ø± Ø­Ø§Ù„Øª listØŒ Ø±ÙˆÛŒ selectedTreeId Ù…ÛŒâ€ŒÙ…Ø§Ù†Ø¯.
      */
     const treeSelectedId = useMemo(() => {
         if (routeMode === "create") {
@@ -832,9 +766,9 @@ export default function OrganizationsFclShellPage() {
     ]);
 
     /**
-     * کلیک روی نود درخت:
-     * فقط انتخاب و نمایش جزئیات کناری.
-     * هیچ modal باز نمی‌شود.
+     * Ú©Ù„ÛŒÚ© Ø±ÙˆÛŒ Ù†ÙˆØ¯ Ø¯Ø±Ø®Øª:
+     * ÙÙ‚Ø· Ø§Ù†ØªØ®Ø§Ø¨ Ùˆ Ù†Ù…Ø§ÛŒØ´ Ø¬Ø²Ø¦ÛŒØ§Øª Ú©Ù†Ø§Ø±ÛŒ.
+     * Ù‡ÛŒÚ† modal Ø¨Ø§Ø² Ù†Ù…ÛŒâ€ŒØ´ÙˆØ¯.
      */
     const handleSelect = useCallback((id: string) => {
         setPageError(null);
@@ -843,8 +777,8 @@ export default function OrganizationsFclShellPage() {
     }, []);
 
     /**
-     * دکمه نمایش:
-     * modal نمایش سازمان را باز می‌کند.
+     * Ø¯Ú©Ù…Ù‡ Ù†Ù…Ø§ÛŒØ´:
+     * modal Ù†Ù…Ø§ÛŒØ´ Ø³Ø§Ø²Ù…Ø§Ù† Ø±Ø§ Ø¨Ø§Ø² Ù…ÛŒâ€ŒÚ©Ù†Ø¯.
      */
     const handleShow = useCallback(
         (id: string) => {
@@ -857,9 +791,9 @@ export default function OrganizationsFclShellPage() {
     );
 
     /**
-     * دکمه ایجاد سازمان:
-     * اگر نودی انتخاب شده باشد، زیر همان نود ایجاد می‌کند.
-     * اگر نودی انتخاب نشده باشد، root ایجاد می‌کند.
+     * Ø¯Ú©Ù…Ù‡ Ø§ÛŒØ¬Ø§Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†:
+     * Ø§Ú¯Ø± Ù†ÙˆØ¯ÛŒ Ø§Ù†ØªØ®Ø§Ø¨ Ø´Ø¯Ù‡ Ø¨Ø§Ø´Ø¯ØŒ Ø²ÛŒØ± Ù‡Ù…Ø§Ù† Ù†ÙˆØ¯ Ø§ÛŒØ¬Ø§Ø¯ Ù…ÛŒâ€ŒÚ©Ù†Ø¯.
+     * Ø§Ú¯Ø± Ù†ÙˆØ¯ÛŒ Ø§Ù†ØªØ®Ø§Ø¨ Ù†Ø´Ø¯Ù‡ Ø¨Ø§Ø´Ø¯ØŒ root Ø§ÛŒØ¬Ø§Ø¯ Ù…ÛŒâ€ŒÚ©Ù†Ø¯.
      */
     const handleCreate = useCallback(() => {
         setObjectError(null);
@@ -890,8 +824,8 @@ export default function OrganizationsFclShellPage() {
     );
 
     /**
-     * بستن modal.
-     * پنل جزئیات کناری روی آخرین انتخاب باقی می‌ماند.
+     * Ø¨Ø³ØªÙ† modal.
+     * Ù¾Ù†Ù„ Ø¬Ø²Ø¦ÛŒØ§Øª Ú©Ù†Ø§Ø±ÛŒ Ø±ÙˆÛŒ Ø¢Ø®Ø±ÛŒÙ† Ø§Ù†ØªØ®Ø§Ø¨ Ø¨Ø§Ù‚ÛŒ Ù…ÛŒâ€ŒÙ…Ø§Ù†Ø¯.
      */
     const handleCancel = useCallback(() => {
         setObjectError(null);
@@ -908,29 +842,6 @@ export default function OrganizationsFclShellPage() {
 
         navigate("/organizations");
     }, [navigate, organizationId, queryParentId, routeMode, selectedTreeId]);
-
-    const commitOrganizationTempDocuments = useCallback(
-        async (targetId: string) => {
-            const tempDocuments = tempDocumentsBySession[documentTempSessionId] ?? [];
-            if (tempDocuments.length === 0) {
-                return;
-            }
-
-            await commitTempDocuments({
-                tempSessionId: documentTempSessionId,
-                targetType: DOCUMENT_TARGET_TYPE,
-                targetId,
-                documentIds: tempDocuments.map((documentItem) => documentItem.id),
-                documentTitles: Object.fromEntries(
-                    tempDocuments.map((documentItem) => [
-                        documentItem.id,
-                        documentItem.title || documentItem.originalFileName,
-                    ]),
-                ),
-            });
-        },
-        [commitTempDocuments, documentTempSessionId, tempDocumentsBySession],
-    );
 
     const handleSubmitCreate = useCallback(
         async (payload: OrganizationNodeCreate | OrganizationNodeUpdate) => {
@@ -966,13 +877,11 @@ export default function OrganizationsFclShellPage() {
                             ? payload.location.trim() || undefined
                             : undefined,
                 });
-                await commitOrganizationTempDocuments(created.id);
-
                 /**
-                 * بعد از create:
-                 * - نود جدید در درخت انتخاب می‌شود.
-                 * - parent باز می‌ماند.
-                 * - modal نمایش همان سازمان باز می‌شود.
+                 * Ø¨Ø¹Ø¯ Ø§Ø² create:
+                 * - Ù†ÙˆØ¯ Ø¬Ø¯ÛŒØ¯ Ø¯Ø± Ø¯Ø±Ø®Øª Ø§Ù†ØªØ®Ø§Ø¨ Ù…ÛŒâ€ŒØ´ÙˆØ¯.
+                 * - parent Ø¨Ø§Ø² Ù…ÛŒâ€ŒÙ…Ø§Ù†Ø¯.
+                 * - modal Ù†Ù…Ø§ÛŒØ´ Ù‡Ù…Ø§Ù† Ø³Ø§Ø²Ù…Ø§Ù† Ø¨Ø§Ø² Ù…ÛŒâ€ŒØ´ÙˆØ¯.
                  */
                 setSelectedTreeId(created.id);
                 setTreeExpansionAnchorId(created.parentId ?? created.id);
@@ -982,7 +891,7 @@ export default function OrganizationsFclShellPage() {
                     mapError(
                         error,
                         t("organization.errors.create", {
-                            defaultValue: "خطا در ایجاد واحد سازمانی",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø§ÛŒØ¬Ø§Ø¯ ÙˆØ§Ø­Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†ÛŒ",
                         }),
                     ),
                 );
@@ -990,7 +899,7 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [commitOrganizationTempDocuments, createNode, navigate, t],
+        [createNode, navigate, t],
     );
 
     const handleSubmitUpdate = useCallback(
@@ -1028,7 +937,6 @@ export default function OrganizationsFclShellPage() {
                 };
 
                 await updateNode(organizationId, updatePayload);
-                await commitOrganizationTempDocuments(organizationId);
 
                 setSelectedTreeId(organizationId);
                 setTreeExpansionAnchorId(updatePayload.parentId ?? organizationId);
@@ -1039,7 +947,7 @@ export default function OrganizationsFclShellPage() {
                     mapError(
                         error,
                         t("organization.errors.update", {
-                            defaultValue: "خطا در بروزرسانی واحد سازمانی",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø±ÙˆØ²Ø±Ø³Ø§Ù†ÛŒ ÙˆØ§Ø­Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†ÛŒ",
                         }),
                     ),
                 );
@@ -1047,7 +955,7 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [commitOrganizationTempDocuments, navigate, organizationId, t, updateNode],
+        [navigate, organizationId, t, updateNode],
     );
 
     const requestDelete = useCallback(
@@ -1055,14 +963,14 @@ export default function OrganizationsFclShellPage() {
             const target = nodesById[id];
 
             if (!target) {
-                setPageError(t("organization.errors.notFound", { defaultValue: "آیتم یافت نشد" }));
+                setPageError(t("organization.errors.notFound", { defaultValue: "Ø¢ÛŒØªÙ… ÛŒØ§ÙØª Ù†Ø´Ø¯" }));
                 return;
             }
 
             if (hasChildren(items, id)) {
                 setPageError(
                     t("organization.errors.hasChildren", {
-                        defaultValue: "امکان حذف واحدی که زیرمجموعه دارد وجود ندارد",
+                        defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù ÙˆØ§Ø­Ø¯ÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
                     }),
                 );
                 return;
@@ -1088,10 +996,10 @@ export default function OrganizationsFclShellPage() {
             setDeleteCandidate(null);
 
             /**
-             * بعد از حذف:
-             * - modal بسته می‌شود.
-             * - انتخاب به parent منتقل می‌شود.
-             * - اگر parent وجود نداشت، selection خالی می‌شود.
+             * Ø¨Ø¹Ø¯ Ø§Ø² Ø­Ø°Ù:
+             * - modal Ø¨Ø³ØªÙ‡ Ù…ÛŒâ€ŒØ´ÙˆØ¯.
+             * - Ø§Ù†ØªØ®Ø§Ø¨ Ø¨Ù‡ parent Ù…Ù†ØªÙ‚Ù„ Ù…ÛŒâ€ŒØ´ÙˆØ¯.
+             * - Ø§Ú¯Ø± parent ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø´ØªØŒ selection Ø®Ø§Ù„ÛŒ Ù…ÛŒâ€ŒØ´ÙˆØ¯.
              */
             if (parentId) {
                 setSelectedTreeId(parentId);
@@ -1108,7 +1016,7 @@ export default function OrganizationsFclShellPage() {
                 mapError(
                     error,
                     t("organization.errors.delete", {
-                        defaultValue: "خطا در حذف واحد سازمانی",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù ÙˆØ§Ø­Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†ÛŒ",
                     }),
                 ),
             );
@@ -1166,7 +1074,6 @@ export default function OrganizationsFclShellPage() {
             loadAssignmentsForOrganization(objectValue.id),
             loadRisksForOrganization(objectValue.id),
             loadObjectiveAssignmentsForOrganization(objectValue.id),
-            loadDocumentsForTarget(DOCUMENT_TARGET_TYPE, objectValue.id),
             ...REFERENCE_TYPES.map((referenceType) =>
                 loadReferenceAssignmentsForOrganization(objectValue.id, referenceType),
             ),
@@ -1175,14 +1082,13 @@ export default function OrganizationsFclShellPage() {
                 mapError(
                     error,
                     t("organization.relationships.errors.load", {
-                        defaultValue: "خطا در بارگذاری ارتباطات سازمان",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø§Ø±ØªØ¨Ø§Ø·Ø§Øª Ø³Ø§Ø²Ù…Ø§Ù†",
                     }),
                 ),
             );
         });
     }, [
         loadAssignmentsForOrganization,
-        loadDocumentsForTarget,
         loadObjectiveAssignmentsForOrganization,
         loadRisksForOrganization,
         loadReferenceAssignmentsForOrganization,
@@ -1200,18 +1106,6 @@ export default function OrganizationsFclShellPage() {
     const organizationObjectiveAssignments = objectValue?.id
         ? objectiveAssignmentsByOrganizationId[objectValue.id] ?? EMPTY_OBJECTIVE_ASSIGNMENTS
         : EMPTY_OBJECTIVE_ASSIGNMENTS;
-    const organizationDocumentTargetKey = getDocumentTargetKey(
-        DOCUMENT_TARGET_TYPE,
-        objectValue?.id || undefined,
-    );
-    const organizationDocuments = organizationDocumentTargetKey
-        ? documentsByTarget[organizationDocumentTargetKey] ?? EMPTY_DOCUMENTS
-        : EMPTY_DOCUMENTS;
-    const organizationTempDocuments =
-        tempDocumentsBySession[documentTempSessionId] ?? EMPTY_DOCUMENTS;
-    const organizationDocumentUploadPolicy: DocumentUploadPolicy | undefined =
-        documentUploadPoliciesByTargetType[DOCUMENT_TARGET_TYPE];
-
     const organizationSubProcesses = useMemo(
         () => buildOrganizationSubProcessViews(currentAssignments, processNodesById),
         [currentAssignments, processNodesById],
@@ -1291,7 +1185,7 @@ export default function OrganizationsFclShellPage() {
                     mapError(
                         error,
                         t("organization.subProcesses.errors.assign", {
-                            defaultValue: "خطا در تخصیص زیر فرآیند به سازمان",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± ØªØ®ØµÛŒØµ Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯ Ø¨Ù‡ Ø³Ø§Ø²Ù…Ø§Ù†",
                         }),
                     ),
                 );
@@ -1324,7 +1218,7 @@ export default function OrganizationsFclShellPage() {
                     mapError(
                         error,
                         t("organization.subProcesses.errors.remove", {
-                            defaultValue: "خطا در حذف زیر فرآیند از سازمان",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯ Ø§Ø² Ø³Ø§Ø²Ù…Ø§Ù†",
                         }),
                     ),
                 );
@@ -1362,7 +1256,7 @@ export default function OrganizationsFclShellPage() {
                     mapError(
                         error,
                         t("organization.risks.errors.assign", {
-                            defaultValue: "خطا در تخصیص ریسک به سازمان",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± ØªØ®ØµÛŒØµ Ø±ÛŒØ³Ú© Ø¨Ù‡ Ø³Ø§Ø²Ù…Ø§Ù†",
                         }),
                     ),
                 );
@@ -1389,7 +1283,7 @@ export default function OrganizationsFclShellPage() {
                     mapError(
                         error,
                         t("organization.risks.errors.remove", {
-                            defaultValue: "خطا در حذف ریسک از سازمان",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù Ø±ÛŒØ³Ú© Ø§Ø² Ø³Ø§Ø²Ù…Ø§Ù†",
                         }),
                     ),
                 );
@@ -1422,7 +1316,7 @@ export default function OrganizationsFclShellPage() {
                     mapError(
                         error,
                         t("organization.references.errors.assign", {
-                            defaultValue: "خطا در تخصیص آیتم به سازمان",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± ØªØ®ØµÛŒØµ Ø¢ÛŒØªÙ… Ø¨Ù‡ Ø³Ø§Ø²Ù…Ø§Ù†",
                         }),
                     ),
                 );
@@ -1453,7 +1347,7 @@ export default function OrganizationsFclShellPage() {
                     mapError(
                         error,
                         t("organization.references.errors.remove", {
-                            defaultValue: "خطا در حذف تخصیص از سازمان",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù ØªØ®ØµÛŒØµ Ø§Ø² Ø³Ø§Ø²Ù…Ø§Ù†",
                         }),
                     ),
                 );
@@ -1483,7 +1377,7 @@ export default function OrganizationsFclShellPage() {
                     mapError(
                         error,
                         t("organization.references.errors.assign", {
-                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± ØªØ®ØµÛŒØµ Ø¢ÛŒØªÙ… Ø¨Ù‡ Ø³Ø§Ø²Ù…Ø§Ù†",
+                            defaultValue: "Ã˜Â®Ã˜Â·Ã˜Â§ Ã˜Â¯Ã˜Â± Ã˜ÂªÃ˜Â®Ã˜ÂµÃ›Å’Ã˜Âµ Ã˜Â¢Ã›Å’Ã˜ÂªÃ™â€¦ Ã˜Â¨Ã™â€¡ Ã˜Â³Ã˜Â§Ã˜Â²Ã™â€¦Ã˜Â§Ã™â€ ",
                         }),
                     ),
                 );
@@ -1510,7 +1404,7 @@ export default function OrganizationsFclShellPage() {
                     mapError(
                         error,
                         t("organization.references.errors.remove", {
-                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù ØªØ®ØµÛŒØµ Ø§Ø² Ø³Ø§Ø²Ù…Ø§Ù†",
+                            defaultValue: "Ã˜Â®Ã˜Â·Ã˜Â§ Ã˜Â¯Ã˜Â± Ã˜Â­Ã˜Â°Ã™Â Ã˜ÂªÃ˜Â®Ã˜ÂµÃ›Å’Ã˜Âµ Ã˜Â§Ã˜Â² Ã˜Â³Ã˜Â§Ã˜Â²Ã™â€¦Ã˜Â§Ã™â€ ",
                         }),
                     ),
                 );
@@ -1519,88 +1413,6 @@ export default function OrganizationsFclShellPage() {
             }
         },
         [objectValue?.id, removeObjectiveFromOrganization, t],
-    );
-
-    const handleUploadOrganizationDocument = useCallback(
-        async (file: File, onProgress?: (progress: number) => void) => {
-            await uploadTempDocument(
-                {
-                    targetType: DOCUMENT_TARGET_TYPE,
-                    targetId: objectValue?.id || null,
-                    tempSessionId: documentTempSessionId,
-                    title: file.name,
-                    file,
-                },
-                onProgress,
-            );
-        },
-        [documentTempSessionId, objectValue?.id, uploadTempDocument],
-    );
-
-    const handleUpdateOrganizationDocumentTitle = useCallback(
-        async (documentId: string, title: string) => {
-            try {
-                setSubmitting(true);
-                setObjectError(null);
-                await updateDocumentTitle(documentId, title);
-            } catch (error) {
-                setObjectError(
-                    mapError(
-                        error,
-                        t("organization.documents.errors.updateTitle", {
-                            defaultValue: "خطا در ثبت عنوان مستند",
-                        }),
-                    ),
-                );
-                throw error;
-            } finally {
-                setSubmitting(false);
-            }
-        },
-        [t, updateDocumentTitle],
-    );
-
-    const handleDeleteOrganizationDocument = useCallback(
-        async (documentId: string) => {
-            try {
-                setSubmitting(true);
-                setObjectError(null);
-                await deleteDocument(documentId);
-            } catch (error) {
-                setObjectError(
-                    mapError(
-                        error,
-                        t("organization.documents.errors.delete", {
-                            defaultValue: "خطا در حذف مستند",
-                        }),
-                    ),
-                );
-                throw error;
-            } finally {
-                setSubmitting(false);
-            }
-        },
-        [deleteDocument, t],
-    );
-
-    const handleDownloadOrganizationDocument = useCallback(
-        async (documentId: string) => {
-            try {
-                setObjectError(null);
-                const url = await createDocumentDownloadUrl(documentId);
-                window.open(url, "_blank", "noopener,noreferrer");
-            } catch (error) {
-                setObjectError(
-                    mapError(
-                        error,
-                        t("organization.documents.errors.download", {
-                            defaultValue: "خطا در دریافت لینک دانلود مستند",
-                        }),
-                    ),
-                );
-            }
-        },
-        [createDocumentDownloadUrl, t],
     );
 
     const showInlineSummaryPane = Boolean(selectedTreeItem);
@@ -1772,10 +1584,6 @@ export default function OrganizationsFclShellPage() {
                             availableObjectives={availableObjectiveOptions}
                             risks={organizationRisks}
                             availableRisks={availableRiskTemplates}
-                            documents={organizationDocuments}
-                            tempDocuments={organizationTempDocuments}
-                            documentUploadPolicy={organizationDocumentUploadPolicy}
-                            documentTempSessionId={documentTempSessionId}
                             subProcessesBusy={processLoading || assignmentsLoading}
                             relationshipsBusy={relationshipsLoading || riskLoading}
                             referencesBusy={
@@ -1786,7 +1594,6 @@ export default function OrganizationsFclShellPage() {
                                 objectiveLoading ||
                                 objectiveAssignmentsLoading
                             }
-                            documentsBusy={documentsLoading}
                             busy={loading || submitting}
                             error={objectError}
                             onErrorClose={() => setObjectError(null)}
@@ -1801,16 +1608,12 @@ export default function OrganizationsFclShellPage() {
                             onRemoveReferenceAssignment={handleRemoveReferenceAssignment}
                             onAssignObjective={handleAssignObjectiveToOrganization}
                             onRemoveObjectiveAssignment={handleRemoveObjectiveAssignment}
-                            onUploadDocument={handleUploadOrganizationDocument}
-                            onUpdateDocumentTitle={handleUpdateOrganizationDocumentTitle}
-                            onDeleteDocument={handleDeleteOrganizationDocument}
-                            onDownloadDocument={handleDownloadOrganizationDocument}
                             onActiveTabChange={setObjectActiveTab}
                         />
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
                             {t("organization.object.notFound", {
-                                defaultValue: "واحد سازمانی انتخاب‌شده یافت نشد",
+                                defaultValue: "ÙˆØ§Ø­Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†ÛŒ Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯",
                             })}
                         </MessageStrip>
                     )}
@@ -1819,13 +1622,13 @@ export default function OrganizationsFclShellPage() {
 
             <DeleteConfirmDialog
                 open={Boolean(deleteCandidate)}
-                title={t("organization.delete.title", { defaultValue: "حذف واحد سازمانی" })}
+                title={t("organization.delete.title", { defaultValue: "Ø­Ø°Ù ÙˆØ§Ø­Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†ÛŒ" })}
                 message={t("organization.delete.confirm", {
-                    defaultValue: 'آیا از حذف "{{title}}" مطمئن هستید؟',
+                    defaultValue: 'Ø¢ÛŒØ§ Ø§Ø² Ø­Ø°Ù "{{title}}" Ù…Ø·Ù…Ø¦Ù† Ù‡Ø³ØªÛŒØ¯ØŸ',
                     title: deleteCandidate?.name ?? "",
                 })}
-                confirmText={t("common.delete", { defaultValue: "حذف" })}
-                cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+                confirmText={t("common.delete", { defaultValue: "Ø­Ø°Ù" })}
+                cancelText={t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
                 loading={submitting}
                 onClose={() => setDeleteCandidate(null)}
                 onConfirm={() => {

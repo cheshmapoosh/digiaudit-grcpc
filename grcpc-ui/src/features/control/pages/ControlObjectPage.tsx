@@ -1,7 +1,5 @@
-import {
+﻿import {
     Fragment,
-    useCallback,
-    useRef,
     useState,
     type CSSProperties,
     type ReactNode,
@@ -40,7 +38,6 @@ import ControlRegulationsTab from "../components/tabs/ControlRegulationsTab";
 import ControlRequirementsTab from "../components/tabs/ControlRequirementsTab";
 import ControlRisksTab from "../components/tabs/ControlRisksTab";
 import ControlStepsTab from "../components/tabs/ControlStepsTab";
-import type { DocumentBeforeParentSubmitHandler } from "@/features/document";
 
 export type ControlObjectMode = "view" | "edit";
 
@@ -90,7 +87,6 @@ export interface ControlObjectPageProps {
     value: ControlDetails;
     busy?: boolean;
     error?: string | null;
-    documentTempSessionId?: string;
     onErrorClose?: () => void;
     onSubmit: (payload: UpdateControlAssignmentRequest) => Promise<void> | void;
     onCancel: () => void;
@@ -313,8 +309,8 @@ function resolveStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     return status === "active"
-        ? t("common.active", { defaultValue: "فعال" })
-        : t("common.inactive", { defaultValue: "غیرفعال" });
+        ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+        : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
 }
 
 function resolveControlStatusLabel(
@@ -322,8 +318,8 @@ function resolveControlStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     return status === "active"
-        ? t("common.active", { defaultValue: "فعال" })
-        : t("common.inactive", { defaultValue: "غیرفعال" });
+        ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+        : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
 }
 
 function formatValidityRange(validFrom?: string | null, validTo?: string | null): string {
@@ -339,16 +335,16 @@ function resolveTabLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const labels: Record<ControlTabKey, string> = {
-        general: t("control.tabs.general", { defaultValue: "اطلاعات کلی" }),
-        steps: t("control.tabs.steps", { defaultValue: "مراحل" }),
-        regulations: t("control.tabs.regulations", { defaultValue: "قوانین" }),
-        requirements: t("control.tabs.requirements", { defaultValue: "الزامات" }),
-        risks: t("control.tabs.risks", { defaultValue: "ریسک‌ها" }),
-        accountGroups: t("control.tabs.accountGroups", { defaultValue: "گروه حساب‌ها" }),
+        general: t("control.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
+        steps: t("control.tabs.steps", { defaultValue: "Ù…Ø±Ø§Ø­Ù„" }),
+        regulations: t("control.tabs.regulations", { defaultValue: "Ù‚ÙˆØ§Ù†ÛŒÙ†" }),
+        requirements: t("control.tabs.requirements", { defaultValue: "Ø§Ù„Ø²Ø§Ù…Ø§Øª" }),
+        risks: t("control.tabs.risks", { defaultValue: "Ø±ÛŒØ³Ú©â€ŒÙ‡Ø§" }),
+        accountGroups: t("control.tabs.accountGroups", { defaultValue: "Ú¯Ø±ÙˆÙ‡ Ø­Ø³Ø§Ø¨â€ŒÙ‡Ø§" }),
         performancePlan: t("control.tabs.performancePlan", {
-            defaultValue: "برنامه عملکرد",
+            defaultValue: "Ø¨Ø±Ù†Ø§Ù…Ù‡ Ø¹Ù…Ù„Ú©Ø±Ø¯",
         }),
-        documents: t("control.tabs.documents", { defaultValue: "مستندات" }),
+        documents: t("control.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }),
     };
 
     return labels[tab];
@@ -396,7 +392,6 @@ export default function ControlObjectPage({
     value,
     busy = false,
     error,
-    documentTempSessionId,
     onErrorClose,
     onSubmit,
     onCancel,
@@ -410,8 +405,6 @@ export default function ControlObjectPage({
     const [form, setForm] = useState<ControlAssignmentFormState>(() => toFormState(value));
     const [validationError, setValidationError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<ControlTabKey>("general");
-    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
-    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
 
     const handleChange = <K extends keyof ControlAssignmentFormState>(
         key: K,
@@ -427,7 +420,7 @@ export default function ControlObjectPage({
         if (form.sortOrder.trim() && parseSortOrder(form.sortOrder) === undefined) {
             setValidationError(
                 t("control.validation.sortOrderInvalid", {
-                    defaultValue: "ترتیب نمایش باید عدد صحیح نامنفی باشد",
+                    defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´ Ø¨Ø§ÛŒØ¯ Ø¹Ø¯Ø¯ ØµØ­ÛŒØ­ Ù†Ø§Ù…Ù†ÙÛŒ Ø¨Ø§Ø´Ø¯",
                 }),
             );
             return false;
@@ -437,31 +430,8 @@ export default function ControlObjectPage({
         return true;
     };
 
-    const handleDocumentBeforeParentSubmitChange = useCallback(
-        (handler: DocumentBeforeParentSubmitHandler | null) => {
-            documentBeforeSubmitRef.current = handler;
-        },
-        [],
-    );
-
     const handleSubmit = async () => {
         if (effectiveReadOnly || !validate()) {
-            return;
-        }
-
-        if (hasPendingDocumentUploads) {
-            setValidationError(
-                t("document.validation.waitForUpload", {
-                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
-                }),
-            );
-            setActiveTab("documents");
-            return;
-        }
-
-        const documentsReady = await documentBeforeSubmitRef.current?.();
-        if (documentsReady === false) {
-            setActiveTab("documents");
             return;
         }
 
@@ -483,23 +453,23 @@ export default function ControlObjectPage({
         <div style={{ display: "grid", gap: "1rem" }}>
             <Title level="H5">
                 {t("control.sections.assignmentInfo", {
-                    defaultValue: "اطلاعات اتصال کنترل",
+                    defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ø§ØªØµØ§Ù„ Ú©Ù†ØªØ±Ù„",
                 })}
             </Title>
 
             <div style={DETAIL_GRID_STYLE}>
-                <DetailRow label={t("control.fields.code", { defaultValue: "کد" })} value={value.code} />
-                <DetailRow label={t("control.fields.name", { defaultValue: "نام" })} value={value.name} />
+                <DetailRow label={t("control.fields.code", { defaultValue: "Ú©Ø¯" })} value={value.code} />
+                <DetailRow label={t("control.fields.name", { defaultValue: "Ù†Ø§Ù…" })} value={value.name} />
                 <DetailRow
-                    label={t("control.fields.controlClass", { defaultValue: "طبقه کنترل" })}
+                    label={t("control.fields.controlClass", { defaultValue: "Ø·Ø¨Ù‚Ù‡ Ú©Ù†ØªØ±Ù„" })}
                     value={value.controlClass}
                 />
                 <DetailRow
-                    label={t("control.fields.controlNature", { defaultValue: "ماهیت کنترل" })}
+                    label={t("control.fields.controlNature", { defaultValue: "Ù…Ø§Ù‡ÛŒØª Ú©Ù†ØªØ±Ù„" })}
                     value={value.controlNature ? t(`control.nature.${value.controlNature}`) : undefined}
                 />
                 <DetailRow
-                    label={t("control.fields.automationType", { defaultValue: "نوع اجرا" })}
+                    label={t("control.fields.automationType", { defaultValue: "Ù†ÙˆØ¹ Ø§Ø¬Ø±Ø§" })}
                     value={
                         value.automationType
                             ? t(`control.automation.${value.automationType}`)
@@ -507,51 +477,51 @@ export default function ControlObjectPage({
                     }
                 />
                 <DetailRow
-                    label={t("control.fields.importance", { defaultValue: "اهمیت" })}
+                    label={t("control.fields.importance", { defaultValue: "Ø§Ù‡Ù…ÛŒØª" })}
                     value={value.importance ? t(`control.importance.${value.importance}`) : undefined}
                 />
                 <DetailRow
-                    label={t("control.fields.ownerName", { defaultValue: "مسئول" })}
+                    label={t("control.fields.ownerName", { defaultValue: "Ù…Ø³Ø¦ÙˆÙ„" })}
                     value={value.ownerName}
                 />
                 <DetailRow
-                    label={t("control.fields.validity", { defaultValue: "اعتبار" })}
+                    label={t("control.fields.validity", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø±" })}
                     value={formatValidityRange(value.validFrom, value.validTo)}
                 />
                 <DetailRow
-                    label={t("control.fields.sortOrder", { defaultValue: "ترتیب نمایش" })}
+                    label={t("control.fields.sortOrder", { defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´" })}
                     value={value.sortOrder?.toString()}
                 />
                 <DetailRow
-                    label={t("control.fields.operationPeriod", { defaultValue: "دوره عملیات" })}
+                    label={t("control.fields.operationPeriod", { defaultValue: "Ø¯ÙˆØ±Ù‡ Ø¹Ù…Ù„ÛŒØ§Øª" })}
                     value={value.operationPeriod}
                 />
                 <DetailRow
-                    label={t("control.fields.testMethod", { defaultValue: "روش آزمون" })}
+                    label={t("control.fields.testMethod", { defaultValue: "Ø±ÙˆØ´ Ø¢Ø²Ù…ÙˆÙ†" })}
                     value={value.testMethod}
                 />
                 <DetailRow
-                    label={t("control.fields.testPlan", { defaultValue: "برنامه آزمون" })}
+                    label={t("control.fields.testPlan", { defaultValue: "Ø¨Ø±Ù†Ø§Ù…Ù‡ Ø¢Ø²Ù…ÙˆÙ†" })}
                     value={value.testPlan}
                 />
                 <DetailRow
-                    label={t("control.fields.assignmentStatus", { defaultValue: "وضعیت اتصال" })}
+                    label={t("control.fields.assignmentStatus", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª Ø§ØªØµØ§Ù„" })}
                     value={resolveStatusLabel(value.assignmentStatus, t)}
                 />
                 <DetailRow
-                    label={t("control.fields.status", { defaultValue: "وضعیت کنترل" })}
+                    label={t("control.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª Ú©Ù†ØªØ±Ù„" })}
                     value={resolveControlStatusLabel(value.status, t)}
                 />
                 <DetailRow
-                    label={t("control.fields.objective", { defaultValue: "هدف" })}
+                    label={t("control.fields.objective", { defaultValue: "Ù‡Ø¯Ù" })}
                     value={value.objective}
                 />
                 <DetailRow
-                    label={t("control.fields.description", { defaultValue: "شرح" })}
+                    label={t("control.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                     value={value.description}
                 />
                 <DetailRow
-                    label={t("control.fields.updatedAt", { defaultValue: "آخرین بروزرسانی" })}
+                    label={t("control.fields.updatedAt", { defaultValue: "Ø¢Ø®Ø±ÛŒÙ† Ø¨Ø±ÙˆØ²Ø±Ø³Ø§Ù†ÛŒ" })}
                     value={formatPersianDateTime(value.updatedAt)}
                 />
             </div>
@@ -562,14 +532,14 @@ export default function ControlObjectPage({
         <>
             <Title level="H5">
                 {t("control.sections.assignmentInfo", {
-                    defaultValue: "اطلاعات اتصال کنترل",
+                    defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ø§ØªØµØ§Ù„ Ú©Ù†ØªØ±Ù„",
                 })}
             </Title>
 
             <div style={{ height: "0.75rem" }} />
 
             <div style={FORM_GRID_STYLE}>
-                <FormField label={t("control.fields.ownerName", { defaultValue: "مسئول" })}>
+                <FormField label={t("control.fields.ownerName", { defaultValue: "Ù…Ø³Ø¦ÙˆÙ„" })}>
                     <Input
                         value={form.ownerName}
                         disabled={busy}
@@ -579,7 +549,7 @@ export default function ControlObjectPage({
 
                 <FormField
                     label={t("control.fields.assignmentStatus", {
-                        defaultValue: "وضعیت اتصال",
+                        defaultValue: "ÙˆØ¶Ø¹ÛŒØª Ø§ØªØµØ§Ù„",
                     })}
                 >
                     <Select
@@ -590,15 +560,15 @@ export default function ControlObjectPage({
                         }}
                     >
                         <Option data-value="active" selected={form.assignmentStatus === "active"}>
-                            {t("common.active", { defaultValue: "فعال" })}
+                            {t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })}
                         </Option>
                         <Option data-value="inactive" selected={form.assignmentStatus === "inactive"}>
-                            {t("common.inactive", { defaultValue: "غیرفعال" })}
+                            {t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" })}
                         </Option>
                     </Select>
                 </FormField>
 
-                <FormField label={t("control.fields.validFrom", { defaultValue: "اعتبار از" })}>
+                <FormField label={t("control.fields.validFrom", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø± Ø§Ø²" })}>
                     <DatePicker
                         value={form.validFrom}
                         valueFormat={DATE_VALUE_FORMAT}
@@ -608,7 +578,7 @@ export default function ControlObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("control.fields.validTo", { defaultValue: "اعتبار تا" })}>
+                <FormField label={t("control.fields.validTo", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø± ØªØ§" })}>
                     <DatePicker
                         value={form.validTo}
                         valueFormat={DATE_VALUE_FORMAT}
@@ -619,7 +589,7 @@ export default function ControlObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("control.fields.sortOrder", { defaultValue: "ترتیب نمایش" })}
+                    label={t("control.fields.sortOrder", { defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´" })}
                 >
                     <Input
                         value={form.sortOrder}
@@ -630,7 +600,7 @@ export default function ControlObjectPage({
 
                 <FormField
                     label={t("control.fields.operationPeriod", {
-                        defaultValue: "دوره عملیات",
+                        defaultValue: "Ø¯ÙˆØ±Ù‡ Ø¹Ù…Ù„ÛŒØ§Øª",
                     })}
                 >
                     <Input
@@ -641,7 +611,7 @@ export default function ControlObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("control.fields.testMethod", { defaultValue: "روش آزمون" })}
+                    label={t("control.fields.testMethod", { defaultValue: "Ø±ÙˆØ´ Ø¢Ø²Ù…ÙˆÙ†" })}
                     fullWidth
                 >
                     <TextArea
@@ -653,7 +623,7 @@ export default function ControlObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("control.fields.testPlan", { defaultValue: "برنامه آزمون" })}
+                    label={t("control.fields.testPlan", { defaultValue: "Ø¨Ø±Ù†Ø§Ù…Ù‡ Ø¢Ø²Ù…ÙˆÙ†" })}
                     fullWidth
                 >
                     <TextArea
@@ -682,7 +652,7 @@ export default function ControlObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={onCancel}
                     >
-                        {t("common.close", { defaultValue: "بستن" })}
+                        {t("common.close", { defaultValue: "Ø¨Ø³ØªÙ†" })}
                     </Button>
                 </div>
             );
@@ -697,7 +667,7 @@ export default function ControlObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={onEdit}
                 >
-                    {t("common.edit", { defaultValue: "ویرایش" })}
+                    {t("common.edit", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´" })}
                 </Button>
                 ) : (
                 <Button
@@ -706,7 +676,7 @@ export default function ControlObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={handleSubmit}
                 >
-                    {t("common.save", { defaultValue: "ذخیره" })}
+                    {t("common.save", { defaultValue: "Ø°Ø®ÛŒØ±Ù‡" })}
                 </Button>
                 )}
 
@@ -717,8 +687,8 @@ export default function ControlObjectPage({
                     onClick={onCancel}
                 >
                     {mode === "view"
-                        ? t("common.close", { defaultValue: "بستن" })
-                        : t("common.cancel", { defaultValue: "انصراف" })}
+                        ? t("common.close", { defaultValue: "Ø¨Ø³ØªÙ†" })
+                        : t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
                 </Button>
             </div>
         );
@@ -784,16 +754,9 @@ export default function ControlObjectPage({
                 return (
                     <ControlDocumentsTab
                         key={`${value.controlAssignmentId}:documents`}
-                        controlAssignmentId={value.controlAssignmentId}
-                        tempSessionId={isPanel ? undefined : documentTempSessionId}
+                        controlId={value.controlId}
                         readOnly={effectiveReadOnly}
                         showActions={showTabActions}
-                        onBeforeParentSubmitChange={
-                            isPanel ? undefined : handleDocumentBeforeParentSubmitChange
-                        }
-                        onPendingUploadsChange={
-                            isPanel ? undefined : setHasPendingDocumentUploads
-                        }
                     />
                 );
             case "general":
@@ -812,22 +775,22 @@ export default function ControlObjectPage({
                 <div style={HEADER_GRID_STYLE}>
                     <HeaderItem
                         label={t("control.fields.parentProcess", {
-                            defaultValue: "فرآیند والد",
+                            defaultValue: "ÙØ±Ø¢ÛŒÙ†Ø¯ ÙˆØ§Ù„Ø¯",
                         })}
                         value={value.parentProcessTitle}
                     />
                     <HeaderItem
                         label={t("control.fields.parentSubProcess", {
-                            defaultValue: "زیر فرآیند",
+                            defaultValue: "Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯",
                         })}
                         value={value.parentSubProcessTitle}
                     />
                     <HeaderItem
-                        label={t("control.fields.validity", { defaultValue: "اعتبار" })}
+                        label={t("control.fields.validity", { defaultValue: "Ø§Ø¹ØªØ¨Ø§Ø±" })}
                         value={formatValidityRange(value.validFrom, value.validTo)}
                     />
                     <HeaderItem
-                        label={t("control.fields.status", { defaultValue: "وضعیت کنترل" })}
+                        label={t("control.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª Ú©Ù†ØªØ±Ù„" })}
                         value={resolveControlStatusLabel(value.status, t)}
                     />
                 </div>

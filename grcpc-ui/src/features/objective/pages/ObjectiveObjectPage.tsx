@@ -1,7 +1,6 @@
-import {
+﻿import {
     useCallback,
     useMemo,
-    useRef,
     useState,
     type CSSProperties,
     type ReactNode,
@@ -43,10 +42,7 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
-import {
-    DocumentAttachmentsManager,
-    type DocumentBeforeParentSubmitHandler,
-} from "@/features/document";
+import { DocumentManager } from "@/features/document";
 import type { OrganizationNode } from "@/features/organization";
 
 export type ObjectiveObjectMode = "create" | "edit" | "view";
@@ -80,7 +76,6 @@ export interface ObjectiveObjectPageProps {
     organizationsBusy?: boolean;
     busy?: boolean;
     error?: string | null;
-    documentTempSessionId?: string;
     onErrorClose?: () => void;
     onSubmit: (payload: ObjectiveNodeCreate | ObjectiveNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
@@ -367,8 +362,8 @@ function resolveStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     return status === "active"
-        ? t("common.active", { defaultValue: "فعال" })
-        : t("common.inactive", { defaultValue: "غیرفعال" });
+        ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+        : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
 }
 
 function resolveObjectiveTypeLabel(
@@ -376,12 +371,12 @@ function resolveObjectiveTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<ObjectiveType, string> = {
-        operational: t("objective.type.operational", { defaultValue: "اهداف عملیاتی" }),
-        compliance: t("objective.type.compliance", { defaultValue: "اهداف رعایتی" }),
-        strategic: t("objective.type.strategic", { defaultValue: "اهداف استراتژیک" }),
-        financial: t("objective.type.financial", { defaultValue: "اهداف مالی" }),
-        reporting: t("objective.type.reporting", { defaultValue: "اهداف گزارشگری" }),
-        market: t("objective.type.market", { defaultValue: "اهداف بازار" }),
+        operational: t("objective.type.operational", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø¹Ù…Ù„ÛŒØ§ØªÛŒ" }),
+        compliance: t("objective.type.compliance", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø±Ø¹Ø§ÛŒØªÛŒ" }),
+        strategic: t("objective.type.strategic", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø§Ø³ØªØ±Ø§ØªÚ˜ÛŒÚ©" }),
+        financial: t("objective.type.financial", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ù…Ø§Ù„ÛŒ" }),
+        reporting: t("objective.type.reporting", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ú¯Ø²Ø§Ø±Ø´Ú¯Ø±ÛŒ" }),
+        market: t("objective.type.market", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø¨Ø§Ø²Ø§Ø±" }),
     };
 
     return map[objectiveType];
@@ -397,9 +392,9 @@ function defaultTabs(): ObjectiveTabKey[] {
 
 function resolveTabLabel(tab: ObjectiveTabKey, t: ReturnType<typeof useTranslation>["t"]): string {
     const labels: Record<ObjectiveTabKey, string> = {
-        general: t("objective.tabs.general", { defaultValue: "اطلاعات کلی" }),
+        general: t("objective.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
         relatedOrganizations: t("objective.tabs.relatedOrganizations"),
-        documents: t("objective.tabs.documents", { defaultValue: "مستندات" }),
+        documents: t("objective.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }),
     };
 
     return labels[tab];
@@ -461,7 +456,6 @@ export default function ObjectiveObjectPage({
     organizationsBusy = false,
     busy = false,
     error,
-    documentTempSessionId,
     onErrorClose,
     onSubmit,
     onCancel,
@@ -477,8 +471,6 @@ export default function ObjectiveObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(), []);
     const [activeTab, setActiveTab] = useState<ObjectiveTabKey>("general");
-    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
-    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
     const [selectedOrganizationId, setSelectedOrganizationId] = useState("");
     const [selectedOrganizationSearchValue, setSelectedOrganizationSearchValue] =
         useState("");
@@ -556,7 +548,7 @@ export default function ObjectiveObjectPage({
     const headerTitle = form.title || value?.title || "";
     const headerParent = selectedParent
         ? `${selectedParent.code} - ${selectedParent.title}`
-        : t("common.none", { defaultValue: "ندارد" });
+        : t("common.none", { defaultValue: "Ù†Ø¯Ø§Ø±Ø¯" });
     const headerStatus = resolveStatusLabel(form.status, t);
     const headerType = resolveObjectiveTypeLabel(form.objectiveType, t);
     const currentObjectiveId = value?.id ?? null;
@@ -605,14 +597,14 @@ export default function ObjectiveObjectPage({
     const validate = (): boolean => {
         if (!form.code.trim()) {
             setValidationError(
-                t("objective.validation.codeRequired", { defaultValue: "کد الزامی است" }),
+                t("objective.validation.codeRequired", { defaultValue: "Ú©Ø¯ Ø§Ù„Ø²Ø§Ù…ÛŒ Ø§Ø³Øª" }),
             );
             return false;
         }
 
         if (!form.title.trim()) {
             setValidationError(
-                t("objective.validation.titleRequired", { defaultValue: "نام الزامی است" }),
+                t("objective.validation.titleRequired", { defaultValue: "Ù†Ø§Ù… Ø§Ù„Ø²Ø§Ù…ÛŒ Ø§Ø³Øª" }),
             );
             return false;
         }
@@ -620,7 +612,7 @@ export default function ObjectiveObjectPage({
         if (form.sortOrder.trim() && parseSortOrder(form.sortOrder) === undefined) {
             setValidationError(
                 t("objective.validation.sortOrderInvalid", {
-                    defaultValue: "ترتیب نمایش باید عدد صحیح نامنفی باشد",
+                    defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´ Ø¨Ø§ÛŒØ¯ Ø¹Ø¯Ø¯ ØµØ­ÛŒØ­ Ù†Ø§Ù…Ù†ÙÛŒ Ø¨Ø§Ø´Ø¯",
                 }),
             );
             return false;
@@ -630,31 +622,8 @@ export default function ObjectiveObjectPage({
         return true;
     };
 
-    const handleDocumentBeforeParentSubmitChange = useCallback(
-        (handler: DocumentBeforeParentSubmitHandler | null) => {
-            documentBeforeSubmitRef.current = handler;
-        },
-        [],
-    );
-
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
-            return;
-        }
-
-        if (hasPendingDocumentUploads) {
-            setValidationError(
-                t("document.validation.waitForUpload", {
-                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
-                }),
-            );
-            setActiveTab("documents");
-            return;
-        }
-
-        const documentsReady = await documentBeforeSubmitRef.current?.();
-        if (documentsReady === false) {
-            setActiveTab("documents");
             return;
         }
 
@@ -681,7 +650,7 @@ export default function ObjectiveObjectPage({
     const renderGeneralTab = () => (
         <>
             <div style={FORM_GRID_STYLE}>
-                <FormField label={t("objective.fields.code", { defaultValue: "شناسه" })} required>
+                <FormField label={t("objective.fields.code", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡" })} required>
                     <Input
                         value={form.code}
                         disabled={readOnly || busy}
@@ -689,7 +658,7 @@ export default function ObjectiveObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("objective.fields.name", { defaultValue: "نام" })} required>
+                <FormField label={t("objective.fields.name", { defaultValue: "Ù†Ø§Ù…" })} required>
                     <Input
                         value={form.title}
                         disabled={readOnly || busy}
@@ -697,13 +666,13 @@ export default function ObjectiveObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("objective.fields.parent", { defaultValue: "هدف والد" })}>
+                <FormField label={t("objective.fields.parent", { defaultValue: "Ù‡Ø¯Ù ÙˆØ§Ù„Ø¯" })}>
                     <Input value={headerParent} readonly />
                 </FormField>
 
                 <FormField
                     label={t("objective.fields.objectiveType", {
-                        defaultValue: "نوع هدف",
+                        defaultValue: "Ù†ÙˆØ¹ Ù‡Ø¯Ù",
                     })}
                 >
                     <Select
@@ -717,40 +686,40 @@ export default function ObjectiveObjectPage({
                             data-value="operational"
                             selected={form.objectiveType === "operational"}
                         >
-                            {t("objective.type.operational", { defaultValue: "اهداف عملیاتی" })}
+                            {t("objective.type.operational", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø¹Ù…Ù„ÛŒØ§ØªÛŒ" })}
                         </Option>
                         <Option
                             data-value="compliance"
                             selected={form.objectiveType === "compliance"}
                         >
-                            {t("objective.type.compliance", { defaultValue: "اهداف رعایتی" })}
+                            {t("objective.type.compliance", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø±Ø¹Ø§ÛŒØªÛŒ" })}
                         </Option>
                         <Option
                             data-value="strategic"
                             selected={form.objectiveType === "strategic"}
                         >
-                            {t("objective.type.strategic", { defaultValue: "اهداف استراتژیک" })}
+                            {t("objective.type.strategic", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø§Ø³ØªØ±Ø§ØªÚ˜ÛŒÚ©" })}
                         </Option>
                         <Option
                             data-value="financial"
                             selected={form.objectiveType === "financial"}
                         >
-                            {t("objective.type.financial", { defaultValue: "اهداف مالی" })}
+                            {t("objective.type.financial", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ù…Ø§Ù„ÛŒ" })}
                         </Option>
                         <Option
                             data-value="reporting"
                             selected={form.objectiveType === "reporting"}
                         >
-                            {t("objective.type.reporting", { defaultValue: "اهداف گزارشگری" })}
+                            {t("objective.type.reporting", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ú¯Ø²Ø§Ø±Ø´Ú¯Ø±ÛŒ" })}
                         </Option>
                         <Option data-value="market" selected={form.objectiveType === "market"}>
-                            {t("objective.type.market", { defaultValue: "اهداف بازار" })}
+                            {t("objective.type.market", { defaultValue: "Ø§Ù‡Ø¯Ø§Ù Ø¨Ø§Ø²Ø§Ø±" })}
                         </Option>
                     </Select>
                 </FormField>
 
                 <FormField
-                    label={t("objective.fields.objectiveClass", { defaultValue: "طبقه هدف" })}
+                    label={t("objective.fields.objectiveClass", { defaultValue: "Ø·Ø¨Ù‚Ù‡ Ù‡Ø¯Ù" })}
                 >
                     <Input
                         value={form.objectiveClass}
@@ -759,7 +728,7 @@ export default function ObjectiveObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("objective.fields.status", { defaultValue: "وضعیت" })}>
+                <FormField label={t("objective.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}>
                     <Select
                         disabled={readOnly || busy}
                         onChange={(event) => {
@@ -768,16 +737,16 @@ export default function ObjectiveObjectPage({
                         }}
                     >
                         <Option data-value="active" selected={form.status === "active"}>
-                            {t("common.active", { defaultValue: "فعال" })}
+                            {t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })}
                         </Option>
                         <Option data-value="inactive" selected={form.status === "inactive"}>
-                            {t("common.inactive", { defaultValue: "غیرفعال" })}
+                            {t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" })}
                         </Option>
                     </Select>
                 </FormField>
 
                 <FormField
-                    label={t("objective.fields.effectiveFrom", { defaultValue: "تاریخ ایجاد" })}
+                    label={t("objective.fields.effectiveFrom", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" })}
                 >
                     <DatePicker
                         value={form.effectiveFrom}
@@ -786,7 +755,7 @@ export default function ObjectiveObjectPage({
                         primaryCalendarType="Persian"
                         disabled={readOnly || busy}
                         placeholder={t("organization.fields.datePlaceholder", {
-                            defaultValue: "سال/ماه/روز",
+                            defaultValue: "Ø³Ø§Ù„/Ù…Ø§Ù‡/Ø±ÙˆØ²",
                         })}
                         onChange={(event) =>
                             handleChange("effectiveFrom", readDatePickerValue(event))
@@ -795,7 +764,7 @@ export default function ObjectiveObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("objective.fields.validUntil", { defaultValue: "تاریخ اعتبار" })}
+                    label={t("objective.fields.validUntil", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" })}
                 >
                     <DatePicker
                         value={form.validUntil}
@@ -804,7 +773,7 @@ export default function ObjectiveObjectPage({
                         primaryCalendarType="Persian"
                         disabled={readOnly || busy}
                         placeholder={t("organization.fields.datePlaceholder", {
-                            defaultValue: "سال/ماه/روز",
+                            defaultValue: "Ø³Ø§Ù„/Ù…Ø§Ù‡/Ø±ÙˆØ²",
                         })}
                         onChange={(event) =>
                             handleChange("validUntil", readDatePickerValue(event))
@@ -813,7 +782,7 @@ export default function ObjectiveObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("objective.fields.sortOrder", { defaultValue: "ترتیب نمایش" })}
+                    label={t("objective.fields.sortOrder", { defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´" })}
                 >
                     <Input
                         value={form.sortOrder}
@@ -823,7 +792,7 @@ export default function ObjectiveObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("objective.fields.organizationUnit", { defaultValue: "واحد سازمانی" })}
+                    label={t("objective.fields.organizationUnit", { defaultValue: "ÙˆØ§Ø­Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†ÛŒ" })}
                 >
                     <Input
                         value={form.organizationUnitName}
@@ -835,7 +804,7 @@ export default function ObjectiveObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("objective.fields.strategy", { defaultValue: "استراتژی" })}
+                    label={t("objective.fields.strategy", { defaultValue: "Ø§Ø³ØªØ±Ø§ØªÚ˜ÛŒ" })}
                     fullWidth
                 >
                     <TextArea
@@ -847,7 +816,7 @@ export default function ObjectiveObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("objective.fields.description", { defaultValue: "شرح" })}
+                    label={t("objective.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                     fullWidth
                 >
                     <TextArea
@@ -1004,21 +973,17 @@ export default function ObjectiveObjectPage({
         }
 
         return (
-            <DocumentAttachmentsManager
+            <DocumentManager
                 key={currentObjectiveId ?? "unsaved-objective-documents"}
-                title={t("objective.tabs.documents", { defaultValue: "مستندات" })}
-                targetType="OBJECTIVE_NODE"
+                title={t("objective.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
+                targetType="CENTRAL_CONTROL_OBJECTIVE_DEF"
                 targetId={currentObjectiveId}
-                tempSessionId={documentTempSessionId}
-                stagingMode="tempUntilParentSave"
                 busy={busy}
                 readOnly={readOnly}
                 saveFirstMessage={t("objective.documents.saveFirst", {
                     defaultValue:
-                        "ابتدا هدف را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
+                        "Ø§Ø¨ØªØ¯Ø§ Ù‡Ø¯Ù Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯ØŒ Ø³Ù¾Ø³ Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø±Ø§ Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ÛŒØ¯.",
                 })}
-                onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
-                onPendingUploadsChange={setHasPendingDocumentUploads}
             />
         );
     };
@@ -1032,7 +997,7 @@ export default function ObjectiveObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={onEdit}
                 >
-                    {t("common.edit", { defaultValue: "ویرایش" })}
+                    {t("common.edit", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´" })}
                 </Button>
             ) : (
                 <Button
@@ -1041,7 +1006,7 @@ export default function ObjectiveObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={handleSubmit}
                 >
-                    {t("common.save", { defaultValue: "ذخیره" })}
+                    {t("common.save", { defaultValue: "Ø°Ø®ÛŒØ±Ù‡" })}
                 </Button>
             )}
 
@@ -1052,8 +1017,8 @@ export default function ObjectiveObjectPage({
                 onClick={onCancel}
             >
                 {mode === "view"
-                    ? t("common.close", { defaultValue: "بستن" })
-                    : t("common.cancel", { defaultValue: "انصراف" })}
+                    ? t("common.close", { defaultValue: "Ø¨Ø³ØªÙ†" })
+                    : t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
             </Button>
         </div>
     );
@@ -1066,10 +1031,10 @@ export default function ObjectiveObjectPage({
                 <div style={HEADER_TITLE_STYLE}>
                     <Title level="H4">
                         {mode === "create"
-                            ? t("objective.object.createModalTitle", { defaultValue: "ایجاد هدف" })
+                            ? t("objective.object.createModalTitle", { defaultValue: "Ø§ÛŒØ¬Ø§Ø¯ Ù‡Ø¯Ù" })
                             : headerTitle ||
                               t("objective.object.modalTitle", {
-                                  defaultValue: "مرکز اهداف",
+                                  defaultValue: "Ù…Ø±Ú©Ø² Ø§Ù‡Ø¯Ø§Ù",
                               })}
                     </Title>
                 </div>
@@ -1077,30 +1042,30 @@ export default function ObjectiveObjectPage({
                 <div style={HEADER_GRID_STYLE}>
                     <HeaderItem
                         label={t("objective.fields.parentObjective", {
-                            defaultValue: "هدف والد",
+                            defaultValue: "Ù‡Ø¯Ù ÙˆØ§Ù„Ø¯",
                         })}
                         value={headerParent}
                     />
                     <HeaderItem
-                        label={t("objective.fields.identifier", { defaultValue: "شناسه" })}
+                        label={t("objective.fields.identifier", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡" })}
                         value={form.code || value?.id}
                     />
                     <HeaderItem
-                        label={t("objective.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
+                        label={t("objective.fields.createdAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" })}
                         value={formatPersianDate(value?.createdAt ?? form.effectiveFrom)}
                     />
                     <HeaderItem
-                        label={t("objective.fields.validUntil", { defaultValue: "تاریخ اعتبار" })}
+                        label={t("objective.fields.validUntil", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" })}
                         value={formatPersianDate(form.validUntil)}
                     />
                     <HeaderItem
                         label={t("objective.fields.objectiveType", {
-                            defaultValue: "نوع هدف",
+                            defaultValue: "Ù†ÙˆØ¹ Ù‡Ø¯Ù",
                         })}
                         value={headerType}
                     />
                     <HeaderItem
-                        label={t("objective.fields.status", { defaultValue: "وضعیت" })}
+                        label={t("objective.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}
                         value={headerStatus}
                     />
                 </div>

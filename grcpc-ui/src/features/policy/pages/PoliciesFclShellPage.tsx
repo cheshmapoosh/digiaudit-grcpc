@@ -1,4 +1,4 @@
-import {
+﻿import {
     createElement,
     useCallback,
     useEffect,
@@ -27,14 +27,12 @@ import PoliciesListReport from "./PoliciesListReport";
 import PolicyObjectPage from "./PolicyObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
-import { useDocumentAttachmentState } from "@/features/document";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 
 const DIALOG_WIDTH = "90vw";
-const POLICY_DOCUMENT_TARGET_TYPE = "POLICY_NODE";
 
 function usePolicyRouteMode(): RouteMode {
     const { policyId } = useParams();
@@ -59,14 +57,6 @@ function isPolicyNodeType(value: string | null): value is PolicyNodeType {
     return value === "policyGroup" || value === "policy";
 }
 
-function createDocumentTempSessionId(): string {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-        return crypto.randomUUID();
-    }
-
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 function mapError(
     error: unknown,
     fallback: string,
@@ -75,16 +65,16 @@ function mapError(
     if (error instanceof Error && error.message) {
         switch (error.message) {
             case "NOT_FOUND":
-                return t("policy.errors.notFound", { defaultValue: "آیتم موردنظر یافت نشد" });
+                return t("policy.errors.notFound", { defaultValue: "Ø¢ÛŒØªÙ… Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯" });
             case "PARENT_NOT_FOUND":
-                return t("policy.errors.parentNotFound", { defaultValue: "والد انتخاب‌شده یافت نشد" });
+                return t("policy.errors.parentNotFound", { defaultValue: "ÙˆØ§Ù„Ø¯ Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯" });
             case "HAS_CHILDREN":
                 return t("policy.errors.hasChildren", {
-                    defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+                    defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù Ø¢ÛŒØªÙ…ÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
                 });
             case "INVALID_HIERARCHY":
                 return t("policy.errors.invalidHierarchy", {
-                    defaultValue: "ساختار انتخاب‌شده برای سیاست معتبر نیست",
+                    defaultValue: "Ø³Ø§Ø®ØªØ§Ø± Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ Ø³ÛŒØ§Ø³Øª Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª",
                 });
             default:
                 return error.message;
@@ -159,15 +149,15 @@ function resolveDialogTitle(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     if (routeMode === "create") {
-        return t("policy.create.title", { defaultValue: "ایجاد آیتم سیاست" });
+        return t("policy.create.title", { defaultValue: "Ø§ÛŒØ¬Ø§Ø¯ Ø¢ÛŒØªÙ… Ø³ÛŒØ§Ø³Øª" });
     }
 
     if (routeMode === "edit") {
-        return t("policy.edit.title", { defaultValue: "ویرایش آیتم سیاست" });
+        return t("policy.edit.title", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´ Ø¢ÛŒØªÙ… Ø³ÛŒØ§Ø³Øª" });
     }
 
     if (routeMode === "view") {
-        return t("policy.view.title", { defaultValue: "نمایش آیتم سیاست" });
+        return t("policy.view.title", { defaultValue: "Ù†Ù…Ø§ÛŒØ´ Ø¢ÛŒØªÙ… Ø³ÛŒØ§Ø³Øª" });
     }
 
     return "";
@@ -219,12 +209,12 @@ function resolveInvalidCreateMessage(
 ): string {
     if (nodeType === "policy") {
         return t("policy.errors.selectPolicyGroupParent", {
-            defaultValue: "برای ایجاد سیاست، ابتدا یک گروه سیاست را انتخاب کنید.",
+            defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒØ¬Ø§Ø¯ Ø³ÛŒØ§Ø³ØªØŒ Ø§Ø¨ØªØ¯Ø§ ÛŒÚ© Ú¯Ø±ÙˆÙ‡ Ø³ÛŒØ§Ø³Øª Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯.",
         });
     }
 
     return t("policy.errors.invalidHierarchy", {
-        defaultValue: "ساختار انتخاب‌شده برای سیاست معتبر نیست",
+        defaultValue: "Ø³Ø§Ø®ØªØ§Ø± Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ Ø³ÛŒØ§Ø³Øª Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª",
     });
 }
 
@@ -242,11 +232,6 @@ export default function PoliciesFclShellPage() {
     const createNode = usePolicyState((state) => state.createNode);
     const updateNode = usePolicyState((state) => state.updateNode);
     const removeNode = usePolicyState((state) => state.removeNode);
-    const tempDocumentsBySession = useDocumentAttachmentState(
-        (state) => state.tempDocumentsBySession,
-    );
-    const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
-    const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -255,9 +240,6 @@ export default function PoliciesFclShellPage() {
     const [submitting, setSubmitting] = useState(false);
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
-    const [policyDocumentTempSessionId, setPolicyDocumentTempSessionId] = useState(
-        createDocumentTempSessionId,
-    );
 
     const items = useMemo(() => sortPolicies(Object.values(nodesById)), [nodesById]);
 
@@ -278,18 +260,6 @@ export default function PoliciesFclShellPage() {
         return defaultChildType(selectedParentForCreate?.nodeType ?? null);
     }, [queryNodeType, selectedParentForCreate]);
 
-    const documentScopeKey = useMemo(() => {
-        if (routeMode === "create") {
-            return `create:${queryParentId ?? "root"}:${requestedNodeType}`;
-        }
-
-        if ((routeMode === "view" || routeMode === "edit") && policyId) {
-            return `policy:${policyId}`;
-        }
-
-        return "none";
-    }, [policyId, queryParentId, requestedNodeType, routeMode]);
-
     useEffect(() => {
         void loadChildren(ROOT_PARENT).catch((error: unknown) => {
             setPageError(
@@ -303,30 +273,6 @@ export default function PoliciesFclShellPage() {
             );
         });
     }, [loadChildren, t]);
-
-    useEffect(() => {
-        setPolicyDocumentTempSessionId(createDocumentTempSessionId());
-    }, [documentScopeKey]);
-
-    useEffect(() => {
-        if (!policyId) {
-            return;
-        }
-
-        void loadDocumentsForTarget(POLICY_DOCUMENT_TARGET_TYPE, policyId).catch(
-            (error: unknown) => {
-                setObjectError(
-                    mapError(
-                        error,
-                        t("document.errors.load", {
-                            defaultValue: "خطا در بارگذاری مستندات",
-                        }),
-                        t,
-                    ),
-                );
-            },
-        );
-    }, [loadDocumentsForTarget, policyId, t]);
 
     const treeSelectedId = useMemo(() => {
         if (routeMode === "create") {
@@ -427,43 +373,13 @@ export default function PoliciesFclShellPage() {
         navigate("/policies");
     }, [navigate, policyId, queryParentId, routeMode, selectedTreeId]);
 
-    const commitPolicyTempDocuments = useCallback(
-        async (targetId: string) => {
-            const tempDocuments = tempDocumentsBySession[policyDocumentTempSessionId] ?? [];
-
-            if (tempDocuments.length === 0) {
-                return;
-            }
-
-            await commitTempDocuments({
-                tempSessionId: policyDocumentTempSessionId,
-                targetType: POLICY_DOCUMENT_TARGET_TYPE,
-                targetId,
-                documentIds: tempDocuments.map((documentItem) => documentItem.id),
-                documentTitles: Object.fromEntries(
-                    tempDocuments.map((documentItem) => [
-                        documentItem.id,
-                        documentItem.title || documentItem.originalFileName,
-                    ]),
-                ),
-            });
-            await loadDocumentsForTarget(POLICY_DOCUMENT_TARGET_TYPE, targetId);
-        },
-        [
-            commitTempDocuments,
-            loadDocumentsForTarget,
-            policyDocumentTempSessionId,
-            tempDocumentsBySession,
-        ],
-    );
-
     const requestDelete = useCallback(
         (id: string) => {
             const target = nodesById[id];
 
             if (!target) {
                 setPageError(
-                    t("policy.errors.notFound", { defaultValue: "آیتم موردنظر یافت نشد" }),
+                    t("policy.errors.notFound", { defaultValue: "Ø¢ÛŒØªÙ… Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯" }),
                 );
                 return;
             }
@@ -471,7 +387,7 @@ export default function PoliciesFclShellPage() {
             if (hasChildren(items, id)) {
                 setPageError(
                     t("policy.errors.hasChildren", {
-                        defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+                        defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù Ø¢ÛŒØªÙ…ÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
                     }),
                 );
                 return;
@@ -510,7 +426,7 @@ export default function PoliciesFclShellPage() {
                 mapError(
                     error,
                     t("policy.errors.delete", {
-                        defaultValue: "خطا در حذف آیتم سیاست",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù Ø¢ÛŒØªÙ… Ø³ÛŒØ§Ø³Øª",
                     }),
                     t,
                 ),
@@ -530,7 +446,6 @@ export default function PoliciesFclShellPage() {
                 if (routeMode === "create") {
                     const createPayload = payload as PolicyNodeCreate;
                     const created = await createNode(createPayload.parentId ?? null, createPayload);
-                    await commitPolicyTempDocuments(created.id);
 
                     setSelectedTreeId(created.id);
                     setTreeExpansionAnchorId(created.id);
@@ -540,7 +455,6 @@ export default function PoliciesFclShellPage() {
 
                 if (routeMode === "edit" && policyId) {
                     await updateNode(policyId, payload as PolicyNodeUpdate);
-                    await commitPolicyTempDocuments(policyId);
                     setSelectedTreeId(policyId);
                     setTreeExpansionAnchorId(policyId);
                     navigate(`/policies/${policyId}`);
@@ -550,7 +464,7 @@ export default function PoliciesFclShellPage() {
                     mapError(
                         error,
                         t("policy.errors.save", {
-                            defaultValue: "خطا در ذخیره آیتم سیاست",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø°Ø®ÛŒØ±Ù‡ Ø¢ÛŒØªÙ… Ø³ÛŒØ§Ø³Øª",
                         }),
                         t,
                     ),
@@ -560,7 +474,6 @@ export default function PoliciesFclShellPage() {
             }
         },
         [
-            commitPolicyTempDocuments,
             createNode,
             navigate,
             policyId,
@@ -729,7 +642,6 @@ export default function PoliciesFclShellPage() {
                             requestedNodeType={requestedNodeType}
                             busy={loading || submitting}
                             error={objectError}
-                            documentTempSessionId={policyDocumentTempSessionId}
                             onErrorClose={() => setObjectError(null)}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
@@ -738,7 +650,7 @@ export default function PoliciesFclShellPage() {
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
                             {t("policy.object.notFound", {
-                                defaultValue: "آیتم سیاست انتخاب‌شده یافت نشد.",
+                                defaultValue: "Ø¢ÛŒØªÙ… Ø³ÛŒØ§Ø³Øª Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯.",
                             })}
                         </MessageStrip>
                     )}
@@ -747,13 +659,13 @@ export default function PoliciesFclShellPage() {
 
             <DeleteConfirmDialog
                 open={Boolean(deleteCandidate)}
-                title={t("policy.delete.title", { defaultValue: "حذف آیتم سیاست" })}
+                title={t("policy.delete.title", { defaultValue: "Ø­Ø°Ù Ø¢ÛŒØªÙ… Ø³ÛŒØ§Ø³Øª" })}
                 message={t("policy.delete.confirm", {
-                    defaultValue: "آیا از حذف \"{{title}}\" مطمئن هستید؟",
+                    defaultValue: "Ø¢ÛŒØ§ Ø§Ø² Ø­Ø°Ù \"{{title}}\" Ù…Ø·Ù…Ø¦Ù† Ù‡Ø³ØªÛŒØ¯ØŸ",
                     title: deleteCandidate?.title ?? "",
                 })}
-                confirmText={t("common.delete", { defaultValue: "حذف" })}
-                cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+                confirmText={t("common.delete", { defaultValue: "Ø­Ø°Ù" })}
+                cancelText={t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
                 loading={submitting}
                 onClose={() => setDeleteCandidate(null)}
                 onConfirm={() => {

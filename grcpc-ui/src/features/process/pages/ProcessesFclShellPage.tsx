@@ -1,4 +1,4 @@
-import {
+﻿import {
     createElement,
     useCallback,
     useEffect,
@@ -35,7 +35,6 @@ import type {
 import { useControlState } from "@/features/control/state/control.state";
 import ControlObjectPage, { type ControlObjectMode } from "@/features/control/pages/ControlObjectPage";
 import CreateControlDialog from "@/features/control/pages/CreateControlDialog";
-import { useDocumentAttachmentState } from "@/features/document";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import {
@@ -56,8 +55,6 @@ type ControlObjectErrorState = {
 };
 
 const DIALOG_WIDTH = "90vw";
-const PROCESS_DOCUMENT_TARGET_TYPE = "PROCESS_NODE";
-const CONTROL_DOCUMENT_TARGET_TYPE = "CONTROL_ASSIGNMENT";
 
 function useProcessRouteMode(): RouteMode {
     const { processId, controlAssignmentId } = useParams();
@@ -82,14 +79,6 @@ function isProcessNodeType(value: string | null): value is ProcessNodeType {
     return value === "process" || value === "subProcess";
 }
 
-function createDocumentTempSessionId(): string {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-        return crypto.randomUUID();
-    }
-
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 function mapError(
     error: unknown,
     fallback: string,
@@ -98,16 +87,16 @@ function mapError(
     if (error instanceof Error && error.message) {
         switch (error.message) {
             case "NOT_FOUND":
-                return t("process.errors.notFound", { defaultValue: "آیتم موردنظر یافت نشد" });
+                return t("process.errors.notFound", { defaultValue: "Ø¢ÛŒØªÙ… Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯" });
             case "PARENT_NOT_FOUND":
-                return t("process.errors.parentNotFound", { defaultValue: "والد انتخاب‌شده یافت نشد" });
+                return t("process.errors.parentNotFound", { defaultValue: "ÙˆØ§Ù„Ø¯ Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯" });
             case "HAS_CHILDREN":
                 return t("process.errors.hasChildren", {
-                    defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+                    defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù Ø¢ÛŒØªÙ…ÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
                 });
             case "INVALID_HIERARCHY":
                 return t("process.errors.invalidHierarchy", {
-                    defaultValue: "ساختار انتخاب‌شده برای فرآیند معتبر نیست",
+                    defaultValue: "Ø³Ø§Ø®ØªØ§Ø± Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ ÙØ±Ø¢ÛŒÙ†Ø¯ Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª",
                 });
             default:
                 return error.message;
@@ -127,19 +116,19 @@ function mapControlError(
             case "NOT_FOUND":
             case "CONTROL_ASSIGNMENT_NOT_FOUND":
                 return t("control.errors.notFound", {
-                    defaultValue: "اتصال کنترل موردنظر یافت نشد",
+                    defaultValue: "Ø§ØªØµØ§Ù„ Ú©Ù†ØªØ±Ù„ Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯",
                 });
             case "CONTROL_NOT_FOUND":
                 return t("control.errors.controlNotFound", {
-                    defaultValue: "کنترل انتخاب‌شده یافت نشد",
+                    defaultValue: "Ú©Ù†ØªØ±Ù„ Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯",
                 });
             case "SUB_PROCESS_NOT_FOUND":
                 return t("control.errors.subProcessNotFound", {
-                    defaultValue: "زیر فرآیند انتخاب‌شده یافت نشد",
+                    defaultValue: "Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯ Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯",
                 });
             case "DUPLICATE_ACTIVE_ASSIGNMENT":
                 return t("control.errors.duplicateActiveAssignment", {
-                    defaultValue: "این کنترل قبلاً به‌صورت فعال به این زیر فرآیند متصل شده است",
+                    defaultValue: "Ø§ÛŒÙ† Ú©Ù†ØªØ±Ù„ Ù‚Ø¨Ù„Ø§Ù‹ Ø¨Ù‡â€ŒØµÙˆØ±Øª ÙØ¹Ø§Ù„ Ø¨Ù‡ Ø§ÛŒÙ† Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯ Ù…ØªØµÙ„ Ø´Ø¯Ù‡ Ø§Ø³Øª",
                 });
             default:
                 return error.message;
@@ -279,15 +268,15 @@ function resolveDialogTitle(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     if (routeMode === "create") {
-        return t("process.create.title", { defaultValue: "ایجاد آیتم فرآیندی" });
+        return t("process.create.title", { defaultValue: "Ø§ÛŒØ¬Ø§Ø¯ Ø¢ÛŒØªÙ… ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ" });
     }
 
     if (routeMode === "edit") {
-        return t("process.edit.title", { defaultValue: "ویرایش آیتم فرآیندی" });
+        return t("process.edit.title", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´ Ø¢ÛŒØªÙ… ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ" });
     }
 
     if (routeMode === "view") {
-        return t("process.view.title", { defaultValue: "نمایش آیتم فرآیندی" });
+        return t("process.view.title", { defaultValue: "Ù†Ù…Ø§ÛŒØ´ Ø¢ÛŒØªÙ… ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ" });
     }
 
     return "";
@@ -343,12 +332,12 @@ function resolveInvalidCreateMessage(
 ): string {
     if (nodeType === "subProcess") {
         return t("process.errors.selectProcessParent", {
-            defaultValue: "برای ایجاد زیر فرآیند، ابتدا یک فرآیند یا زیر فرآیند همان والد را انتخاب کنید.",
+            defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒØ¬Ø§Ø¯ Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯ØŒ Ø§Ø¨ØªØ¯Ø§ ÛŒÚ© ÙØ±Ø¢ÛŒÙ†Ø¯ ÛŒØ§ Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯ Ù‡Ù…Ø§Ù† ÙˆØ§Ù„Ø¯ Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯.",
         });
     }
 
     return t("process.errors.invalidHierarchy", {
-        defaultValue: "ساختار انتخاب‌شده برای فرآیند معتبر نیست",
+        defaultValue: "Ø³Ø§Ø®ØªØ§Ø± Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ ÙØ±Ø¢ÛŒÙ†Ø¯ Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª",
     });
 }
 
@@ -376,11 +365,6 @@ export default function ProcessesFclShellPage() {
     const createAndAssignControl = useControlState((state) => state.createAndAssign);
     const updateControlAssignment = useControlState((state) => state.updateAssignment);
     const deleteControlAssignment = useControlState((state) => state.deleteAssignment);
-    const tempDocumentsBySession = useDocumentAttachmentState(
-        (state) => state.tempDocumentsBySession,
-    );
-    const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
-    const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -397,15 +381,6 @@ export default function ProcessesFclShellPage() {
     const [controlModalAssignmentId, setControlModalAssignmentId] = useState<string | null>(null);
     const [controlModalMode, setControlModalMode] = useState<ControlObjectMode>("view");
     const [controlModalError, setControlModalError] = useState<string | null>(null);
-    const [processDocumentTempSessionId, setProcessDocumentTempSessionId] = useState(
-        createDocumentTempSessionId,
-    );
-    const [controlDocumentTempSessionId, setControlDocumentTempSessionId] = useState(
-        createDocumentTempSessionId,
-    );
-    const [controlModalDocumentTempSessionId, setControlModalDocumentTempSessionId] = useState(
-        createDocumentTempSessionId,
-    );
     const [controlObjectLoadedId, setControlObjectLoadedId] = useState<string | null>(null);
     const controlObjectRequestSeq = useRef(0);
 
@@ -436,37 +411,13 @@ export default function ProcessesFclShellPage() {
         return defaultChildType(selectedParentForCreate?.nodeType ?? null);
     }, [queryNodeType, selectedParentForCreate]);
 
-    const processDocumentScopeKey = useMemo(() => {
-        if (isControlRoute) {
-            return "none";
-        }
-
-        if (routeMode === "create") {
-            return `create:${queryParentId ?? "root"}:${requestedNodeType}`;
-        }
-
-        if ((routeMode === "view" || routeMode === "edit") && processId) {
-            return `process:${routeMode}:${processId}`;
-        }
-
-        return "none";
-    }, [isControlRoute, processId, queryParentId, requestedNodeType, routeMode]);
-
-    const controlDocumentScopeKey = useMemo(() => {
-        if (!isControlRoute || !controlAssignmentId) {
-            return "none";
-        }
-
-        return `control:${routeMode}:${controlAssignmentId}`;
-    }, [controlAssignmentId, isControlRoute, routeMode]);
-
     useEffect(() => {
         void loadChildren(ROOT_PARENT).catch((error: unknown) => {
             setPageError(
                 mapError(
                     error,
                     t("process.errors.loadList", {
-                        defaultValue: "خطا در بارگذاری ساختار فرآیند",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø³Ø§Ø®ØªØ§Ø± ÙØ±Ø¢ÛŒÙ†Ø¯",
                     }),
                     t,
                 ),
@@ -475,24 +426,12 @@ export default function ProcessesFclShellPage() {
     }, [loadChildren, t]);
 
     useEffect(() => {
-        setProcessDocumentTempSessionId(createDocumentTempSessionId());
-    }, [processDocumentScopeKey]);
-
-    useEffect(() => {
-        setControlDocumentTempSessionId(createDocumentTempSessionId());
-    }, [controlDocumentScopeKey]);
-
-    useEffect(() => {
-        setControlModalDocumentTempSessionId(createDocumentTempSessionId());
-    }, [controlModalAssignmentId, controlModalMode]);
-
-    useEffect(() => {
         void refreshControlStructure().catch((error: unknown) => {
             setPageError(
                 mapControlError(
                     error,
                     t("control.errors.loadStructure", {
-                        defaultValue: "خطا در بارگذاری ساختار کنترل‌ها",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø³Ø§Ø®ØªØ§Ø± Ú©Ù†ØªØ±Ù„â€ŒÙ‡Ø§",
                     }),
                     t,
                 ),
@@ -525,7 +464,7 @@ export default function ProcessesFclShellPage() {
                     message: mapControlError(
                         error,
                         t("control.errors.loadAssignment", {
-                            defaultValue: "خطا در بارگذاری جزئیات اتصال کنترل",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø¬Ø²Ø¦ÛŒØ§Øª Ø§ØªØµØ§Ù„ Ú©Ù†ØªØ±Ù„",
                         }),
                         t,
                     ),
@@ -631,7 +570,7 @@ export default function ProcessesFclShellPage() {
                     mapControlError(
                         error,
                         t("control.errors.loadAssignment", {
-                            defaultValue: "خطا در بارگذاری جزئیات اتصال کنترل",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø¬Ø²Ø¦ÛŒØ§Øª Ø§ØªØµØ§Ù„ Ú©Ù†ØªØ±Ù„",
                         }),
                         t,
                     ),
@@ -668,7 +607,7 @@ export default function ProcessesFclShellPage() {
                 setPageError(
                     t("process.errors.createFromControlSelection", {
                         defaultValue:
-                            "برای ایجاد فرآیند یا زیر فرآیند، ابتدا یک آیتم فرآیندی را انتخاب کنید؛ کنترل فقط برای عملیات کنترل قابل استفاده است.",
+                            "Ø¨Ø±Ø§ÛŒ Ø§ÛŒØ¬Ø§Ø¯ ÙØ±Ø¢ÛŒÙ†Ø¯ ÛŒØ§ Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯ØŒ Ø§Ø¨ØªØ¯Ø§ ÛŒÚ© Ø¢ÛŒØªÙ… ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯Ø› Ú©Ù†ØªØ±Ù„ ÙÙ‚Ø· Ø¨Ø±Ø§ÛŒ Ø¹Ù…Ù„ÛŒØ§Øª Ú©Ù†ØªØ±Ù„ Ù‚Ø§Ø¨Ù„ Ø§Ø³ØªÙØ§Ø¯Ù‡ Ø§Ø³Øª.",
                     }),
                 );
                 return;
@@ -740,7 +679,7 @@ export default function ProcessesFclShellPage() {
 
             if (!target) {
                 setPageError(
-                    t("process.errors.notFound", { defaultValue: "آیتم موردنظر یافت نشد" }),
+                    t("process.errors.notFound", { defaultValue: "Ø¢ÛŒØªÙ… Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯" }),
                 );
                 return;
             }
@@ -748,7 +687,7 @@ export default function ProcessesFclShellPage() {
             if (selectedItem && hasAttachedControlsInScope(combinedTreeItems, selectedItem)) {
                 setPageError(
                     t("process.errors.hasAttachedControls", {
-                        defaultValue: "این آیتم دارای کنترل متصل است و قابل حذف نیست.",
+                        defaultValue: "Ø§ÛŒÙ† Ø¢ÛŒØªÙ… Ø¯Ø§Ø±Ø§ÛŒ Ú©Ù†ØªØ±Ù„ Ù…ØªØµÙ„ Ø§Ø³Øª Ùˆ Ù‚Ø§Ø¨Ù„ Ø­Ø°Ù Ù†ÛŒØ³Øª.",
                     }),
                 );
                 return;
@@ -757,7 +696,7 @@ export default function ProcessesFclShellPage() {
             if (hasChildren(processItems, id)) {
                 setPageError(
                     t("process.errors.hasChildren", {
-                        defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+                        defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù Ø¢ÛŒØªÙ…ÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
                     }),
                 );
                 return;
@@ -796,7 +735,7 @@ export default function ProcessesFclShellPage() {
                 mapError(
                     error,
                     t("process.errors.delete", {
-                        defaultValue: "خطا در حذف آیتم فرآیندی",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù Ø¢ÛŒØªÙ… ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ",
                     }),
                     t,
                 ),
@@ -834,7 +773,7 @@ export default function ProcessesFclShellPage() {
                 mapControlError(
                     error,
                     t("control.errors.delete", {
-                        defaultValue: "خطا در حذف اتصال کنترل",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù Ø§ØªØµØ§Ù„ Ú©Ù†ØªØ±Ù„",
                     }),
                     t,
                 ),
@@ -843,30 +782,6 @@ export default function ProcessesFclShellPage() {
             setSubmitting(false);
         }
     }, [deleteControlAssignment, deleteControlCandidate, navigate, t]);
-
-    const commitDocumentTempUploads = useCallback(
-        async (targetType: string, targetId: string, tempSessionId: string) => {
-            const tempDocuments = tempDocumentsBySession[tempSessionId] ?? [];
-            if (tempDocuments.length === 0) {
-                return;
-            }
-
-            await commitTempDocuments({
-                tempSessionId,
-                targetType,
-                targetId,
-                documentIds: tempDocuments.map((documentItem) => documentItem.id),
-                documentTitles: Object.fromEntries(
-                    tempDocuments.map((documentItem) => [
-                        documentItem.id,
-                        documentItem.title || documentItem.originalFileName,
-                    ]),
-                ),
-            });
-            await loadDocumentsForTarget(targetType, targetId);
-        },
-        [commitTempDocuments, loadDocumentsForTarget, tempDocumentsBySession],
-    );
 
     const handleObjectSubmit = useCallback(
         async (payload: ProcessNodeCreate | ProcessNodeUpdate) => {
@@ -878,11 +793,6 @@ export default function ProcessesFclShellPage() {
                 if (routeMode === "create") {
                     const createPayload = payload as ProcessNodeCreate;
                     const created = await createNode(createPayload.parentId ?? null, createPayload);
-                    await commitDocumentTempUploads(
-                        PROCESS_DOCUMENT_TARGET_TYPE,
-                        created.id,
-                        processDocumentTempSessionId,
-                    );
 
                     setSelectedTreeId(created.id);
                     setTreeExpansionAnchorId(created.id);
@@ -892,11 +802,6 @@ export default function ProcessesFclShellPage() {
 
                 if (routeMode === "edit" && processId) {
                     await updateNode(processId, payload as ProcessNodeUpdate);
-                    await commitDocumentTempUploads(
-                        PROCESS_DOCUMENT_TARGET_TYPE,
-                        processId,
-                        processDocumentTempSessionId,
-                    );
                     setSelectedTreeId(processId);
                     setTreeExpansionAnchorId(processId);
                     navigate(`/processes/${processId}`);
@@ -906,7 +811,7 @@ export default function ProcessesFclShellPage() {
                     mapError(
                         error,
                         t("process.errors.save", {
-                            defaultValue: "خطا در ذخیره آیتم فرآیندی",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø°Ø®ÛŒØ±Ù‡ Ø¢ÛŒØªÙ… ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ",
                         }),
                         t,
                     ),
@@ -916,10 +821,8 @@ export default function ProcessesFclShellPage() {
             }
         },
         [
-            commitDocumentTempUploads,
             createNode,
             navigate,
-            processDocumentTempSessionId,
             processId,
             routeMode,
             t,
@@ -943,7 +846,7 @@ export default function ProcessesFclShellPage() {
                 setPageError(
                     t("control.errors.selectSubProcessForCreate", {
                         defaultValue:
-                            "برای ایجاد کنترل، ابتدا یک زیر فرآیند یا کنترل زیر آن را انتخاب کنید.",
+                            "Ø¨Ø±Ø§ÛŒ Ø§ÛŒØ¬Ø§Ø¯ Ú©Ù†ØªØ±Ù„ØŒ Ø§Ø¨ØªØ¯Ø§ ÛŒÚ© Ø²ÛŒØ± ÙØ±Ø¢ÛŒÙ†Ø¯ ÛŒØ§ Ú©Ù†ØªØ±Ù„ Ø²ÛŒØ± Ø¢Ù† Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯.",
                     }),
                 );
                 return;
@@ -977,7 +880,7 @@ export default function ProcessesFclShellPage() {
                 setControlDialogError(
                     mapControlError(
                         error,
-                        t("control.errors.save", { defaultValue: "خطا در ذخیره کنترل" }),
+                        t("control.errors.save", { defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ØªØ±Ù„" }),
                         t,
                     ),
                 );
@@ -998,11 +901,6 @@ export default function ProcessesFclShellPage() {
                 setSubmitting(true);
                 setControlObjectError(null);
                 await updateControlAssignment(controlAssignmentId, payload);
-                await commitDocumentTempUploads(
-                    CONTROL_DOCUMENT_TARGET_TYPE,
-                    controlAssignmentId,
-                    controlDocumentTempSessionId,
-                );
                 await Promise.all([
                     loadControlAssignment(controlAssignmentId),
                     refreshControlStructure(),
@@ -1015,7 +913,7 @@ export default function ProcessesFclShellPage() {
                     controlAssignmentId,
                     message: mapControlError(
                         error,
-                        t("control.errors.save", { defaultValue: "خطا در ذخیره کنترل" }),
+                        t("control.errors.save", { defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ØªØ±Ù„" }),
                         t,
                     ),
                 });
@@ -1024,9 +922,7 @@ export default function ProcessesFclShellPage() {
             }
         },
         [
-            commitDocumentTempUploads,
             controlAssignmentId,
-            controlDocumentTempSessionId,
             loadControlAssignment,
             navigate,
             refreshControlStructure,
@@ -1064,11 +960,6 @@ export default function ProcessesFclShellPage() {
                 setSubmitting(true);
                 setControlModalError(null);
                 await updateControlAssignment(controlModalAssignmentId, payload);
-                await commitDocumentTempUploads(
-                    CONTROL_DOCUMENT_TARGET_TYPE,
-                    controlModalAssignmentId,
-                    controlModalDocumentTempSessionId,
-                );
                 await Promise.all([
                     loadControlAssignment(controlModalAssignmentId),
                     refreshControlStructure(),
@@ -1078,7 +969,7 @@ export default function ProcessesFclShellPage() {
                 setControlModalError(
                     mapControlError(
                         error,
-                        t("control.errors.save", { defaultValue: "خطا در ذخیره کنترل" }),
+                        t("control.errors.save", { defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ØªØ±Ù„" }),
                         t,
                     ),
                 );
@@ -1087,9 +978,7 @@ export default function ProcessesFclShellPage() {
             }
         },
         [
-            commitDocumentTempUploads,
             controlModalAssignmentId,
-            controlModalDocumentTempSessionId,
             loadControlAssignment,
             refreshControlStructure,
             t,
@@ -1108,7 +997,7 @@ export default function ProcessesFclShellPage() {
                         mapControlError(
                             error,
                             t("control.errors.loadAssignment", {
-                                defaultValue: "خطا در بارگذاری جزئیات اتصال کنترل",
+                                defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø¬Ø²Ø¦ÛŒØ§Øª Ø§ØªØµØ§Ù„ Ú©Ù†ØªØ±Ù„",
                             }),
                             t,
                         ),
@@ -1136,7 +1025,7 @@ export default function ProcessesFclShellPage() {
                 mapControlError(
                     error,
                     t("control.errors.loadStructure", {
-                        defaultValue: "خطا در بارگذاری ساختار کنترل‌ها",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø³Ø§Ø®ØªØ§Ø± Ú©Ù†ØªØ±Ù„â€ŒÙ‡Ø§",
                     }),
                     t,
                 ),
@@ -1261,7 +1150,6 @@ export default function ProcessesFclShellPage() {
                         value={selectedControlAssignment}
                         busy={controlLoading || submitting}
                         error={selectedControlObjectError}
-                        documentTempSessionId={controlDocumentTempSessionId}
                         onErrorClose={() => setControlObjectError(null)}
                         onSubmit={handleControlObjectSubmit}
                         onCancel={handleCloseControlDetailsPanel}
@@ -1317,7 +1205,7 @@ export default function ProcessesFclShellPage() {
 
     const dialogTitle = resolveDialogTitle(routeMode, t);
     const controlModalTitle = t("control.object.viewTitle", {
-        defaultValue: "نمایش کنترل",
+        defaultValue: "Ù†Ù…Ø§ÛŒØ´ Ú©Ù†ØªØ±Ù„",
     });
 
     return (
@@ -1357,7 +1245,6 @@ export default function ProcessesFclShellPage() {
                             requestedNodeType={requestedNodeType}
                             busy={loading || submitting}
                             error={objectError}
-                            documentTempSessionId={processDocumentTempSessionId}
                             onErrorClose={() => setObjectError(null)}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
@@ -1368,7 +1255,7 @@ export default function ProcessesFclShellPage() {
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
                             {t("process.object.notFound", {
-                                defaultValue: "آیتم فرآیندی انتخاب‌شده یافت نشد.",
+                                defaultValue: "Ø¢ÛŒØªÙ… ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯.",
                             })}
                         </MessageStrip>
                     )}
@@ -1395,7 +1282,6 @@ export default function ProcessesFclShellPage() {
                                 value={controlModalAssignment}
                                 busy={controlLoading || submitting}
                                 error={controlModalError}
-                                documentTempSessionId={controlModalDocumentTempSessionId}
                                 onErrorClose={() => setControlModalError(null)}
                                 onSubmit={handleControlModalSubmit}
                                 onCancel={handleControlModalCancel}
@@ -1408,7 +1294,7 @@ export default function ProcessesFclShellPage() {
                         ) : (
                             <MessageStrip design="Information" hideCloseButton>
                                 {t("control.object.loading", {
-                                    defaultValue: "در حال بارگذاری کنترل...",
+                                    defaultValue: "Ø¯Ø± Ø­Ø§Ù„ Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ØªØ±Ù„...",
                                 })}
                             </MessageStrip>
                         )}
@@ -1434,13 +1320,13 @@ export default function ProcessesFclShellPage() {
 
             <DeleteConfirmDialog
                 open={Boolean(deleteCandidate)}
-                title={t("process.delete.title", { defaultValue: "حذف آیتم فرآیندی" })}
+                title={t("process.delete.title", { defaultValue: "Ø­Ø°Ù Ø¢ÛŒØªÙ… ÙØ±Ø¢ÛŒÙ†Ø¯ÛŒ" })}
                 message={t("process.delete.confirm", {
-                    defaultValue: "آیا از حذف \"{{title}}\" مطمئن هستید؟",
+                    defaultValue: "Ø¢ÛŒØ§ Ø§Ø² Ø­Ø°Ù \"{{title}}\" Ù…Ø·Ù…Ø¦Ù† Ù‡Ø³ØªÛŒØ¯ØŸ",
                     title: deleteCandidate?.title ?? "",
                 })}
-                confirmText={t("common.delete", { defaultValue: "حذف" })}
-                cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+                confirmText={t("common.delete", { defaultValue: "Ø­Ø°Ù" })}
+                cancelText={t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
                 loading={submitting}
                 onClose={() => setDeleteCandidate(null)}
                 onConfirm={() => {
@@ -1451,16 +1337,16 @@ export default function ProcessesFclShellPage() {
             <DeleteConfirmDialog
                 open={Boolean(deleteControlCandidate)}
                 title={t("control.delete.title", {
-                    defaultValue: "حذف اتصال کنترل",
+                    defaultValue: "Ø­Ø°Ù Ø§ØªØµØ§Ù„ Ú©Ù†ØªØ±Ù„",
                 })}
                 message={t("control.delete.confirm", {
-                    defaultValue: "آیا از حذف اتصال کنترل «{{title}}» مطمئن هستید؟",
+                    defaultValue: "Ø¢ÛŒØ§ Ø§Ø² Ø­Ø°Ù Ø§ØªØµØ§Ù„ Ú©Ù†ØªØ±Ù„ Â«{{title}}Â» Ù…Ø·Ù…Ø¦Ù† Ù‡Ø³ØªÛŒØ¯ØŸ",
                     title: deleteControlCandidate?.title ?? "",
                 })}
                 confirmText={t("control.actions.deleteAssignment", {
-                    defaultValue: "حذف اتصال کنترل",
+                    defaultValue: "Ø­Ø°Ù Ø§ØªØµØ§Ù„ Ú©Ù†ØªØ±Ù„",
                 })}
-                cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+                cancelText={t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
                 loading={submitting}
                 onClose={() => setDeleteControlCandidate(null)}
                 onConfirm={() => {

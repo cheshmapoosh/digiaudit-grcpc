@@ -1,7 +1,5 @@
-import {
-    useCallback,
+﻿import {
     useMemo,
-    useRef,
     useState,
     type CSSProperties,
     type ReactNode,
@@ -37,10 +35,7 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
-import {
-    DocumentAttachmentsManager,
-    type DocumentBeforeParentSubmitHandler,
-} from "@/features/document";
+import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
 
 export type RiskObjectMode = "create" | "edit" | "view";
 
@@ -80,7 +75,6 @@ export interface RiskObjectPageProps {
     requestedNodeType?: RiskNodeType;
     busy?: boolean;
     error?: string | null;
-    documentTempSessionId?: string;
     onErrorClose?: () => void;
     onSubmit: (payload: RiskNodeCreate | RiskNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
@@ -319,8 +313,8 @@ function resolveNodeTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<RiskNodeType, string> = {
-        riskCategory: t("risk.nodeType.riskCategory", { defaultValue: "طبقه ریسک" }),
-        riskTemplate: t("risk.nodeType.riskTemplate", { defaultValue: "الگوی ریسک" }),
+        riskCategory: t("risk.nodeType.riskCategory", { defaultValue: "Ø·Ø¨Ù‚Ù‡ Ø±ÛŒØ³Ú©" }),
+        riskTemplate: t("risk.nodeType.riskTemplate", { defaultValue: "Ø§Ù„Ú¯ÙˆÛŒ Ø±ÛŒØ³Ú©" }),
     };
 
     return map[nodeType];
@@ -331,8 +325,8 @@ function resolveStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     return status === "active"
-        ? t("common.active", { defaultValue: "فعال" })
-        : t("common.inactive", { defaultValue: "غیرفعال" });
+        ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+        : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
 }
 
 function resolveRiskTypeLabel(
@@ -340,14 +334,14 @@ function resolveRiskTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<RiskTemplateType, string> = {
-        operational: t("risk.riskType.operational", { defaultValue: "عملیاتی" }),
-        financial: t("risk.riskType.financial", { defaultValue: "مالی" }),
-        strategic: t("risk.riskType.strategic", { defaultValue: "استراتژیک" }),
-        compliance: t("risk.riskType.compliance", { defaultValue: "انطباق" }),
-        technology: t("risk.riskType.technology", { defaultValue: "فناوری" }),
-        reputation: t("risk.riskType.reputation", { defaultValue: "شهرت" }),
-        safety: t("risk.riskType.safety", { defaultValue: "ایمنی" }),
-        other: t("risk.riskType.other", { defaultValue: "سایر" }),
+        operational: t("risk.riskType.operational", { defaultValue: "Ø¹Ù…Ù„ÛŒØ§ØªÛŒ" }),
+        financial: t("risk.riskType.financial", { defaultValue: "Ù…Ø§Ù„ÛŒ" }),
+        strategic: t("risk.riskType.strategic", { defaultValue: "Ø§Ø³ØªØ±Ø§ØªÚ˜ÛŒÚ©" }),
+        compliance: t("risk.riskType.compliance", { defaultValue: "Ø§Ù†Ø·Ø¨Ø§Ù‚" }),
+        technology: t("risk.riskType.technology", { defaultValue: "ÙÙ†Ø§ÙˆØ±ÛŒ" }),
+        reputation: t("risk.riskType.reputation", { defaultValue: "Ø´Ù‡Ø±Øª" }),
+        safety: t("risk.riskType.safety", { defaultValue: "Ø§ÛŒÙ…Ù†ÛŒ" }),
+        other: t("risk.riskType.other", { defaultValue: "Ø³Ø§ÛŒØ±" }),
     };
 
     return map[riskType];
@@ -368,16 +362,20 @@ function defaultTabs(nodeType: RiskNodeType): RiskTabKey[] {
     return ["general", "riskSummary", "kriTemplate", "documents"];
 }
 
+function resolveDocumentTargetType(nodeType: RiskNodeType): DocumentLinkTargetType {
+    return nodeType === "riskTemplate" ? "CENTRAL_RISK_TEMPLATE" : "CENTRAL_RISK_CATEGORY";
+}
+
 function resolveTabLabel(tab: RiskTabKey, t: ReturnType<typeof useTranslation>["t"]): string {
     const labels: Record<RiskTabKey, string> = {
-        general: t("risk.tabs.general", { defaultValue: "اطلاعات کلی" }),
-        riskSummary: t("risk.tabs.riskSummary", { defaultValue: "خلاصه ریسک" }),
-        kriTemplate: t("risk.tabs.kriTemplate", { defaultValue: "قالب KRI" }),
-        documents: t("risk.tabs.documents", { defaultValue: "مستندات" }),
-        impacts: t("risk.tabs.impacts", { defaultValue: "محرک‌ها و اثرات" }),
-        existingRisks: t("risk.tabs.existingRisks", { defaultValue: "ریسک موجود" }),
-        responsePattern: t("risk.tabs.responsePattern", { defaultValue: "الگوی پاسخ" }),
-        controlCenter: t("risk.tabs.controlCenter", { defaultValue: "مرکز کنترل" }),
+        general: t("risk.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
+        riskSummary: t("risk.tabs.riskSummary", { defaultValue: "Ø®Ù„Ø§ØµÙ‡ Ø±ÛŒØ³Ú©" }),
+        kriTemplate: t("risk.tabs.kriTemplate", { defaultValue: "Ù‚Ø§Ù„Ø¨ KRI" }),
+        documents: t("risk.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }),
+        impacts: t("risk.tabs.impacts", { defaultValue: "Ù…Ø­Ø±Ú©â€ŒÙ‡Ø§ Ùˆ Ø§Ø«Ø±Ø§Øª" }),
+        existingRisks: t("risk.tabs.existingRisks", { defaultValue: "Ø±ÛŒØ³Ú© Ù…ÙˆØ¬ÙˆØ¯" }),
+        responsePattern: t("risk.tabs.responsePattern", { defaultValue: "Ø§Ù„Ú¯ÙˆÛŒ Ù¾Ø§Ø³Ø®" }),
+        controlCenter: t("risk.tabs.controlCenter", { defaultValue: "Ù…Ø±Ú©Ø² Ú©Ù†ØªØ±Ù„" }),
     };
 
     return labels[tab];
@@ -476,7 +474,6 @@ export default function RiskObjectPage({
                                            requestedNodeType,
                                            busy = false,
                                            error,
-                                           documentTempSessionId,
                                            onErrorClose,
                                            onSubmit,
                                            onCancel,
@@ -492,8 +489,6 @@ export default function RiskObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(form.nodeType), [form.nodeType]);
     const [activeTab, setActiveTab] = useState<RiskTabKey>("general");
-    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
-    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
 
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? parent ?? null
@@ -502,7 +497,7 @@ export default function RiskObjectPage({
     const headerTitle = form.title || value?.title || "";
     const headerParent = selectedParent
         ? `${selectedParent.code} - ${selectedParent.title}`
-        : t("common.none", { defaultValue: "ندارد" });
+        : t("common.none", { defaultValue: "Ù†Ø¯Ø§Ø±Ø¯" });
     const headerType = resolveNodeTypeLabel(form.nodeType, t);
     const headerStatus = resolveStatusLabel(form.status, t);
     const currentRiskId = value?.id ?? null;
@@ -520,14 +515,14 @@ export default function RiskObjectPage({
     const validate = (): boolean => {
         if (!form.code.trim()) {
             setValidationError(
-                t("risk.validation.codeRequired", { defaultValue: "کد الزامی است" }),
+                t("risk.validation.codeRequired", { defaultValue: "Ú©Ø¯ Ø§Ù„Ø²Ø§Ù…ÛŒ Ø§Ø³Øª" }),
             );
             return false;
         }
 
         if (!form.title.trim()) {
             setValidationError(
-                t("risk.validation.titleRequired", { defaultValue: "نام الزامی است" }),
+                t("risk.validation.titleRequired", { defaultValue: "Ù†Ø§Ù… Ø§Ù„Ø²Ø§Ù…ÛŒ Ø§Ø³Øª" }),
             );
             return false;
         }
@@ -535,7 +530,7 @@ export default function RiskObjectPage({
         if (form.sortOrder.trim() && parseSortOrder(form.sortOrder) === undefined) {
             setValidationError(
                 t("risk.validation.sortOrderInvalid", {
-                    defaultValue: "ترتیب نمایش باید عدد صحیح نامنفی باشد",
+                    defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´ Ø¨Ø§ÛŒØ¯ Ø¹Ø¯Ø¯ ØµØ­ÛŒØ­ Ù†Ø§Ù…Ù†ÙÛŒ Ø¨Ø§Ø´Ø¯",
                 }),
             );
             return false;
@@ -545,31 +540,8 @@ export default function RiskObjectPage({
         return true;
     };
 
-    const handleDocumentBeforeParentSubmitChange = useCallback(
-        (handler: DocumentBeforeParentSubmitHandler | null) => {
-            documentBeforeSubmitRef.current = handler;
-        },
-        [],
-    );
-
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
-            return;
-        }
-
-        if (hasPendingDocumentUploads) {
-            setValidationError(
-                t("document.validation.waitForUpload", {
-                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
-                }),
-            );
-            setActiveTab("documents");
-            return;
-        }
-
-        const documentsReady = await documentBeforeSubmitRef.current?.();
-        if (documentsReady === false) {
-            setActiveTab("documents");
             return;
         }
 
@@ -604,7 +576,7 @@ export default function RiskObjectPage({
     const renderGeneralTab = () => (
         <>
             <div style={FORM_GRID_STYLE}>
-                <FormField label={t("risk.fields.code", { defaultValue: "شناسه" })} required>
+                <FormField label={t("risk.fields.code", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡" })} required>
                     <Input
                         value={form.code}
                         disabled={readOnly || busy}
@@ -612,7 +584,7 @@ export default function RiskObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("risk.fields.name", { defaultValue: "نام" })} required>
+                <FormField label={t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" })} required>
                     <Input
                         value={form.title}
                         disabled={readOnly || busy}
@@ -620,15 +592,15 @@ export default function RiskObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("risk.fields.parent", { defaultValue: "والد" })}>
+                <FormField label={t("risk.fields.parent", { defaultValue: "ÙˆØ§Ù„Ø¯" })}>
                     <Input value={headerParent} readonly />
                 </FormField>
 
-                <FormField label={t("risk.fields.type", { defaultValue: "نوع" })}>
+                <FormField label={t("risk.fields.type", { defaultValue: "Ù†ÙˆØ¹" })}>
                     <Input value={headerType} readonly />
                 </FormField>
 
-                <FormField label={t("risk.fields.status", { defaultValue: "وضعیت" })}>
+                <FormField label={t("risk.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}>
                     <Select
                         disabled={readOnly || busy}
                         onChange={(event) => {
@@ -637,16 +609,16 @@ export default function RiskObjectPage({
                         }}
                     >
                         <Option data-value="active" selected={form.status === "active"}>
-                            {t("common.active", { defaultValue: "فعال" })}
+                            {t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })}
                         </Option>
                         <Option data-value="inactive" selected={form.status === "inactive"}>
-                            {t("common.inactive", { defaultValue: "غیرفعال" })}
+                            {t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" })}
                         </Option>
                     </Select>
                 </FormField>
 
                 <FormField
-                    label={t("risk.fields.sortOrder", { defaultValue: "ترتیب نمایش" })}
+                    label={t("risk.fields.sortOrder", { defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´" })}
                 >
                     <Input
                         value={form.sortOrder}
@@ -655,7 +627,7 @@ export default function RiskObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("risk.fields.validFrom", { defaultValue: "تاریخ ایجاد" })}>
+                <FormField label={t("risk.fields.validFrom", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" })}>
                     <DatePicker
                         value={form.validFrom}
                         valueFormat={DATE_VALUE_FORMAT}
@@ -663,7 +635,7 @@ export default function RiskObjectPage({
                         primaryCalendarType="Persian"
                         disabled={readOnly || busy}
                         placeholder={t("organization.fields.datePlaceholder", {
-                            defaultValue: "سال/ماه/روز",
+                            defaultValue: "Ø³Ø§Ù„/Ù…Ø§Ù‡/Ø±ÙˆØ²",
                         })}
                         onChange={(event) =>
                             handleChange("validFrom", readDatePickerValue(event))
@@ -671,7 +643,7 @@ export default function RiskObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("risk.fields.validTo", { defaultValue: "تاریخ اعتبار" })}>
+                <FormField label={t("risk.fields.validTo", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" })}>
                     <DatePicker
                         value={form.validTo}
                         valueFormat={DATE_VALUE_FORMAT}
@@ -679,7 +651,7 @@ export default function RiskObjectPage({
                         primaryCalendarType="Persian"
                         disabled={readOnly || busy}
                         placeholder={t("organization.fields.datePlaceholder", {
-                            defaultValue: "سال/ماه/روز",
+                            defaultValue: "Ø³Ø§Ù„/Ù…Ø§Ù‡/Ø±ÙˆØ²",
                         })}
                         onChange={(event) =>
                             handleChange("validTo", readDatePickerValue(event))
@@ -688,18 +660,18 @@ export default function RiskObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("risk.fields.allowReference", { defaultValue: "مجوز ارجاع" })}
+                    label={t("risk.fields.allowReference", { defaultValue: "Ù…Ø¬ÙˆØ² Ø§Ø±Ø¬Ø§Ø¹" })}
                 >
                     <CheckBox
                         checked={form.allowReference}
                         disabled={readOnly || busy}
-                        text={form.allowReference ? t("common.yes", { defaultValue: "بله" }) : t("common.no", { defaultValue: "خیر" })}
+                        text={form.allowReference ? t("common.yes", { defaultValue: "Ø¨Ù„Ù‡" }) : t("common.no", { defaultValue: "Ø®ÛŒØ±" })}
                         onChange={(event) => handleChange("allowReference", readCheckBoxChecked(event))}
                     />
                 </FormField>
 
                 <FormField
-                    label={t("risk.fields.analysisProfile", { defaultValue: "پروفایل تحلیل" })}
+                    label={t("risk.fields.analysisProfile", { defaultValue: "Ù¾Ø±ÙˆÙØ§ÛŒÙ„ ØªØ­Ù„ÛŒÙ„" })}
                 >
                     <Input
                         value={form.analysisProfile}
@@ -708,7 +680,7 @@ export default function RiskObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("risk.fields.owner", { defaultValue: "مالک" })}>
+                <FormField label={t("risk.fields.owner", { defaultValue: "Ù…Ø§Ù„Ú©" })}>
                     <Input
                         value={form.ownerName}
                         disabled={readOnly || busy}
@@ -720,7 +692,7 @@ export default function RiskObjectPage({
                     <>
                         <FormField
                             label={t("risk.fields.companyOperation", {
-                                defaultValue: "شرکت / عملیات",
+                                defaultValue: "Ø´Ø±Ú©Øª / Ø¹Ù…Ù„ÛŒØ§Øª",
                             })}
                         >
                             <Input
@@ -732,7 +704,7 @@ export default function RiskObjectPage({
                             />
                         </FormField>
 
-                        <FormField label={t("risk.fields.riskType", { defaultValue: "نوع ریسک" })}>
+                        <FormField label={t("risk.fields.riskType", { defaultValue: "Ù†ÙˆØ¹ Ø±ÛŒØ³Ú©" })}>
                             <Select
                                 disabled={readOnly || busy}
                                 onChange={(event) => {
@@ -762,7 +734,7 @@ export default function RiskObjectPage({
                         </FormField>
 
                         <FormField
-                            label={t("risk.fields.causes", { defaultValue: "محرک‌ها و اثرات" })}
+                            label={t("risk.fields.causes", { defaultValue: "Ù…Ø­Ø±Ú©â€ŒÙ‡Ø§ Ùˆ Ø§Ø«Ø±Ø§Øª" })}
                             fullWidth
                         >
                             <TextArea
@@ -776,7 +748,7 @@ export default function RiskObjectPage({
                 ) : null}
 
                 <FormField
-                    label={t("risk.fields.description", { defaultValue: "شرح" })}
+                    label={t("risk.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                     fullWidth
                 >
                     <TextArea
@@ -800,7 +772,7 @@ export default function RiskObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={onEdit}
                 >
-                    {t("common.edit", { defaultValue: "ویرایش" })}
+                    {t("common.edit", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´" })}
                 </Button>
             ) : (
                 <Button
@@ -809,7 +781,7 @@ export default function RiskObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={handleSubmit}
                 >
-                    {t("common.save", { defaultValue: "ذخیره" })}
+                    {t("common.save", { defaultValue: "Ø°Ø®ÛŒØ±Ù‡" })}
                 </Button>
             )}
 
@@ -820,8 +792,8 @@ export default function RiskObjectPage({
                 onClick={onCancel}
             >
                 {mode === "view"
-                    ? t("common.close", { defaultValue: "بستن" })
-                    : t("common.cancel", { defaultValue: "انصراف" })}
+                    ? t("common.close", { defaultValue: "Ø¨Ø³ØªÙ†" })
+                    : t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
             </Button>
         </div>
     );
@@ -834,11 +806,11 @@ export default function RiskObjectPage({
         if (tab === "impacts") {
             return (
                 <TablePlaceholder
-                    title={t("risk.tabs.impacts", { defaultValue: "محرک‌ها و اثرات" })}
+                    title={t("risk.tabs.impacts", { defaultValue: "Ù…Ø­Ø±Ú©â€ŒÙ‡Ø§ Ùˆ Ø§Ø«Ø±Ø§Øª" })}
                     columns={[
-                        t("risk.fields.effect", { defaultValue: "اثر" }),
-                        t("risk.fields.effectCategory", { defaultValue: "طبقه اثر" }),
-                        t("risk.fields.effectCategoryDescription", { defaultValue: "شرح طبقه اثر" }),
+                        t("risk.fields.effect", { defaultValue: "Ø§Ø«Ø±" }),
+                        t("risk.fields.effectCategory", { defaultValue: "Ø·Ø¨Ù‚Ù‡ Ø§Ø«Ø±" }),
+                        t("risk.fields.effectCategoryDescription", { defaultValue: "Ø´Ø±Ø­ Ø·Ø¨Ù‚Ù‡ Ø§Ø«Ø±" }),
                     ]}
                 />
             );
@@ -847,14 +819,14 @@ export default function RiskObjectPage({
         if (tab === "existingRisks") {
             return (
                 <TablePlaceholder
-                    title={t("risk.tabs.existingRisks", { defaultValue: "ریسک موجود" })}
+                    title={t("risk.tabs.existingRisks", { defaultValue: "Ø±ÛŒØ³Ú© Ù…ÙˆØ¬ÙˆØ¯" })}
                     columns={[
-                        t("risk.fields.name", { defaultValue: "نام" }),
-                        t("risk.fields.orgUnit", { defaultValue: "واحد سازمانی" }),
-                        t("risk.fields.activity", { defaultValue: "فعالیت" }),
-                        t("risk.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                        t("risk.fields.validTo", { defaultValue: "تاریخ اعتبار" }),
-                        t("risk.fields.publishMethod", { defaultValue: "روش انتشار" }),
+                        t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" }),
+                        t("risk.fields.orgUnit", { defaultValue: "ÙˆØ§Ø­Ø¯ Ø³Ø§Ø²Ù…Ø§Ù†ÛŒ" }),
+                        t("risk.fields.activity", { defaultValue: "ÙØ¹Ø§Ù„ÛŒØª" }),
+                        t("risk.fields.createdAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" }),
+                        t("risk.fields.validTo", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" }),
+                        t("risk.fields.publishMethod", { defaultValue: "Ø±ÙˆØ´ Ø§Ù†ØªØ´Ø§Ø±" }),
                     ]}
                 />
             );
@@ -863,13 +835,13 @@ export default function RiskObjectPage({
         if (tab === "responsePattern") {
             return (
                 <TablePlaceholder
-                    title={t("risk.tabs.responsePattern", { defaultValue: "الگوی پاسخ" })}
+                    title={t("risk.tabs.responsePattern", { defaultValue: "Ø§Ù„Ú¯ÙˆÛŒ Ù¾Ø§Ø³Ø®" })}
                     columns={[
-                        t("risk.fields.name", { defaultValue: "نام" }),
-                        t("risk.fields.type", { defaultValue: "نوع" }),
-                        t("risk.fields.objective", { defaultValue: "هدف" }),
-                        t("risk.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                        t("risk.fields.validTo", { defaultValue: "تاریخ اعتبار" }),
+                        t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" }),
+                        t("risk.fields.type", { defaultValue: "Ù†ÙˆØ¹" }),
+                        t("risk.fields.objective", { defaultValue: "Ù‡Ø¯Ù" }),
+                        t("risk.fields.createdAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" }),
+                        t("risk.fields.validTo", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" }),
                     ]}
                 />
             );
@@ -878,11 +850,11 @@ export default function RiskObjectPage({
         if (tab === "controlCenter") {
             return (
                 <TablePlaceholder
-                    title={t("risk.tabs.controlCenter", { defaultValue: "مرکز کنترل" })}
+                    title={t("risk.tabs.controlCenter", { defaultValue: "Ù…Ø±Ú©Ø² Ú©Ù†ØªØ±Ù„" })}
                     columns={[
-                        t("risk.fields.name", { defaultValue: "نام" }),
-                        t("risk.fields.owner", { defaultValue: "مالک" }),
-                        t("risk.fields.description", { defaultValue: "شرح" }),
+                        t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" }),
+                        t("risk.fields.owner", { defaultValue: "Ù…Ø§Ù„Ú©" }),
+                        t("risk.fields.description", { defaultValue: "Ø´Ø±Ø­" }),
                     ]}
                 />
             );
@@ -891,10 +863,10 @@ export default function RiskObjectPage({
         if (tab === "riskSummary") {
             return (
                 <TablePlaceholder
-                    title={t("risk.tabs.riskSummary", { defaultValue: "خلاصه ریسک" })}
+                    title={t("risk.tabs.riskSummary", { defaultValue: "Ø®Ù„Ø§ØµÙ‡ Ø±ÛŒØ³Ú©" })}
                     columns={[
-                        t("risk.fields.name", { defaultValue: "نام" }),
-                        t("risk.fields.description", { defaultValue: "شرح" }),
+                        t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" }),
+                        t("risk.fields.description", { defaultValue: "Ø´Ø±Ø­" }),
                     ]}
                 />
             );
@@ -903,32 +875,28 @@ export default function RiskObjectPage({
         if (tab === "kriTemplate") {
             return (
                 <TablePlaceholder
-                    title={t("risk.tabs.kriTemplate", { defaultValue: "قالب KRI" })}
+                    title={t("risk.tabs.kriTemplate", { defaultValue: "Ù‚Ø§Ù„Ø¨ KRI" })}
                     columns={[
-                        t("risk.fields.name", { defaultValue: "نام" }),
-                        t("risk.fields.type", { defaultValue: "نوع" }),
-                        t("risk.fields.description", { defaultValue: "شرح" }),
+                        t("risk.fields.name", { defaultValue: "Ù†Ø§Ù…" }),
+                        t("risk.fields.type", { defaultValue: "Ù†ÙˆØ¹" }),
+                        t("risk.fields.description", { defaultValue: "Ø´Ø±Ø­" }),
                     ]}
                 />
             );
         }
 
         return (
-            <DocumentAttachmentsManager
+            <DocumentManager
                 key={currentRiskId ?? "unsaved-risk-documents"}
-                title={t("risk.tabs.documents", { defaultValue: "مستندات" })}
-                targetType="RISK_NODE"
+                title={t("risk.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
+                targetType={resolveDocumentTargetType(form.nodeType)}
                 targetId={currentRiskId}
-                tempSessionId={documentTempSessionId}
-                stagingMode="tempUntilParentSave"
                 busy={busy}
                 readOnly={readOnly}
                 saveFirstMessage={t("risk.documents.saveFirst", {
                     defaultValue:
-                        "ابتدا آیتم ریسک را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
+                        "Ø§Ø¨ØªØ¯Ø§ Ø¢ÛŒØªÙ… Ø±ÛŒØ³Ú© Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯ØŒ Ø³Ù¾Ø³ Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø±Ø§ Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ÛŒØ¯.",
                 })}
-                onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
-                onPendingUploadsChange={setHasPendingDocumentUploads}
             />
         );
     };
@@ -941,10 +909,10 @@ export default function RiskObjectPage({
                 <div style={HEADER_TITLE_STYLE}>
                     <Title level="H4">
                         {mode === "create"
-                            ? t("risk.object.createModalTitle", { defaultValue: "ایجاد" })
+                            ? t("risk.object.createModalTitle", { defaultValue: "Ø§ÛŒØ¬Ø§Ø¯" })
                             : headerTitle ||
                               t("risk.object.modalTitle", {
-                                  defaultValue: "مرکز ریسک",
+                                  defaultValue: "Ù…Ø±Ú©Ø² Ø±ÛŒØ³Ú©",
                               })}
                     </Title>
                 </div>
@@ -952,28 +920,28 @@ export default function RiskObjectPage({
                 <div style={HEADER_GRID_STYLE}>
                     <HeaderItem
                         label={t("risk.fields.parentRiskCategory", {
-                            defaultValue: "والد طبقه",
+                            defaultValue: "ÙˆØ§Ù„Ø¯ Ø·Ø¨Ù‚Ù‡",
                         })}
                         value={headerParent}
                     />
                     <HeaderItem
-                        label={t("risk.fields.identifier", { defaultValue: "شناسه" })}
+                        label={t("risk.fields.identifier", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡" })}
                         value={form.code || value?.id}
                     />
                     <HeaderItem
-                        label={t("risk.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
+                        label={t("risk.fields.createdAt", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" })}
                         value={formatPersianDate(value?.createdAt)}
                     />
                     <HeaderItem
-                        label={t("risk.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
+                        label={t("risk.fields.validTo", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" })}
                         value={formatPersianDate(form.validTo)}
                     />
                     <HeaderItem
-                        label={t("risk.fields.nodeType", { defaultValue: "نوع آیتم" })}
+                        label={t("risk.fields.nodeType", { defaultValue: "Ù†ÙˆØ¹ Ø¢ÛŒØªÙ…" })}
                         value={headerType}
                     />
                     <HeaderItem
-                        label={t("risk.fields.status", { defaultValue: "وضعیت" })}
+                        label={t("risk.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}
                         value={headerStatus}
                     />
                 </div>

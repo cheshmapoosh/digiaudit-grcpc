@@ -4,15 +4,21 @@
 Applies to `src/features/document`.
 
 ## Feature purpose
-Document manages attachment metadata and upload/download flows used by other features.
+Document is the shared Master Data V2 UI for:
+
+`Temporary Upload -> Document -> Immutable Document Version -> typed Document Link`
 
 ## Rules
 - Keep API calls inside `infra/document.api.repo.ts`.
-- Keep backend API base path aligned with `/api/documents`.
-- Preserve temporary upload and commit flow when used by modals or tabs in other features.
-- Do not expose storage credentials or assume direct permanent object URLs in UI code.
-- Model attachment metadata in `domain/document.model.ts` before using it in state.
-- Reusable attachment UI should go to shared/components only when multiple features need the same component.
+- Use only `/api/master-data/document-temporary-uploads`, `/api/master-data/documents`, `/api/master-data/document-versions`, and `/api/master-data/document-links`.
+- Temporary upload is target-independent. It accepts one file only and returns safe metadata plus `tempUploadId`.
+- Do not use `tempSessionId`, browser-generated upload sessions, generic commit endpoints, generic target strings, or `/api/documents`.
+- The shared component receives one approved `DocumentLinkTargetType` and a target ID or null from the owning feature.
+- When target ID is null, disable finalization and show the save-first state; do not chain parent save and document commit in the browser.
+- `Document Version` rows are immutable; adding a file creates a new version and link.
+- Deleting from a target panel deletes the `Document Link`, not the document identity, version, or permanent object.
+- `MASTERDATA_REVISION` is backend-only and must not be selectable or rendered as a normal browser target.
+- Do not expose storage keys, bucket names, endpoints, permanent URLs, Revision Content, or object metadata in UI models.
 
 ## Verification
 - Run `npm run lint` and `npm run build` from `grcpc-ui`.

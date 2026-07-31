@@ -6,57 +6,62 @@
       "upload": "Select File",
       "saveTitle": "Save",
       "download": "Download",
-      "delete": "Delete"
+      "delete": "Remove Link",
+      "addVersion": "Add Version"
     },
     "upload": {
-      "inProgress": "Uploading files...",
       "fileInProgress": "Uploading",
       "fileProgress": "Uploading {{progress}}%",
-      "successState": "Upload complete",
-      "success": "File \"{{fileName}}\" uploaded successfully.",
+      "success": "File \"{{fileName}}\" uploaded and saved successfully.",
       "failed": "Upload failed",
-      "removeFailed": "Delete"
+      "removeFailed": "Remove",
+      "available": "Temporary upload is available",
+      "finalizing": "Saving document",
+      "finalized": "Document was saved successfully.",
+      "finalizeFailed": "Finalization failed",
+      "retryFinalize": "Retry",
+      "consumed": "Document saved",
+      "expired": "Temporary upload expired",
+      "accessDenied": "Access denied"
     },
     "titleSave": {
       "success": "Document title saved successfully."
     },
     "fields": {
       "title": "Title",
-      "originalFileName": "File Name",
-      "contentType": "File Type",
+      "fileName": "File Name",
+      "version": "Version",
+      "mimeType": "File Type",
       "size": "Size",
       "status": "Status",
       "uploadedAt": "Uploaded At",
       "actions": "Actions"
     },
     "status": {
-      "uploading": "Uploading {{progress}}%",
-      "success": "Upload complete",
-      "error": "Error",
-      "temp": "Temporary",
-      "active": "Saved"
+      "active": "Saved",
+      "inactive": "Inactive",
+      "deleted": "Deleted"
     },
     "empty": "No document has been added.",
     "saveFirst": "Save the item first, then upload documents.",
     "saveFirst.process": "Save the process item first, then upload documents.",
-    "maxFileSize": "Maximum size per file: {{size}} MB",
-    "maxFileSizeUnknown": "Maximum file size is read from system settings.",
     "validation": {
-      "fileTooLarge": "The file exceeds the maximum upload size.",
-      "waitForUpload": "Wait for file uploads to finish, then save."
+      "waitForUpload": "Wait for file uploads to finish."
     },
     "errors": {
       "load": "Failed to load documents",
       "upload": "File upload failed",
-      "delete": "Failed to delete document",
+      "finalize": "Document finalization failed",
+      "delete": "Failed to remove document link",
       "updateTitle": "Failed to save document title",
-      "loadPolicy": "Failed to load document upload settings",
-      "missingTempSession": "The temporary document upload session is not ready.",
+      "download": "Failed to prepare document download",
+      "expired": "The temporary upload has expired. Upload the file again.",
       "storageDisabled": "Document storage is not configured. Enable MinIO."
     },
     "delete": {
-      "title": "Delete Document",
-      "confirm": "Delete document \"{{title}}\"?"
+      "title": "Remove Document Link",
+      "confirm": "Remove document \"{{title}}\" from this item?",
+      "success": "Document link was removed."
     }
   }
 }

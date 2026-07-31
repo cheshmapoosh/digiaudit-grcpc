@@ -1,13 +1,17 @@
 export type {
-    DocumentAttachment,
-    DocumentCommitPayload,
-    DocumentDownloadUrl,
-    DocumentStatus,
-    DocumentTempUploadPayload,
-    DocumentUploadPayload,
-    DocumentUploadPolicy,
+    DocumentAddVersionPayload,
+    DocumentCommandResponse,
+    DocumentCreatePayload,
+    DocumentDownloadAccess,
+    DocumentLifecyclePayload,
+    DocumentLifecycleStatus,
+    DocumentLinkLifecyclePayload,
+    DocumentLinkSummary,
+    DocumentLinkTargetType,
+    DocumentMetadataUpdatePayload,
+    DocumentTemporaryUpload,
+    DocumentTempUploadStatus,
 } from "./domain/document.model";
-export { default as DocumentAttachmentsManager } from "./components/DocumentAttachmentsManager";
-export { default as DocumentAttachmentsTab } from "./components/DocumentAttachmentsTab";
-export type { DocumentBeforeParentSubmitHandler } from "./components/DocumentAttachmentsTab";
-export { useDocumentAttachmentState } from "./state/document-attachment.state";
+export { DOCUMENT_LINK_TARGET_TYPES } from "./domain/document.model";
+export { default as DocumentManager } from "./components/DocumentManager";
+export { getDocumentTargetKey, useDocumentState } from "./state/document.state";

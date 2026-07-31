@@ -1,4 +1,4 @@
-import {
+﻿import {
     createElement,
     useCallback,
     useEffect,
@@ -32,7 +32,6 @@ import ObjectivesListReport from "./ObjectivesListReport";
 import ObjectiveObjectPage from "./ObjectiveObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
-import { useDocumentAttachmentState } from "@/features/document";
 import {
     ROOT_PARENT as ORGANIZATION_ROOT_PARENT,
     useOrganizationState,
@@ -44,7 +43,6 @@ type UiDir = "rtl" | "ltr";
 type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 
 const DIALOG_WIDTH = "90vw";
-const OBJECTIVE_DOCUMENT_TARGET_TYPE = "OBJECTIVE_NODE";
 const CREATE_NODE_TYPES: ObjectiveNodeType[] = ["objective"];
 
 function useObjectiveRouteMode(): RouteMode {
@@ -70,14 +68,6 @@ function isObjectiveNodeType(value: string | null): value is ObjectiveNodeType {
     return value === "objective";
 }
 
-function createDocumentTempSessionId(): string {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-        return crypto.randomUUID();
-    }
-
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 function mapError(
     error: unknown,
     fallback: string,
@@ -86,18 +76,18 @@ function mapError(
     if (error instanceof Error && error.message) {
         switch (error.message) {
             case "NOT_FOUND":
-                return t("objective.errors.notFound", { defaultValue: "هدف موردنظر یافت نشد" });
+                return t("objective.errors.notFound", { defaultValue: "Ù‡Ø¯Ù Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯" });
             case "PARENT_NOT_FOUND":
                 return t("objective.errors.parentNotFound", {
-                    defaultValue: "هدف والد انتخاب‌شده یافت نشد",
+                    defaultValue: "Ù‡Ø¯Ù ÙˆØ§Ù„Ø¯ Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯",
                 });
             case "HAS_CHILDREN":
                 return t("objective.errors.hasChildren", {
-                    defaultValue: "امکان حذف هدفی که زیرمجموعه دارد وجود ندارد",
+                    defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù Ù‡Ø¯ÙÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
                 });
             case "INVALID_HIERARCHY":
                 return t("objective.errors.invalidHierarchy", {
-                    defaultValue: "ساختار انتخاب‌شده برای اهداف معتبر نیست",
+                    defaultValue: "Ø³Ø§Ø®ØªØ§Ø± Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ Ø§Ù‡Ø¯Ø§Ù Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª",
                 });
             default:
                 return error.message;
@@ -172,15 +162,15 @@ function resolveDialogTitle(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     if (routeMode === "create") {
-        return t("objective.create.title", { defaultValue: "ایجاد هدف" });
+        return t("objective.create.title", { defaultValue: "Ø§ÛŒØ¬Ø§Ø¯ Ù‡Ø¯Ù" });
     }
 
     if (routeMode === "edit") {
-        return t("objective.edit.title", { defaultValue: "ویرایش هدف" });
+        return t("objective.edit.title", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´ Ù‡Ø¯Ù" });
     }
 
     if (routeMode === "view") {
-        return t("objective.view.title", { defaultValue: "نمایش هدف" });
+        return t("objective.view.title", { defaultValue: "Ù†Ù…Ø§ÛŒØ´ Ù‡Ø¯Ù" });
     }
 
     return "";
@@ -207,15 +197,6 @@ export default function ObjectivesFclShellPage() {
     const organizationNodesById = useOrganizationState((state) => state.nodesById);
     const organizationLoading = useOrganizationState((state) => state.loading);
     const loadOrganizationChildren = useOrganizationState((state) => state.loadChildren);
-    const tempDocumentsBySession = useDocumentAttachmentState(
-        (state) => state.tempDocumentsBySession,
-    );
-    const documentsByTarget = useDocumentAttachmentState(
-        (state) => state.documentsByTarget,
-    );
-    const documentsLoading = useDocumentAttachmentState((state) => state.loading);
-    const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
-    const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -226,10 +207,6 @@ export default function ObjectivesFclShellPage() {
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
     const [manualExpandedIds, setManualExpandedIds] = useState<Set<string>>(() => new Set());
     const [manualCollapsedIds, setManualCollapsedIds] = useState<Set<string>>(() => new Set());
-    const [objectiveDocumentTempSessionId, setObjectiveDocumentTempSessionId] = useState(
-        createDocumentTempSessionId,
-    );
-
     const items = useMemo(() => sortObjectives(Object.values(nodesById)), [nodesById]);
     const organizationItems = useMemo(
         () => sortOrganizations(Object.values(organizationNodesById)),
@@ -253,17 +230,6 @@ export default function ObjectivesFclShellPage() {
         return defaultChildType(selectedParentForCreate?.nodeType ?? null);
     }, [queryNodeType, selectedParentForCreate]);
 
-    const documentScopeKey = useMemo(() => {
-        if (routeMode === "create") {
-            return `create:${queryParentId ?? "root"}:${requestedNodeType}`;
-        }
-
-        if ((routeMode === "view" || routeMode === "edit") && objectiveId) {
-            return `objective:${objectiveId}`;
-        }
-
-        return "none";
-    }, [objectiveId, queryParentId, requestedNodeType, routeMode]);
 
     useEffect(() => {
         void loadChildren(ROOT_PARENT).catch((error: unknown) => {
@@ -271,7 +237,7 @@ export default function ObjectivesFclShellPage() {
                 mapError(
                     error,
                     t("objective.errors.loadList", {
-                        defaultValue: "خطا در بارگذاری ساختار اهداف",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø³Ø§Ø®ØªØ§Ø± Ø§Ù‡Ø¯Ø§Ù",
                     }),
                     t,
                 ),
@@ -291,39 +257,7 @@ export default function ObjectivesFclShellPage() {
         });
     }, [loadOrganizationChildren, t]);
 
-    useEffect(() => {
-        setObjectiveDocumentTempSessionId(createDocumentTempSessionId());
-    }, [documentScopeKey]);
 
-    useEffect(() => {
-        const targetIds = Array.from(
-            new Set(
-                [objectiveId, selectedTreeItem?.id].filter(
-                    (id): id is string => Boolean(id),
-                ),
-            ),
-        );
-
-        if (targetIds.length === 0) {
-            return;
-        }
-
-        void Promise.all(
-            targetIds.map((targetId) =>
-                loadDocumentsForTarget(OBJECTIVE_DOCUMENT_TARGET_TYPE, targetId),
-            ),
-        ).catch((error: unknown) => {
-            setObjectError(
-                mapError(
-                    error,
-                    t("document.errors.load", {
-                        defaultValue: "خطا در بارگذاری مستندات",
-                    }),
-                    t,
-                ),
-            );
-        });
-    }, [loadDocumentsForTarget, objectiveId, selectedTreeItem?.id, t]);
 
     const treeSelectedId = useMemo(() => {
         if (routeMode === "create") {
@@ -379,7 +313,7 @@ export default function ObjectivesFclShellPage() {
             if (!canCreateChild(parent?.nodeType ?? null, nodeType)) {
                 setPageError(
                     t("objective.errors.invalidHierarchy", {
-                        defaultValue: "ساختار انتخاب‌شده برای اهداف معتبر نیست",
+                        defaultValue: "Ø³Ø§Ø®ØªØ§Ø± Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ Ø§Ù‡Ø¯Ø§Ù Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª",
                     }),
                 );
                 return;
@@ -428,44 +362,13 @@ export default function ObjectivesFclShellPage() {
         navigate("/objectives");
     }, [navigate, objectiveId, queryParentId, routeMode, selectedTreeId]);
 
-    const commitObjectiveTempDocuments = useCallback(
-        async (targetId: string) => {
-            const tempDocuments =
-                tempDocumentsBySession[objectiveDocumentTempSessionId] ?? [];
-
-            if (tempDocuments.length === 0) {
-                return;
-            }
-
-            await commitTempDocuments({
-                tempSessionId: objectiveDocumentTempSessionId,
-                targetType: OBJECTIVE_DOCUMENT_TARGET_TYPE,
-                targetId,
-                documentIds: tempDocuments.map((documentItem) => documentItem.id),
-                documentTitles: Object.fromEntries(
-                    tempDocuments.map((documentItem) => [
-                        documentItem.id,
-                        documentItem.title || documentItem.originalFileName,
-                    ]),
-                ),
-            });
-            await loadDocumentsForTarget(OBJECTIVE_DOCUMENT_TARGET_TYPE, targetId);
-        },
-        [
-            commitTempDocuments,
-            loadDocumentsForTarget,
-            objectiveDocumentTempSessionId,
-            tempDocumentsBySession,
-        ],
-    );
-
     const requestDelete = useCallback(
         (id: string) => {
             const target = nodesById[id];
 
             if (!target) {
                 setPageError(
-                    t("objective.errors.notFound", { defaultValue: "هدف موردنظر یافت نشد" }),
+                    t("objective.errors.notFound", { defaultValue: "Ù‡Ø¯Ù Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯" }),
                 );
                 return;
             }
@@ -473,7 +376,7 @@ export default function ObjectivesFclShellPage() {
             if (hasChildren(items, id)) {
                 setPageError(
                     t("objective.errors.hasChildren", {
-                        defaultValue: "امکان حذف هدفی که زیرمجموعه دارد وجود ندارد",
+                        defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù Ù‡Ø¯ÙÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
                     }),
                 );
                 return;
@@ -512,7 +415,7 @@ export default function ObjectivesFclShellPage() {
                 mapError(
                     error,
                     t("objective.errors.delete", {
-                        defaultValue: "خطا در حذف هدف",
+                        defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù Ù‡Ø¯Ù",
                     }),
                     t,
                 ),
@@ -532,7 +435,6 @@ export default function ObjectivesFclShellPage() {
                 if (routeMode === "create") {
                     const createPayload = payload as ObjectiveNodeCreate;
                     const created = await createNode(createPayload.parentId ?? null, createPayload);
-                    await commitObjectiveTempDocuments(created.id);
 
                     setSelectedTreeId(created.id);
                     setTreeExpansionAnchorId(created.id);
@@ -542,7 +444,6 @@ export default function ObjectivesFclShellPage() {
 
                 if (routeMode === "edit" && objectiveId) {
                     await updateNode(objectiveId, payload as ObjectiveNodeUpdate);
-                    await commitObjectiveTempDocuments(objectiveId);
                     setSelectedTreeId(objectiveId);
                     setTreeExpansionAnchorId(objectiveId);
                     navigate(`/objectives/${objectiveId}`);
@@ -552,7 +453,7 @@ export default function ObjectivesFclShellPage() {
                     mapError(
                         error,
                         t("objective.errors.save", {
-                            defaultValue: "خطا در ذخیره هدف",
+                            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø°Ø®ÛŒØ±Ù‡ Ù‡Ø¯Ù",
                         }),
                         t,
                     ),
@@ -562,7 +463,6 @@ export default function ObjectivesFclShellPage() {
             }
         },
         [
-            commitObjectiveTempDocuments,
             createNode,
             navigate,
             objectiveId,
@@ -593,12 +493,6 @@ export default function ObjectivesFclShellPage() {
     const showInlineSummaryPane = Boolean(selectedTreeItem);
     const fclLayout: FclLayout = showInlineSummaryPane ? "TwoColumnsStartExpanded" : "OneColumn";
     const createOptions = CREATE_NODE_TYPES;
-    const selectedObjectiveDocumentKey = selectedTreeItem?.id
-        ? `${OBJECTIVE_DOCUMENT_TARGET_TYPE}:${selectedTreeItem.id}`
-        : null;
-    const selectedObjectiveDocuments = selectedObjectiveDocumentKey
-        ? documentsByTarget[selectedObjectiveDocumentKey] ?? []
-        : [];
 
     const slotContainerStyle = useMemo<CSSProperties>(
         () => ({
@@ -690,8 +584,6 @@ export default function ObjectivesFclShellPage() {
               <div style={frameStyle}>
                   <ObjectiveSummaryPanel
                       value={selectedTreeItem}
-                      documents={selectedObjectiveDocuments}
-                      documentsBusy={documentsLoading}
                       busy={loading || submitting}
                       error={!showModal ? pageError : null}
                       onClose={() => {
@@ -744,7 +636,6 @@ export default function ObjectivesFclShellPage() {
                             organizationsBusy={organizationLoading}
                             busy={loading || submitting}
                             error={objectError}
-                            documentTempSessionId={objectiveDocumentTempSessionId}
                             onErrorClose={() => setObjectError(null)}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}
@@ -753,7 +644,7 @@ export default function ObjectivesFclShellPage() {
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
                             {t("objective.object.notFound", {
-                                defaultValue: "هدف انتخاب‌شده یافت نشد.",
+                                defaultValue: "Ù‡Ø¯Ù Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯.",
                             })}
                         </MessageStrip>
                     )}
@@ -762,13 +653,13 @@ export default function ObjectivesFclShellPage() {
 
             <DeleteConfirmDialog
                 open={Boolean(deleteCandidate)}
-                title={t("objective.delete.title", { defaultValue: "حذف هدف" })}
+                title={t("objective.delete.title", { defaultValue: "Ø­Ø°Ù Ù‡Ø¯Ù" })}
                 message={t("objective.delete.confirm", {
-                    defaultValue: "آیا از حذف \"{{title}}\" مطمئن هستید؟",
+                    defaultValue: "Ø¢ÛŒØ§ Ø§Ø² Ø­Ø°Ù \"{{title}}\" Ù…Ø·Ù…Ø¦Ù† Ù‡Ø³ØªÛŒØ¯ØŸ",
                     title: deleteCandidate?.title ?? "",
                 })}
-                confirmText={t("common.delete", { defaultValue: "حذف" })}
-                cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+                confirmText={t("common.delete", { defaultValue: "Ø­Ø°Ù" })}
+                cancelText={t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
                 loading={submitting}
                 onClose={() => setDeleteCandidate(null)}
                 onConfirm={() => {

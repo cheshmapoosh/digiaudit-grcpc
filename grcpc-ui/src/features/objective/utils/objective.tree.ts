@@ -231,10 +231,12 @@ export function hasChildren(items: ObjectiveNode[], id: string): boolean {
 }
 
 export function canHaveChildren(_nodeType: ObjectiveNodeType): boolean {
+    void _nodeType;
     return true;
 }
 
 export function allowedChildTypes(_parentType: ObjectiveNodeType | null): ObjectiveNodeType[] {
+    void _parentType;
     return ["objective"];
 }
 
@@ -246,5 +248,6 @@ export function canCreateChild(
 }
 
 export function defaultChildType(_parentType: ObjectiveNodeType | null): ObjectiveNodeType {
+    void _parentType;
     return "objective";
 }

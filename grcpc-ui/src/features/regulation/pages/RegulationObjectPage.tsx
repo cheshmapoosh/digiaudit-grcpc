@@ -1,8 +1,6 @@
-import {
+﻿import {
     Fragment,
-    useCallback,
     useMemo,
-    useRef,
     useState,
     type CSSProperties,
     type ReactNode,
@@ -41,10 +39,7 @@ import {
     formatPersianDate,
     toEnglishDigits,
 } from "@/shared/utils/date.utils";
-import {
-    DocumentAttachmentsManager,
-    type DocumentBeforeParentSubmitHandler,
-} from "@/features/document";
+import { DocumentManager, type DocumentLinkTargetType } from "@/features/document";
 import { sortRegulations } from "../utils/regulation.tree";
 
 export type RegulationObjectMode = "create" | "edit" | "view";
@@ -73,7 +68,6 @@ export interface RegulationObjectPageProps {
     requestedNodeType?: RegulationNodeType;
     busy?: boolean;
     error?: string | null;
-    documentTempSessionId?: string;
     onSubmit: (payload: RegulationNodeCreate | RegulationNodeUpdate) => Promise<void> | void;
     onCancel: () => void;
     onEdit?: () => void;
@@ -302,10 +296,10 @@ function resolveNodeTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const map: Record<RegulationNodeType, string> = {
-        lawGroup: t("regulation.nodeType.lawGroup", { defaultValue: "گروه قانون" }),
-        law: t("regulation.nodeType.law", { defaultValue: "قانون" }),
+        lawGroup: t("regulation.nodeType.lawGroup", { defaultValue: "Ú¯Ø±ÙˆÙ‡ Ù‚Ø§Ù†ÙˆÙ†" }),
+        law: t("regulation.nodeType.law", { defaultValue: "Ù‚Ø§Ù†ÙˆÙ†" }),
         lawRequirement: t("regulation.nodeType.lawRequirement", {
-            defaultValue: "الزامات قانون",
+            defaultValue: "Ø§Ù„Ø²Ø§Ù…Ø§Øª Ù‚Ø§Ù†ÙˆÙ†",
         }),
     };
 
@@ -317,8 +311,8 @@ function resolveStatusLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     return status === "active"
-        ? t("common.active", { defaultValue: "فعال" })
-        : t("common.inactive", { defaultValue: "غیرفعال" });
+        ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
+        : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
 }
 
 function defaultTabs(nodeType: RegulationNodeType): RegulationTabKey[] {
@@ -334,9 +328,9 @@ function resolveTabLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const labels: Record<RegulationTabKey, string> = {
-        general: t("regulation.tabs.general", { defaultValue: "اطلاعات کلی" }),
-        requirements: t("regulation.tabs.requirements", { defaultValue: "الزامات" }),
-        documents: t("regulation.tabs.documents", { defaultValue: "مستندات" }),
+        general: t("regulation.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
+        requirements: t("regulation.tabs.requirements", { defaultValue: "Ø§Ù„Ø²Ø§Ù…Ø§Øª" }),
+        documents: t("regulation.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" }),
     };
 
     return labels[tab];
@@ -383,14 +377,22 @@ function resolveParentLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     if (nodeType === "lawGroup") {
-        return t("regulation.fields.parentLawGroup", { defaultValue: "والد گروه قانون" });
+        return t("regulation.fields.parentLawGroup", { defaultValue: "ÙˆØ§Ù„Ø¯ Ú¯Ø±ÙˆÙ‡ Ù‚Ø§Ù†ÙˆÙ†" });
     }
 
     if (nodeType === "law") {
-        return t("regulation.fields.parentLaw", { defaultValue: "والد قانون" });
+        return t("regulation.fields.parentLaw", { defaultValue: "ÙˆØ§Ù„Ø¯ Ù‚Ø§Ù†ÙˆÙ†" });
     }
 
-    return t("regulation.fields.parentRequirement", { defaultValue: "والد قانون" });
+    return t("regulation.fields.parentRequirement", { defaultValue: "ÙˆØ§Ù„Ø¯ Ù‚Ø§Ù†ÙˆÙ†" });
+}
+
+function resolveDocumentTargetType(nodeType: RegulationNodeType): DocumentLinkTargetType {
+    if (nodeType === "lawGroup") {
+        return "CENTRAL_REGULATION_GROUP";
+    }
+
+    return nodeType === "law" ? "CENTRAL_REGULATION" : "CENTRAL_REQUIREMENT";
 }
 
 export default function RegulationObjectPage({
@@ -401,7 +403,6 @@ export default function RegulationObjectPage({
     requestedNodeType,
     busy = false,
     error,
-    documentTempSessionId,
     onSubmit,
     onCancel,
     onEdit,
@@ -420,8 +421,6 @@ export default function RegulationObjectPage({
     const [validationError, setValidationError] = useState<string | null>(null);
     const tabs = useMemo(() => defaultTabs(form.nodeType), [form.nodeType]);
     const [activeTab, setActiveTab] = useState<RegulationTabKey>("general");
-    const [hasPendingDocumentUploads, setHasPendingDocumentUploads] = useState(false);
-    const documentBeforeSubmitRef = useRef<DocumentBeforeParentSubmitHandler | null>(null);
     const effectiveActiveTab = tabs.includes(activeTab) ? activeTab : "general";
 
     const selectedParent = form.parentId
@@ -446,7 +445,7 @@ export default function RegulationObjectPage({
     const headerTitle = form.title || value?.title || "";
     const headerParent = selectedParent
         ? `${selectedParent.code} - ${selectedParent.title}`
-        : t("common.none", { defaultValue: "ندارد" });
+        : t("common.none", { defaultValue: "Ù†Ø¯Ø§Ø±Ø¯" });
     const headerType = resolveNodeTypeLabel(form.nodeType, t);
     const headerStatus = resolveStatusLabel(form.status, t);
     const parentLabel = resolveParentLabel(form.nodeType, t);
@@ -464,14 +463,14 @@ export default function RegulationObjectPage({
     const validate = (): boolean => {
         if (!form.code.trim()) {
             setValidationError(
-                t("regulation.validation.codeRequired", { defaultValue: "کد الزامی است" }),
+                t("regulation.validation.codeRequired", { defaultValue: "Ú©Ø¯ Ø§Ù„Ø²Ø§Ù…ÛŒ Ø§Ø³Øª" }),
             );
             return false;
         }
 
         if (!form.title.trim()) {
             setValidationError(
-                t("regulation.validation.titleRequired", { defaultValue: "نام الزامی است" }),
+                t("regulation.validation.titleRequired", { defaultValue: "Ù†Ø§Ù… Ø§Ù„Ø²Ø§Ù…ÛŒ Ø§Ø³Øª" }),
             );
             return false;
         }
@@ -479,7 +478,7 @@ export default function RegulationObjectPage({
         if (form.sortOrder.trim() && parseSortOrder(form.sortOrder) === undefined) {
             setValidationError(
                 t("regulation.validation.sortOrderInvalid", {
-                    defaultValue: "ترتیب نمایش باید عدد صحیح نامنفی باشد",
+                    defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´ Ø¨Ø§ÛŒØ¯ Ø¹Ø¯Ø¯ ØµØ­ÛŒØ­ Ù†Ø§Ù…Ù†ÙÛŒ Ø¨Ø§Ø´Ø¯",
                 }),
             );
             return false;
@@ -489,31 +488,8 @@ export default function RegulationObjectPage({
         return true;
     };
 
-    const handleDocumentBeforeParentSubmitChange = useCallback(
-        (handler: DocumentBeforeParentSubmitHandler | null) => {
-            documentBeforeSubmitRef.current = handler;
-        },
-        [],
-    );
-
     const handleSubmit = async () => {
         if (readOnly || !validate()) {
-            return;
-        }
-
-        if (hasPendingDocumentUploads) {
-            setValidationError(
-                t("document.validation.waitForUpload", {
-                    defaultValue: "تا پایان بارگذاری فایل‌ها صبر کنید.",
-                }),
-            );
-            setActiveTab("documents");
-            return;
-        }
-
-        const documentsReady = await documentBeforeSubmitRef.current?.();
-        if (documentsReady === false) {
-            setActiveTab("documents");
             return;
         }
 
@@ -537,7 +513,7 @@ export default function RegulationObjectPage({
     const renderGeneralTab = () => (
         <>
             <div style={FORM_GRID_STYLE}>
-                <FormField label={t("regulation.fields.code", { defaultValue: "شناسه" })} required>
+                <FormField label={t("regulation.fields.code", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡" })} required>
                     <Input
                         value={form.code}
                         disabled={readOnly || busy}
@@ -545,7 +521,7 @@ export default function RegulationObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("regulation.fields.name", { defaultValue: "نام" })} required>
+                <FormField label={t("regulation.fields.name", { defaultValue: "Ù†Ø§Ù…" })} required>
                     <Input
                         value={form.title}
                         disabled={readOnly || busy}
@@ -557,11 +533,11 @@ export default function RegulationObjectPage({
                     <Input value={headerParent} readonly />
                 </FormField>
 
-                <FormField label={t("regulation.fields.type", { defaultValue: "نوع" })}>
+                <FormField label={t("regulation.fields.type", { defaultValue: "Ù†ÙˆØ¹" })}>
                     <Input value={headerType} readonly />
                 </FormField>
 
-                <FormField label={t("regulation.fields.status", { defaultValue: "وضعیت" })}>
+                <FormField label={t("regulation.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}>
                     <Select
                         disabled={readOnly || busy}
                         onChange={(event) => {
@@ -570,16 +546,16 @@ export default function RegulationObjectPage({
                         }}
                     >
                         <Option data-value="active" selected={form.status === "active"}>
-                            {t("common.active", { defaultValue: "فعال" })}
+                            {t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })}
                         </Option>
                         <Option data-value="inactive" selected={form.status === "inactive"}>
-                            {t("common.inactive", { defaultValue: "غیرفعال" })}
+                            {t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" })}
                         </Option>
                     </Select>
                 </FormField>
 
                 <FormField
-                    label={t("regulation.fields.sortOrder", { defaultValue: "ترتیب نمایش" })}
+                    label={t("regulation.fields.sortOrder", { defaultValue: "ØªØ±ØªÛŒØ¨ Ù†Ù…Ø§ÛŒØ´" })}
                 >
                     <Input
                         value={form.sortOrder}
@@ -589,7 +565,7 @@ export default function RegulationObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("regulation.fields.effectiveDate", { defaultValue: "تاریخ ایجاد" })}
+                    label={t("regulation.fields.effectiveDate", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯" })}
                 >
                     <DatePicker
                         value={form.effectiveDate}
@@ -598,7 +574,7 @@ export default function RegulationObjectPage({
                         primaryCalendarType="Persian"
                         disabled={readOnly || busy}
                         placeholder={t("organization.fields.datePlaceholder", {
-                            defaultValue: "سال/ماه/روز",
+                            defaultValue: "Ø³Ø§Ù„/Ù…Ø§Ù‡/Ø±ÙˆØ²",
                         })}
                         onChange={(event) =>
                             handleChange("effectiveDate", readDatePickerValue(event))
@@ -607,7 +583,7 @@ export default function RegulationObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
+                    label={t("regulation.fields.validTo", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" })}
                 >
                     <DatePicker
                         value={form.validTo}
@@ -616,7 +592,7 @@ export default function RegulationObjectPage({
                         primaryCalendarType="Persian"
                         disabled={readOnly || busy}
                         placeholder={t("organization.fields.datePlaceholder", {
-                            defaultValue: "سال/ماه/روز",
+                            defaultValue: "Ø³Ø§Ù„/Ù…Ø§Ù‡/Ø±ÙˆØ²",
                         })}
                         onChange={(event) =>
                             handleChange("validTo", readDatePickerValue(event))
@@ -625,7 +601,7 @@ export default function RegulationObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("regulation.fields.issuer", { defaultValue: "مرجع صادرکننده" })}
+                    label={t("regulation.fields.issuer", { defaultValue: "Ù…Ø±Ø¬Ø¹ ØµØ§Ø¯Ø±Ú©Ù†Ù†Ø¯Ù‡" })}
                 >
                     <Input
                         value={form.issuer}
@@ -634,7 +610,7 @@ export default function RegulationObjectPage({
                     />
                 </FormField>
 
-                <FormField label={t("regulation.fields.owner", { defaultValue: "مالک" })}>
+                <FormField label={t("regulation.fields.owner", { defaultValue: "Ù…Ø§Ù„Ú©" })}>
                     <Input
                         value={form.ownerName}
                         disabled={readOnly || busy}
@@ -643,7 +619,7 @@ export default function RegulationObjectPage({
                 </FormField>
 
                 <FormField
-                    label={t("regulation.fields.description", { defaultValue: "شرح" })}
+                    label={t("regulation.fields.description", { defaultValue: "Ø´Ø±Ø­" })}
                     fullWidth
                 >
                     <TextArea
@@ -675,7 +651,7 @@ export default function RegulationObjectPage({
                         disabled={busy}
                         onClick={() => onShowRequirement?.(requirement.id)}
                     >
-                        {t("common.view", { defaultValue: "نمایش" })}
+                        {t("common.view", { defaultValue: "Ù†Ù…Ø§ÛŒØ´" })}
                     </Button>
                 ) : null}
                 {canEdit ? (
@@ -684,7 +660,7 @@ export default function RegulationObjectPage({
                         disabled={busy}
                         onClick={() => onEditRequirement?.(requirement.id)}
                     >
-                        {t("common.edit", { defaultValue: "ویرایش" })}
+                        {t("common.edit", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´" })}
                     </Button>
                 ) : null}
                 {canDelete ? (
@@ -693,7 +669,7 @@ export default function RegulationObjectPage({
                         disabled={busy}
                         onClick={() => onDeleteRequirement?.(requirement.id)}
                     >
-                        {t("common.delete", { defaultValue: "حذف" })}
+                        {t("common.delete", { defaultValue: "Ø­Ø°Ù" })}
                     </Button>
                 ) : null}
             </div>
@@ -711,7 +687,7 @@ export default function RegulationObjectPage({
                 <div style={REQUIREMENTS_HEADER_STYLE}>
                     <Title level="H5">
                         {t("regulation.requirements.title", {
-                            defaultValue: "الزامات قانون",
+                            defaultValue: "Ø§Ù„Ø²Ø§Ù…Ø§Øª Ù‚Ø§Ù†ÙˆÙ†",
                         })}
                     </Title>
 
@@ -726,7 +702,7 @@ export default function RegulationObjectPage({
                             }}
                         >
                             {t("regulation.requirements.add", {
-                                defaultValue: "افزودن الزام",
+                                defaultValue: "Ø§ÙØ²ÙˆØ¯Ù† Ø§Ù„Ø²Ø§Ù…",
                             })}
                         </Button>
                     ) : null}
@@ -738,7 +714,7 @@ export default function RegulationObjectPage({
                         <MessageStrip design="Information" hideCloseButton>
                             {t("regulation.requirements.saveFirst", {
                                 defaultValue:
-                                    "ابتدا قانون را ذخیره کنید، سپس الزام اضافه کنید.",
+                                    "Ø§Ø¨ØªØ¯Ø§ Ù‚Ø§Ù†ÙˆÙ† Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯ØŒ Ø³Ù¾Ø³ Ø§Ù„Ø²Ø§Ù… Ø§Ø¶Ø§ÙÙ‡ Ú©Ù†ÛŒØ¯.",
                             })}
                         </MessageStrip>
                     </>
@@ -748,44 +724,44 @@ export default function RegulationObjectPage({
 
                 <Table
                     accessibleName={t("regulation.requirements.title", {
-                        defaultValue: "الزامات قانون",
+                        defaultValue: "Ø§Ù„Ø²Ø§Ù…Ø§Øª Ù‚Ø§Ù†ÙˆÙ†",
                     })}
                     alternateRowColors
                     headerRow={
                         <TableHeaderRow>
                             <TableHeaderCell width="8rem">
                                 {t("regulation.requirements.columns.code", {
-                                    defaultValue: "شناسه",
+                                    defaultValue: "Ø´Ù†Ø§Ø³Ù‡",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell minWidth="12rem">
                                 {t("regulation.requirements.columns.title", {
-                                    defaultValue: "نام الزام",
+                                    defaultValue: "Ù†Ø§Ù… Ø§Ù„Ø²Ø§Ù…",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell minWidth="14rem">
                                 {t("regulation.requirements.columns.description", {
-                                    defaultValue: "شرح",
+                                    defaultValue: "Ø´Ø±Ø­",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell width="8rem">
                                 {t("regulation.requirements.columns.status", {
-                                    defaultValue: "وضعیت",
+                                    defaultValue: "ÙˆØ¶Ø¹ÛŒØª",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell width="10rem">
                                 {t("regulation.requirements.columns.effectiveDate", {
-                                    defaultValue: "تاریخ ایجاد",
+                                    defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell width="10rem">
                                 {t("regulation.requirements.columns.validTo", {
-                                    defaultValue: "تاریخ اعتبار",
+                                    defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±",
                                 })}
                             </TableHeaderCell>
                             <TableHeaderCell width="12rem">
                                 {t("regulation.requirements.columns.actions", {
-                                    defaultValue: "عملیات",
+                                    defaultValue: "Ø¹Ù…Ù„ÛŒØ§Øª",
                                 })}
                             </TableHeaderCell>
                         </TableHeaderRow>
@@ -793,7 +769,7 @@ export default function RegulationObjectPage({
                     loading={busy}
                     loadingDelay={0}
                     noDataText={t("regulation.requirements.empty", {
-                        defaultValue: "الزامی برای این قانون ثبت نشده است.",
+                        defaultValue: "Ø§Ù„Ø²Ø§Ù…ÛŒ Ø¨Ø±Ø§ÛŒ Ø§ÛŒÙ† Ù‚Ø§Ù†ÙˆÙ† Ø«Ø¨Øª Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª.",
                     })}
                     overflowMode="Popin"
                 >
@@ -822,7 +798,7 @@ export default function RegulationObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={onEdit}
                 >
-                    {t("common.edit", { defaultValue: "ویرایش" })}
+                    {t("common.edit", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´" })}
                 </Button>
             ) : (
                 <Button
@@ -831,7 +807,7 @@ export default function RegulationObjectPage({
                     style={ACTION_BUTTON_STYLE}
                     onClick={handleSubmit}
                 >
-                    {t("common.save", { defaultValue: "ذخیره" })}
+                    {t("common.save", { defaultValue: "Ø°Ø®ÛŒØ±Ù‡" })}
                 </Button>
             )}
 
@@ -842,8 +818,8 @@ export default function RegulationObjectPage({
                 onClick={onCancel}
             >
                 {mode === "view"
-                    ? t("common.close", { defaultValue: "بستن" })
-                    : t("common.cancel", { defaultValue: "انصراف" })}
+                    ? t("common.close", { defaultValue: "Ø¨Ø³ØªÙ†" })
+                    : t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
             </Button>
         </div>
     );
@@ -858,20 +834,16 @@ export default function RegulationObjectPage({
         }
 
         return (
-            <DocumentAttachmentsManager
-                title={t("regulation.tabs.documents", { defaultValue: "مستندات" })}
-                targetType="REGULATION_NODE"
+            <DocumentManager
+                title={t("regulation.tabs.documents", { defaultValue: "Ù…Ø³ØªÙ†Ø¯Ø§Øª" })}
+                targetType={resolveDocumentTargetType(form.nodeType)}
                 targetId={currentRegulationId}
-                tempSessionId={documentTempSessionId}
-                stagingMode="tempUntilParentSave"
                 busy={busy}
                 readOnly={readOnly}
                 saveFirstMessage={t("regulation.documents.saveFirst", {
                     defaultValue:
-                        "ابتدا آیتم قانون را ذخیره کنید، سپس مستندات را بارگذاری کنید.",
+                        "Ø§Ø¨ØªØ¯Ø§ Ø¢ÛŒØªÙ… Ù‚Ø§Ù†ÙˆÙ† Ø±Ø§ Ø°Ø®ÛŒØ±Ù‡ Ú©Ù†ÛŒØ¯ØŒ Ø³Ù¾Ø³ Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø±Ø§ Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ú©Ù†ÛŒØ¯.",
                 })}
-                onBeforeParentSubmitChange={handleDocumentBeforeParentSubmitChange}
-                onPendingUploadsChange={setHasPendingDocumentUploads}
             />
         );
     };
@@ -882,7 +854,7 @@ export default function RegulationObjectPage({
                 <div style={HEADER_TITLE_STYLE}>
                     <Title level="H4">
                         {mode === "create"
-                            ? t("regulation.object.createModalTitle", { defaultValue: "ایجاد" })
+                            ? t("regulation.object.createModalTitle", { defaultValue: "Ø§ÛŒØ¬Ø§Ø¯" })
                             : resolveNodeTypeLabel(form.nodeType, t)}
                     </Title>
                 </div>
@@ -890,30 +862,30 @@ export default function RegulationObjectPage({
                 <div style={HEADER_GRID_STYLE}>
                     <HeaderItem label={parentLabel} value={headerParent} />
                     <HeaderItem
-                        label={t("regulation.fields.identifier", { defaultValue: "شناسه" })}
+                        label={t("regulation.fields.identifier", { defaultValue: "Ø´Ù†Ø§Ø³Ù‡" })}
                         value={form.code || value?.id}
                     />
                     <HeaderItem
                         label={t("regulation.fields.effectiveDate", {
-                            defaultValue: "تاریخ ایجاد",
+                            defaultValue: "ØªØ§Ø±ÛŒØ® Ø§ÛŒØ¬Ø§Ø¯",
                         })}
                         value={formatPersianDate(form.effectiveDate || value?.effectiveDate)}
                     />
                     <HeaderItem
-                        label={t("regulation.fields.validTo", { defaultValue: "تاریخ اعتبار" })}
+                        label={t("regulation.fields.validTo", { defaultValue: "ØªØ§Ø±ÛŒØ® Ø§Ø¹ØªØ¨Ø§Ø±" })}
                         value={formatPersianDate(form.validTo || value?.validTo)}
                     />
                     <HeaderItem
-                        label={t("regulation.fields.nodeType", { defaultValue: "نوع آیتم" })}
+                        label={t("regulation.fields.nodeType", { defaultValue: "Ù†ÙˆØ¹ Ø¢ÛŒØªÙ…" })}
                         value={headerType}
                     />
                     <HeaderItem
-                        label={t("regulation.fields.status", { defaultValue: "وضعیت" })}
+                        label={t("regulation.fields.status", { defaultValue: "ÙˆØ¶Ø¹ÛŒØª" })}
                         value={headerStatus}
                     />
                     {headerTitle ? (
                         <HeaderItem
-                            label={t("regulation.fields.name", { defaultValue: "نام" })}
+                            label={t("regulation.fields.name", { defaultValue: "Ù†Ø§Ù…" })}
                             value={headerTitle}
                         />
                     ) : null}

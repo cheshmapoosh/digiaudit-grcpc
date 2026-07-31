@@ -1,4 +1,4 @@
-import {
+﻿import {
   useCallback,
   useEffect,
   useMemo,
@@ -29,12 +29,10 @@ import RisksListReport from "./RisksListReport";
 import RiskObjectPage from "./RiskObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
-import { useDocumentAttachmentState } from "@/features/document";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 const DIALOG_WIDTH = "90vw";
-const RISK_DOCUMENT_TARGET_TYPE = "RISK_NODE";
 
 function useRiskRouteMode(): RouteMode {
   const { riskId } = useParams();
@@ -59,14 +57,6 @@ function isRiskNodeType(value: string | null): value is RiskNodeType {
   return value === "riskCategory" || value === "riskTemplate";
 }
 
-function createDocumentTempSessionId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 function mapError(
   error: unknown,
   fallback: string,
@@ -76,19 +66,19 @@ function mapError(
     switch (error.message) {
       case "NOT_FOUND":
         return t("risk.errors.notFound", {
-          defaultValue: "آیتم موردنظر یافت نشد",
+          defaultValue: "Ø¢ÛŒØªÙ… Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯",
         });
       case "PARENT_NOT_FOUND":
         return t("risk.errors.parentNotFound", {
-          defaultValue: "والد انتخاب‌شده یافت نشد",
+          defaultValue: "ÙˆØ§Ù„Ø¯ Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯",
         });
       case "HAS_CHILDREN":
         return t("risk.errors.hasChildren", {
-          defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+          defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù Ø¢ÛŒØªÙ…ÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
         });
       case "INVALID_HIERARCHY":
         return t("risk.errors.invalidHierarchy", {
-          defaultValue: "ساختار انتخاب‌شده برای ریسک معتبر نیست",
+          defaultValue: "Ø³Ø§Ø®ØªØ§Ø± Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ Ø±ÛŒØ³Ú© Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª",
         });
       default:
         return error.message;
@@ -163,15 +153,15 @@ function resolveDialogTitle(
   t: ReturnType<typeof useTranslation>["t"],
 ): string {
   if (routeMode === "create") {
-    return t("risk.create.title", { defaultValue: "ایجاد آیتم ریسک" });
+    return t("risk.create.title", { defaultValue: "Ø§ÛŒØ¬Ø§Ø¯ Ø¢ÛŒØªÙ… Ø±ÛŒØ³Ú©" });
   }
 
   if (routeMode === "edit") {
-    return t("risk.edit.title", { defaultValue: "ویرایش آیتم ریسک" });
+    return t("risk.edit.title", { defaultValue: "ÙˆÛŒØ±Ø§ÛŒØ´ Ø¢ÛŒØªÙ… Ø±ÛŒØ³Ú©" });
   }
 
   if (routeMode === "view") {
-    return t("risk.view.title", { defaultValue: "نمایش آیتم ریسک" });
+    return t("risk.view.title", { defaultValue: "Ù†Ù…Ø§ÛŒØ´ Ø¢ÛŒØªÙ… Ø±ÛŒØ³Ú©" });
   }
 
   return "";
@@ -227,12 +217,12 @@ function resolveInvalidCreateMessage(
 ): string {
   if (nodeType === "riskTemplate") {
     return t("risk.errors.selectCategoryParent", {
-      defaultValue: "برای ایجاد الگوی ریسک، ابتدا یک طبقه ریسک را انتخاب کنید.",
+      defaultValue: "Ø¨Ø±Ø§ÛŒ Ø§ÛŒØ¬Ø§Ø¯ Ø§Ù„Ú¯ÙˆÛŒ Ø±ÛŒØ³Ú©ØŒ Ø§Ø¨ØªØ¯Ø§ ÛŒÚ© Ø·Ø¨Ù‚Ù‡ Ø±ÛŒØ³Ú© Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯.",
     });
   }
 
   return t("risk.errors.invalidHierarchy", {
-    defaultValue: "ساختار انتخاب‌شده برای ریسک معتبر نیست",
+    defaultValue: "Ø³Ø§Ø®ØªØ§Ø± Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ Ø±ÛŒØ³Ú© Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª",
   });
 }
 
@@ -262,11 +252,6 @@ export default function RisksFclShellPage() {
   const createNode = useRiskState((state) => state.createNode);
   const updateNode = useRiskState((state) => state.updateNode);
   const removeNode = useRiskState((state) => state.removeNode);
-  const tempDocumentsBySession = useDocumentAttachmentState(
-    (state) => state.tempDocumentsBySession,
-  );
-  const commitTempDocuments = useDocumentAttachmentState((state) => state.commitTemp);
-  const loadDocumentsForTarget = useDocumentAttachmentState((state) => state.loadForTarget);
 
   const [searchText, setSearchText] = useState("");
   const [pageError, setPageError] = useState<string | null>(null);
@@ -277,10 +262,6 @@ export default function RisksFclShellPage() {
   const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<
     string | null
   >(null);
-  const [riskDocumentTempSessionId, setRiskDocumentTempSessionId] = useState(
-    createDocumentTempSessionId,
-  );
-
   const items = useMemo(() => sortRisks(Object.values(nodesById)), [nodesById]);
 
   const selectedRouteItem = riskId ? (nodesById[riskId] ?? null) : null;
@@ -307,17 +288,6 @@ export default function RisksFclShellPage() {
     return defaultChildType(selectedParentForCreate?.nodeType ?? null);
   }, [queryNodeType, selectedParentForCreate]);
 
-  const documentScopeKey = useMemo(() => {
-    if (routeMode === "create") {
-      return `create:${queryParentId ?? "root"}:${requestedNodeType}`;
-    }
-
-    if ((routeMode === "view" || routeMode === "edit") && riskId) {
-      return `risk:${riskId}`;
-    }
-
-    return "none";
-  }, [queryParentId, requestedNodeType, riskId, routeMode]);
 
   useEffect(() => {
     void loadChildren(ROOT_PARENT).catch((error: unknown) => {
@@ -325,7 +295,7 @@ export default function RisksFclShellPage() {
         mapError(
           error,
           t("risk.errors.loadList", {
-            defaultValue: "خطا در بارگذاری ساختار ریسک",
+            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ Ø³Ø§Ø®ØªØ§Ø± Ø±ÛŒØ³Ú©",
           }),
           t,
         ),
@@ -333,29 +303,7 @@ export default function RisksFclShellPage() {
     });
   }, [loadChildren, t]);
 
-  useEffect(() => {
-    setRiskDocumentTempSessionId(createDocumentTempSessionId());
-  }, [documentScopeKey]);
 
-  useEffect(() => {
-    if (!riskId) {
-      return;
-    }
-
-    void loadDocumentsForTarget(RISK_DOCUMENT_TARGET_TYPE, riskId).catch(
-      (error: unknown) => {
-        setObjectError(
-          mapError(
-            error,
-            t("document.errors.load", {
-              defaultValue: "خطا در بارگذاری مستندات",
-            }),
-            t,
-          ),
-        );
-      },
-    );
-  }, [loadDocumentsForTarget, riskId, t]);
 
   const treeSelectedId = useMemo(() => {
     if (routeMode === "create") {
@@ -463,43 +411,13 @@ export default function RisksFclShellPage() {
     navigate("/risks");
   }, [navigate, riskId, queryParentId, routeMode, selectedTreeId]);
 
-  const commitRiskTempDocuments = useCallback(
-    async (targetId: string) => {
-      const tempDocuments = tempDocumentsBySession[riskDocumentTempSessionId] ?? [];
-
-      if (tempDocuments.length === 0) {
-        return;
-      }
-
-      await commitTempDocuments({
-        tempSessionId: riskDocumentTempSessionId,
-        targetType: RISK_DOCUMENT_TARGET_TYPE,
-        targetId,
-        documentIds: tempDocuments.map((documentItem) => documentItem.id),
-        documentTitles: Object.fromEntries(
-          tempDocuments.map((documentItem) => [
-            documentItem.id,
-            documentItem.title || documentItem.originalFileName,
-          ]),
-        ),
-      });
-      await loadDocumentsForTarget(RISK_DOCUMENT_TARGET_TYPE, targetId);
-    },
-    [
-      commitTempDocuments,
-      loadDocumentsForTarget,
-      riskDocumentTempSessionId,
-      tempDocumentsBySession,
-    ],
-  );
-
   const requestDelete = useCallback(
     (id: string) => {
       const target = nodesById[id];
 
       if (!target) {
         setPageError(
-          t("risk.errors.notFound", { defaultValue: "آیتم موردنظر یافت نشد" }),
+          t("risk.errors.notFound", { defaultValue: "Ø¢ÛŒØªÙ… Ù…ÙˆØ±Ø¯Ù†Ø¸Ø± ÛŒØ§ÙØª Ù†Ø´Ø¯" }),
         );
         return;
       }
@@ -507,7 +425,7 @@ export default function RisksFclShellPage() {
       if (hasChildren(items, id)) {
         setPageError(
           t("risk.errors.hasChildren", {
-            defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
+            defaultValue: "Ø§Ù…Ú©Ø§Ù† Ø­Ø°Ù Ø¢ÛŒØªÙ…ÛŒ Ú©Ù‡ Ø²ÛŒØ±Ù…Ø¬Ù…ÙˆØ¹Ù‡ Ø¯Ø§Ø±Ø¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯",
           }),
         );
         return;
@@ -546,7 +464,7 @@ export default function RisksFclShellPage() {
         mapError(
           error,
           t("risk.errors.delete", {
-            defaultValue: "خطا در حذف آیتم ریسک",
+            defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù Ø¢ÛŒØªÙ… Ø±ÛŒØ³Ú©",
           }),
           t,
         ),
@@ -569,7 +487,6 @@ export default function RisksFclShellPage() {
             createPayload.parentId ?? null,
             createPayload,
           );
-          await commitRiskTempDocuments(created.id);
 
           setSelectedTreeId(created.id);
           setTreeExpansionAnchorId(created.id);
@@ -579,7 +496,6 @@ export default function RisksFclShellPage() {
 
         if (routeMode === "edit" && riskId) {
           await updateNode(riskId, payload as RiskNodeUpdate);
-          await commitRiskTempDocuments(riskId);
           setSelectedTreeId(riskId);
           setTreeExpansionAnchorId(riskId);
           navigate(`/risks/${riskId}`);
@@ -589,7 +505,7 @@ export default function RisksFclShellPage() {
           mapError(
             error,
             t("risk.errors.save", {
-              defaultValue: "خطا در ذخیره آیتم ریسک",
+              defaultValue: "Ø®Ø·Ø§ Ø¯Ø± Ø°Ø®ÛŒØ±Ù‡ Ø¢ÛŒØªÙ… Ø±ÛŒØ³Ú©",
             }),
             t,
           ),
@@ -599,7 +515,6 @@ export default function RisksFclShellPage() {
       }
     },
     [
-      commitRiskTempDocuments,
       createNode,
       navigate,
       riskId,
@@ -771,7 +686,6 @@ export default function RisksFclShellPage() {
               requestedNodeType={requestedNodeType}
               busy={loading || submitting}
               error={objectError}
-              documentTempSessionId={riskDocumentTempSessionId}
               onErrorClose={() => setObjectError(null)}
               onSubmit={handleObjectSubmit}
               onCancel={handleCancel}
@@ -780,7 +694,7 @@ export default function RisksFclShellPage() {
           ) : (
             <MessageStrip design="Information" hideCloseButton>
               {t("risk.object.notFound", {
-                defaultValue: "آیتم ریسک انتخاب‌شده یافت نشد.",
+                defaultValue: "Ø¢ÛŒØªÙ… Ø±ÛŒØ³Ú© Ø§Ù†ØªØ®Ø§Ø¨â€ŒØ´Ø¯Ù‡ ÛŒØ§ÙØª Ù†Ø´Ø¯.",
               })}
             </MessageStrip>
           )}
@@ -789,13 +703,13 @@ export default function RisksFclShellPage() {
 
       <DeleteConfirmDialog
         open={Boolean(deleteCandidate)}
-        title={t("risk.delete.title", { defaultValue: "حذف آیتم ریسک" })}
+        title={t("risk.delete.title", { defaultValue: "Ø­Ø°Ù Ø¢ÛŒØªÙ… Ø±ÛŒØ³Ú©" })}
         message={t("risk.delete.confirm", {
-          defaultValue: 'آیا از حذف "{{title}}" مطمئن هستید؟',
+          defaultValue: 'Ø¢ÛŒØ§ Ø§Ø² Ø­Ø°Ù "{{title}}" Ù…Ø·Ù…Ø¦Ù† Ù‡Ø³ØªÛŒØ¯ØŸ',
           title: deleteCandidate?.title ?? "",
         })}
-        confirmText={t("common.delete", { defaultValue: "حذف" })}
-        cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+        confirmText={t("common.delete", { defaultValue: "Ø­Ø°Ù" })}
+        cancelText={t("common.cancel", { defaultValue: "Ø§Ù†ØµØ±Ø§Ù" })}
         loading={submitting}
         onClose={() => setDeleteCandidate(null)}
         onConfirm={() => {
