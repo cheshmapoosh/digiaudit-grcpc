@@ -45,19 +45,11 @@ export type DocumentLinkTargetType = typeof DOCUMENT_LINK_TARGET_TYPES[number];
 
 export type DocumentLifecycleStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 
-export type DocumentTempUploadStatus =
-    | "UPLOADING"
-    | "AVAILABLE"
-    | "CONSUMED"
-    | "EXPIRED"
-    | "FAILED";
-
 export interface DocumentTemporaryUpload {
     tempUploadId: string;
     originalFileName: string;
     mimeType?: string | null;
     fileSize: number;
-    uploadStatus: DocumentTempUploadStatus;
     uploadedAt: string;
     expiresAt: string;
     version: number;
@@ -123,11 +115,12 @@ export interface DocumentLinkSummary {
 
 export interface DocumentCommandResponse {
     entityId: string;
-    revisionId: string;
+    documentId: string;
     documentVersion: number;
     documentVersionId?: string | null;
     documentVersionNumber?: number | null;
     documentLinkId?: string | null;
+    documentLinkVersion?: number | null;
     summary?: DocumentLinkSummary | null;
 }
 

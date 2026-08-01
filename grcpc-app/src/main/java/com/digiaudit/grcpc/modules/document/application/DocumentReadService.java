@@ -119,12 +119,6 @@ public class DocumentReadService {
         return responseMapper.toDocumentVersion(version);
     }
 
-    public DocumentLinkSummaryResponse findSummaryByLinkId(UUID linkId) {
-        DocumentLinkReadProjection projection = linkRepository.findSummaryByLinkId(linkId)
-                .orElseThrow(() -> DocumentFailures.notFound("DOCUMENT_LINK_NOT_FOUND", "Document link was not found"));
-        return responseMapper.toLinkSummary(projection);
-    }
-
     public DocumentDownloadResponse createDownload(UUID documentVersionId) {
         DocumentVersionEntity version = versionRepository.findById(documentVersionId)
                 .orElseThrow(() -> DocumentFailures.notFound("DOCUMENT_VERSION_NOT_FOUND", "Document version was not found"));

@@ -3,6 +3,7 @@ package com.digiaudit.grcpc.common.api;
 import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.ForbiddenException;
 import com.digiaudit.grcpc.common.exception.BusinessException;
+import com.digiaudit.grcpc.common.exception.GoneException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
 import jakarta.persistence.OptimisticLockException;
@@ -54,6 +55,12 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleForbidden(ForbiddenException ex, Locale locale) {
         log.warn("Handling ForbiddenException: {}", ex.getMessage());
         return build(HttpStatus.FORBIDDEN, ex, locale, List.of());
+    }
+
+    @ExceptionHandler(GoneException.class)
+    public ResponseEntity<ApiErrorResponse> handleGone(GoneException ex, Locale locale) {
+        log.warn("Handling GoneException: {}", ex.getMessage());
+        return build(HttpStatus.GONE, ex, locale, List.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

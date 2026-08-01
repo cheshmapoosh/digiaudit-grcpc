@@ -9,6 +9,8 @@ public interface DocumentStoragePort {
 
     DocumentObjectMetadata inspectObject(String objectKey);
 
+    String calculateObjectChecksum(String objectKey, String checksumAlgorithm);
+
     PermanentObjectPromotionResult promoteTemporaryObject(String temporaryObjectKey, String permanentObjectKey, DocumentObjectMetadata expectedMetadata);
 
     void verifyPermanentObject(String permanentObjectKey, DocumentObjectMetadata expectedMetadata);

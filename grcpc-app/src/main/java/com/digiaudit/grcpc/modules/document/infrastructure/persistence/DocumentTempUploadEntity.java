@@ -1,8 +1,6 @@
 package com.digiaudit.grcpc.modules.document.infrastructure.persistence;
 
-import com.digiaudit.grcpc.modules.document.domain.DocumentTempUploadStatus;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -40,10 +38,6 @@ public class DocumentTempUploadEntity {
     @Column(name = "checksum_value", nullable = false, length = 128)
     private String checksumValue;
 
-    @Convert(converter = DocumentTempUploadStatusConverter.class)
-    @Column(name = "upload_status", nullable = false, length = 32)
-    private DocumentTempUploadStatus uploadStatus;
-
     @JdbcTypeCode(SqlTypes.BINARY)
     @Column(name = "uploaded_by", nullable = false, columnDefinition = "RAW(16)")
     private UUID uploadedBy;
@@ -53,13 +47,6 @@ public class DocumentTempUploadEntity {
 
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
-
-    @Column(name = "consumed_at")
-    private Instant consumedAt;
-
-    @JdbcTypeCode(SqlTypes.BINARY)
-    @Column(name = "document_version_id", columnDefinition = "RAW(16)")
-    private UUID documentVersionId;
 
     @Version
     @Column(name = "version", nullable = false)
@@ -90,14 +77,16 @@ public class DocumentTempUploadEntity {
         this.storageObjectKey = Objects.requireNonNull(storageObjectKey, "storageObjectKey is required");
         this.checksumAlgorithm = Objects.requireNonNull(checksumAlgorithm, "checksumAlgorithm is required");
         this.checksumValue = Objects.requireNonNull(checksumValue, "checksumValue is required");
-        this.uploadStatus = DocumentTempUploadStatus.UPLOADING;
         this.uploadedBy = Objects.requireNonNull(uploadedBy, "uploadedBy is required");
         this.uploadedAt = Objects.requireNonNull(uploadedAt, "uploadedAt is required");
         this.expiresAt = Objects.requireNonNull(expiresAt, "expiresAt is required");
+        if (!expiresAt.isAfter(uploadedAt)) {
+            throw new IllegalArgumentException("expiresAt must be after uploadedAt");
+        }
         this.version = 0L;
     }
 
-    public static DocumentTempUploadEntity uploading(
+    public static DocumentTempUploadEntity create(
             UUID id,
             String originalFileName,
             String mimeType,
@@ -121,54 +110,6 @@ public class DocumentTempUploadEntity {
                 uploadedAt,
                 expiresAt
         );
-    }
-
-    public void markAvailable(Instant now) {
-        Objects.requireNonNull(now, "now is required");
-        if (uploadStatus != DocumentTempUploadStatus.UPLOADING) {
-            throw new IllegalStateException("Only uploading temporary uploads can become available");
-        }
-        if (!now.isBefore(expiresAt)) {
-            uploadStatus = DocumentTempUploadStatus.EXPIRED;
-            throw new IllegalStateException("Expired temporary upload cannot become available");
-        }
-        uploadStatus = DocumentTempUploadStatus.AVAILABLE;
-    }
-
-    public void markFailed() {
-        if (uploadStatus != DocumentTempUploadStatus.UPLOADING) {
-            throw new IllegalStateException("Only uploading temporary uploads can fail");
-        }
-        uploadStatus = DocumentTempUploadStatus.FAILED;
-    }
-
-    public void markExpired(Instant now) {
-        Objects.requireNonNull(now, "now is required");
-        if (uploadStatus == DocumentTempUploadStatus.CONSUMED) {
-            return;
-        }
-        if ((uploadStatus == DocumentTempUploadStatus.AVAILABLE || uploadStatus == DocumentTempUploadStatus.UPLOADING)
-                && !now.isBefore(expiresAt)) {
-            uploadStatus = DocumentTempUploadStatus.EXPIRED;
-        }
-    }
-
-    public void consume(UUID completedDocumentVersionId, Instant now) {
-        Objects.requireNonNull(now, "now is required");
-        Objects.requireNonNull(completedDocumentVersionId, "documentVersionId is required");
-        if (uploadStatus != DocumentTempUploadStatus.AVAILABLE) {
-            throw new IllegalStateException("Only available temporary uploads can be consumed");
-        }
-        if (!now.isBefore(expiresAt)) {
-            uploadStatus = DocumentTempUploadStatus.EXPIRED;
-            throw new IllegalStateException("Expired temporary upload cannot be consumed");
-        }
-        if (consumedAt != null || documentVersionId != null) {
-            throw new IllegalStateException("Temporary upload was already consumed");
-        }
-        uploadStatus = DocumentTempUploadStatus.CONSUMED;
-        consumedAt = now;
-        documentVersionId = completedDocumentVersionId;
     }
 
     public UUID getId() {
@@ -199,10 +140,6 @@ public class DocumentTempUploadEntity {
         return checksumValue;
     }
 
-    public DocumentTempUploadStatus getUploadStatus() {
-        return uploadStatus;
-    }
-
     public UUID getUploadedBy() {
         return uploadedBy;
     }
@@ -213,14 +150,6 @@ public class DocumentTempUploadEntity {
 
     public Instant getExpiresAt() {
         return expiresAt;
-    }
-
-    public Instant getConsumedAt() {
-        return consumedAt;
-    }
-
-    public UUID getDocumentVersionId() {
-        return documentVersionId;
     }
 
     public long getVersion() {

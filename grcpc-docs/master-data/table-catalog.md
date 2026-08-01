@@ -99,7 +99,7 @@ Revision Entity Type rules:
 
 - Codes mapped to catalog tables `01` through `27` are permitted in Central revisions according to the current domain enum.
 - Codes mapped to catalog tables `28` through `40` are permitted in Local revisions.
-- `DOCUMENT`, `DOCUMENT_VERSION`, and `DOCUMENT_LINK` may be represented in Central or Local revisions according to their owning Business Command context.
+- `DOCUMENT`, `DOCUMENT_VERSION`, and `DOCUMENT_LINK` remain recorded stored-code values, but the Prompt 4.2 Document command flow does not create Revision Content for temporary upload, Document, Document Version, or Document Link mutation.
 - `MASTERDATA_REVISION` is not a Revision Content entity type.
 - `masterdata_revision` and `masterdata_revision_content` do not revise themselves.
 - `document_temp_upload` is technical and is not Revision Content.
@@ -903,7 +903,7 @@ Document Link Target Type rules:
 
 **Constraints and indexes.** Shared checks. If optional code is implemented as a unique business key, its null/uniqueness semantics must be explicitly fixed in detailed design without creating an alternate document table.
 
-**Mutability and Revision.** Document identity/link metadata changes that are business changes are revision-controlled; content change creates a new `document_version`.
+**Mutability and Revision.** Document identity metadata changes use direct Document command transactions and do not create Business Revision or Revision Content. File content change creates a new `document_version`.
 
 **Authority / non-invention note.** Final Logical Model §13-1; Physical Design §13. This table is not a generic attachment row.
 
@@ -913,7 +913,7 @@ Document Link Target Type rules:
 
 **Fields.** `ID`; `document_id RAW(16) NOT NULL`; `document_version_number NUMBER(19,0) NOT NULL`; `file_name VARCHAR2(512 CHAR) NOT NULL`; `mime_type VARCHAR2(255 BYTE) NOT NULL`; `file_size NUMBER(19,0) NOT NULL`; `storage_object_key VARCHAR2(1024 BYTE) NOT NULL`; `checksum_algorithm VARCHAR2(32 BYTE) NOT NULL`; `checksum_value VARCHAR2(128 BYTE) NOT NULL`; lifecycle/validity/audit and optimistic `version`.
 
-**Keys and relationships.** PK: `id`. Business key: unique `(document_id, document_version_number)`. FK: `document_id -> document(id)`. Referenced by Document Link and the consumed temporary upload.
+**Keys and relationships.** PK: `id`. Business key: unique `(document_id, document_version_number)`. FK: `document_id -> document(id)`. Referenced by Document Link; finalized metadata is copied from the confirmed temporary upload row.
 
 **Composite FKs.** None.
 
@@ -939,7 +939,7 @@ Document Link Target Type rules:
 
 **Constraints and indexes.** Unique link triple; target-type check against the canonical 41-code Document Link Target Type vocabulary; indexed `document_version_id` via the unique index and an appropriate target lookup index if not covered. The target cannot be an arbitrary legacy attachment target.
 
-**Mutability and Revision.** Linking to a Master Data target is revision-controlled. The narrow exception is a link to its own DRAFT `masterdata_revision`, which is metadata of that same revision and must not create a recursive revision.
+**Mutability and Revision.** Linking to a Master Data target uses a direct Document command transaction and does not create Business Revision or Revision Content. The retained `MASTERDATA_REVISION` target vocabulary remains Backend-only and is not a normal Browser-selectable target.
 
 **Authority / non-invention note.** Final Logical Model §13-3; Conceptual Model shared-document rules; Physical Design §8 and §13.
 
@@ -985,19 +985,19 @@ Document Link Target Type rules:
 
 ### T1. `document_temp_upload`
 
-**Purpose and family.** The sole technical table in this redesign scope. It tracks a one-time MinIO temporary object before a successful Business Command creates an immutable `document_version`.
+**Purpose and family.** The sole technical table in this redesign scope. Row existence means the temporary object was uploaded successfully, verified, and is waiting for explicit user confirmation.
 
-**Fields and Oracle types.** `id RAW(16) NOT NULL`; `original_file_name VARCHAR2(512 CHAR) NOT NULL`; `mime_type VARCHAR2(255 BYTE) NOT NULL`; `file_size NUMBER(19,0) NOT NULL`; `storage_object_key VARCHAR2(1024 BYTE) NOT NULL`; `checksum_algorithm VARCHAR2(32 BYTE) NOT NULL`; `checksum_value VARCHAR2(128 BYTE) NOT NULL`; `upload_status VARCHAR2(32 BYTE) NOT NULL`; `uploaded_by RAW(16) NOT NULL`; `uploaded_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `expires_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; nullable `consumed_at TIMESTAMP(6) WITH TIME ZONE`; nullable `document_version_id RAW(16)`; `version NUMBER(19,0) NOT NULL`.
+**Fields and Oracle types.** `id RAW(16) NOT NULL`; `original_file_name VARCHAR2(512 CHAR) NOT NULL`; `mime_type VARCHAR2(255 BYTE) NOT NULL`; `file_size NUMBER(19,0) NOT NULL`; `storage_object_key VARCHAR2(1024 BYTE) NOT NULL`; `checksum_algorithm VARCHAR2(32 BYTE) NOT NULL`; `checksum_value VARCHAR2(128 BYTE) NOT NULL`; `uploaded_by RAW(16) NOT NULL`; `uploaded_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `expires_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `version NUMBER(19,0) NOT NULL`.
 
-**Keys and relationships.** PK: `id`. Business/technical key: unique `storage_object_key`. FK: nullable `document_version_id -> document_version(id)` after successful consumption. No generic target or `tempSessionId` column exists.
+**Keys and relationships.** PK: `id`. Business/technical key: unique `storage_object_key`. No FK to `document_version`, no generic target, no `tempSessionId`, and no persisted status/history columns exist.
 
 **Composite FKs.** None.
 
-**Lifecycle, validity, and lock.** `upload_status` is `UPLOADING`, `AVAILABLE`, `CONSUMED`, `EXPIRED`, or `FAILED`. `version` prevents concurrent consume races. It has expiry timestamps rather than the business validity profile.
+**Lifecycle, validity, and lock.** There is no persisted temporary-upload state machine. `uploaded_at` is the successful upload completion time, and `expires_at = uploaded_at + temporary TTL`. Upload transport timeout and temporary-file expiry are separate concepts. `PESSIMISTIC_WRITE` on the row is the single-use finalization guard, and `version` remains available for optimistic conventions.
 
-**Constraints and indexes.** Check `file_size >= 0`; check `expires_at > uploaded_at`; check that `CONSUMED` has both `consumed_at` and `document_version_id`, while every other status has neither; unique object key; index the consuming document version if the FK is not otherwise covered. Do not add a status-only index.
+**Constraints and indexes.** Check `file_size >= 0`; check `expires_at > uploaded_at`; check `version >= 0`; unique object key; mandatory file identity and ownership fields. There is no status check, consumed-row check, or index for removed status/version-pointer columns.
 
-**Mutability and Revision.** Backend validates object existence, checksum, expiry, status, user/context authorization, then consumes the row exactly once in the final document command. The Frontend sends `tempUploadId` only and never a final object key. MinIO lifecycle removes temporary objects; no technical Job/Scheduler table is added.
+**Mutability and Revision.** Backend validates row existence, ownership, expiry, MinIO object presence, size, MIME metadata, and checksum before finalization. Final confirmation copies file metadata into `document_version`, deletes the `document_temp_upload` row in the Document transaction, and deletes the temporary MinIO object after commit. Temporary upload and final Document mutation do not create Revision Content.
 
 **Authority / non-invention note.** Physical Design §12-1 through §12-4. It is technical, not one of the 45 business tables, and there is no distributed Oracle–MinIO transaction or Outbox.
 

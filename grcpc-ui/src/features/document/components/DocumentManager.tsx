@@ -48,9 +48,8 @@ export interface DocumentManagerProps {
 type UploadFlowState =
     | "SELECTED"
     | "UPLOADING"
-    | "AVAILABLE"
-    | "FINALIZING"
-    | "CONSUMED";
+    | "UPLOADED"
+    | "FINALIZING";
 
 type UploadFailureState =
     | "UPLOAD_FAILED"
@@ -174,7 +173,6 @@ const ERROR_TEXT_STYLE: CSSProperties = {
 };
 
 const NONE_TEXT = "-";
-const SUCCESS_UPLOAD_VISIBLE_MS = 2000;
 const FALLBACK_PROGRESS_INTERVAL_MS = 300;
 const FALLBACK_PROGRESS_MAX = 90;
 const FALLBACK_PROGRESS_STEP = 5;
@@ -269,6 +267,10 @@ function deriveFailureState(error: unknown, expiresAt?: string): UploadFailureSt
     return "FINALIZATION_FAILED";
 }
 
+function isAlreadyFinalizedNotFound(error: unknown): boolean {
+    return error instanceof HttpError && error.code === "TEMPORARY_UPLOAD_NOT_FOUND";
+}
+
 function versionStatusText(
     row: DocumentLinkSummary,
     t: ReturnType<typeof useTranslation>["t"],
@@ -298,7 +300,6 @@ export default function DocumentManager({
 }: DocumentManagerProps) {
     const { t } = useTranslation();
     const mountedRef = useRef(true);
-    const successTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
     const progressFallbackTimersRef =
         useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
     const [uploadItems, setUploadItems] = useState<UploadFlowItem[]>([]);
@@ -344,8 +345,6 @@ export default function DocumentManager({
 
         return () => {
             mountedRef.current = false;
-            successTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-            successTimeoutsRef.current = [];
             progressFallbackTimers.forEach((intervalId) => clearInterval(intervalId));
             progressFallbackTimers.clear();
         };
@@ -419,17 +418,6 @@ export default function DocumentManager({
         setUploadItems((current) => current.filter((row) => row.id !== rowId));
     }, [clearUploadProgressFallback]);
 
-    const scheduleSuccessfulUploadRemoval = useCallback((rowId: string) => {
-        const timeoutId = setTimeout(() => {
-            successTimeoutsRef.current = successTimeoutsRef.current.filter(
-                (currentTimeoutId) => currentTimeoutId !== timeoutId,
-            );
-            removeUploadItem(rowId);
-        }, SUCCESS_UPLOAD_VISIBLE_MS);
-
-        successTimeoutsRef.current = [...successTimeoutsRef.current, timeoutId];
-    }, [removeUploadItem]);
-
     const startUploadProgressFallback = useCallback((rowId: string) => {
         clearUploadProgressFallback(rowId);
 
@@ -464,10 +452,16 @@ export default function DocumentManager({
     }, [clearUploadProgressFallback]);
 
     const finalizeUpload = useCallback(
-        async (item: UploadFlowItem, upload: DocumentTemporaryUpload) => {
+        async (item: UploadFlowItem) => {
             if (!targetId) {
                 throw new Error(saveFirstMessage ?? t("document.saveFirst", {
                     defaultValue: "Save the item first, then upload documents.",
+                }));
+            }
+
+            if (!item.tempUploadId || isExpired(item.expiresAt)) {
+                throw new Error(t("document.errors.expired", {
+                    defaultValue: "The temporary upload has expired. Upload the file again.",
                 }));
             }
 
@@ -480,7 +474,7 @@ export default function DocumentManager({
 
             if (item.existingDocument) {
                 await addVersion(item.existingDocument.documentId, {
-                    tempUploadId: upload.tempUploadId,
+                    tempUploadId: item.tempUploadId,
                     expectedDocumentVersion: item.existingDocument.documentVersion,
                     targetType,
                     targetId,
@@ -498,7 +492,7 @@ export default function DocumentManager({
             }
 
             await createDocument({
-                tempUploadId: upload.tempUploadId,
+                tempUploadId: item.tempUploadId,
                 code: optionalText(item.code),
                 title: titleValue,
                 description: optionalText(item.description),
@@ -569,16 +563,16 @@ export default function DocumentManager({
                 uploadedTemp = upload;
                 clearUploadProgressFallback(rowId);
 
-                const availableItem: UploadFlowItem = {
+                const uploadedItem: UploadFlowItem = {
                     ...initialItem,
                     tempUploadId: upload.tempUploadId,
                     expiresAt: upload.expiresAt,
                     progress: 100,
-                    state: "AVAILABLE",
+                    state: "UPLOADED",
                     mimeType: upload.mimeType,
                     fileSize: upload.fileSize,
                 };
-                updateUploadItem(rowId, availableItem);
+                updateUploadItem(rowId, uploadedItem);
                 setActionMessage({
                     design: "Positive",
                     text: t("document.upload.staged", {
@@ -601,7 +595,7 @@ export default function DocumentManager({
 
                 updateUploadItem(rowId, {
                     progress: 100,
-                    state: uploadedTemp ? "AVAILABLE" : "SELECTED",
+                    state: uploadedTemp ? "UPLOADED" : "SELECTED",
                     failureState,
                     tempUploadId: uploadedTemp?.tempUploadId,
                     expiresAt: uploadedTemp?.expiresAt,
@@ -639,33 +633,35 @@ export default function DocumentManager({
                 return;
             }
 
-            const upload: DocumentTemporaryUpload = {
-                tempUploadId: item.tempUploadId,
-                originalFileName: item.fileName,
-                mimeType: item.mimeType,
-                fileSize: item.fileSize,
-                uploadStatus: "AVAILABLE",
-                uploadedAt: "",
-                expiresAt: item.expiresAt ?? "",
-                version: 0,
-            };
-
             try {
                 setActionMessage(null);
-                await finalizeUpload(item, upload);
-                updateUploadItem(item.id, {
-                    state: "CONSUMED",
-                    failureState: undefined,
-                    error: undefined,
-                });
+                await finalizeUpload(item);
+                removeUploadItem(item.id);
                 setActionMessage({
                     design: "Positive",
                     text: t("document.upload.finalized", {
                         defaultValue: "Document was saved successfully.",
                     }),
                 });
-                scheduleSuccessfulUploadRemoval(item.id);
             } catch (error) {
+                if (targetId && isAlreadyFinalizedNotFound(error)) {
+                    removeUploadItem(item.id);
+                    setActionMessage({
+                        design: "Information",
+                        text: t("document.upload.alreadyFinalized", {
+                            defaultValue: "Temporary upload is no longer staged. The document list was refreshed.",
+                        }),
+                    });
+                    void loadForTarget(targetType, targetId).catch(() => {
+                        setActionMessage({
+                            design: "Information",
+                            text: t("document.upload.refreshWarning", {
+                                defaultValue: "Document mutation status is unchanged, but refreshing the list failed. Reload later.",
+                            }),
+                        });
+                    });
+                    return;
+                }
                 const message =
                     error instanceof Error && error.message
                         ? error.message
@@ -673,14 +669,14 @@ export default function DocumentManager({
                               defaultValue: "Document finalization failed.",
                           });
                 updateUploadItem(item.id, {
-                    state: "AVAILABLE",
+                    state: "UPLOADED",
                     failureState: deriveFailureState(error, item.expiresAt),
                     error: message,
                 });
                 setActionMessage({ design: "Negative", text: message });
             }
         },
-        [finalizeUpload, scheduleSuccessfulUploadRemoval, t, updateUploadItem],
+        [finalizeUpload, loadForTarget, removeUploadItem, t, targetId, targetType, updateUploadItem],
     );
 
     const handleDocumentFilesChange = (event: unknown) => {
@@ -935,19 +931,13 @@ export default function DocumentManager({
             });
         }
 
-        if (item.state === "CONSUMED") {
-            return t("document.upload.consumed", {
-                defaultValue: "Document saved",
-            });
-        }
-
         if (item.state === "FINALIZING") {
             return t("document.upload.finalizing", {
                 defaultValue: "Saving document",
             });
         }
 
-        if (item.state === "AVAILABLE") {
+        if (item.state === "UPLOADED") {
             return t("document.upload.available", {
                 defaultValue: "Temporary upload is available",
             });
@@ -976,10 +966,10 @@ export default function DocumentManager({
                 {uploadItems.map((item) => {
                     const progress = normalizeVisibleProgress(item.progress);
                     const progressValue =
-                        item.state === "CONSUMED" || item.failureState ? 100 : progress;
+                        item.failureState ? 100 : progress;
                     const statusText = renderUploadStatusText(item);
                     const staged =
-                        item.state === "AVAILABLE" &&
+                        item.state === "UPLOADED" &&
                         Boolean(item.tempUploadId) &&
                         !isExpired(item.expiresAt) &&
                         item.failureState !== "UPLOAD_FAILED" &&
@@ -992,7 +982,7 @@ export default function DocumentManager({
                         !readOnly &&
                         !titleMissing;
                     const showMetadata =
-                        item.state === "AVAILABLE" ||
+                        item.state === "UPLOADED" ||
                         item.state === "FINALIZING" ||
                         item.failureState === "FINALIZATION_FAILED";
                     const finalizeText = item.failureState === "FINALIZATION_FAILED"
@@ -1028,7 +1018,7 @@ export default function DocumentManager({
                                             {finalizeText}
                                         </Button>
                                     ) : null}
-                                    {item.failureState || item.state === "CONSUMED" ? (
+                                    {item.failureState ? (
                                         <Button
                                             design="Transparent"
                                             onClick={() => removeUploadItem(item.id)}
@@ -1138,20 +1128,16 @@ export default function DocumentManager({
                             <ProgressIndicator
                                 accessibleName={statusText}
                                 displayValue={
-                                    item.state === "CONSUMED"
-                                        ? "100%"
-                                        : item.state === "UPLOADING"
+                                    item.state === "UPLOADING"
                                           ? `${progress}%`
                                           : ""
                                 }
-                                hideValue={item.state !== "UPLOADING" && item.state !== "CONSUMED"}
+                                hideValue={item.state !== "UPLOADING"}
                                 value={progressValue}
                                 valueState={
                                     item.failureState
                                         ? "Negative"
-                                        : item.state === "CONSUMED"
-                                          ? "Positive"
-                                          : "Information"
+                                        : "Information"
                                 }
                             />
 

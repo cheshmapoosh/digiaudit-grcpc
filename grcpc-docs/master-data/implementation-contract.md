@@ -368,7 +368,9 @@ The Frontend never supplies before or after snapshots.
 
 The Frontend never controls transaction order.
 
-The response includes at least `entityId`, `revisionId`, and `version`.
+Revision-controlled command responses include at least `entityId`, `revisionId`, and `version`.
+
+Project-owner correction for Prompt 4.2: Document commands are direct Document transactions, do not create or require Business Revision, do not create Revision Content, and do not include `revisionId` in Document-specific mutation responses.
 
 Revision domain is `CENTRAL` or `LOCAL`.
 
@@ -401,7 +403,7 @@ Document Link Target Type contains exactly 41 stored codes and is used only for 
 
 Document Link allows catalog tables `01` through `40` plus the narrow `MASTERDATA_REVISION` exception.
 
-Document-family tables are revisionable where applicable, but `document`, `document_version`, and `document_link` are not Document Link targets.
+Document-family tables are not Document Link targets, and Prompt 4.2 Document commands do not create Revision Content.
 
 `masterdata_revision_content`, `document_temp_upload`, Effective read models, Diagnostic read models, Roll-up read models, and Policy Applicability read models are not Document Link targets.
 
@@ -443,21 +445,25 @@ It is created only for a finalized permanent object.
 
 `document_link` attaches an exact Document Version to a controlled target.
 
-The final Business Command consumes a Temporary Upload, creates or updates Document identity as needed, creates the immutable Document Version, and creates the Document Link.
+The final Document command confirms a verified Temporary Upload, creates or updates Document identity as needed, creates the immutable Document Version, creates the Document Link where applicable, and deletes the temporary row.
 
-The temporary table is exactly `document_temp_upload`; it is technical and is consumed by a final Business Command.
+The temporary table is exactly `document_temp_upload`; it is technical and contains only uploads that already completed MinIO upload and object verification.
 
 `tempUploadId` is the only upload identifier sent into a final document-aware command.
 
-A temporary upload is one-time consumable.
+A temporary upload row has no persisted status, no consumed timestamp, and no Document Version pointer.
 
-It must be `AVAILABLE`.
+`uploaded_at` is successful upload completion time.
 
-It must be unexpired.
+`expires_at = uploaded_at + temporary TTL`.
+
+Upload transport timeout and temporary-file expiry are separate concepts.
+
+It must be unexpired when finalized.
 
 It must be authorized for the current user or permitted context.
 
-The Backend verifies MinIO object existence and checksum.
+The Backend verifies MinIO object existence, size, MIME metadata, and checksum.
 
 Failed temporary or permanent storage preparation must not create a completed Document Version row; storage failure handling belongs to the future Document command flow.
 
@@ -465,7 +471,9 @@ The Frontend never supplies a final MinIO object key.
 
 The Frontend never performs a direct final Document upload.
 
-The Backend creates the immutable Document Version then marks the temporary upload `CONSUMED` in the authorized flow.
+The Backend copies file metadata from the temporary row into `document_version`, stores a Backend-generated permanent object key, deletes the temporary database row before commit, and deletes the temporary MinIO object only after a successful commit.
+
+Document command success is built from entities already available inside the command transaction. It must not depend on a secondary Summary query, a post-commit read, another controller call, or a UI refresh. A refresh failure after a successful mutation is a read synchronization issue, not a mutation failure.
 
 Replacing a file creates a new Document Version.
 
@@ -481,7 +489,7 @@ The Backend uses validation, ordered operations, and best-effort cleanup to mana
 
 No Outbox is introduced for this version.
 
-Temporary objects are cleaned through MinIO lifecycle behavior.
+Successful finalization deletes the temporary MinIO object after commit. Abandoned expired rows and objects require a separately approved maintenance design or infrastructure lifecycle behavior.
 
 No Job or Scheduler table is introduced for temporary cleanup.
 

@@ -4,11 +4,12 @@ import java.util.UUID;
 
 public record DocumentCommandResponse(
         UUID entityId,
-        UUID revisionId,
+        UUID documentId,
         long documentVersion,
         UUID documentVersionId,
-        long documentVersionNumber,
+        Long documentVersionNumber,
         UUID documentLinkId,
+        Long documentLinkVersion,
         DocumentLinkSummaryResponse summary
 ) {
 }

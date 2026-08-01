@@ -19,13 +19,13 @@ public class DocumentObjectKeyService {
         return key(properties.temporaryPrefix(), tempUploadId, fileName);
     }
 
-    public String permanentKey(UUID tempUploadId, String fileName) {
-        return key(properties.permanentPrefix(), tempUploadId, fileName);
+    public String permanentKey(UUID documentVersionId, String fileName) {
+        return key(properties.permanentPrefix(), documentVersionId, fileName);
     }
 
-    private String key(String configuredPrefix, UUID tempUploadId, String fileName) {
+    private String key(String configuredPrefix, UUID objectId, String fileName) {
         String prefix = normalizePrefix(configuredPrefix);
-        String key = prefix + "/" + tempUploadId + extension(fileName);
+        String key = prefix + "/" + objectId + extension(fileName);
         if (key.length() > 1024) {
             throw DocumentFailures.invalid("INVALID_FILENAME", "Document object key exceeds the database limit");
         }

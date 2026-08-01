@@ -124,3 +124,22 @@ create table document_link (
 );
 
 create index ix_document_link_target on document_link(target_type, target_id);
+
+create table document_temp_upload (
+    id raw(16) not null,
+    original_file_name varchar2(512 char) not null,
+    mime_type varchar2(255 byte) not null,
+    file_size number(19,0) not null,
+    storage_object_key varchar2(1024 byte) not null,
+    checksum_algorithm varchar2(32 byte) not null,
+    checksum_value varchar2(128 byte) not null,
+    uploaded_by raw(16) not null,
+    uploaded_at timestamp(6) with time zone not null,
+    expires_at timestamp(6) with time zone not null,
+    version number(19,0) default 0 not null,
+    constraint pk_document_temp_upload primary key (id),
+    constraint uk_document_temp_upload_object unique (storage_object_key),
+    constraint ck_document_temp_upload_size check (file_size >= 0),
+    constraint ck_document_temp_upload_expiry check (expires_at > uploaded_at),
+    constraint ck_document_temp_upload_version check (version >= 0)
+);

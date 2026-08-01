@@ -132,7 +132,7 @@ Example shape:
 
 ### Standard mutation response
 
-Every successful mutation response contains at least the following fields.
+Every successful revision-controlled mutation response contains at least the following fields.
 
 ```json
 {
@@ -145,6 +145,8 @@ Every successful mutation response contains at least the following fields.
 The response may additionally contain a typed summary, status, and stable read representation.
 
 The response must not expose internal Revision Content ordering or snapshots unless an authorized revision-history read use case needs a safe read projection.
+
+Document mutation responses are a Prompt 4.2 exception: they do not contain `revisionId`, do not require Revision Content, and return Document-specific IDs/versions plus any safe linked summary built from entities already available in the command transaction.
 
 ### Status, delete, and restore commands
 
@@ -350,9 +352,19 @@ The final command does not accept `tempSessionId`.
 
 The final command does not accept final `storageObjectKey`.
 
-The Backend checks status, expiry, ownership/context, MinIO object presence, and checksum before consuming the temporary upload.
+The temporary-upload row is inserted only after the temporary MinIO object upload, checksum calculation, and object verification succeed.
 
-The Backend creates the exact immutable `document_version` and then marks the temporary upload `CONSUMED` in the authorized flow.
+The temporary-upload response returns safe metadata only: `tempUploadId`, original filename, MIME type, file size, `uploadedAt`, `expiresAt`, and optimistic `version` when exposed by convention. It never returns bucket, endpoint, credentials, object key, upload status, Document Version ID, or consumed timestamp.
+
+`uploadedAt` is successful upload completion time, and `expiresAt = uploadedAt + temporary TTL`.
+
+Upload transport timeout and temporary-file expiry are separate concepts.
+
+The Backend checks row existence, expiry, ownership/context, MinIO object presence, size, MIME metadata, and checksum before finalization.
+
+The Backend creates the exact immutable `document_version`, copies file metadata from the temporary row, deletes the `document_temp_upload` row in the same transaction, and deletes the temporary MinIO object after successful commit.
+
+Document command success must not depend on a secondary Summary query, a post-commit read, another controller call, or a UI refresh. Refresh failure after a successful mutation is a read synchronization issue, not a mutation failure.
 
 Document identity and version APIs separate identity metadata from immutable file content.
 
@@ -432,9 +444,9 @@ Create commands use approved business-key uniqueness plus explicit inactive reac
 
 Compound commands must be retried only when their preconditions can be evaluated safely inside one Backend transaction.
 
-Temporary-upload finalization is safe against replay through optimistic locking and the one-time `CONSUMED` state.
+Temporary-upload finalization is safe against replay through a pessimistic write lock on the exact temporary row and deletion of that row on success.
 
-A repeat consume returns an explicit consumed/invalid upload error rather than producing another Document Version.
+A repeated finalization finds no temporary row or receives a safe already-finalized/not-found response rather than producing another Document Version.
 
 An optional transport idempotency key may be supported only through an approved shared platform facility.
 
@@ -486,9 +498,9 @@ Do not disclose raw database constraint names, MinIO credentials, or internal ob
 | `CROSS_LOCAL_CONTEXT_COVERAGE` | 422 | Local Coverage endpoints do not belong to the requested Local Organization–Subprocess Context. |
 | `REVISION_DOMAIN_MISMATCH` | 422 | A Central revision attempts Local content, a Local revision attempts Central content, or Local content uses a different Organization. |
 | `MASTERDATA_REVISION_REQUIRED` | 409 | A protected source mutation is attempted without the Backend revision context. |
-| `INVALID_TEMP_UPLOAD` | 422 | The temporary upload does not exist, is not authorized, has an invalid object/checksum, or is not valid for the command. |
-| `TEMP_UPLOAD_EXPIRED` | 410 | The temporary upload has passed `expiresAt`. |
-| `TEMP_UPLOAD_ALREADY_CONSUMED` | 409 | The temporary upload has already produced a Document Version. |
+| `INVALID_TEMP_UPLOAD` | 422 | The temporary upload is not authorized, has an invalid object/checksum, or is not valid for the command. |
+| `TEMPORARY_UPLOAD_NOT_FOUND` | 404 | The temporary upload row does not exist, including replay after successful finalization. |
+| `TEMPORARY_UPLOAD_EXPIRED` | 410 | The temporary upload has passed `expiresAt`. |
 | `POLICY_SCOPE_VALIDITY_CONFLICT` | 422 | A Policy Scope interval is incompatible with its Policy Version. |
 | `FORBIDDEN` | 403 | The authenticated user lacks the feature or resource permission. |
 | `NOT_FOUND` | 404 | The requested authorized resource is absent. |
@@ -513,7 +525,7 @@ Central definition/relation commands require Central Master Data authorization.
 
 Local commands require authorization for the exact Organization and Local Context.
 
-Document upload, consume, link, and secure download require document/resource authorization.
+Document upload, finalization, link, and secure download require document/resource authorization.
 
 Diagnostic read access uses a distinct read-only permission.
 
@@ -525,7 +537,7 @@ Permissions are named and remapped per V2 vertical slice; Legacy permissions are
 
 An endpoint set is complete only when it uses actual approved entity vocabulary.
 
-It must return revision-aware mutation results.
+It must return revision-aware mutation results for revision-controlled features and Document-specific mutation results for Document commands.
 
 It must require version where required.
 

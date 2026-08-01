@@ -2,6 +2,7 @@ package com.digiaudit.grcpc.modules.document.application;
 
 import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.ForbiddenException;
+import com.digiaudit.grcpc.common.exception.GoneException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
 
@@ -21,6 +22,10 @@ public final class DocumentFailures {
 
     public static ForbiddenException forbidden(String code, String message) {
         return new ForbiddenException(code, MESSAGE_CODE, message);
+    }
+
+    public static GoneException gone(String code, String message) {
+        return new GoneException(code, MESSAGE_CODE, message);
     }
 
     public static UnprocessableEntityException invalid(String code, String message) {

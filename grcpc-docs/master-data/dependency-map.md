@@ -20,7 +20,7 @@ The map is a delivery dependency map; it does not add any table, cache, outbox, 
 - A Local Organization–Subprocess Scope exists before every Local Scope, Coverage, or Local Policy Scope.
 - Local Scope exists before Local Coverage and exact Local Control/Requirement Policy Scope.
 - A Central reference is validated before an inherited Local Scope or Coverage can be applied.
-- Document Version is created from a consumed Temporary Upload before a Document Link is created.
+- Document Version is created from a confirmed Temporary Upload before a Document Link is created, and successful finalization deletes the temporary row.
 - A Business Revision header exists before Backend-created Revision Content is persisted and applied.
 - Read models depend on source tables and never become source-table dependencies.
 - Central changes can affect read results and impact analysis; they never create physical Local mutations.
@@ -145,7 +145,7 @@ The dotted arrows identify inherited-reference validation and Effective dependen
 | D1 | `document` | Oracle conventions | Stable document identity. |
 | D2 | `document_version` | Document | Immutable finalized version metadata and object key. |
 | D3 | `document_link` | Document Version + controlled target vocabulary | Link references a precise version. |
-| T1 | `document_temp_upload` | Document Version FK target may be nullable | Technical staging metadata; it can exist before final version. |
+| T1 | `document_temp_upload` | Successful temporary object upload and verification | Technical staging metadata waiting for explicit confirmation; no Document Version FK or status. |
 | R1 | `masterdata_revision` | Organization for Local domain; self parent optional | Revision header before contents. |
 | R2 | `masterdata_revision_content` | Master Data Revision | Ordered controlled mutation records. |
 
@@ -198,7 +198,7 @@ It is not a chain of Legacy `DROP`, `ALTER`, data-copy, or compatibility migrati
 | 4. Central relations | Central catalogs | Typed scopes, classifications, policy scopes, coverage commands | Same-subprocess composite FKs and typed validation. |
 | 5. Local context | Central relations | Local Context and typed Local Scope commands | Local inherited range and definition/context validation. |
 | 6. Local relations | Local context | Local Coverage and Local Policy Scope commands | Same-context composite FKs and precedence input. |
-| 7. Document + Revision | Shared foundation and targets | Temporary upload, document/version/link, revision command coordination | One-time upload consume and immutable version. |
+| 7. Document + Revision | Shared foundation and targets | Temporary upload, document/version/link, and the separate revision framework | One-time temporary-row deletion and immutable version. |
 | 8. Read queries | Central/local/document sources | Effective, Diagnostic, Roll-up, Policy Applicability query services | No mutable endpoint or materialization. |
 | 9. Legacy removal | Each owning slice | Remove old endpoints/entities/services/permissions | No compatibility API or dual write remains. |
 
@@ -237,24 +237,24 @@ Command handlers must reject cross-domain content before persistence.
 
 A Central impact can identify Local remediation work but cannot create it automatically.
 
-Document Link to the current DRAFT revision is handled as metadata of that revision and does not start a recursive revision.
+Prompt 4.2 Document commands do not use Business Revision. Any retained Document-to-revision vocabulary is Backend-only and outside normal Browser-selectable Document commands.
 
 ## Document dependencies
 
 ```mermaid
 flowchart LR
-    Upload[document_temp_upload<br/>AVAILABLE + unexpired]
+    Upload[document_temp_upload<br/>row exists + unexpired]
     Verify[Backend validates user/context,<br/>MinIO object, and checksum]
     Command[Final typed Business Command]
     Doc[document]
     Version[immutable document_version]
-    Consume[Temporary upload marked CONSUMED]
+    DeleteTempRow[delete temporary row]
     Link[document_link to exact version]
 
     Upload --> Verify --> Command
     Command --> Doc
     Doc --> Version
-    Version --> Consume
+    Version --> DeleteTempRow
     Version --> Link
 ```
 
@@ -268,7 +268,7 @@ There is no distributed Oracle–MinIO transaction.
 
 The Backend uses ordered operations and best-effort cleanup.
 
-Temporary MinIO cleanup uses bucket lifecycle behavior rather than a job or scheduler table.
+Successful finalization deletes the temporary MinIO object after the database transaction commits; abandoned expired uploads need a separately approved cleanup design or infrastructure lifecycle behavior rather than a job or scheduler table in this model.
 
 ## Read-model dependencies
 
@@ -291,7 +291,7 @@ No read model emits a Business Revision merely because a calculation changes.
 4. Add Central Scope, Classification, Central Policy Scope, and Central Coverage screens/dialogs after the central relation APIs exist.
 5. Add Local Organization–Subprocess Context before Local Scope, Local Coverage, and Local Policy Scope workflows.
 6. Replace generic document attachment UI with temporary upload, immutable versions, exact links, and secure download presentation.
-7. Add revision-aware mutation feedback containing entity/revision/version information.
+7. Add mutation feedback containing returned entity/version information; Document mutation success does not require a revision ID or refresh request.
 8. Add read-only Effective, Diagnostic, Roll-up, and Policy Applicability views after query APIs exist.
 9. Remove the Legacy tab, route, API repository, state, permission, and i18n element in the same vertical slice that replaces it.
 
@@ -304,7 +304,7 @@ No read model emits a Business Revision merely because a calculation changes.
 | Central catalog | Central definitions and Policy Version | Combined risk, regulation, policy, generic objective, and account-group JSON structures. |
 | Central relation | Central Scope, Classification, Policy Scope, Coverage | Generic process/reference/control relationship tables and direct Control–Regulation links. |
 | Local relation | Local Context, Local Scope/Coverage/Policy Scope | Generic organization-reference and organization-process-risk relationships. |
-| Document and revision | Document/version/link, temporary upload, revisions | Generic attachment, direct final upload, session-based upload/commit, legacy document tables. |
+| Document and revision | Document/version/link, temporary upload, and separate revision framework | Generic attachment, direct final upload, session-based upload/commit, legacy document tables. |
 | Read model | Effective, Diagnostic, Roll-up, Policy Applicability | Any mutable or cached substitute for derived outcomes. |
 | UI and integration | Compatible visual workflows and resource authorization | Dead routes, stores, API repos, permissions, i18n keys, DTOs, controllers, and services. |
 
@@ -320,4 +320,4 @@ Do not expose read-model data through mutable CRUD.
 
 Do not leave the Legacy implementation to a final catch-all cleanup phase.
 
-Every slice must demonstrate its source dependencies, typed constraints, Backend-owned revision path, and removal of the behavior it supersedes.
+Every slice must demonstrate its source dependencies, typed constraints, the approved transaction path for that slice, and removal of the behavior it supersedes.

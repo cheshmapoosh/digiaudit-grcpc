@@ -17,14 +17,33 @@ public class DocumentPromotionRollbackRegistry {
         this.storagePort = Objects.requireNonNull(storagePort, "storagePort is required");
     }
 
-    public void removePermanentObjectOnRollback(String permanentObjectKey, UUID tempUploadId, UUID documentVersionId) {
+    public void registerFinalizationCleanup(
+            String temporaryObjectKey,
+            String permanentObjectKey,
+            UUID tempUploadId,
+            UUID documentVersionId,
+            boolean permanentCreatedByThisAttempt
+    ) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            throw new IllegalStateException("Document permanent object rollback cleanup requires an active transaction");
+            throw new IllegalStateException("Document finalization cleanup requires an active transaction");
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
+            public void afterCommit() {
+                try {
+                    storagePort.removeTemporaryObjectBestEffort(temporaryObjectKey);
+                } catch (RuntimeException cleanupFailure) {
+                    log.warn(
+                            "Document temporary object cleanup after commit failed. tempUploadId={}, documentVersionId={}",
+                            tempUploadId,
+                            documentVersionId
+                    );
+                }
+            }
+
+            @Override
             public void afterCompletion(int status) {
-                if (status != STATUS_ROLLED_BACK) {
+                if (status != STATUS_ROLLED_BACK || !permanentCreatedByThisAttempt) {
                     return;
                 }
                 try {

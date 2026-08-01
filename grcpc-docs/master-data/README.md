@@ -71,6 +71,8 @@ No customer mock-up or existing endpoint may introduce a Master Data concept abs
 
 Prompt 3.3 records an explicit project-owner scope correction for the exact Document physical scope. That correction governs the active implementation contract for Document tables: `document_retention_policy` and `document_hold` are not part of Master Data V2, and future prompts must not reintroduce them from older extracted material.
 
+Prompt 4.2 records an explicit project-owner correction for Document temporary upload finalization: a temporary row is created only after successful MinIO upload and verification, has no persisted status/history, is deleted on successful finalization, and its temporary object is deleted only after the permanent database transaction commits. Document commands do not create or require Business Revision, and command success must not depend on a secondary Summary query or UI refresh. This correction does not claim that the retained DOCX files already contained these simplifications.
+
 ## Recommended reading order
 
 1. Read the three authoritative Word documents in the authority order above.
@@ -163,7 +165,7 @@ Effective, Diagnostic, Roll-up, and Policy Applicability are read-only derived v
 | 3 — Central catalog | Central definitions, hierarchies, policy/version, account-group classifications | Typed central catalogs and no combined Legacy persistence remain in the slice. |
 | 4 — Central relationship model | Central scope, central policy scope, central coverage, impact analysis | Same-subprocess constraints and typed APIs are demonstrable. |
 | 5 — Local context model | Local organization-subprocess scope, local scope, coverage, local policy scope | Same-context constraints and no Central-to-Local mutation are demonstrable. |
-| 6 — Document and revision | Document/version/link, temporary upload, revision command service | Immutable document versions and backend-owned atomic revisions work end to end. |
+| 6 — Document and revision | Document/version/link, temporary upload, revision command service for non-Document revision-controlled slices | Immutable document versions finalize directly, while Backend-owned revisions remain available to the slices that require them. |
 | 7 — Read models | Effective, Diagnostic, Roll-up, Policy Applicability | Read-only, non-materialized results use a common evaluation date. |
 | 8 — UI replacement and cleanup | Compatible UI5/FCL flows, typed data flows, Legacy route/API/entity cleanup | Every replaced Legacy element is removed by its owning vertical slice. |
 | 9 — Full-stack acceptance | Security, browser UX, Oracle/MinIO integration, build and cleanup checks | All checks in the acceptance checklist pass. |

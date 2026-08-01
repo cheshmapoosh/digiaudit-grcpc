@@ -288,22 +288,29 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Temp upload object keys are unique.
 - [ ] Temp upload file size cannot be negative.
 - [ ] Temp upload expiry is later than upload time.
-- [ ] Temp upload statuses are limited to `UPLOADING`, `AVAILABLE`, `CONSUMED`, `EXPIRED`, and `FAILED`.
-- [ ] A consumed upload has both consumed time and final Document Version ID.
-- [ ] A non-consumed upload has neither consumed time nor final Document Version ID.
-- [ ] A temp upload is used exactly once.
+- [ ] A temp upload row is inserted only after MinIO upload, checksum calculation, and object verification succeed.
+- [ ] Temp upload has no persisted `upload_status`.
+- [ ] Temp upload has no `consumed_at`.
+- [ ] Temp upload has no `document_version_id`.
+- [ ] A temp upload row is used exactly once by deleting the row on successful finalization.
+- [ ] `uploaded_at` records successful upload completion time.
+- [ ] `expires_at` equals `uploaded_at` plus the configured temporary TTL.
+- [ ] Upload transport timeout and temporary-file expiry are separate concepts.
 - [ ] A final command accepts `tempUploadId`, not `tempSessionId`.
-- [ ] The Backend verifies `AVAILABLE` state before consumption.
-- [ ] The Backend rejects an expired upload with `TEMP_UPLOAD_EXPIRED`.
-- [ ] The Backend rejects an already-consumed upload with `TEMP_UPLOAD_ALREADY_CONSUMED`.
+- [ ] The Backend locks the exact temp row with `PESSIMISTIC_WRITE` before finalization.
+- [ ] The Backend rejects an expired upload with `TEMPORARY_UPLOAD_EXPIRED`.
+- [ ] A repeated finalization does not create another Document Version and receives a safe not-found/already-finalized response.
 - [ ] The Backend rejects object/checksum/authorization failures with `INVALID_TEMP_UPLOAD`.
 - [ ] The Backend validates MinIO object presence and checksum before finalization.
 - [ ] The Frontend never supplies final `storageObjectKey`.
 - [ ] There is no direct final file upload path.
-- [ ] Document Version is created before the temporary record is marked consumed in the final authorized flow.
+- [ ] Final confirmation transfers original filename, MIME type, file size, checksum algorithm, and checksum value into `document_version`.
+- [ ] Document Version and Link rows are persisted before the temporary row is deleted in the final authorized flow.
 - [ ] Temporary MinIO objects use the approved temporary bucket or prefix convention.
 - [ ] Permanent MinIO objects use the approved permanent bucket or prefix convention.
-- [ ] MinIO lifecycle cleans temporary objects without a Job/Scheduler table.
+- [ ] Successful finalization deletes the temporary MinIO object after database commit.
+- [ ] Rollback retains the temporary row and object, and removes only a permanent object created by that failed attempt.
+- [ ] No Job/Scheduler table is introduced for abandoned expired temporary cleanup.
 - [ ] No distributed Oracle–MinIO transaction is used.
 - [ ] No Outbox is introduced to coordinate Oracle and MinIO in version one.
 - [ ] Download uses a Backend-controlled stream or short-lived authorized URL.
@@ -330,7 +337,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] `MASTERDATA_REVISION`, `MASTERDATA_REVISION_CONTENT`, and `DOCUMENT_TEMP_UPLOAD` are absent from the Revision Entity Type vocabulary.
 - [ ] `DOCUMENT_RETENTION_POLICY` and `DOCUMENT_HOLD` are absent from the Revision Entity Type vocabulary.
 - [ ] Effective, Diagnostic, Roll-up, Policy Applicability, Audit, workflow, monitoring, job, scheduler, cache, outbox, KPI, and KRI concepts are absent from the Revision Entity Type vocabulary.
-- [ ] The Backend creates one Business Revision per Business Command.
+- [ ] The Backend creates one Business Revision per revision-controlled Business Command; Prompt 4.2 Document commands are excluded.
 - [ ] The Backend owns the transaction for the Business Command.
 - [ ] The Backend validates all Revision Content before applying any content.
 - [ ] Failure of any content rolls back the whole Business Command.
@@ -344,7 +351,9 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] The Frontend never sends Revision Content sequence numbers.
 - [ ] The Frontend never sends before/after snapshots.
 - [ ] The Frontend never controls transaction order.
-- [ ] Every mutation response includes `entityId`, `revisionId`, and `version`.
+- [ ] Every revision-controlled mutation response includes `entityId`, `revisionId`, and `version`.
+- [ ] Document mutation responses do not include `revisionId` and do include Document-specific IDs/versions.
+- [ ] Document temporary upload and final Document mutation do not create Revision Content.
 
 ## 15. Effective and Diagnostic acceptance
 
@@ -423,7 +432,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] UI makes same-Subprocess/Context selection constraints visible before submit.
 - [ ] UI does not offer direct Control–Regulation linking.
 - [ ] UI does not offer generic Scope/Coverage target selectors.
-- [ ] UI shows revision-aware mutation result information.
+- [ ] UI shows mutation result information without requiring Document commands to return `revisionId`.
 - [ ] UI shows immutable Document Version history.
 - [ ] UI uses temporary upload before final document creation.
 - [ ] UI does not expose a direct final-upload action.
@@ -441,7 +450,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 
 - [ ] Every Central mutation requires Central Master Data authorization.
 - [ ] Every Local mutation checks authorization against its exact Organization/Local Context.
-- [ ] Document upload/consume/link/download checks the appropriate resource authorization.
+- [ ] Document upload/finalize/link/download checks the appropriate resource authorization.
 - [ ] Download authorization is checked before streaming or issuing a short-lived URL.
 - [ ] Diagnostic reads have a separate permission.
 - [ ] No normal application user gets direct database source-table access.
@@ -492,11 +501,11 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Central changes do not create or mutate Local rows.
 - [ ] A Central impact is visible through impact analysis/diagnostics without automatic Local remediation.
 - [ ] A Policy Version publish/content change follows immutable-version rules without creating workflow tables.
-- [ ] Document upload finalization consumes a valid temporary upload once and produces immutable version metadata.
-- [ ] A repeat temporary-upload consume attempt is safe and produces the correct domain error.
+- [ ] Document upload finalization deletes a valid temporary upload row once and produces immutable version metadata.
+- [ ] A repeat temporary-upload finalization attempt is safe and does not produce a second Document Version.
 - [ ] An authorized user can obtain a secure Document Version download without a permanent MinIO URL.
 - [ ] Effective, Diagnostic, Roll-up, and Policy Applicability queries are read-only and use a consistent evaluation date.
-- [ ] UI mutation feedback contains entity ID, revision ID, and version.
+- [ ] UI mutation feedback contains the returned entity/version fields, with no `revisionId` required for Document commands.
 - [ ] Browser flows never create Revision Content or coordinate backend transaction order.
 - [ ] Backend package/build is successful.
 - [ ] UI lint is successful.
@@ -514,7 +523,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 | Central definitions and separated catalogs | P4 Central catalog | Entity/repository/API/UI evidence for the fourteen structural/Central definition tables. |
 | Central Scope, Classification, Policy Scope, Coverage | P5 Central relation | Typed commands, composite FK migration, same-subprocess tests, Legacy direct-link removal. |
 | Local Context, Local Scope, Local Coverage, Local Policy Scope | P6 Local relation | Context-first flow, source/validity checks, same-context tests, generic assignment removal. |
-| Document, temporary upload, MinIO, Revision | P7 Document and Revision | One-time consume tests, immutable version tests, secure-download tests, atomic revision tests. |
+| Document, temporary upload, MinIO, Revision | P7 Document and Revision | One-time row deletion checks, immutable version checks, secure-download checks, and separate revision checks where applicable. |
 | Effective, Diagnostic, Roll-up, Policy Applicability | P8 Read models and UI integration | Read-only query/API/UI tests with common evaluation date and permission checks. |
 | Dead-code, route, permission, DTO, state, i18n cleanup | P3–P9 owning slices and P9 closeout | Static search, route/menu inventory, build/lint, no Legacy table/entity/service. |
 | Full production acceptance | P9 full-stack acceptance | Fresh Oracle, MinIO, Backend, UI, security, and smoke-test evidence. |

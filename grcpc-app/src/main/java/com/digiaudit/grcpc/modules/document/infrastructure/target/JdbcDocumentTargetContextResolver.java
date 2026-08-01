@@ -4,8 +4,6 @@ import com.digiaudit.grcpc.modules.document.application.DocumentFailures;
 import com.digiaudit.grcpc.modules.document.application.DocumentTargetContextResolver;
 import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
 import com.digiaudit.grcpc.modules.document.domain.DocumentTargetContext;
-import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionContext;
-import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionDomain;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -87,22 +85,6 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
         };
     }
 
-    @Override
-    public DocumentTargetContext sameRevisionEvidence(RevisionExecutionContext context) {
-        Objects.requireNonNull(context, "context is required");
-        if (!context.isDraft()) {
-            throw DocumentFailures.conflict("MASTERDATA_REVISION_REQUIRED", "Same-revision document evidence requires a draft revision context");
-        }
-        return new DocumentTargetContext(
-                DocumentLinkTargetType.MASTERDATA_REVISION,
-                context.revisionId(),
-                context.domain(),
-                context.organizationId(),
-                DocumentLinkTargetType.MASTERDATA_REVISION.wireValue(),
-                context.revisionId()
-        );
-    }
-
     private DocumentTargetContext central(DocumentLinkTargetType targetType, UUID targetId, String sql) {
         Optional<UUID> existing = queryUuid(sql, targetId);
         if (existing.isEmpty()) {
@@ -111,8 +93,6 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
         return new DocumentTargetContext(
                 targetType,
                 targetId,
-                RevisionDomain.CENTRAL,
-                null,
                 targetType.wireValue(),
                 targetId
         );
@@ -124,8 +104,6 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
         return new DocumentTargetContext(
                 targetType,
                 targetId,
-                RevisionDomain.LOCAL,
-                organizationId,
                 targetType.wireValue(),
                 targetId
         );

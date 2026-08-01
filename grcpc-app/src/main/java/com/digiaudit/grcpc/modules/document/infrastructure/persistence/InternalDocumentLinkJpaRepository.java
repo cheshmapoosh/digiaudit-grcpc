@@ -32,7 +32,7 @@ public interface InternalDocumentLinkJpaRepository extends JpaRepository<Documen
     );
 
     @Query("""
-            select count(l) > 0
+            select l
             from DocumentLinkEntity l, DocumentVersionEntity v
             where l.documentVersionId = v.id
               and v.documentId = :documentId
@@ -40,8 +40,9 @@ public interface InternalDocumentLinkJpaRepository extends JpaRepository<Documen
               and l.targetType = :targetType
               and l.targetId = :targetId
               and l.status = :activeStatus
+            order by v.documentVersionNumber desc, l.createdAt desc
             """)
-    boolean existsActiveDocumentTargetLink(
+    List<DocumentLinkEntity> findActiveTargetLinksForDocument(
             @Param("documentId") UUID documentId,
             @Param("targetType") DocumentLinkTargetType targetType,
             @Param("targetId") UUID targetId,
@@ -173,34 +174,4 @@ public interface InternalDocumentLinkJpaRepository extends JpaRepository<Documen
             @Param("activeStatus") DocumentLifecycleStatus activeStatus
     );
 
-    @Query("""
-            select new com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentLinkReadProjection(
-                d.id,
-                d.version,
-                d.code,
-                d.title,
-                d.description,
-                d.documentCategoryCode,
-                d.status,
-                v.id,
-                v.documentVersionNumber,
-                v.fileName,
-                v.mimeType,
-                v.fileSize,
-                v.checksumAlgorithm,
-                v.status,
-                l.id,
-                l.version,
-                l.targetType,
-                l.targetId,
-                l.status,
-                v.createdAt,
-                v.createdBy
-            )
-            from DocumentLinkEntity l, DocumentVersionEntity v, DocumentEntity d
-            where l.documentVersionId = v.id
-              and v.documentId = d.id
-              and l.id = :linkId
-            """)
-    Optional<DocumentLinkReadProjection> findSummaryByLinkId(@Param("linkId") UUID linkId);
 }

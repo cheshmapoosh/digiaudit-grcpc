@@ -266,18 +266,18 @@ These approved capabilities are not implemented in the current UI and must be cl
 | Local Coverage | Generic links/assignments only | Four `local_subprocess_*_coverage` tables | `ADD` | Context-scoped typed Coverage dialogs that select only same-context Scope endpoints. |
 | Local Policy Scope | No typed policy applicability UI | Four `local_policy_*_scope` tables | `ADD` | Organization/Context/exact-target policy tabs with decision/preference feedback. |
 
-## 13. Document, Business Revision, and read-model UX additions
+## 13. Document, command response, and read-model UX additions
 
-Document target selection uses the closed `DocumentLinkTargetType` vocabulary defined in [table-catalog.md](table-catalog.md#document-link-target-type-stored-code-vocabulary). The UI may expose only approved normal targets that are relevant to the current feature context. It must not display internal Document-family targets, `MASTERDATA_REVISION`, arbitrary table names, Java class names, or legacy generic attachment target strings as normal user choices. Revision metadata linking is Backend-owned and may appear only as a result of the owning Business Command flow.
+Document target selection uses the closed `DocumentLinkTargetType` vocabulary defined in [table-catalog.md](table-catalog.md#document-link-target-type-stored-code-vocabulary). The UI may expose only approved normal targets that are relevant to the current feature context. It must not display internal Document-family targets, `MASTERDATA_REVISION`, arbitrary table names, Java class names, or legacy generic attachment target strings as normal user choices. Prompt 4.2 Document commands do not create Business Revision or Revision Content.
 
 | Required target capability | Current UI/API/storage | Approved entity/use case | Status | Required target UI |
 | --- | --- | --- | --- | --- |
-| Temporary upload first | `/api/documents/temp` plus session-oriented client state | `document_temp_upload` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Keep progress UI; replace session state with `tempUploadId`, expiry, and authorization feedback. |
-| No direct final upload | `POST /api/documents` direct upload | Final typed Business Command | `REMOVE` | Remove direct final-upload action; final save consumes temporary upload inside the command. |
+| Temporary upload first | `/api/documents/temp` plus session-oriented client state | `document_temp_upload` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Keep progress UI; replace session state with `tempUploadId`, safe metadata, expiry, and local-only upload/finalization states. |
+| No direct final upload | `POST /api/documents` direct upload | Final typed Business Command | `REMOVE` | Remove direct final-upload action; final save confirms the temporary upload and deletes its database row on success. |
 | Immutable Document Version list | Generic attachment list | `document` + `document_version` | `ADD` | Add version history, version number, file metadata, and immutable replacement action. |
 | Controlled Document Link | Generic `targetType`/`targetId` binding | `document_link` | `REPLACE` | UI chooses an approved typed target context; it never exposes an open generic target list or internal revision metadata target. |
 | Secure download | Presigned download URL flow | Authorized document-version download use case | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain download button; request controlled stream/short-lived URL without exposing permanent key. |
-| Revision-aware mutation result | Current CRUD feedback only | `masterdata_revision` result | `ADD` | Show successful entity ID, revision ID, and new version; link to authorized revision summary if available. |
+| Document mutation result | Current CRUD feedback plus refresh | Document-specific command response | `ADD` | Treat mutation success as final when the command succeeds; update local state from returned Document/link summary and treat refresh failure as a non-blocking read synchronization warning. |
 | Business Revision history | No current V2 UI | `masterdata_revision` and read projection | `ADD` | Add read-only revision panel separated from generic Audit Trail. |
 | Effective status | No current UI | Effective Read DTO | `ADD` | Add read-only status badge with common evaluation date and source. |
 | Diagnostic detail | No current UI | Diagnostic DTO | `ADD` | Add read-only support/admin diagnostic panel listing every blocker/dependency. |
@@ -299,7 +299,7 @@ Document target selection uses the closed `DocumentLinkTargetType` vocabulary de
 | `/api/organization-process-assignments` | `REMOVE` | Replace with Local Organization–Subprocess Scope command/query. |
 | `/api/organization-risk-assignments` and generic reference endpoints | `REMOVE` | Replace only with typed Local Scope/Coverage/Policy Scope flows. |
 | `POST /api/documents` direct final upload | `REMOVE` | Temporary upload then document-aware business command. |
-| `/api/documents/temp` and `/api/documents/commit` session flow | `REPLACE` | `tempUploadId` staging and one-time server-side consumption. |
+| `/api/documents/temp` and `/api/documents/commit` session flow | `REPLACE` | `tempUploadId` staging, explicit confirmation, no backend upload status, and temporary-row deletion on success. |
 | Generic document attachment storage | `REPLACE` | Document, immutable Version, controlled Link. |
 
 ## 15. Explicit exclusions in target UI
@@ -332,7 +332,7 @@ Next deliver Central Scope/Classification/Coverage and Policy Scope screens.
 
 Next deliver Local Context before Local Scope/Coverage/Policy Scope screens.
 
-Next deliver Document Version/temporary-upload/link UI and Revision-aware mutation feedback.
+Next deliver Document Version/temporary-upload/link UI and Document-specific mutation feedback.
 
 Next deliver Effective, Diagnostic, Roll-up, and Policy Applicability read-only pages/panels.
 

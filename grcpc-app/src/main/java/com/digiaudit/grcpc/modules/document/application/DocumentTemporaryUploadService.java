@@ -3,6 +3,7 @@ package com.digiaudit.grcpc.modules.document.application;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentTemporaryUploadResponse;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentTempUploadEntity;
+import com.digiaudit.grcpc.modules.document.infrastructure.persistence.InternalDocumentTempUploadJpaRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -19,9 +20,8 @@ import java.util.UUID;
 public class DocumentTemporaryUploadService {
     private final CurrentUserProvider currentUserProvider;
     private final DocumentValidation validation;
-    private final DocumentChecksumService checksumService;
     private final DocumentObjectKeyService objectKeyService;
-    private final DocumentTempUploadStateService stateService;
+    private final InternalDocumentTempUploadJpaRepository tempUploadRepository;
     private final DocumentStoragePort storagePort;
     private final DocumentResponseMapper responseMapper;
     private final com.digiaudit.grcpc.modules.document.config.MinioProperties properties;
@@ -30,19 +30,17 @@ public class DocumentTemporaryUploadService {
     public DocumentTemporaryUploadService(
             CurrentUserProvider currentUserProvider,
             DocumentValidation validation,
-            DocumentChecksumService checksumService,
             DocumentObjectKeyService objectKeyService,
-            DocumentTempUploadStateService stateService,
+            InternalDocumentTempUploadJpaRepository tempUploadRepository,
             DocumentStoragePort storagePort,
             DocumentResponseMapper responseMapper,
             com.digiaudit.grcpc.modules.document.config.MinioProperties properties,
-            @Qualifier("masterDataRevisionClock") Clock clock
+            @Qualifier("documentClock") Clock clock
     ) {
         this.currentUserProvider = Objects.requireNonNull(currentUserProvider, "currentUserProvider is required");
         this.validation = Objects.requireNonNull(validation, "validation is required");
-        this.checksumService = Objects.requireNonNull(checksumService, "checksumService is required");
         this.objectKeyService = Objects.requireNonNull(objectKeyService, "objectKeyService is required");
-        this.stateService = Objects.requireNonNull(stateService, "stateService is required");
+        this.tempUploadRepository = Objects.requireNonNull(tempUploadRepository, "tempUploadRepository is required");
         this.storagePort = Objects.requireNonNull(storagePort, "storagePort is required");
         this.responseMapper = Objects.requireNonNull(responseMapper, "responseMapper is required");
         this.properties = Objects.requireNonNull(properties, "properties is required");
@@ -53,13 +51,33 @@ public class DocumentTemporaryUploadService {
         UUID actorId = currentUserProvider.getCurrentUserIdOptional()
                 .orElseThrow(() -> DocumentFailures.forbidden("DOCUMENT_ACTOR_REQUIRED", "Authenticated user is required"));
         DocumentValidation.SafeUploadMetadata safeUpload = validation.validateUpload(file);
-        String checksum = checksumService.sha256(file);
         UUID tempUploadId = UUID.randomUUID();
         String temporaryObjectKey = objectKeyService.temporaryKey(tempUploadId, safeUpload.fileName());
+
+        String checksum;
+        try {
+            storagePort.uploadTemporaryObject(new DocumentStoragePort.DocumentObjectUpload(
+                    temporaryObjectKey,
+                    safeUpload.fileName(),
+                    safeUpload.mimeType(),
+                    safeUpload.fileSize(),
+                    null,
+                    null,
+                    file::getInputStream
+            ));
+            checksum = storagePort.calculateObjectChecksum(temporaryObjectKey, DocumentChecksumService.SHA_256);
+            verifyStorageMetadata(storagePort.inspectObject(temporaryObjectKey), safeUpload);
+        } catch (DocumentStorageException ex) {
+            removeTemporaryObjectAfterFailure(tempUploadId, temporaryObjectKey);
+            throw storageFailure(ex);
+        } catch (RuntimeException ex) {
+            removeTemporaryObjectAfterFailure(tempUploadId, temporaryObjectKey);
+            throw ex;
+        }
+
         Instant uploadedAt = Instant.now(clock);
         Instant expiresAt = uploadedAt.plus(Duration.ofMinutes(Math.max(1L, properties.tempTtlMinutes())));
-
-        DocumentTempUploadEntity uploading = DocumentTempUploadEntity.uploading(
+        DocumentTempUploadEntity tempUpload = DocumentTempUploadEntity.create(
                 tempUploadId,
                 safeUpload.fileName(),
                 safeUpload.mimeType(),
@@ -71,52 +89,43 @@ public class DocumentTemporaryUploadService {
                 uploadedAt,
                 expiresAt
         );
-        stateService.createUploading(uploading);
-
-        try {
-            storagePort.uploadTemporaryObject(new DocumentStoragePort.DocumentObjectUpload(
-                    temporaryObjectKey,
-                    safeUpload.fileName(),
-                    safeUpload.mimeType(),
-                    safeUpload.fileSize(),
-                    DocumentChecksumService.SHA_256,
-                    checksum,
-                    file::getInputStream
-            ));
-            verifyStorageMetadata(storagePort.inspectObject(temporaryObjectKey), uploading);
-            DocumentTempUploadEntity available = stateService.markAvailable(tempUploadId, Instant.now(clock));
-            return responseMapper.toTemporaryUploadResponse(available);
-        } catch (DocumentStorageException ex) {
-            markFailedAndRemoveTemporary(tempUploadId, temporaryObjectKey);
-            throw storageFailure(ex);
-        } catch (RuntimeException ex) {
-            markFailedAndRemoveTemporary(tempUploadId, temporaryObjectKey);
-            throw ex;
-        }
+        return responseMapper.toTemporaryUploadResponse(persistVerifiedTemporaryUpload(tempUpload, temporaryObjectKey));
     }
 
     public DocumentTemporaryUploadResponse get(UUID tempUploadId) {
-        return responseMapper.toTemporaryUploadResponse(stateService.inspectOwnerScoped(tempUploadId));
+        DocumentTempUploadEntity entity = tempUploadRepository.findById(tempUploadId)
+                .orElseThrow(() -> DocumentFailures.notFound("TEMPORARY_UPLOAD_NOT_FOUND", "Temporary upload was not found"));
+        UUID actorId = currentUserProvider.getCurrentUserIdOptional()
+                .orElseThrow(() -> DocumentFailures.forbidden("DOCUMENT_ACTOR_REQUIRED", "Authenticated user is required"));
+        if (!entity.getUploadedBy().equals(actorId)) {
+            throw DocumentFailures.forbidden("TEMPORARY_UPLOAD_OWNERSHIP_DENIED", "Temporary upload is owned by another user");
+        }
+        return responseMapper.toTemporaryUploadResponse(entity);
     }
 
     private void verifyStorageMetadata(
             DocumentStoragePort.DocumentObjectMetadata actual,
-            DocumentTempUploadEntity expected
+            DocumentValidation.SafeUploadMetadata expected
     ) {
-        if (actual.fileSize() != expected.getFileSize()
-                || !Objects.equals(actual.mimeType(), expected.getMimeType())
-                || !Objects.equals(actual.checksumAlgorithm(), expected.getChecksumAlgorithm())
-                || !Objects.equals(actual.checksumValue(), expected.getChecksumValue())) {
+        if (actual.fileSize() != expected.fileSize()
+                || !Objects.equals(actual.mimeType(), expected.mimeType())) {
             throw new DocumentStorageException("TEMPORARY_OBJECT_METADATA_MISMATCH", "Temporary upload metadata mismatch");
         }
     }
 
-    private void markFailedAndRemoveTemporary(UUID tempUploadId, String temporaryObjectKey) {
+    private DocumentTempUploadEntity persistVerifiedTemporaryUpload(
+            DocumentTempUploadEntity tempUpload,
+            String temporaryObjectKey
+    ) {
         try {
-            stateService.markFailed(tempUploadId);
-        } catch (RuntimeException failedUpdate) {
-            log.warn("Could not mark temporary document upload as failed. tempUploadId={}", tempUploadId);
+            return tempUploadRepository.saveAndFlush(tempUpload);
+        } catch (RuntimeException ex) {
+            removeTemporaryObjectAfterFailure(tempUpload.getId(), temporaryObjectKey);
+            throw ex;
         }
+    }
+
+    private void removeTemporaryObjectAfterFailure(UUID tempUploadId, String temporaryObjectKey) {
         try {
             storagePort.removeTemporaryObjectBestEffort(temporaryObjectKey);
         } catch (RuntimeException cleanupFailure) {

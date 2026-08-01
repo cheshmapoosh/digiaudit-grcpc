@@ -72,6 +72,44 @@ function updateTargetRows(
     return [summary, ...nextRows];
 }
 
+function removeTemporaryUpload(
+    uploads: Record<string, DocumentTemporaryUpload>,
+    tempUploadId: string,
+): Record<string, DocumentTemporaryUpload> {
+    const nextUploads = { ...uploads };
+    delete nextUploads[tempUploadId];
+    return nextUploads;
+}
+
+function updateDocumentRows(
+    rows: DocumentLinkSummary[],
+    documentId: string,
+    patch: Partial<DocumentLinkSummary>,
+): DocumentLinkSummary[] {
+    return rows.map((row) =>
+        row.documentId === documentId
+            ? {
+                  ...row,
+                  ...patch,
+              }
+            : row,
+    );
+}
+
+function lifecycleStatusForAction(
+    action: "activate" | "inactivate" | "delete" | "restore",
+): "ACTIVE" | "INACTIVE" | "DELETED" {
+    if (action === "delete") {
+        return "DELETED";
+    }
+
+    if (action === "inactivate") {
+        return "INACTIVE";
+    }
+
+    return "ACTIVE";
+}
+
 export const useDocumentState = create<DocumentState>((set) => ({
     linkedDocumentsByTarget: {},
     temporaryUploadsById: {},
@@ -137,6 +175,10 @@ export const useDocumentState = create<DocumentState>((set) => ({
                     response,
                 ),
             },
+            temporaryUploadsById: removeTemporaryUpload(
+                state.temporaryUploadsById,
+                payload.tempUploadId,
+            ),
         }));
         return response;
     },
@@ -151,17 +193,35 @@ export const useDocumentState = create<DocumentState>((set) => ({
                     response,
                 ),
             },
+            temporaryUploadsById: removeTemporaryUpload(
+                state.temporaryUploadsById,
+                payload.tempUploadId,
+            ),
         }));
         return response;
     },
 
     async updateMetadata(documentId, payload) {
         const response = await documentRepo.updateMetadata(documentId, payload);
-        const rows = await documentRepo.listByTarget(payload.targetType, payload.targetId);
         set((state) => ({
             linkedDocumentsByTarget: {
                 ...state.linkedDocumentsByTarget,
-                [targetKey(payload.targetType, payload.targetId)]: rows,
+                [targetKey(payload.targetType, payload.targetId)]: updateDocumentRows(
+                    updateTargetRows(
+                        state.linkedDocumentsByTarget[targetKey(payload.targetType, payload.targetId)] ?? [],
+                        response,
+                    ),
+                    documentId,
+                    {
+                        documentVersion: response.documentVersion,
+                        ...(payload.code !== undefined ? { code: payload.code } : {}),
+                        ...(payload.title !== undefined && payload.title !== null ? { title: payload.title } : {}),
+                        ...(payload.description !== undefined ? { description: payload.description } : {}),
+                        ...(payload.documentCategoryCode !== undefined
+                            ? { documentCategoryCode: payload.documentCategoryCode }
+                            : {}),
+                    },
+                ),
             },
         }));
         return response;
@@ -169,13 +229,24 @@ export const useDocumentState = create<DocumentState>((set) => ({
 
     async documentLifecycle(documentId, action, payload) {
         const response = await documentRepo.documentLifecycle(documentId, action, payload);
+        const nextStatus = lifecycleStatusForAction(action);
         set((state) => ({
             linkedDocumentsByTarget: {
                 ...state.linkedDocumentsByTarget,
-                [targetKey(payload.targetType, payload.targetId)]: updateTargetRows(
-                    state.linkedDocumentsByTarget[targetKey(payload.targetType, payload.targetId)] ?? [],
-                    response,
-                ),
+                [targetKey(payload.targetType, payload.targetId)]: action === "delete"
+                    ? (state.linkedDocumentsByTarget[targetKey(payload.targetType, payload.targetId)] ?? [])
+                          .filter((row) => row.documentId !== documentId)
+                    : updateDocumentRows(
+                          updateTargetRows(
+                              state.linkedDocumentsByTarget[targetKey(payload.targetType, payload.targetId)] ?? [],
+                              response,
+                          ),
+                          documentId,
+                          {
+                              documentVersion: response.documentVersion,
+                              documentStatus: nextStatus,
+                          },
+                      ),
             },
         }));
         return response;

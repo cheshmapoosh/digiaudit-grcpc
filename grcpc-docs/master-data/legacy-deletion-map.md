@@ -38,7 +38,7 @@ No item is deferred merely to avoid cleanup.
 | P4 | Central catalog | All Central definitions, policy/version, and typed classification foundations. |
 | P5 | Central relation | Central Scope, Central Policy Scope, and Central Coverage. |
 | P6 | Local relation | Local Context, Local Scope, Local Coverage, and Local Policy Scope. |
-| P7 | Document and Revision | Document/version/link, temporary upload, business revision integration. |
+| P7 | Document and Revision | Document/version/link, temporary upload, and separate revision framework integration where applicable. |
 | P8 | Read models and UI integration | Effective/Diagnostic/Roll-up/Policy Applicability and V2 data-flow UI wiring. |
 | P9 | Slice-close cleanup | Remove unused routes, permissions, DTOs, entities, services, stores, and i18n keys left by the owning slice. |
 
@@ -72,7 +72,7 @@ All entries in this section are Legacy-removal decisions.
 | `DELETE` | `V1156` / `control_document` | Control-assignment-specific document relation | V2 shares Document Version links across approved targets. | `document`, `document_version`, `document_link`. | P7 |
 | `DELETE` | `V1157__create_process_risk_assignment.sql` / `process_risk_assignment` | Process-to-Risk assignment | Scope must be Subprocess-to-Risk Template and typed. | None; use Central/Local Risk Scope when business meaning exists. | P5–P6 |
 | `DELETE` | `V1158__create_process_regulation_assignment.sql` / `process_regulation_assignment` | Process-to-Regulation assignment | Regulation itself is not a Scope endpoint; Requirement is. | None; use Requirement Scope/Coverage where applicable. | P5 |
-| `REPLACE` | `V1159__create_document_temp_upload.sql` / `document_temp_upload` | Session-oriented temporary upload tracking | Final name survives, but final fields, status, one-time consumption, object-key, checksum, and authorization rules differ. | Approved technical `document_temp_upload`. | P7 |
+| `REPLACE` | `V1159__create_document_temp_upload.sql` / `document_temp_upload` | Session-oriented temporary upload tracking | Final name survives, but final fields, persisted status, retained consumed history, object-key, checksum, and authorization rules differ. | Approved technical `document_temp_upload`. | P7 |
 | `DELETE` | `V1160__create_objective_organization_assignment.sql`, `V1161__extend_objective_organization_assignment.sql` / `objective_organization_assignment` | Generic Objective-to-Organization relation | Generic objective is removed and local application requires Organization + Subprocess context. | None; do not map to a generic organization relation. | P4–P6 |
 | `DELETE` | `V1080` / `document_attachment` | File and generic attachment target in one table | Final document identity, immutable version, and controlled link are separate. | `document`, `document_version`, `document_link`. | P7 |
 
@@ -118,8 +118,8 @@ All rows below name current source evidence and the slice that must remove or re
 | `DELETE` | `modules/organization/**/OrganizationReferenceAssignment*` | Generic reference-type assignment | Generic local relations are prohibited. | None. | P6 |
 | `DELETE` | `modules/organization/**/ObjectiveOrganizationAssignment*` | Generic objective-to-organization relationship | Generic objective has no V2 counterpart. | None. | P4–P6 |
 | `REPLACE` | `modules/document/domain/entity/DocumentAttachmentEntity.java` and repository/mapper | Generic attachment metadata and target | Lacks stable Document, immutable Version, and controlled Link separation. | V2 Document aggregate persistence. | P7 |
-| `REPLACE` | `modules/document/domain/entity/DocumentTempUploadEntity.java` and repository | Temporary upload entity | Keep table name but replace session/target/consume semantics with Physical Design. | V2 `document_temp_upload` entity. | P7 |
-| `REPLACE` | `modules/document/application/DocumentAttachmentService.java` | Direct final upload, generic target binding, commit flow, scheduled cleanup | Violates final command-owned upload/version/link and no scheduler infrastructure. | Document command service with one-time `tempUploadId` consumption and MinIO lifecycle cleanup. | P7 |
+| `REPLACE` | `modules/document/domain/entity/DocumentTempUploadEntity.java` and repository | Temporary upload entity | Keep table name but replace session/target/status semantics with verified-row confirmation and deletion semantics. | V2 `document_temp_upload` entity. | P7 |
+| `REPLACE` | `modules/document/application/DocumentAttachmentService.java` | Direct final upload, generic target binding, commit flow, scheduled cleanup | Violates final command-owned upload/version/link and no scheduler infrastructure. | Direct Document command service with `tempUploadId` confirmation, temporary-row deletion, and after-commit temporary object cleanup. | P7 |
 | `REPLACE` | `modules/document/api/DocumentAttachmentController.java` | `/api/documents` direct final upload and generic attachment endpoints | Final API is use-case-oriented, secure, and version-specific. | Typed Document/temporary-upload endpoints. | P7 |
 | `KEEP` | `modules/document/config/MinioProperties.java`, `DocumentStorageConfig.java` | MinIO client/configuration boundary | MinIO remains the approved object store. | Keep configuration capability; change only needed bucket/key conventions in P7. | P7 |
 | `KEEP` | `modules/securityacl/**/ResourceAuthorizationService*` | Resource authorization capability | V2 still needs permission/resource authorization. | Keep capability; remap resource/action vocabulary per slice. | P2–P9 |
@@ -167,10 +167,10 @@ The UI rows use the same classification rules, but `KEEP_VISUAL_REPLACE_DATA_FLO
 | `DELETE` | Policy approval/review UI actions and corresponding i18n/API calls | Customer/Legacy workflow interaction | Policy approval workflow is outside Master Data V2. | None in this domain. | P4 |
 | `KEEP_VISUAL_REPLACE_DATA_FLOW` | `features/account-group/pages/AccountGroupsFclShellPage.tsx`, tree/state/API repo | Account Group hierarchy UX | Current relation values derive from JSON or absent V2 fields. | Keep tree/search/value-help; only surface approved hierarchy/classifications. | P4–P5 |
 | `REPLACE` | `features/document/infra/document.api.repo.ts` | Generic attachment upload/commit/download calls | Must use temp upload, final business command, document version/link, secure download. | V2 document API repository. | P7 |
-| `REPLACE` | `features/document/state/document-attachment.state.ts` | Generic attachment and `tempSessionId` client state | Final flow uses `tempUploadId` one-time consumption and no generic target commit. | V2 temporary-upload/document-version state. | P7 |
+| `REPLACE` | `features/document/state/document-attachment.state.ts` | Generic attachment and `tempSessionId` client state | Final flow uses `tempUploadId` confirmation, no persisted temp status, and no generic target commit. | V2 temporary-upload/document-version state. | P7 |
 | `KEEP_VISUAL_REPLACE_DATA_FLOW` | `features/document/components/DocumentAttachmentsManager.tsx` | Reusable file list/upload/download presentation | Existing data flow is generic attachment/direct upload. | Reuse visual progress/list/download presentation with V2 version-aware state. | P7 |
 | `KEEP_VISUAL_REPLACE_DATA_FLOW` | `DocumentAttachmentsTab.tsx`, `DocumentAttachmentsPanel.tsx` | Reusable attachment tabs/panels | Must stop binding raw `targetType`/`targetId` and final uploads. | Version-aware Document Link panel. | P7 |
-| `DELETE` | UI use of `tempSessionId` | Client-side session correlation for commit | Physical Design approves `tempUploadId`, not session commit protocol. | None; final command consumes `tempUploadId`. | P7 |
+| `DELETE` | UI use of `tempSessionId` | Client-side session correlation for commit | Physical Design approves `tempUploadId`, not session commit protocol. | None; final command confirms `tempUploadId` and deletes the temporary row on success. | P7 |
 | `DELETE` | Direct `POST /api/documents` final-upload UI wiring | Direct permanent Document upload | Final document creation occurs inside a typed business command after temporary staging. | None; temporary upload first. | P7 |
 | `KEEP` | Feature i18n folders under `features/{organization,process,control,objective,risk,regulation,policy,account-group,document}/i18n/{fa,en}.*.json` | Persian/English UI text resources | Resource mechanism remains compatible. | Keep Persian/RTL/i18n pattern; remove or replace stale keys per owning slice. | P3–P9 |
 | `KEEP` | FCL, List Report, Object Page, tree, search, selection, expanded-state, and RTL application patterns | Usable interaction conventions | None when decoupled from Legacy data model. | Reuse visual patterns only. | P3–P8 |
@@ -181,7 +181,7 @@ Every page or dialog that previously edited a generic assignment must move to a 
 
 Every customer-compatible display that joins Process/Subprocess may remain a combined tree only in its read DTO.
 
-Every UI mutation result must surface the returned entity ID, revision ID, and version without asking the browser to construct Revision Content.
+Revision-controlled UI mutation results must surface the returned entity ID, revision ID, and version without asking the browser to construct Revision Content. Document mutation results surface Document-specific entity/version IDs and do not require a revision ID.
 
 Every Document presentation must show version-specific metadata and secure download behavior.
 
@@ -213,7 +213,7 @@ Current responsibility: a browser can upload final file content directly, then c
 
 Reason: the approved flow is temporary MinIO object, Backend validation, final Business Command, immutable Document Version, and controlled link.
 
-Target: `document_temp_upload` using `tempUploadId` and one-time consume status.
+Target: `document_temp_upload` using `tempUploadId`, no persisted status, and deletion of the temporary row after successful finalization.
 
 Owner: P7 Document and Revision.
 

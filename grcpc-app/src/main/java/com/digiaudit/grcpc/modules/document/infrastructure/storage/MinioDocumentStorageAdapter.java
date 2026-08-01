@@ -2,10 +2,12 @@ package com.digiaudit.grcpc.modules.document.infrastructure.storage;
 
 import com.digiaudit.grcpc.modules.document.application.DocumentStorageException;
 import com.digiaudit.grcpc.modules.document.application.DocumentStoragePort;
+import com.digiaudit.grcpc.modules.document.application.DocumentChecksumService;
 import com.digiaudit.grcpc.modules.document.config.MinioProperties;
 import io.minio.BucketExistsArgs;
 import io.minio.CopyObjectArgs;
 import io.minio.CopySource;
+import io.minio.GetObjectArgs;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
@@ -20,10 +22,14 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -43,7 +49,7 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
     public MinioDocumentStorageAdapter(
             ObjectProvider<MinioClient> minioClientProvider,
             MinioProperties properties,
-            @Qualifier("masterDataRevisionClock") Clock clock
+            @Qualifier("documentClock") Clock clock
     ) {
         this.minioClientProvider = Objects.requireNonNull(minioClientProvider, "minioClientProvider is required");
         this.properties = Objects.requireNonNull(properties, "properties is required");
@@ -94,6 +100,27 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
     }
 
     @Override
+    public String calculateObjectChecksum(String objectKey, String checksumAlgorithm) {
+        Objects.requireNonNull(objectKey, "objectKey is required");
+        MessageDigest digest = checksumDigest(checksumAlgorithm);
+        byte[] buffer = new byte[8192];
+        try (InputStream raw = client().getObject(GetObjectArgs.builder()
+                .bucket(properties.bucket())
+                .object(objectKey)
+                .build());
+             DigestInputStream input = new DigestInputStream(raw, digest)) {
+            while (input.read(buffer) != -1) {
+                // DigestInputStream updates the digest as the object is read.
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (DocumentStorageException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw classifyStorageFailure(ex, "DOCUMENT_STORAGE_UNAVAILABLE", "Document storage object checksum could not be calculated");
+        }
+    }
+
+    @Override
     public PermanentObjectPromotionResult promoteTemporaryObject(
             String temporaryObjectKey,
             String permanentObjectKey,
@@ -103,8 +130,11 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
         Objects.requireNonNull(permanentObjectKey, "permanentObjectKey is required");
         Objects.requireNonNull(expectedMetadata, "expectedMetadata is required");
         try {
-            DocumentObjectMetadata existingPermanent = inspectObject(permanentObjectKey);
-            verifyMetadata(existingPermanent, expectedMetadata, "PERMANENT_OBJECT_CONFLICT");
+            DocumentObjectMetadata existingPermanent = verifiedObjectMetadata(
+                    permanentObjectKey,
+                    expectedMetadata,
+                    "PERMANENT_OBJECT_CONFLICT"
+            );
             return new PermanentObjectPromotionResult(permanentObjectKey, false, existingPermanent);
         } catch (DocumentStorageException ex) {
             if (!"DOCUMENT_OBJECT_MISSING".equals(ex.errorCode())) {
@@ -177,9 +207,24 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
     }
 
     private DocumentObjectMetadata verifiedPermanentMetadata(String permanentObjectKey, DocumentObjectMetadata expectedMetadata) {
-        DocumentObjectMetadata actual = inspectObject(permanentObjectKey);
-        verifyMetadata(actual, expectedMetadata, "DOCUMENT_OBJECT_METADATA_MISMATCH");
-        return actual;
+        return verifiedObjectMetadata(permanentObjectKey, expectedMetadata, "DOCUMENT_OBJECT_METADATA_MISMATCH");
+    }
+
+    private DocumentObjectMetadata verifiedObjectMetadata(
+            String objectKey,
+            DocumentObjectMetadata expectedMetadata,
+            String errorCode
+    ) {
+        DocumentObjectMetadata actual = inspectObject(objectKey);
+        String actualChecksum = calculateObjectChecksum(objectKey, expectedMetadata.checksumAlgorithm());
+        DocumentObjectMetadata verified = new DocumentObjectMetadata(
+                actual.mimeType(),
+                actual.fileSize(),
+                expectedMetadata.checksumAlgorithm(),
+                actualChecksum
+        );
+        verifyMetadata(verified, expectedMetadata, errorCode);
+        return verified;
     }
 
     private void removeNewPermanentBestEffort(String permanentObjectKey) {
@@ -237,11 +282,17 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
 
     private Map<String, String> metadata(DocumentObjectUpload upload) {
         Map<String, String> metadata = new HashMap<>();
-        metadata.put(META_CHECKSUM_ALGORITHM, upload.checksumAlgorithm());
-        metadata.put(META_CHECKSUM_VALUE, upload.checksumValue());
+        putIfPresent(metadata, META_CHECKSUM_ALGORITHM, upload.checksumAlgorithm());
+        putIfPresent(metadata, META_CHECKSUM_VALUE, upload.checksumValue());
         metadata.put(META_FILE_SIZE, Long.toString(upload.fileSize()));
         metadata.put(META_FILE_NAME, upload.fileName());
         return metadata;
+    }
+
+    private void putIfPresent(Map<String, String> metadata, String key, String value) {
+        if (value != null) {
+            metadata.put(key, value);
+        }
     }
 
     private Map<String, String> lowerCaseKeys(Map<String, String> metadata) {
@@ -255,6 +306,17 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
             }
         });
         return normalized;
+    }
+
+    private MessageDigest checksumDigest(String checksumAlgorithm) {
+        if (!DocumentChecksumService.SHA_256.equals(checksumAlgorithm)) {
+            throw new IllegalArgumentException("Unsupported document checksum algorithm");
+        }
+        try {
+            return MessageDigest.getInstance(checksumAlgorithm);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 is not available", ex);
+        }
     }
 
     private void verifyMetadata(DocumentObjectMetadata actual, DocumentObjectMetadata expected, String errorCode) {
