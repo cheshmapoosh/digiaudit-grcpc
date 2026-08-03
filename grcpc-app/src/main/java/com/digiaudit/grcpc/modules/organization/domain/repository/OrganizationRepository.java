@@ -1,25 +1,35 @@
 package com.digiaudit.grcpc.modules.organization.domain.repository;
 
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import com.digiaudit.grcpc.modules.organization.domain.entity.OrganizationEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface OrganizationRepository extends JpaRepository<OrganizationEntity, UUID> {
+    List<OrganizationEntity> findByStatusNotOrderByCodeAscIdAsc(MasterDataLifecycleStatus status);
 
-    List<OrganizationEntity> findAllByOrderByNameAsc();
+    Optional<OrganizationEntity> findByIdAndStatusNot(UUID id, MasterDataLifecycleStatus status);
 
-    List<OrganizationEntity> findByParentIdOrderByNameAsc(UUID parentId);
+    boolean existsByIdAndStatusNot(UUID id, MasterDataLifecycleStatus status);
 
-    List<OrganizationEntity> findByParentIdIsNullOrderByNameAsc();
+    boolean existsByParentOrganizationIdAndStatusNot(UUID parentOrganizationId, MasterDataLifecycleStatus status);
 
-    boolean existsByParentId(UUID parentId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select organization from OrganizationEntity organization where organization.id = :id")
+    Optional<OrganizationEntity> lockById(@Param("id") UUID id);
 
-    boolean existsByCodeIgnoreCase(String code);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select organization from OrganizationEntity organization where upper(organization.code) = upper(:code)")
+    Optional<OrganizationEntity> lockByNormalizedCode(@Param("code") String code);
 
-    boolean existsByCodeIgnoreCaseAndIdNot(String code, UUID id);
-
-    Optional<OrganizationEntity> findByCodeIgnoreCase(String code);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select organization from OrganizationEntity organization where organization.status <> :deletedStatus")
+    List<OrganizationEntity> lockAllNonDeleted(@Param("deletedStatus") MasterDataLifecycleStatus deletedStatus);
 }

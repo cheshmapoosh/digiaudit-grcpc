@@ -1,5 +1,8 @@
 import { create } from "zustand";
 import type {
+    MasterDataRevisionMutationResponse,
+    OrganizationLifecycleCommand,
+    OrganizationMoveCommand,
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
@@ -16,18 +19,38 @@ interface OrganizationState {
 
     loadChildren(parentId?: string): Promise<void>;
     createNode(
-        parentId: string | null,
         payload: OrganizationNodeCreate,
-    ): Promise<OrganizationNode>;
-    updateNode(id: string, payload: OrganizationNodeUpdate): Promise<void>;
-    removeNode(id: string): Promise<void>;
-    toggleStatus(id: string): Promise<void>;
+    ): Promise<MasterDataRevisionMutationResponse>;
+    updateNode(
+        id: string,
+        payload: OrganizationNodeUpdate,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    moveNode(
+        id: string,
+        payload: OrganizationMoveCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    activateNode(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    inactivateNode(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    removeNode(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    restoreNode(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
     refresh(): Promise<void>;
     reset(): void;
 }
 
-function toParentKey(parentId?: string | null): string {
-    return parentId ?? ROOT_PARENT;
+function toParentKey(parentOrganizationId?: string | null): string {
+    return parentOrganizationId ?? ROOT_PARENT;
 }
 
 function buildIndexes(nodes: OrganizationNode[]) {
@@ -37,12 +60,40 @@ function buildIndexes(nodes: OrganizationNode[]) {
     nodes.forEach((node) => {
         nodesById[node.id] = node;
 
-        const key = toParentKey(node.parentId);
+        const key = toParentKey(node.parentOrganizationId);
         const currentChildren = childrenByParent[key] ?? [];
         childrenByParent[key] = [...currentChildren, node];
     });
 
     return { nodesById, childrenByParent };
+}
+
+async function reloadIndexes() {
+    const allNodes = await organizationService.list();
+    return buildIndexes(allNodes);
+}
+
+type OrganizationSetState = (
+    partial:
+        | Partial<OrganizationState>
+        | ((state: OrganizationState) => Partial<OrganizationState>),
+) => void;
+
+async function refreshAfterMutation(set: OrganizationSetState): Promise<void> {
+    try {
+        const { nodesById, childrenByParent } = await reloadIndexes();
+
+        set((state) => ({
+            nodesById,
+            childrenByParent,
+            loadedChildren: {
+                ...state.loadedChildren,
+                [ROOT_PARENT]: true,
+            },
+        }));
+    } catch (error) {
+        console.warn("Organization refresh after mutation failed", error);
+    }
 }
 
 export const useOrganizationState = create<OrganizationState>((set) => ({
@@ -55,8 +106,7 @@ export const useOrganizationState = create<OrganizationState>((set) => ({
         set({ loading: true });
 
         try {
-            const allNodes = await organizationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
+            const { nodesById, childrenByParent } = await reloadIndexes();
 
             set((state) => ({
                 nodesById,
@@ -75,8 +125,7 @@ export const useOrganizationState = create<OrganizationState>((set) => ({
         set({ loading: true });
 
         try {
-            const allNodes = await organizationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
+            const { nodesById, childrenByParent } = await reloadIndexes();
 
             set((state) => ({
                 nodesById,
@@ -91,28 +140,13 @@ export const useOrganizationState = create<OrganizationState>((set) => ({
         }
     },
 
-    async createNode(parentId, payload) {
+    async createNode(payload) {
         set({ loading: true });
 
         try {
-            const createdNode = await organizationService.create({
-                ...payload,
-                parentId: parentId === ROOT_PARENT ? null : parentId,
-            });
-
-            const allNodes = await organizationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
-
-            set((state) => ({
-                nodesById,
-                childrenByParent,
-                loadedChildren: {
-                    ...state.loadedChildren,
-                    [toParentKey(parentId)]: true,
-                },
-            }));
-
-            return createdNode;
+            const result = await organizationService.create(payload);
+            await refreshAfterMutation(set);
+            return result;
         } finally {
             set({ loading: false });
         }
@@ -122,63 +156,69 @@ export const useOrganizationState = create<OrganizationState>((set) => ({
         set({ loading: true });
 
         try {
-            await organizationService.update(id, payload);
-
-            const allNodes = await organizationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
-
-            set((state) => ({
-                nodesById,
-                childrenByParent,
-                loadedChildren: {
-                    ...state.loadedChildren,
-                    [ROOT_PARENT]: true,
-                },
-            }));
+            const result = await organizationService.update(id, payload);
+            await refreshAfterMutation(set);
+            return result;
         } finally {
             set({ loading: false });
         }
     },
 
-    async removeNode(id) {
+    async moveNode(id, payload) {
         set({ loading: true });
 
         try {
-            await organizationService.remove(id);
-
-            const allNodes = await organizationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
-
-            set((state) => ({
-                nodesById,
-                childrenByParent,
-                loadedChildren: {
-                    ...state.loadedChildren,
-                    [ROOT_PARENT]: true,
-                },
-            }));
+            const result = await organizationService.move(id, payload);
+            await refreshAfterMutation(set);
+            return result;
         } finally {
             set({ loading: false });
         }
     },
 
-    async toggleStatus(id) {
+    async activateNode(id, payload) {
         set({ loading: true });
 
         try {
-            await organizationService.toggleStatus(id);
+            const result = await organizationService.activate(id, payload);
+            await refreshAfterMutation(set);
+            return result;
+        } finally {
+            set({ loading: false });
+        }
+    },
 
-            const allNodes = await organizationService.list();
-            const { nodesById, childrenByParent } = buildIndexes(allNodes);
+    async inactivateNode(id, payload) {
+        set({ loading: true });
 
-            set((state) => ({
-                nodesById,
-                childrenByParent,
-                loadedChildren: {
-                    ...state.loadedChildren,
-                    [ROOT_PARENT]: true,
-                },
-            }));
+        try {
+            const result = await organizationService.inactivate(id, payload);
+            await refreshAfterMutation(set);
+            return result;
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    async removeNode(id, payload) {
+        set({ loading: true });
+
+        try {
+            const result = await organizationService.delete(id, payload);
+            await refreshAfterMutation(set);
+            return result;
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    async restoreNode(id, payload) {
+        set({ loading: true });
+
+        try {
+            const result = await organizationService.restore(id, payload);
+            await refreshAfterMutation(set);
+            return result;
         } finally {
             set({ loading: false });
         }

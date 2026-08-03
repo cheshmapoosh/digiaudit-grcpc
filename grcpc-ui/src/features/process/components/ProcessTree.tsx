@@ -86,8 +86,8 @@ function resolveNodeTypeLabel(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     const labels: Record<ProcessNodeType, string> = {
-        process: t("process.nodeType.process", { defaultValue: "فرآیند" }),
-        subProcess: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
+        PROCESS: t("process.nodeType.process", { defaultValue: "فرآیند" }),
+        SUBPROCESS: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
     };
 
     return labels[nodeType];

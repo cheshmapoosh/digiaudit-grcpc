@@ -6,11 +6,7 @@ import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 import type { ProcessNodeType } from "../domain/process.model";
 
-type CreateMenuAction =
-    | { kind: "process"; nodeType: ProcessNodeType }
-    | { kind: "control" };
-
-const DEFAULT_CREATE_NODE_TYPES: ProcessNodeType[] = ["process", "subProcess"];
+const DEFAULT_CREATE_NODE_TYPES: ProcessNodeType[] = ["PROCESS", "SUBPROCESS"];
 const PROCESS_CREATE_MENU_BUTTON_CLASS = "process-create-menu-button";
 
 addCustomCSS(
@@ -27,15 +23,14 @@ addCustomCSS(
     `,
 );
 
-const CREATE_MENU_ACTIONS: Record<string, CreateMenuAction> = {
-    "process-create-menu-process": { kind: "process", nodeType: "process" },
-    "process-create-menu-sub-process": { kind: "process", nodeType: "subProcess" },
-    "process-create-menu-control": { kind: "control" },
+const createMenuItemIdByNodeType: Record<ProcessNodeType, string> = {
+    PROCESS: "process-create-menu-process",
+    SUBPROCESS: "process-create-menu-subprocess",
 };
 
-const createMenuItemIdByNodeType: Record<ProcessNodeType, string> = {
-    process: "process-create-menu-process",
-    subProcess: "process-create-menu-sub-process",
+const nodeTypeByMenuItemId: Record<string, ProcessNodeType> = {
+    "process-create-menu-process": "PROCESS",
+    "process-create-menu-subprocess": "SUBPROCESS",
 };
 
 type MenuItemClickEvent = {
@@ -54,13 +49,12 @@ export interface ProcessCreateMenuProps {
     disabled?: boolean;
     style?: CSSProperties;
     nodeTypes?: ProcessNodeType[];
-    onCreateProcess: (nodeType: ProcessNodeType) => void;
-    onCreateControl: () => void;
+    onCreate: (nodeType: ProcessNodeType) => void;
 }
 
-function readClickedAction(event: unknown): CreateMenuAction | null {
+function readClickedNodeType(event: unknown): ProcessNodeType | null {
     const itemId = (event as MenuItemClickEvent).detail?.item?.id;
-    return itemId ? CREATE_MENU_ACTIONS[itemId] ?? null : null;
+    return itemId ? nodeTypeByMenuItemId[itemId] ?? null : null;
 }
 
 function readButtonElement(event: unknown): HTMLElement | undefined {
@@ -76,8 +70,7 @@ export default function ProcessCreateMenu({
     disabled = false,
     style,
     nodeTypes = DEFAULT_CREATE_NODE_TYPES,
-    onCreateProcess,
-    onCreateControl,
+    onCreate,
 }: ProcessCreateMenuProps) {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
@@ -85,8 +78,8 @@ export default function ProcessCreateMenu({
 
     const labels = useMemo<Record<ProcessNodeType, string>>(
         () => ({
-            process: t("process.nodeType.process", { defaultValue: "فرآیند" }),
-            subProcess: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
+            PROCESS: t("process.nodeType.process", { defaultValue: "فرآیند" }),
+            SUBPROCESS: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
         }),
         [t],
     );
@@ -101,20 +94,14 @@ export default function ProcessCreateMenu({
             horizontalAlign="End"
             onClose={() => setOpen(false)}
             onItemClick={(event) => {
-                const action = readClickedAction(event);
+                const nodeType = readClickedNodeType(event);
 
-                if (!action) {
+                if (!nodeType) {
                     return;
                 }
 
                 setOpen(false);
-
-                if (action.kind === "process") {
-                    onCreateProcess(action.nodeType);
-                    return;
-                }
-
-                onCreateControl();
+                onCreate(nodeType);
             }}
         >
             {visibleNodeTypes.map((nodeType) => (
@@ -124,10 +111,6 @@ export default function ProcessCreateMenu({
                     text={labels[nodeType]}
                 />
             ))}
-            <MenuItem
-                id="process-create-menu-control"
-                text={t("process.createMenu.control", { defaultValue: "کنترل" })}
-            />
         </Menu>
     );
 

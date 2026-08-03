@@ -1,7 +1,11 @@
 export { processRoutes } from "./routes";
 
 export type {
-    ProcessCategory,
+    CentralProcessResponse,
+    CentralSubprocessResponse,
+    MasterDataRevisionMutationResponse,
+    ProcessLifecycleCommand,
+    ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
     ProcessNodeType,
@@ -11,65 +15,20 @@ export type {
 } from "./domain/process.model";
 
 export type {
-    ProcessObjectiveAssignment,
-    ProcessObjectiveAssignmentCreate,
-    ProcessObjectiveAssignmentStatus,
-    ProcessObjectiveAssignmentType,
-} from "./domain/process-objective-assignment.model";
-
-export type {
-    ProcessAccountGroupAssignment,
-    ProcessAccountGroupAssignmentCreate,
-    ProcessAccountGroupAssignmentStatus,
-    ProcessAccountGroupAssignmentType,
-} from "./domain/process-account-group-assignment.model";
-
-export type {
-    ProcessRiskAssignment,
-    ProcessRiskAssignmentCreate,
-    ProcessRiskAssignmentStatus,
-    ProcessRiskAssignmentType,
-} from "./domain/process-risk-assignment.model";
-
-export type {
-    ProcessRegulationAssignment,
-    ProcessRegulationAssignmentCreate,
-    ProcessRegulationAssignmentStatus,
-} from "./domain/process-regulation-assignment.model";
-
-export type {
     ProcessCreateInput,
+    ProcessMoveInput,
     ProcessUpdateInput,
 } from "./domain/process.schema";
 
 export {
-    processCategorySchema,
     processCreateSchema,
+    processLifecycleSchema,
+    processMoveSchema,
     processNodeTypeSchema,
     processStatusSchema,
     processUpdateSchema,
 } from "./domain/process.schema";
 
 export { createProcessService, processService } from "./service/process.service";
-
-export {
-    createProcessObjectiveAssignmentService,
-    processObjectiveAssignmentService,
-} from "./service/process-objective-assignment.service";
-
-export {
-    createProcessAccountGroupAssignmentService,
-    processAccountGroupAssignmentService,
-} from "./service/process-account-group-assignment.service";
-
-export {
-    createProcessRiskAssignmentService,
-    processRiskAssignmentService,
-} from "./service/process-risk-assignment.service";
-
-export {
-    createProcessRegulationAssignmentService,
-    processRegulationAssignmentService,
-} from "./service/process-regulation-assignment.service";
 
 export { ROOT_PARENT, useProcessState } from "./state/process.state";

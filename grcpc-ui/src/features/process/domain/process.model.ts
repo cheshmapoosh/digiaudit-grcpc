@@ -1,17 +1,14 @@
 import type { AuditFields } from "@/shared/domain/audit.model";
 
-export type ProcessStatus = "active" | "inactive";
+export type ProcessStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 
-export type ProcessNodeType = "process" | "subProcess";
+export type ProcessNodeType = "PROCESS" | "SUBPROCESS";
 
-export type ProcessCategory =
-    | "operational"
-    | "support"
-    | "strategic"
-    | "financial"
-    | "compliance"
-    | "it"
-    | "other";
+export interface MasterDataRevisionMutationResponse {
+    entityId: string;
+    revisionId: string;
+    version: number;
+}
 
 export interface ProcessNode extends AuditFields {
     id: string;
@@ -19,21 +16,19 @@ export interface ProcessNode extends AuditFields {
     title: string;
     nodeType: ProcessNodeType;
     parentId: string | null;
+    description?: string | null;
+    sortOrder: number;
     status: ProcessStatus;
-    sortOrder?: number;
-    description?: string;
-
-    processCategory?: ProcessCategory;
-    ownerId?: string | null;
-    ownerName?: string;
-    documentsCount?: number;
-
-    objective?: string;
-    operationCycle?: string;
+    validFrom?: string | null;
+    validTo?: string | null;
+    version: number;
 }
 
 export type ProcessReadonlyKeys =
     | "id"
+    | "nodeType"
+    | "status"
+    | "version"
     | "createdAt"
     | "updatedAt"
     | "createdBy"
@@ -41,6 +36,57 @@ export type ProcessReadonlyKeys =
     | "deletedAt"
     | "deletedBy";
 
-export type ProcessNodeCreate = Omit<ProcessNode, ProcessReadonlyKeys>;
+export interface ProcessNodeCreate {
+    nodeType: ProcessNodeType;
+    code: string;
+    title: string;
+    parentId?: string | null;
+    description?: string | null;
+    sortOrder?: number | null;
+    validFrom?: string | null;
+    validTo?: string | null;
+}
 
-export type ProcessNodeUpdate = Partial<Omit<ProcessNode, ProcessReadonlyKeys>>;
+export interface ProcessNodeUpdate {
+    version: number;
+    title: string;
+    description?: string | null;
+    sortOrder?: number | null;
+    validFrom?: string | null;
+    validTo?: string | null;
+}
+
+export interface ProcessMoveCommand {
+    parentId?: string | null;
+    version: number;
+}
+
+export interface ProcessLifecycleCommand {
+    version: number;
+}
+
+export interface CentralProcessResponse extends AuditFields {
+    id: string;
+    code: string;
+    title: string;
+    parentProcessId: string | null;
+    description?: string | null;
+    sortOrder: number;
+    status: ProcessStatus;
+    validFrom?: string | null;
+    validTo?: string | null;
+    version: number;
+}
+
+export interface CentralSubprocessResponse extends AuditFields {
+    id: string;
+    code: string;
+    title: string;
+    processId: string;
+    description?: string | null;
+    sortOrder: number;
+    status: ProcessStatus;
+    validFrom?: string | null;
+    validTo?: string | null;
+    version: number;
+}

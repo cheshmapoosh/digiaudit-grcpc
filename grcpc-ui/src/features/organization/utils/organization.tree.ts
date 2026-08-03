@@ -14,7 +14,7 @@ export function sortOrganizations(items: OrganizationNode[]): OrganizationNode[]
             return codeCompare;
         }
 
-        return a.name.localeCompare(b.name, "fa");
+        return a.id.localeCompare(b.id);
     });
 }
 
@@ -54,7 +54,7 @@ export function buildTree(items: OrganizationNode[]): OrganizationTreeNode[] {
             level: 0,
         });
 
-        parentById.set(item.id, item.parentId ?? null);
+        parentById.set(item.id, item.parentOrganizationId ?? null);
     }
 
     const roots: OrganizationTreeNode[] = [];
@@ -66,7 +66,7 @@ export function buildTree(items: OrganizationNode[]): OrganizationTreeNode[] {
             continue;
         }
 
-        const parentId = item.parentId;
+        const parentId = item.parentOrganizationId;
 
         if (!parentId || parentId === item.id || !byId.has(parentId)) {
             roots.push(current);
@@ -166,14 +166,14 @@ export function collectAncestorIds(
 
     let current = byId.get(nodeId);
 
-    while (current?.parentId) {
-        if (visited.has(current.parentId)) {
+    while (current?.parentOrganizationId) {
+        if (visited.has(current.parentOrganizationId)) {
             break;
         }
 
-        visited.add(current.parentId);
-        result.push(current.parentId);
-        current = byId.get(current.parentId);
+        visited.add(current.parentOrganizationId);
+        result.push(current.parentOrganizationId);
+        current = byId.get(current.parentOrganizationId);
     }
 
     return result;
@@ -193,9 +193,8 @@ export function filterTree(
             .filter((item): item is OrganizationTreeNode => item !== null);
 
         const matched =
-            containsText(node.name, searchText) ||
-            containsText(node.code, searchText) ||
-            containsText(node.description, searchText);
+            containsText(node.displayLabel, searchText) ||
+            containsText(node.code, searchText);
 
         if (!matched && filteredChildren.length === 0) {
             return null;
@@ -213,5 +212,5 @@ export function filterTree(
 }
 
 export function hasChildren(items: OrganizationNode[], id: string): boolean {
-    return items.some((item) => parentKey(item.parentId) === id);
+    return items.some((item) => parentKey(item.parentOrganizationId) === id);
 }

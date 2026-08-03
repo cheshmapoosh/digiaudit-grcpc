@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Bar, Button, Label, MessageStrip, Title } from "@ui5/webcomponents-react";
 
 import type { OrganizationNode } from "../domain/organization.model";
-import { formatPersianDate } from "@/shared/utils/date.utils";
+import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 
 export interface OrganizationSummaryPanelProps {
     value?: OrganizationNode | null;
@@ -14,31 +14,19 @@ export interface OrganizationSummaryPanelProps {
     onCancel?: () => void;
 }
 
-function mapTypeLabel(type: OrganizationNode["type"], t: ReturnType<typeof useTranslation>["t"]): string {
-    switch (type) {
-        case "holding":
-            return t("organization.type.holding", { defaultValue: "هلدینگ" });
-        case "company":
-            return t("organization.type.company", { defaultValue: "شرکت" });
-        case "deputy":
-            return t("organization.type.deputy", { defaultValue: "معاونت" });
-        case "office":
-            return t("organization.type.office", { defaultValue: "اداره" });
-        case "unit":
-            return t("organization.type.unit", { defaultValue: "واحد" });
-        case "committee":
-            return t("organization.type.committee", { defaultValue: "کمیته" });
-        case "group":
-            return t("organization.type.group", { defaultValue: "گروه" });
-        case "department":
-            return t("organization.type.department", { defaultValue: "دپارتمان" });
-        case "management":
-            return t("organization.type.management", { defaultValue: "مدیریت" });
-        case "branch":
-            return t("organization.type.branch", { defaultValue: "شعبه" });
-        default:
-            return t("organization.type.other", { defaultValue: "سایر" });
+function resolveStatusLabel(
+    status: OrganizationNode["status"],
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    if (status === "ACTIVE") {
+        return t("common.active", { defaultValue: "فعال" });
     }
+
+    if (status === "INACTIVE") {
+        return t("common.inactive", { defaultValue: "غیرفعال" });
+    }
+
+    return t("common.deleted", { defaultValue: "حذف‌شده" });
 }
 
 export default function OrganizationSummaryPanel({
@@ -50,10 +38,10 @@ export default function OrganizationSummaryPanel({
     onCancel,
 }: OrganizationSummaryPanelProps) {
     const { t } = useTranslation();
-    const summaryTitle = value?.name?.trim()
+    const summaryTitle = value?.displayLabel?.trim()
         ? t("organization.object.summaryTitleWithName", {
               defaultValue: "واحد سازمانی {{name}}",
-              name: value.name,
+              name: value.displayLabel,
           })
         : t("organization.object.summaryTitle", { defaultValue: "واحد سازمانی" });
 
@@ -71,23 +59,16 @@ export default function OrganizationSummaryPanel({
 
         return [
             {
-                label: t("organization.fields.name", { defaultValue: "نام" }),
-                value: value.name,
-            },
-            {
                 label: t("organization.fields.code", { defaultValue: "کد" }),
                 value: value.code,
             },
             {
-                label: t("organization.fields.type", { defaultValue: "نوع" }),
-                value: mapTypeLabel(value.type, t),
+                label: t("organization.fields.parent", { defaultValue: "والد" }),
+                value: value.parentOrganizationId ?? "-",
             },
             {
                 label: t("organization.fields.status", { defaultValue: "وضعیت" }),
-                value:
-                    value.status === "active"
-                        ? t("common.active", { defaultValue: "فعال" })
-                        : t("common.inactive", { defaultValue: "غیرفعال" }),
+                value: resolveStatusLabel(value.status, t),
             },
             {
                 label: t("organization.fields.validFrom", { defaultValue: "از تاریخ" }),
@@ -98,12 +79,16 @@ export default function OrganizationSummaryPanel({
                 value: formatPersianDate(value.validTo),
             },
             {
-                label: t("organization.fields.location", { defaultValue: "موقعیت" }),
-                value: value.location || "-",
+                label: t("organization.fields.version", { defaultValue: "نسخه" }),
+                value: String(value.version),
             },
             {
-                label: t("organization.fields.description", { defaultValue: "توضیحات" }),
-                value: value.description || "-",
+                label: t("organization.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
+                value: formatPersianDateTime(value.createdAt),
+            },
+            {
+                label: t("organization.fields.updatedAt", { defaultValue: "تاریخ بروزرسانی" }),
+                value: formatPersianDateTime(value.updatedAt),
             },
         ];
     }, [t, value]);
@@ -117,13 +102,7 @@ export default function OrganizationSummaryPanel({
                 gap: "1rem",
             }}
         >
-            <Bar
-                startContent={
-                    <Title level="H4">
-                        {summaryTitle}
-                    </Title>
-                }
-            />
+            <Bar startContent={<Title level="H4">{summaryTitle}</Title>} />
 
             <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
                 {error ? (

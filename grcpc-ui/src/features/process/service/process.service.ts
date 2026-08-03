@@ -1,30 +1,32 @@
-import { omitKeys } from "@/shared/utils/object.utils";
 import {
     processCreateSchema,
+    processLifecycleSchema,
+    processMoveSchema,
     processUpdateSchema,
 } from "../domain/process.schema";
 import type {
+    MasterDataRevisionMutationResponse,
+    ProcessLifecycleCommand,
+    ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
     ProcessNodeUpdate,
-    ProcessReadonlyKeys,
 } from "../domain/process.model";
 import type { ProcessRepo } from "../infra/process.repo";
 import { createProcessRepo } from "../infra/process.factory";
 import { canCreateChild, sortProcesses } from "../utils/process.tree";
 
-const READONLY_KEYS: readonly ProcessReadonlyKeys[] = [
-    "id",
-    "createdAt",
-    "updatedAt",
-    "createdBy",
-    "updatedBy",
-    "deletedAt",
-    "deletedBy",
-] as const;
+function normalizeCode(value: string): string {
+    return value.trim().toLocaleUpperCase("en-US");
+}
 
-function removeReadonlyFields<T extends Record<string, unknown>>(payload: T) {
-    return omitKeys(payload, READONLY_KEYS as (keyof T)[]);
+function normalizeOptionalText(value: string | null | undefined): string | null {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : null;
+}
+
+function normalizeSortOrder(value: number | null | undefined): number {
+    return value ?? 0;
 }
 
 function assertCreateHierarchy(items: ProcessNode[], payload: ProcessNodeCreate): void {
@@ -33,82 +35,87 @@ function assertCreateHierarchy(items: ProcessNode[], payload: ProcessNodeCreate)
         : null;
 
     if (payload.parentId && !parent) {
-        throw new Error("PARENT_NOT_FOUND");
+        throw new Error(
+            payload.nodeType === "PROCESS"
+                ? "PARENT_PROCESS_NOT_FOUND"
+                : "PROCESS_FOR_SUBPROCESS_NOT_FOUND",
+        );
     }
 
-    const parentType = parent?.nodeType ?? null;
-
-    if (!canCreateChild(parentType, payload.nodeType)) {
-        throw new Error("INVALID_HIERARCHY");
-    }
-}
-
-function assertNoCycle(items: ProcessNode[], id: string, parentId: string | null): void {
-    if (!parentId) {
-        return;
-    }
-
-    if (id === parentId) {
-        throw new Error("INVALID_HIERARCHY");
-    }
-
-    const byId = new Map(items.map((item) => [item.id, item]));
-    const visited = new Set<string>();
-    let currentParentId: string | null | undefined = parentId;
-
-    while (currentParentId) {
-        if (currentParentId === id || visited.has(currentParentId)) {
-            throw new Error("INVALID_HIERARCHY");
-        }
-
-        visited.add(currentParentId);
-        currentParentId = byId.get(currentParentId)?.parentId;
+    if (!canCreateChild(parent?.nodeType ?? null, payload.nodeType)) {
+        throw new Error("HIERARCHY_CYCLE");
     }
 }
 
-function assertUpdateHierarchy(
-    items: ProcessNode[],
-    current: ProcessNode,
-    payload: ProcessNodeUpdate,
-): void {
-    const candidate: ProcessNode = {
-        ...current,
-        ...payload,
-        parentId: payload.parentId === undefined ? current.parentId : payload.parentId,
+function normalizeCreatePayload(payload: ProcessNodeCreate): ProcessNodeCreate {
+    const parsed = processCreateSchema.parse(payload);
+
+    return {
+        nodeType: parsed.nodeType,
+        code: normalizeCode(parsed.code),
+        title: parsed.title.trim(),
+        parentId: parsed.parentId?.trim() || null,
+        description: normalizeOptionalText(parsed.description),
+        sortOrder: normalizeSortOrder(parsed.sortOrder),
+        validFrom: normalizeOptionalText(parsed.validFrom),
+        validTo: normalizeOptionalText(parsed.validTo),
     };
+}
 
-    assertNoCycle(items, current.id, candidate.parentId ?? null);
+function normalizeUpdatePayload(payload: ProcessNodeUpdate): ProcessNodeUpdate {
+    const parsed = processUpdateSchema.parse(payload);
 
-    const parent = candidate.parentId
-        ? items.find((item) => item.id === candidate.parentId) ?? null
-        : null;
+    return {
+        version: parsed.version,
+        title: parsed.title.trim(),
+        description: normalizeOptionalText(parsed.description),
+        sortOrder: normalizeSortOrder(parsed.sortOrder),
+        validFrom: normalizeOptionalText(parsed.validFrom),
+        validTo: normalizeOptionalText(parsed.validTo),
+    };
+}
 
-    if (candidate.parentId && !parent) {
-        throw new Error("PARENT_NOT_FOUND");
-    }
+function normalizeMovePayload(payload: ProcessMoveCommand): ProcessMoveCommand {
+    const parsed = processMoveSchema.parse(payload);
 
-    if (!canCreateChild(parent?.nodeType ?? null, candidate.nodeType)) {
-        throw new Error("INVALID_HIERARCHY");
-    }
+    return {
+        parentId: parsed.parentId?.trim() || null,
+        version: parsed.version,
+    };
+}
 
-    const directChildren = items.filter((item) => item.parentId === current.id);
-    const hasInvalidChild = directChildren.some(
-        (child) => !canCreateChild(candidate.nodeType, child.nodeType),
-    );
-
-    if (hasInvalidChild) {
-        throw new Error("INVALID_HIERARCHY");
-    }
+function normalizeLifecyclePayload(payload: ProcessLifecycleCommand): ProcessLifecycleCommand {
+    return processLifecycleSchema.parse(payload);
 }
 
 export interface ProcessService {
     list(): Promise<ProcessNode[]>;
-    getById(id: string): Promise<ProcessNode | null>;
-    getChildren(parentId: string | null): Promise<ProcessNode[]>;
-    create(payload: ProcessNodeCreate): Promise<ProcessNode>;
-    update(id: string, payload: ProcessNodeUpdate): Promise<ProcessNode>;
-    remove(id: string): Promise<void>;
-    toggleStatus(id: string): Promise<ProcessNode>;
+    getById(id: string, node?: ProcessNode): Promise<ProcessNode | null>;
+    create(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
+    update(
+        node: ProcessNode,
+        payload: ProcessNodeUpdate,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    move(
+        node: ProcessNode,
+        payload: ProcessMoveCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    activate(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    inactivate(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    delete(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    restore(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
 }
 
 export function createProcessService(repo: ProcessRepo): ProcessService {
@@ -118,57 +125,40 @@ export function createProcessService(repo: ProcessRepo): ProcessService {
             return sortProcesses(items);
         },
 
-        async getById(id) {
-            return repo.getById(id);
-        },
-
-        async getChildren(parentId) {
-            const items = await repo.getChildren(parentId);
-            return sortProcesses(items);
+        async getById(id, node) {
+            return repo.getById(id, node?.nodeType);
         },
 
         async create(payload) {
-            const sanitized = removeReadonlyFields(payload);
-            const parsed = processCreateSchema.parse(sanitized);
+            const normalized = normalizeCreatePayload(payload);
             const items = await repo.list();
+            assertCreateHierarchy(items, normalized);
 
-            assertCreateHierarchy(items, parsed);
-
-            return repo.create(parsed);
+            return repo.create(normalized);
         },
 
-        async update(id, payload) {
-            const sanitized = removeReadonlyFields(payload);
-            const parsed = processUpdateSchema.parse(sanitized);
-            const items = await repo.list();
-            const current = items.find((item) => item.id === id);
-
-            if (!current) {
-                throw new Error("NOT_FOUND");
-            }
-
-            assertUpdateHierarchy(items, current, parsed);
-
-            return repo.update(id, parsed);
+        async update(node, payload) {
+            return repo.update(node, normalizeUpdatePayload(payload));
         },
 
-        async remove(id) {
-            await repo.remove(id);
+        async move(node, payload) {
+            return repo.move(node, normalizeMovePayload(payload));
         },
 
-        async toggleStatus(id) {
-            if (typeof repo.toggleStatus === "function") {
-                return repo.toggleStatus(id);
-            }
+        async activate(node, payload) {
+            return repo.activate(node, normalizeLifecyclePayload(payload));
+        },
 
-            const current = await repo.getById(id);
-            if (!current) {
-                throw new Error("NOT_FOUND");
-            }
+        async inactivate(node, payload) {
+            return repo.inactivate(node, normalizeLifecyclePayload(payload));
+        },
 
-            return repo.update(id, {
-                status: current.status === "active" ? "inactive" : "active",
-            });
+        async delete(node, payload) {
+            return repo.delete(node, normalizeLifecyclePayload(payload));
+        },
+
+        async restore(node, payload) {
+            return repo.restore(node, normalizeLifecyclePayload(payload));
         },
     };
 }

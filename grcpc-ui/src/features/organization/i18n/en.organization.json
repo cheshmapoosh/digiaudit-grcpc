@@ -1,28 +1,83 @@
 {
   "organization": {
-    "tabs": {
-      "goals": {
-        "label": "Objectives",
-        "title": "Objectives",
-        "hint": "Objectives are loaded from the Objective feature and their relationships with the organization are stored separately.",
-        "saveFirstHint": "Save the organization before assigning an objective."
+    "list": {
+      "title": "Organization Structure",
+      "empty": "No organization has been registered.",
+      "search": "Search by code"
+    },
+    "parent": {
+      "none": "No parent",
+      "select": "Select",
+      "clear": "Clear",
+      "dialog": {
+        "title": "Select Parent",
+        "search": "Search by code"
       }
     },
-    "goals": {
-      "selectPlaceholder": "Select objective",
-      "noData": "No objective has been assigned to this organization."
-    },
-    "actions": {
-      "add": "Add",
-      "delete": "Remove"
-    },
     "fields": {
-      "goal": "Objective",
-      "description": "Description",
-      "owner": "Owner / Type",
-      "assignmentAndStatus": "Relationship / Status",
+      "code": "Code",
+      "parent": "Parent",
+      "status": "Status",
+      "validFrom": "Valid From",
+      "validTo": "Valid To",
       "validity": "Validity",
-      "actions": "Actions"
+      "version": "Version",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "tabs": {
+      "general": "General Information",
+      "subProcesses": "Subprocesses",
+      "risks": "Risks",
+      "controls": "Controls",
+      "rules": "Rules",
+      "policies": "Policies",
+      "goals": {
+        "label": "Objectives"
+      },
+      "documents": "Documents"
+    },
+    "documents": {
+      "empty": "No document has been registered for this organization.",
+      "saveFirst": "Save the organization before finalizing documents."
+    },
+    "object": {
+      "summaryTitle": "Organization",
+      "summaryTitleWithName": "Organization {{name}}",
+      "selectPrompt": "Select an organization to view details.",
+      "notFound": "The selected organization was not found.",
+      "modalTitle": "Organization"
+    },
+    "create": {
+      "title": "Create Organization"
+    },
+    "edit": {
+      "title": "Edit Organization"
+    },
+    "view": {
+      "title": "View Organization"
+    },
+    "delete": {
+      "title": "Delete Organization",
+      "confirm": "Are you sure you want to delete \"{{title}}\"?"
+    },
+    "errors": {
+      "loadList": "Failed to load organizations",
+      "notFound": "The requested item was not found",
+      "duplicateCode": "Organization code already exists",
+      "parentNotFound": "The selected parent was not found",
+      "hasChildren": "You cannot delete an organization that has children",
+      "invalidHierarchy": "The organization hierarchy is not valid",
+      "versionConflict": "The record was changed by another user. Reload the page.",
+      "create": "Failed to create organization",
+      "update": "Failed to update organization",
+      "move": "Failed to move organization",
+      "delete": "Failed to delete organization"
+    },
+    "validation": {
+      "codeRequired": "Code is required",
+      "codeMaxBytes": "Code cannot be longer than 64 bytes",
+      "invalidValidityRange": "Validity range is not valid"
     }
   }
 }

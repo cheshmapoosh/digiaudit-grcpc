@@ -1,43 +1,28 @@
 export { organizationRoutes } from "./routes";
 
 export type {
+    MasterDataRevisionMutationResponse,
+    OrganizationLifecycleCommand,
+    OrganizationMoveCommand,
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
     OrganizationStatus,
-    OrganizationType,
     OrganizationReadonlyKeys,
 } from "./domain/organization.model";
 
 export type {
-    OrganizationProcessAssignment,
-    OrganizationProcessAssignmentCreate,
-    OrganizationProcessAssignmentType,
-    OrganizationSubProcessOption,
-    OrganizationSubProcessView,
-    OrganizationControlView,
-    OrganizationRiskAssignment,
-    OrganizationRiskAssignmentCreate,
-    OrganizationRiskOption,
-} from "./domain/organization-process-assignment.model";
-
-export type {
-    OrganizationObjectiveAssignment,
-    OrganizationObjectiveAssignmentCreate,
-    OrganizationObjectiveOption,
-    OrganizationObjectiveView,
-} from "./domain/organization-objective-assignment.model";
-
-export type {
     OrganizationCreateInput,
+    OrganizationMoveInput,
     OrganizationUpdateInput,
 } from "./domain/organization.schema";
 
 export {
+    organizationLifecycleSchema,
+    organizationMoveSchema,
     organizationCreateSchema,
     organizationUpdateSchema,
     organizationStatusSchema,
-    organizationTypeSchema,
 } from "./domain/organization.schema";
 
 export { organizationService, createOrganizationService } from "./service/organization.service";

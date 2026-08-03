@@ -358,12 +358,16 @@ function FormField({
 }
 
 function resolveStatusLabel(
-    status: ObjectiveStatus,
+    status: ObjectiveStatus | OrganizationNode["status"],
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
-    return status === "active"
-        ? t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" })
-        : t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
+    if (status === "active" || status === "ACTIVE") {
+        return t("common.active", { defaultValue: "ÙØ¹Ø§Ù„" });
+    }
+    if (status === "DELETED") {
+        return t("common.deleted", { defaultValue: "Ø­Ø°Ù Ø´Ø¯Ù‡" });
+    }
+    return t("common.inactive", { defaultValue: "ØºÛŒØ±ÙØ¹Ø§Ù„" });
 }
 
 function resolveObjectiveTypeLabel(
@@ -383,7 +387,8 @@ function resolveObjectiveTypeLabel(
 }
 
 function formatOrganizationOption(organization: OrganizationNode): string {
-    return `${organization.code} - ${organization.name}`;
+    const label = organization.displayLabel || organization.code;
+    return label === organization.code ? organization.code : `${organization.code} - ${label}`;
 }
 
 function defaultTabs(): ObjectiveTabKey[] {
@@ -515,8 +520,9 @@ export default function ObjectiveObjectPage({
                         existingOrganization?.organizationCode ??
                         "",
                     name:
-                        organization?.name ??
+                        organization?.displayLabel ??
                         existingOrganization?.organizationName ??
+                        organization?.code ??
                         "",
                     status:
                         organization?.status ??

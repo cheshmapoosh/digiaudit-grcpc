@@ -67,11 +67,12 @@ interface OrganizationTreeItemProps {
 }
 
 function OrganizationTreeItem({
-                                  node,
-                                  selectedId,
-                                  expandedIds,
-                              }: OrganizationTreeItemProps) {
+    node,
+    selectedId,
+    expandedIds,
+}: OrganizationTreeItemProps) {
     const isSelected = node.id === selectedId;
+    const label = node.displayLabel || node.code;
 
     return (
         <TreeItemCustom
@@ -81,7 +82,7 @@ function OrganizationTreeItem({
             selected={isSelected}
             content={
                 <span
-                    title={node.name}
+                    title={label}
                     style={{
                         display: "block",
                         minWidth: 0,
@@ -92,7 +93,7 @@ function OrganizationTreeItem({
                         fontWeight: isSelected ? 700 : 400,
                     }}
                 >
-          {node.name}
+          {label}
         </span>
             }
         >
@@ -109,13 +110,13 @@ function OrganizationTreeItem({
 }
 
 export default function OrganizationTree({
-                                             items,
-                                             selectedId,
-                                             expansionAnchorId,
-                                             searchText = "",
-                                             busy = false,
-                                             onSelect,
-                                         }: OrganizationTreeProps) {
+    items,
+    selectedId,
+    expansionAnchorId,
+    searchText = "",
+    busy = false,
+    onSelect,
+}: OrganizationTreeProps) {
     const { t } = useTranslation();
 
     const normalizedSearchText = searchText.trim();

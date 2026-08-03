@@ -1,73 +1,94 @@
-import { omitKeys } from "@/shared/utils/object.utils";
 import {
     organizationCreateSchema,
+    organizationLifecycleSchema,
+    organizationMoveSchema,
     organizationUpdateSchema,
 } from "@/features/organization";
 import type {
+    MasterDataRevisionMutationResponse,
+    OrganizationLifecycleCommand,
+    OrganizationMoveCommand,
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
-    OrganizationReadonlyKeys,
 } from "@/features/organization";
 import type { OrganizationRepo } from "../infra/organization.repo";
 import { createOrganizationRepo } from "../infra/organization.factory";
 import { sortOrganizations } from "../utils/organization.tree";
 
-const READONLY_KEYS: readonly OrganizationReadonlyKeys[] = [
-    "id",
-    "createdAt",
-    "updatedAt",
-    "createdBy",
-    "updatedBy",
-    "deletedAt",
-    "deletedBy",
-] as const;
-
-function removeReadonlyFields<T extends Record<string, unknown>>(payload: T) {
-    return omitKeys(payload, READONLY_KEYS as (keyof T)[]);
+function normalizeCode(value: string): string {
+    return value.trim().toLocaleUpperCase("en-US");
 }
 
-function assertParentExists(items: OrganizationNode[], parentId: string | null): void {
-    if (!parentId) {
-        return;
-    }
-
-    const parent = items.find((item) => item.id === parentId);
-    if (!parent) {
-        throw new Error("PARENT_NOT_FOUND");
-    }
+function normalizeOptionalDate(value: string | null | undefined): string | null {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : null;
 }
 
-function assertNoCycle(items: OrganizationNode[], id: string, parentId: string | null): void {
-    if (!parentId) {
-        return;
-    }
+function normalizeCreatePayload(payload: OrganizationNodeCreate): OrganizationNodeCreate {
+    const parsed = organizationCreateSchema.parse(payload);
 
-    if (id === parentId) {
-        throw new Error("INVALID_HIERARCHY");
-    }
+    return {
+        code: normalizeCode(parsed.code),
+        parentOrganizationId: parsed.parentOrganizationId?.trim() || null,
+        validFrom: normalizeOptionalDate(parsed.validFrom),
+        validTo: normalizeOptionalDate(parsed.validTo),
+    };
+}
 
-    const byId = new Map(items.map((item) => [item.id, item]));
-    const visited = new Set<string>();
-    let currentParentId: string | null | undefined = parentId;
+function normalizeUpdatePayload(payload: OrganizationNodeUpdate): OrganizationNodeUpdate {
+    const parsed = organizationUpdateSchema.parse(payload);
 
-    while (currentParentId) {
-        if (currentParentId === id || visited.has(currentParentId)) {
-            throw new Error("INVALID_HIERARCHY");
-        }
+    return {
+        version: parsed.version,
+        validFrom: normalizeOptionalDate(parsed.validFrom),
+        validTo: normalizeOptionalDate(parsed.validTo),
+    };
+}
 
-        visited.add(currentParentId);
-        currentParentId = byId.get(currentParentId)?.parentId;
-    }
+function normalizeMovePayload(payload: OrganizationMoveCommand): OrganizationMoveCommand {
+    const parsed = organizationMoveSchema.parse(payload);
+
+    return {
+        parentOrganizationId: parsed.parentOrganizationId?.trim() || null,
+        version: parsed.version,
+    };
+}
+
+function normalizeLifecyclePayload(
+    payload: OrganizationLifecycleCommand,
+): OrganizationLifecycleCommand {
+    return organizationLifecycleSchema.parse(payload);
 }
 
 export interface OrganizationService {
     list(): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
-    create(payload: OrganizationNodeCreate): Promise<OrganizationNode>;
-    update(id: string, payload: OrganizationNodeUpdate): Promise<OrganizationNode>;
-    remove(id: string): Promise<void>;
-    toggleStatus(id: string): Promise<OrganizationNode>;
+    create(payload: OrganizationNodeCreate): Promise<MasterDataRevisionMutationResponse>;
+    update(
+        id: string,
+        payload: OrganizationNodeUpdate,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    move(
+        id: string,
+        payload: OrganizationMoveCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    activate(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    inactivate(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    delete(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    restore(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
 }
 
 export function createOrganizationService(
@@ -84,51 +105,31 @@ export function createOrganizationService(
         },
 
         async create(payload) {
-            const sanitized = removeReadonlyFields(payload);
-            const parsed = organizationCreateSchema.parse(sanitized);
-            const items = await repo.list();
-
-            assertParentExists(items, parsed.parentId ?? null);
-
-            return repo.create(parsed);
+            return repo.create(normalizeCreatePayload(payload));
         },
 
         async update(id, payload) {
-            const sanitized = removeReadonlyFields(payload);
-            const parsed = organizationUpdateSchema.parse(sanitized);
-            const items = await repo.list();
-            const current = items.find((item) => item.id === id);
-
-            if (!current) {
-                throw new Error("NOT_FOUND");
-            }
-
-            const nextParentId =
-                parsed.parentId === undefined ? current.parentId : parsed.parentId;
-
-            assertParentExists(items, nextParentId ?? null);
-            assertNoCycle(items, id, nextParentId ?? null);
-
-            return repo.update(id, parsed);
+            return repo.update(id, normalizeUpdatePayload(payload));
         },
 
-        async remove(id) {
-            await repo.remove(id);
+        async move(id, payload) {
+            return repo.move(id, normalizeMovePayload(payload));
         },
 
-        async toggleStatus(id) {
-            if (typeof repo.toggleStatus === "function") {
-                return repo.toggleStatus(id);
-            }
+        async activate(id, payload) {
+            return repo.activate(id, normalizeLifecyclePayload(payload));
+        },
 
-            const current = await repo.getById(id);
-            if (!current) {
-                throw new Error("NOT_FOUND");
-            }
+        async inactivate(id, payload) {
+            return repo.inactivate(id, normalizeLifecyclePayload(payload));
+        },
 
-            return repo.update(id, {
-                status: current.status === "active" ? "inactive" : "active",
-            });
+        async delete(id, payload) {
+            return repo.delete(id, normalizeLifecyclePayload(payload));
+        },
+
+        async restore(id, payload) {
+            return repo.restore(id, normalizeLifecyclePayload(payload));
         },
     };
 }

@@ -3,19 +3,19 @@
 ## Scope
 Applies to `src/features/process`.
 
-## Feature purpose
-Process manages process/sub-process master data in a tree/FCL UI.
+## Master Data V2 structural rules
+- `organization`, `central_process`, and `central_subprocess` are separate persistence structures.
+- Combined Process/Subprocess representation is read-only presentation only.
+- Legacy `process_node` must not return.
+- Structural mutations use Backend-owned Business Revision.
+- Document commands remain outside Revision under the Prompt 4.2 correction.
+- Document temporary upload keeps the simplified Prompt 4.2 contract.
+- No automated tests are part of this task.
 
-## Hierarchy rules
-- `process` can contain child `process` and `subProcess` nodes.
-- `subProcess` is a leaf and must not expose child creation.
-
-## Rules
-- Treat this feature as the reference pattern for similar master-data features.
-- API base path is `/api/processes`; keep model/schema aligned with backend DTOs.
-- Preserve expanded tree items and selected item across navigation, create, edit, delete, and refresh.
-- Use UI5 components for buttons, tree, bars, tabs, dialogs, and message strips.
-- Put all visible text in `i18n/fa.process.json` and `i18n/en.process.json`.
-
-## Verification
-- Run `npm run lint` and `npm run build` from `grcpc-ui`.
+## Process/Subprocess UI rules
+- Use `/api/master-data/central/processes`, `/api/master-data/central/subprocesses`, and `/api/master-data/central/process-tree` only for structural data.
+- Keep one combined visual tree, but persist Process and Subprocess through separate typed command models.
+- Do not send `nodeType`, generic parent IDs, process category, owner, document count, objective, or operation-cycle fields in mutation payloads.
+- Subprocess is a leaf and must not offer structural child creation.
+- Remove the Account Group tab and show deferred relation-tab messaging for other unavailable V2 relation slices without calling Legacy APIs.
+- Re-enable the shared Document component only with exact persisted V2 IDs and target types `CENTRAL_PROCESS` or `CENTRAL_SUBPROCESS`.

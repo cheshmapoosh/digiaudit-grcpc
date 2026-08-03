@@ -7,7 +7,8 @@ import com.digiaudit.grcpc.modules.masterdata.control.api.dto.CreateControlAndAs
 import com.digiaudit.grcpc.modules.masterdata.control.api.dto.UpdateControlAssignmentRequest;
 import com.digiaudit.grcpc.modules.masterdata.control.domain.entity.ControlAssignmentEntity;
 import com.digiaudit.grcpc.modules.masterdata.control.domain.entity.ControlEntity;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ProcessNodeEntity;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralProcessEntity;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralSubprocessEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -87,7 +88,7 @@ public interface ControlMapper {
     ControlDetailsDto toDetails(
             ControlAssignmentEntity assignment,
             ControlEntity control,
-            ProcessNodeEntity subProcess,
-            ProcessNodeEntity parentProcess
+            CentralSubprocessEntity subProcess,
+            CentralProcessEntity parentProcess
     );
 }

@@ -1,4 +1,7 @@
 import type {
+    MasterDataRevisionMutationResponse,
+    OrganizationLifecycleCommand,
+    OrganizationMoveCommand,
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
@@ -7,9 +10,29 @@ import type {
 export interface OrganizationRepo {
     list(): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
-    create(payload: OrganizationNodeCreate): Promise<OrganizationNode>;
-    update(id: string, payload: OrganizationNodeUpdate): Promise<OrganizationNode>;
-    remove(id: string): Promise<void>;
-    getChildren(parentId: string | null): Promise<OrganizationNode[]>;
-    toggleStatus(id: string): Promise<OrganizationNode>;
+    create(payload: OrganizationNodeCreate): Promise<MasterDataRevisionMutationResponse>;
+    update(
+        id: string,
+        payload: OrganizationNodeUpdate,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    move(
+        id: string,
+        payload: OrganizationMoveCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    activate(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    inactivate(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    delete(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    restore(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
 }

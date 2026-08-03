@@ -21,12 +21,15 @@ import com.digiaudit.grcpc.modules.masterdata.control.api.dto.UpdateControlAssig
 import com.digiaudit.grcpc.modules.masterdata.control.api.mapper.ControlMapper;
 import com.digiaudit.grcpc.modules.masterdata.control.domain.entity.ControlAssignmentEntity;
 import com.digiaudit.grcpc.modules.masterdata.control.domain.entity.ControlEntity;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.ProcessNodeEntity;
 import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlAssignmentStatus;
 import com.digiaudit.grcpc.modules.masterdata.control.domain.enums.ControlStatus;
 import com.digiaudit.grcpc.modules.masterdata.control.domain.repository.ControlAssignmentRepository;
 import com.digiaudit.grcpc.modules.masterdata.control.domain.repository.ControlRepository;
-import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.ProcessNodeRepository;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralProcessEntity;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralSubprocessEntity;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.CentralProcessRepository;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.CentralSubprocessRepository;
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -55,7 +58,8 @@ public class ControlService {
 
     private final ControlRepository controlRepository;
     private final ControlAssignmentRepository assignmentRepository;
-    private final ProcessNodeRepository processNodeRepository;
+    private final CentralProcessRepository processRepository;
+    private final CentralSubprocessRepository subprocessRepository;
     private final ControlMapper mapper;
     private final AuditService auditService;
     private final CurrentUserProvider currentUserProvider;
@@ -72,9 +76,12 @@ public class ControlService {
     }
 
     public List<ControlStructureNodeDto> getControlStructure() {
-        List<ProcessNodeEntity> processNodes = processNodeRepository.findAllByOrderBySortOrderAscTitleAsc();
-        Map<UUID, ProcessNodeEntity> processNodesById = processNodes.stream()
-                .collect(Collectors.toMap(ProcessNodeEntity::getId, Function.identity()));
+        List<CentralProcessEntity> processes =
+                processRepository.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(MasterDataLifecycleStatus.DELETED);
+        List<CentralSubprocessEntity> subprocesses =
+                subprocessRepository.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(MasterDataLifecycleStatus.DELETED);
+        Map<UUID, CentralSubprocessEntity> subprocessesById = subprocesses.stream()
+                .collect(Collectors.toMap(CentralSubprocessEntity::getId, Function.identity()));
 
         List<ControlAssignmentEntity> assignments =
                 assignmentRepository.findByAssignmentStatusOrderBySortOrderAscCreatedAtAsc(ControlAssignmentStatus.active);
@@ -85,9 +92,10 @@ public class ControlService {
                 .collect(Collectors.toMap(ControlEntity::getId, Function.identity()));
 
         List<ControlStructureNodeDto> result = new ArrayList<>();
-        processNodes.forEach(processNode -> result.add(toProcessStructureNode(processNode)));
+        processes.forEach(process -> result.add(toProcessStructureNode(process)));
+        subprocesses.forEach(subprocess -> result.add(toSubprocessStructureNode(subprocess)));
         assignments.stream()
-                .map(assignment -> toControlStructureNode(assignment, controlsById.get(assignment.getControlId()), processNodesById))
+                .map(assignment -> toControlStructureNode(assignment, controlsById.get(assignment.getControlId()), subprocessesById))
                 .filter(Objects::nonNull)
                 .forEach(result::add);
 
@@ -102,7 +110,7 @@ public class ControlService {
             CreateControlAndAssignRequest request,
             HttpServletRequest httpRequest
     ) {
-        ProcessNodeEntity subProcess = ensureSubProcess(subProcessId);
+        CentralSubprocessEntity subProcess = ensureSubProcess(subProcessId);
         validateDateRange(request.validFrom(), request.validTo());
         ensureUniqueControlCode(request.code(), null);
 
@@ -138,7 +146,7 @@ public class ControlService {
             AttachExistingControlRequest request,
             HttpServletRequest httpRequest
     ) {
-        ProcessNodeEntity subProcess = ensureSubProcess(subProcessId);
+        CentralSubprocessEntity subProcess = ensureSubProcess(subProcessId);
         ControlEntity control = ensureControl(request.controlId());
         validateDateRange(request.validFrom(), request.validTo());
         ensureNoDuplicateActiveAssignment(control.getId(), subProcess.getId(), null);
@@ -162,7 +170,7 @@ public class ControlService {
     public ControlDetailsDto getAssignment(UUID controlAssignmentId) {
         ControlAssignmentEntity assignment = ensureAssignment(controlAssignmentId);
         ControlEntity control = ensureControl(assignment.getControlId());
-        ProcessNodeEntity subProcess = ensureSubProcess(assignment.getSubProcessId());
+        CentralSubprocessEntity subProcess = ensureSubProcess(assignment.getSubProcessId());
         return toDetails(assignment, control, subProcess);
     }
 
@@ -174,7 +182,7 @@ public class ControlService {
     ) {
         ControlAssignmentEntity assignment = ensureAssignment(controlAssignmentId);
         ControlEntity control = ensureControl(assignment.getControlId());
-        ProcessNodeEntity subProcess = ensureSubProcess(assignment.getSubProcessId());
+        CentralSubprocessEntity subProcess = ensureSubProcess(assignment.getSubProcessId());
         validateDateRange(request.validFrom(), request.validTo());
 
         mapper.updateAssignment(request, assignment);
@@ -216,7 +224,7 @@ public class ControlService {
     ) {
         ControlAssignmentEntity source = ensureAssignment(controlAssignmentId);
         ControlEntity control = ensureControl(source.getControlId());
-        ProcessNodeEntity targetSubProcess = ensureSubProcess(request.targetSubProcessId());
+        CentralSubprocessEntity targetSubProcess = ensureSubProcess(request.targetSubProcessId());
         ensureNoDuplicateActiveAssignment(control.getId(), targetSubProcess.getId(), source.getId());
 
         LocalDate moveDate = request.validFrom() == null ? LocalDate.now() : request.validFrom();
@@ -254,32 +262,42 @@ public class ControlService {
         return toDetails(savedTarget, control, targetSubProcess);
     }
 
-    private ControlStructureNodeDto toProcessStructureNode(ProcessNodeEntity node) {
-        UUID processId = NODE_TYPE_PROCESS.equals(node.getNodeType()) ? node.getId() : node.getParentId();
-        UUID subProcessId = NODE_TYPE_SUB_PROCESS.equals(node.getNodeType()) ? node.getId() : null;
-
+    private ControlStructureNodeDto toProcessStructureNode(CentralProcessEntity node) {
         return ControlStructureNodeDto.builder()
                 .id(node.getId())
-                .nodeType(node.getNodeType())
+                .nodeType(NODE_TYPE_PROCESS)
                 .code(node.getCode())
                 .title(node.getTitle())
                 .description(node.getDescription())
-                .parentId(node.getParentId())
-                .processId(processId)
-                .subProcessId(subProcessId)
-                .status(node.getStatus())
+                .parentId(node.getParentProcessId())
+                .processId(node.getId())
+                .subProcessId(null)
+                .status(node.getStatus().wireValue())
                 .sortOrder(node.getSortOrder())
-                .ownerId(node.getOwnerId())
-                .ownerName(node.getOwnerName())
+                .build();
+    }
+
+    private ControlStructureNodeDto toSubprocessStructureNode(CentralSubprocessEntity node) {
+        return ControlStructureNodeDto.builder()
+                .id(node.getId())
+                .nodeType(NODE_TYPE_SUB_PROCESS)
+                .code(node.getCode())
+                .title(node.getTitle())
+                .description(node.getDescription())
+                .parentId(node.getProcessId())
+                .processId(node.getProcessId())
+                .subProcessId(node.getId())
+                .status(node.getStatus().wireValue())
+                .sortOrder(node.getSortOrder())
                 .build();
     }
 
     private ControlStructureNodeDto toControlStructureNode(
             ControlAssignmentEntity assignment,
             ControlEntity control,
-            Map<UUID, ProcessNodeEntity> processNodesById
+            Map<UUID, CentralSubprocessEntity> subprocessesById
     ) {
-        ProcessNodeEntity subProcess = processNodesById.get(assignment.getSubProcessId());
+        CentralSubprocessEntity subProcess = subprocessesById.get(assignment.getSubProcessId());
         if (control == null || subProcess == null) {
             return null;
         }
@@ -291,7 +309,7 @@ public class ControlService {
                 .title(control.getName())
                 .description(control.getDescription())
                 .parentId(subProcess.getId())
-                .processId(subProcess.getParentId())
+                .processId(subProcess.getProcessId())
                 .subProcessId(subProcess.getId())
                 .controlId(control.getId())
                 .controlAssignmentId(assignment.getId())
@@ -307,11 +325,9 @@ public class ControlService {
     private ControlDetailsDto toDetails(
             ControlAssignmentEntity assignment,
             ControlEntity control,
-            ProcessNodeEntity subProcess
+            CentralSubprocessEntity subProcess
     ) {
-        ProcessNodeEntity parentProcess = subProcess.getParentId() == null
-                ? null
-                : processNodeRepository.findById(subProcess.getParentId()).orElse(null);
+        CentralProcessEntity parentProcess = processRepository.findById(subProcess.getProcessId()).orElse(null);
         return mapper.toDetails(assignment, control, subProcess, parentProcess);
     }
 
@@ -325,12 +341,12 @@ public class ControlService {
                 .orElseThrow(() -> new NotFoundException("MASTER_DATA_NOT_FOUND", "error.masterdata.notFound", "Control assignment not found: " + id, id));
     }
 
-    private ProcessNodeEntity ensureSubProcess(UUID id) {
-        ProcessNodeEntity entity = processNodeRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("MASTER_DATA_NOT_FOUND", "error.masterdata.notFound", "Process node not found: " + id, id));
+    private CentralSubprocessEntity ensureSubProcess(UUID id) {
+        CentralSubprocessEntity entity = subprocessRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("SUBPROCESS_NOT_FOUND", "error.masterdata.v2.subprocessNotFound", "Subprocess not found: " + id, id));
 
-        if (!NODE_TYPE_SUB_PROCESS.equals(entity.getNodeType())) {
-            throw new ConflictException("MASTER_DATA_INVALID_PARENT", "error.masterdata.invalidParent", "Process node is not a sub process: " + id, id);
+        if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) {
+            throw new NotFoundException("SUBPROCESS_NOT_FOUND", "error.masterdata.v2.subprocessNotFound", "Subprocess not found: " + id, id);
         }
 
         return entity;

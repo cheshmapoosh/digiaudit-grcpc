@@ -9,14 +9,13 @@ import {
     Title,
 } from "@ui5/webcomponents-react";
 
-import type { ProcessNodeType } from "../domain/process.model";
+import type { ProcessNode, ProcessNodeType } from "../domain/process.model";
 import ProcessCreateMenu from "../components/ProcessCreateMenu";
-import ProcessControlTree from "../components/ProcessControlTree";
-import type { ProcessControlTreeItem } from "../utils/process-control.tree";
+import ProcessTree from "../components/ProcessTree";
 
 export interface ProcessesListReportProps {
-    items: ProcessControlTreeItem[];
-    selectedItem?: ProcessControlTreeItem | null;
+    items: ProcessNode[];
+    selectedItem?: ProcessNode | null;
     selectedId?: string | null;
     expansionAnchorId?: string | null;
     searchText: string;
@@ -26,7 +25,6 @@ export interface ProcessesListReportProps {
     createOptions: ProcessNodeType[];
     onSearchTextChange: (value: string) => void;
     onCreate: (nodeType: ProcessNodeType) => void;
-    onCreateControl: () => void;
     onShow: (id: string) => void;
     onDelete: (id: string) => void;
     onSelect: (id: string) => void;
@@ -37,22 +35,21 @@ function readInputValue(event: unknown): string {
 }
 
 export default function ProcessesListReport({
-                                                items,
-                                                selectedItem,
-                                                selectedId,
-                                                expansionAnchorId,
-                                                searchText,
-                                                busy = false,
-                                                error,
-                                                onErrorClose,
-                                                createOptions,
-                                                onSearchTextChange,
-                                                onCreate,
-                                                onCreateControl,
-                                                onShow,
-                                                onDelete,
-                                                onSelect,
-                                            }: ProcessesListReportProps) {
+    items,
+    selectedItem,
+    selectedId,
+    expansionAnchorId,
+    searchText,
+    busy = false,
+    error,
+    onErrorClose,
+    createOptions,
+    onSearchTextChange,
+    onCreate,
+    onShow,
+    onDelete,
+    onSelect,
+}: ProcessesListReportProps) {
     const { t } = useTranslation();
 
     const actionButtonStyle = useMemo<CSSProperties>(
@@ -73,8 +70,6 @@ export default function ProcessesListReport({
         [],
     );
 
-    const canCreate = !busy;
-
     return (
         <div
             style={{
@@ -94,11 +89,10 @@ export default function ProcessesListReport({
                 endContent={
                     <div style={actionGroupStyle}>
                         <ProcessCreateMenu
-                            disabled={!canCreate}
+                            disabled={busy}
                             style={actionButtonStyle}
                             nodeTypes={createOptions}
-                            onCreateProcess={onCreate}
-                            onCreateControl={onCreateControl}
+                            onCreate={onCreate}
                         />
 
                         <Button
@@ -116,10 +110,8 @@ export default function ProcessesListReport({
                             style={actionButtonStyle}
                             onClick={() => selectedId && onDelete(selectedId)}
                         >
-                            {selectedItem?.nodeType === "control"
-                                ? t("control.actions.deleteAssignment", {
-                                    defaultValue: "حذف اتصال کنترل",
-                                })
+                            {selectedItem?.status === "DELETED"
+                                ? t("common.restore", { defaultValue: "بازگردانی" })
                                 : t("common.delete", { defaultValue: "حذف" })}
                         </Button>
                     </div>
@@ -155,7 +147,7 @@ export default function ProcessesListReport({
             >
                 {busy ? <BusyIndicator active /> : null}
 
-                <ProcessControlTree
+                <ProcessTree
                     items={items}
                     selectedId={selectedId}
                     expansionAnchorId={expansionAnchorId}

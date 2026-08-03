@@ -384,8 +384,8 @@ public class ObjectiveService {
                     .add(new ObjectiveOrganizationResponse(
                             organization.getId(),
                             organization.getCode(),
-                            organization.getName(),
-                            organization.getStatus().name().toLowerCase(Locale.ROOT)
+                            organization.getCode(),
+                            organization.getStatus().wireValue()
                     ));
         }
 

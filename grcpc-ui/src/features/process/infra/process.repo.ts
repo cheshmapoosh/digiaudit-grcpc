@@ -1,15 +1,39 @@
 import type {
+    MasterDataRevisionMutationResponse,
+    ProcessLifecycleCommand,
+    ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
     ProcessNodeUpdate,
+    ProcessNodeType,
 } from "../domain/process.model";
 
 export interface ProcessRepo {
     list(): Promise<ProcessNode[]>;
-    getById(id: string): Promise<ProcessNode | null>;
-    create(payload: ProcessNodeCreate): Promise<ProcessNode>;
-    update(id: string, payload: ProcessNodeUpdate): Promise<ProcessNode>;
-    remove(id: string): Promise<void>;
-    getChildren(parentId: string | null): Promise<ProcessNode[]>;
-    toggleStatus(id: string): Promise<ProcessNode>;
+    getById(id: string, nodeType?: ProcessNodeType): Promise<ProcessNode | null>;
+    create(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
+    update(
+        node: ProcessNode,
+        payload: ProcessNodeUpdate,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    move(
+        node: ProcessNode,
+        payload: ProcessMoveCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    activate(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    inactivate(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    delete(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    restore(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
 }

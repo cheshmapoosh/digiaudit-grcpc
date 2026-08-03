@@ -1,5 +1,8 @@
 import { create } from "zustand";
 import type {
+    MasterDataRevisionMutationResponse,
+    ProcessLifecycleCommand,
+    ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
     ProcessNodeUpdate,
@@ -15,13 +18,31 @@ interface ProcessState {
     loading: boolean;
 
     loadChildren(parentId?: string): Promise<void>;
-    createNode(
-        parentId: string | null,
-        payload: ProcessNodeCreate,
-    ): Promise<ProcessNode>;
-    updateNode(id: string, payload: ProcessNodeUpdate): Promise<void>;
-    removeNode(id: string): Promise<void>;
-    toggleStatus(id: string): Promise<void>;
+    createNode(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
+    updateNode(
+        node: ProcessNode,
+        payload: ProcessNodeUpdate,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    moveNode(
+        node: ProcessNode,
+        payload: ProcessMoveCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    activateNode(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    inactivateNode(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    removeNode(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
+    restoreNode(
+        node: ProcessNode,
+        payload: ProcessLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse>;
     refresh(): Promise<void>;
     reset(): void;
 }
@@ -48,6 +69,27 @@ function buildIndexes(nodes: ProcessNode[]) {
 async function reloadIndexes() {
     const allNodes = await processService.list();
     return buildIndexes(allNodes);
+}
+
+type ProcessSetState = (
+    partial: Partial<ProcessState> | ((state: ProcessState) => Partial<ProcessState>),
+) => void;
+
+async function refreshAfterMutation(set: ProcessSetState): Promise<void> {
+    try {
+        const { nodesById, childrenByParent } = await reloadIndexes();
+
+        set((state) => ({
+            nodesById,
+            childrenByParent,
+            loadedChildren: {
+                ...state.loadedChildren,
+                [ROOT_PARENT]: true,
+            },
+        }));
+    } catch (error) {
+        console.warn("Process refresh after mutation failed", error);
+    }
 }
 
 export const useProcessState = create<ProcessState>((set) => ({
@@ -94,90 +136,85 @@ export const useProcessState = create<ProcessState>((set) => ({
         }
     },
 
-    async createNode(parentId, payload) {
+    async createNode(payload) {
         set({ loading: true });
 
         try {
-            const createdNode = await processService.create({
-                ...payload,
-                parentId: parentId === ROOT_PARENT ? null : parentId,
-            });
-
-            const { nodesById, childrenByParent } = await reloadIndexes();
-
-            set((state) => ({
-                nodesById,
-                childrenByParent,
-                loadedChildren: {
-                    ...state.loadedChildren,
-                    [toParentKey(parentId)]: true,
-                },
-            }));
-
-            return createdNode;
+            const result = await processService.create(payload);
+            await refreshAfterMutation(set);
+            return result;
         } finally {
             set({ loading: false });
         }
     },
 
-    async updateNode(id, payload) {
+    async updateNode(node, payload) {
         set({ loading: true });
 
         try {
-            await processService.update(id, payload);
-
-            const { nodesById, childrenByParent } = await reloadIndexes();
-
-            set((state) => ({
-                nodesById,
-                childrenByParent,
-                loadedChildren: {
-                    ...state.loadedChildren,
-                    [ROOT_PARENT]: true,
-                },
-            }));
+            const result = await processService.update(node, payload);
+            await refreshAfterMutation(set);
+            return result;
         } finally {
             set({ loading: false });
         }
     },
 
-    async removeNode(id) {
+    async moveNode(node, payload) {
         set({ loading: true });
 
         try {
-            await processService.remove(id);
-
-            const { nodesById, childrenByParent } = await reloadIndexes();
-
-            set((state) => ({
-                nodesById,
-                childrenByParent,
-                loadedChildren: {
-                    ...state.loadedChildren,
-                    [ROOT_PARENT]: true,
-                },
-            }));
+            const result = await processService.move(node, payload);
+            await refreshAfterMutation(set);
+            return result;
         } finally {
             set({ loading: false });
         }
     },
 
-    async toggleStatus(id) {
+    async activateNode(node, payload) {
         set({ loading: true });
 
         try {
-            await processService.toggleStatus(id);
+            const result = await processService.activate(node, payload);
+            await refreshAfterMutation(set);
+            return result;
+        } finally {
+            set({ loading: false });
+        }
+    },
 
-            const { nodesById, childrenByParent } = await reloadIndexes();
+    async inactivateNode(node, payload) {
+        set({ loading: true });
 
-            set((state) => ({
-                nodesById,
-                childrenByParent,
-                loadedChildren: {
-                    ...state.loadedChildren,
-                    [ROOT_PARENT]: true,
-                },
-            }));
+        try {
+            const result = await processService.inactivate(node, payload);
+            await refreshAfterMutation(set);
+            return result;
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    async removeNode(node, payload) {
+        set({ loading: true });
+
+        try {
+            const result = await processService.delete(node, payload);
+            await refreshAfterMutation(set);
+            return result;
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    async restoreNode(node, payload) {
+        set({ loading: true });
+
+        try {
+            const result = await processService.restore(node, payload);
+            await refreshAfterMutation(set);
+            return result;
         } finally {
             set({ loading: false });
         }

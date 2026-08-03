@@ -52,7 +52,11 @@ export default function ParentValueHelpDialog({
             return selectableItems;
         }
 
-        return selectableItems.filter((item) => containsText(item.name, searchText));
+        return selectableItems.filter(
+            (item) =>
+                containsText(item.displayLabel, searchText) ||
+                containsText(item.code, searchText),
+        );
     }, [searchText, selectableItems]);
 
     const dialogTitle = t("organization.parent.dialog.title", {
@@ -71,7 +75,7 @@ export default function ParentValueHelpDialog({
                 <Input
                     value={searchText}
                     placeholder={t("organization.parent.dialog.search", {
-                        defaultValue: "جستجو بر اساس نام",
+                        defaultValue: "جستجو بر اساس کد",
                     })}
                     onInput={(event) => setSearchText(event.target.value)}
                 />
@@ -86,10 +90,10 @@ export default function ParentValueHelpDialog({
                             key={item.id}
                             selected={item.id === selectedParentId}
                             additionalText={item.code}
-                            description={item.description ?? ""}
+                            description={item.parentOrganizationId ?? ""}
                             onClick={() => onSelect(item.id)}
                         >
-                            {item.name}
+                            {item.displayLabel || item.code}
                         </ListItemStandard>
                     ))}
                 </List>

@@ -1,4 +1,4 @@
-import {useMemo, useState, type CSSProperties, type ReactNode, Fragment} from "react";
+import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,27 +12,17 @@ import {
 } from "@ui5/webcomponents-react";
 
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
-
-import type {
-    ProcessCategory,
-    ProcessNode,
-    ProcessNodeType,
-    ProcessStatus,
-} from "../domain/process.model";
-import ProcessAccountGroupsTab from "./tabs/ProcessAccountGroupsTab";
-import ProcessControlsTab from "./tabs/ProcessControlsTab";
-import ProcessObjectivesTab from "./tabs/ProcessObjectivesTab";
-import ProcessRegulationsTab from "./tabs/ProcessRegulationsTab";
-import ProcessRisksTab from "./tabs/ProcessRisksTab";
-import { DocumentIntegrationDeferredMessage } from "@/features/document";
-import { formatPersianDate } from "@/shared/utils/date.utils";
+import { DocumentIntegrationDeferredMessage, DocumentManager } from "@/features/document";
+import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import type { DocumentLinkTargetType } from "@/features/document";
+import type { ProcessNode, ProcessNodeType, ProcessStatus } from "../domain/process.model";
 
 export interface ProcessSummaryPanelProps {
     value?: ProcessNode | null;
-    controlsCount?: number;
     busy?: boolean;
     error?: string | null;
     onErrorClose?: () => void;
+    onEdit?: (id: string) => void;
     onClose: () => void;
 }
 
@@ -41,7 +31,6 @@ type ProcessDetailTabKey =
     | "rules"
     | "controls"
     | "objectives"
-    | "accountGroups"
     | "risks"
     | "documents";
 
@@ -101,34 +90,32 @@ function readSelectedTabKey(event: unknown): ProcessDetailTabKey | null {
     return selectedTab?.getAttribute("data-tab-key") as ProcessDetailTabKey | null;
 }
 
+function resolveNodeTypeLabel(
+    nodeType: ProcessNodeType,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    return nodeType === "PROCESS"
+        ? t("process.nodeType.process", { defaultValue: "فرآیند" })
+        : t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" });
+}
+
 function resolveStatusLabel(
     status: ProcessStatus,
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
-    return status === "active"
-        ? t("common.active", { defaultValue: "فعال" })
-        : t("common.inactive", { defaultValue: "غیرفعال" });
-}
-
-function resolveCategoryLabel(
-    category: ProcessCategory | undefined,
-    t: ReturnType<typeof useTranslation>["t"],
-): string {
-    if (!category) {
-        return "-";
+    if (status === "ACTIVE") {
+        return t("common.active", { defaultValue: "فعال" });
     }
 
-    const labels: Record<ProcessCategory, string> = {
-        operational: t("process.category.operational", { defaultValue: "عملیاتی" }),
-        support: t("process.category.support", { defaultValue: "پشتیبانی" }),
-        strategic: t("process.category.strategic", { defaultValue: "استراتژیک" }),
-        financial: t("process.category.financial", { defaultValue: "مالی" }),
-        compliance: t("process.category.compliance", { defaultValue: "انطباق" }),
-        it: t("process.category.it", { defaultValue: "فناوری اطلاعات" }),
-        other: t("process.category.other", { defaultValue: "سایر" }),
-    };
+    if (status === "INACTIVE") {
+        return t("common.inactive", { defaultValue: "غیرفعال" });
+    }
 
-    return labels[category];
+    return t("common.deleted", { defaultValue: "حذف‌شده" });
+}
+
+function resolveDocumentTargetType(nodeType: ProcessNodeType): DocumentLinkTargetType {
+    return nodeType === "PROCESS" ? "CENTRAL_PROCESS" : "CENTRAL_SUBPROCESS";
 }
 
 function DetailRow({ label, value }: { label: string; value?: ReactNode }) {
@@ -149,56 +136,40 @@ function DetailRow({ label, value }: { label: string; value?: ReactNode }) {
     );
 }
 
-function getTabs(
-    nodeType: ProcessNodeType,
-    t: ReturnType<typeof useTranslation>["t"],
-): DetailTabDefinition[] {
-    if (nodeType === "subProcess") {
-        return [
-            {
-                key: "general",
-                label: t("process.tabs.general", { defaultValue: "اطلاعات کلی" }),
-            },
-            {
-                key: "rules",
-                label: t("process.tabs.rules", { defaultValue: "قوانین" }),
-            },
-            {
-                key: "controls",
-                label: t("process.tabs.controls", { defaultValue: "کنترل‌ها" }),
-            },
-            {
-                key: "objectives",
-                label: t("process.tabs.objectives", { defaultValue: "اهداف" }),
-            },
-            {
-                key: "accountGroups",
-                label: t("process.tabs.accountGroups", { defaultValue: "گروه حساب" }),
-            },
-            {
-                key: "risks",
-                label: t("process.tabs.risks", { defaultValue: "ریسک‌ها" }),
-            },
-            {
-                key: "documents",
-                label: t("process.tabs.documents", { defaultValue: "مستندات" }),
-            },
-        ];
-    }
-
+function getTabs(t: ReturnType<typeof useTranslation>["t"]): DetailTabDefinition[] {
     return [
         {
             key: "general",
             label: t("process.tabs.general", { defaultValue: "اطلاعات کلی" }),
         },
+        {
+            key: "rules",
+            label: t("process.tabs.rules", { defaultValue: "قوانین" }),
+        },
+        {
+            key: "controls",
+            label: t("process.tabs.controls", { defaultValue: "کنترل‌ها" }),
+        },
+        {
+            key: "objectives",
+            label: t("process.tabs.objectives", { defaultValue: "اهداف" }),
+        },
+        {
+            key: "risks",
+            label: t("process.tabs.risks", { defaultValue: "ریسک‌ها" }),
+        },
+        {
+            key: "documents",
+            label: t("process.tabs.documents", { defaultValue: "مستندات" }),
+        },
     ];
 }
 
 function ProcessTabs({
-                         tabs,
-                         activeTab,
-                         onChange,
-                     }: {
+    tabs,
+    activeTab,
+    onChange,
+}: {
     tabs: DetailTabDefinition[];
     activeTab: ProcessDetailTabKey;
     onChange: (tab: ProcessDetailTabKey) => void;
@@ -231,13 +202,7 @@ function ProcessTabs({
     );
 }
 
-function GeneralTab({
-                        value,
-                        controlsCount,
-                    }: {
-    value: ProcessNode;
-    controlsCount?: number;
-}) {
+function GeneralTab({ value }: { value: ProcessNode }) {
     const { t } = useTranslation();
 
     return (
@@ -247,105 +212,62 @@ function GeneralTab({
                 value={value.code}
             />
             <DetailRow
-                label={t("process.fields.description", { defaultValue: "شرح" })}
-                value={value.description}
+                label={t("process.fields.name", { defaultValue: "نام" })}
+                value={value.title}
             />
             <DetailRow
-                label={t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-                value={formatPersianDate(value.createdAt)}
+                label={t("process.fields.nodeType", { defaultValue: "نوع آیتم" })}
+                value={resolveNodeTypeLabel(value.nodeType, t)}
             />
             <DetailRow
-                label={t("process.fields.processCategory", { defaultValue: "نوع" })}
-                value={resolveCategoryLabel(value.processCategory, t)}
+                label={t("process.fields.parentProcess", { defaultValue: "والد فرآیند" })}
+                value={value.parentId ?? "-"}
+            />
+            <DetailRow
+                label={t("process.fields.sortOrder", { defaultValue: "ترتیب نمایش" })}
+                value={String(value.sortOrder)}
             />
             <DetailRow
                 label={t("process.fields.status", { defaultValue: "وضعیت" })}
                 value={resolveStatusLabel(value.status, t)}
             />
             <DetailRow
-                label={t("process.fields.owner", { defaultValue: "مالک" })}
-                value={value.ownerName}
+                label={t("process.fields.validity", { defaultValue: "اعتبار" })}
+                value={`${formatPersianDate(value.validFrom)} - ${formatPersianDate(
+                    value.validTo,
+                )}`}
             />
             <DetailRow
-                label={t("process.fields.documents", { defaultValue: "مستندات" })}
-                value={String(value.documentsCount ?? 0)}
+                label={t("process.fields.description", { defaultValue: "شرح" })}
+                value={value.description}
             />
-            {value.nodeType === "subProcess" ? (
-                <DetailRow
-                    label={t("control.fields.controlsCount", { defaultValue: "تعداد کنترل‌ها" })}
-                    value={String(controlsCount ?? 0)}
-                />
-            ) : null}
+            <DetailRow
+                label={t("process.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
+                value={formatPersianDateTime(value.createdAt)}
+            />
         </div>
     );
 }
 
 function TabBody({
-                     value,
-                     activeTab,
-                     controlsCount,
-                 }: {
+    value,
+    activeTab,
+}: {
     value: ProcessNode;
     activeTab: ProcessDetailTabKey;
-    controlsCount?: number;
 }) {
+    const { t } = useTranslation();
 
     if (activeTab === "general") {
-        return <GeneralTab value={value} controlsCount={controlsCount} />;
+        return <GeneralTab value={value} />;
     }
 
-    if (activeTab === "rules") {
+    if (activeTab === "documents") {
         return (
-            <ProcessRegulationsTab
-                key={`${value.id}:regulations`}
-                processId={value.id}
-                nodeType={value.nodeType}
-                readOnly
-                showActions={false}
-            />
-        );
-    }
-
-    if (activeTab === "controls") {
-        return (
-            <ProcessControlsTab
-                key={`${value.id}:controls`}
-                subProcessId={value.id}
-                subProcessTitle={value.title}
-                readOnly
-                showActions={false}
-            />
-        );
-    }
-
-    if (activeTab === "objectives") {
-        return (
-            <ProcessObjectivesTab
-                key={`${value.id}:objectives`}
-                processId={value.id}
-                readOnly
-                showActions={false}
-            />
-        );
-    }
-
-    if (activeTab === "accountGroups") {
-        return (
-            <ProcessAccountGroupsTab
-                key={`${value.id}:account-groups`}
-                processId={value.id}
-                readOnly
-                showActions={false}
-            />
-        );
-    }
-
-    if (activeTab === "risks") {
-        return (
-            <ProcessRisksTab
-                key={`${value.id}:risks`}
-                processId={value.id}
-                nodeType={value.nodeType}
+            <DocumentManager
+                title={t("process.tabs.documents", { defaultValue: "مستندات" })}
+                targetType={resolveDocumentTargetType(value.nodeType)}
+                targetId={value.id}
                 readOnly
                 showActions={false}
             />
@@ -353,27 +275,26 @@ function TabBody({
     }
 
     return (
-        <DocumentIntegrationDeferredMessage />
+        <DocumentIntegrationDeferredMessage
+            title={t(`process.tabs.${activeTab}`, { defaultValue: activeTab })}
+        />
     );
 }
 
 export default function ProcessSummaryPanel({
-                                                 value,
-                                                 controlsCount,
-                                                 error,
-                                                 onErrorClose,
-                                                 onClose,
-                                             }: ProcessSummaryPanelProps) {
+    value,
+    error,
+    onErrorClose,
+    onEdit,
+    onClose,
+}: ProcessSummaryPanelProps) {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<ProcessDetailTabKey>("general");
     const summaryTitle = value?.title ?? t("process.object.summaryTitle", {
         defaultValue: "جزئیات فرآیند",
     });
 
-    const tabs = useMemo(
-        () => (value ? getTabs(value.nodeType, t) : []),
-        [t, value],
-    );
+    const tabs = useMemo(() => getTabs(t), [t]);
 
     const effectiveActiveTab = tabs.some((tab) => tab.key === activeTab)
         ? activeTab
@@ -389,13 +310,7 @@ export default function ProcessSummaryPanel({
                 minWidth: 0,
             }}
         >
-            <Bar
-                startContent={
-                    <Title level="H4">
-                        {summaryTitle}
-                    </Title>
-                }
-            />
+            <Bar startContent={<Title level="H4">{summaryTitle}</Title>} />
 
             <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
                 {error ? (
@@ -413,11 +328,7 @@ export default function ProcessSummaryPanel({
                         />
 
                         <div style={{ ...TAB_BODY_STYLE, minWidth: 0, overflowX: "auto" }}>
-                            <TabBody
-                                value={value}
-                                activeTab={effectiveActiveTab}
-                                controlsCount={controlsCount}
-                            />
+                            <TabBody value={value} activeTab={effectiveActiveTab} />
                         </div>
                     </div>
                 ) : (
@@ -431,15 +342,23 @@ export default function ProcessSummaryPanel({
 
             <Bar
                 endContent={
-                    <Button
-                        design="Transparent"
-                        style={ACTION_BUTTON_STYLE}
-                        onClick={onClose}
-                    >
-                        {t("common.close", {
-                            defaultValue: "بستن",
-                        })}
-                    </Button>
+                    <>
+                        <Button
+                            design="Emphasized"
+                            disabled={!value}
+                            style={ACTION_BUTTON_STYLE}
+                            onClick={() => value && onEdit?.(value.id)}
+                        >
+                            {t("common.edit", { defaultValue: "ویرایش" })}
+                        </Button>
+                        <Button
+                            design="Transparent"
+                            style={ACTION_BUTTON_STYLE}
+                            onClick={onClose}
+                        >
+                            {t("common.close", { defaultValue: "بستن" })}
+                        </Button>
+                    </>
                 }
             />
         </div>

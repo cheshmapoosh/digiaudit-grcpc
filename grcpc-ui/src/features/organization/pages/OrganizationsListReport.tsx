@@ -105,7 +105,7 @@ export default function OrganizationsListReport({
                 value={searchText}
                 disabled={busy}
                 placeholder={t("organization.list.search", {
-                    defaultValue: "جستجو بر اساس نام، کد یا توضیحات",
+                    defaultValue: "جستجو بر اساس کد",
                 })}
                 onInput={(event) => onSearchTextChange(event.target.value)}
             />

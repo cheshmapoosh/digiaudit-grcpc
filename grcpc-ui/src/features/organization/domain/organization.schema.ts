@@ -1,107 +1,60 @@
 import { z } from "zod";
 import { t } from "@/shared/utils/i18n.util";
 
-export const organizationStatusSchema = z.enum(["active", "inactive"]);
+export const organizationStatusSchema = z.enum(["ACTIVE", "INACTIVE", "DELETED"]);
 
-export const organizationTypeSchema = z.enum([
-    "holding",
-    "company",
-    "deputy",
-    "office",
-    "unit",
-    "committee",
-    "group",
-    "department",
-    "management",
-    "branch",
-    "other",
-]);
+const dateSchema = z.string().trim().nullable().optional();
 
-const baseOrganizationPayloadSchema = z.object({
+function byteLength(value: string): number {
+    return new TextEncoder().encode(value).length;
+}
+
+function hasValidDateRange(value: { validFrom?: string | null; validTo?: string | null }) {
+    const validFrom = value.validFrom?.trim();
+    const validTo = value.validTo?.trim();
+
+    return !validFrom || !validTo || validFrom <= validTo;
+}
+
+const baseValiditySchema = z
+    .object({
+        validFrom: dateSchema,
+        validTo: dateSchema,
+    })
+    .refine(hasValidDateRange, {
+        message: t(
+            "organization.validation.invalidValidityRange",
+            "بازه اعتبار معتبر نیست",
+        ),
+    });
+
+export const organizationCreateSchema = baseValiditySchema.extend({
     code: z
         .string()
         .trim()
         .min(1, t("organization.validation.codeRequired", "کد الزامی است"))
-        .max(
-            50,
-            t(
-                "organization.validation.codeMaxLength",
-                "کد نمی‌تواند بیشتر از 50 کاراکتر باشد",
+        .refine((value) => byteLength(value) <= 64, {
+            message: t(
+                "organization.validation.codeMaxBytes",
+                "کد نمی‌تواند بیشتر از 64 بایت باشد",
             ),
-        ),
-
-    name: z
-        .string()
-        .trim()
-        .min(1, t("organization.validation.nameRequired", "نام الزامی است"))
-        .max(
-            255,
-            t(
-                "organization.validation.nameMaxLength",
-                "نام نمی‌تواند بیشتر از 255 کاراکتر باشد",
-            ),
-        ),
-
-    type: organizationTypeSchema,
-
-    parentId: z.string().trim().min(1).nullable(),
-
-    status: organizationStatusSchema,
-
-    validFrom: z.string().trim().optional(),
-
-    validTo: z.string().trim().optional(),
-
-    location: z
-        .string()
-        .trim()
-        .max(
-            255,
-            t(
-                "organization.validation.locationMaxLength",
-                "موقعیت نمی‌تواند بیشتر از 255 کاراکتر باشد",
-            ),
-        )
-        .optional(),
-
-    description: z
-        .string()
-        .trim()
-        .max(
-            2000,
-            t(
-                "organization.validation.descriptionMaxLength",
-                "توضیحات نمی‌تواند بیشتر از 2000 کاراکتر باشد",
-            ),
-        )
-        .optional(),
+        }),
+    parentOrganizationId: z.string().trim().min(1).nullable().optional(),
 });
 
-const forbiddenReadonlyFields = {
-    id: z.never().optional(),
-    createdAt: z.never().optional(),
-    updatedAt: z.never().optional(),
-    createdBy: z.never().optional(),
-    updatedBy: z.never().optional(),
-    deletedAt: z.never().optional(),
-    deletedBy: z.never().optional(),
-};
-
-export const organizationCreateSchema = baseOrganizationPayloadSchema.extend({
-    ...forbiddenReadonlyFields,
+export const organizationUpdateSchema = baseValiditySchema.extend({
+    version: z.number().int().min(0),
 });
 
-export const organizationUpdateSchema = baseOrganizationPayloadSchema
-    .partial()
-    .extend({
-        ...forbiddenReadonlyFields,
-    })
-    .refine((value) => Object.keys(value).length > 0, {
-        message: t(
-            "organization.validation.updateAtLeastOneField",
-            "حداقل یک فیلد برای بروزرسانی لازم است",
-        ),
-    });
+export const organizationMoveSchema = z.object({
+    parentOrganizationId: z.string().trim().min(1).nullable().optional(),
+    version: z.number().int().min(0),
+});
+
+export const organizationLifecycleSchema = z.object({
+    version: z.number().int().min(0),
+});
 
 export type OrganizationCreateInput = z.infer<typeof organizationCreateSchema>;
 export type OrganizationUpdateInput = z.infer<typeof organizationUpdateSchema>;
+export type OrganizationMoveInput = z.infer<typeof organizationMoveSchema>;

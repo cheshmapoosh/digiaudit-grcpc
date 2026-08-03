@@ -1,12 +1,15 @@
 import { httpClient } from "@/shared/infra/http.client";
 import type {
+    MasterDataRevisionMutationResponse,
+    OrganizationLifecycleCommand,
+    OrganizationMoveCommand,
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
 } from "@/features/organization";
 import type { OrganizationRepo } from "./organization.repo";
 
-const BASE_URL = "/api/organizations";
+const BASE_URL = "/api/master-data/organizations";
 
 export class OrganizationApiRepo implements OrganizationRepo {
     async list(): Promise<OrganizationNode[]> {
@@ -21,33 +24,69 @@ export class OrganizationApiRepo implements OrganizationRepo {
         }
     }
 
-    async create(payload: OrganizationNodeCreate): Promise<OrganizationNode> {
-        return httpClient.post<OrganizationNode>(BASE_URL, payload);
+    async create(
+        payload: OrganizationNodeCreate,
+    ): Promise<MasterDataRevisionMutationResponse> {
+        return httpClient.post<MasterDataRevisionMutationResponse>(BASE_URL, payload);
     }
 
     async update(
         id: string,
         payload: OrganizationNodeUpdate,
-    ): Promise<OrganizationNode> {
-        return httpClient.put<OrganizationNode>(`${BASE_URL}/${id}`, payload);
+    ): Promise<MasterDataRevisionMutationResponse> {
+        return httpClient.patch<MasterDataRevisionMutationResponse>(
+            `${BASE_URL}/${id}`,
+            payload,
+        );
     }
 
-    async remove(id: string): Promise<void> {
-        await httpClient.delete<void>(`${BASE_URL}/${id}`);
+    async move(
+        id: string,
+        payload: OrganizationMoveCommand,
+    ): Promise<MasterDataRevisionMutationResponse> {
+        return httpClient.post<MasterDataRevisionMutationResponse>(
+            `${BASE_URL}/${id}/move`,
+            payload,
+        );
     }
 
-    async getChildren(parentId: string | null): Promise<OrganizationNode[]> {
-        const url = parentId
-            ? `${BASE_URL}/children/${parentId}`
-            : `${BASE_URL}/roots`;
-
-        return httpClient.get<OrganizationNode[]>(url);
+    async activate(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse> {
+        return httpClient.post<MasterDataRevisionMutationResponse>(
+            `${BASE_URL}/${id}/activate`,
+            payload,
+        );
     }
 
-    async toggleStatus(id: string): Promise<OrganizationNode> {
-        return httpClient.patch<OrganizationNode>(
-            `${BASE_URL}/${id}/toggle-status`,
-            {},
+    async inactivate(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse> {
+        return httpClient.post<MasterDataRevisionMutationResponse>(
+            `${BASE_URL}/${id}/inactivate`,
+            payload,
+        );
+    }
+
+    async delete(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse> {
+        return httpClient.post<MasterDataRevisionMutationResponse>(
+            `${BASE_URL}/${id}/delete`,
+            payload,
+        );
+    }
+
+    async restore(
+        id: string,
+        payload: OrganizationLifecycleCommand,
+    ): Promise<MasterDataRevisionMutationResponse> {
+        return httpClient.post<MasterDataRevisionMutationResponse>(
+            `${BASE_URL}/${id}/restore`,
+            payload,
         );
     }
 }

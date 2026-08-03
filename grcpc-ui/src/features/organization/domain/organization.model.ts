@@ -1,35 +1,29 @@
 import type { AuditFields } from "@/shared/domain/audit.model";
 
-export type OrganizationStatus = "active" | "inactive";
+export type OrganizationStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 
-export type OrganizationType =
-    | "holding"
-    | "company"
-    | "deputy"
-    | "office"
-    | "unit"
-    | "committee"
-    | "group"
-    | "department"
-    | "management"
-    | "branch"
-    | "other";
+export interface MasterDataRevisionMutationResponse {
+    entityId: string;
+    revisionId: string;
+    version: number;
+}
 
 export interface OrganizationNode extends AuditFields {
     id: string;
     code: string;
-    name: string;
-    type: OrganizationType;
-    parentId: string | null;
+    parentOrganizationId: string | null;
+    displayLabel: string;
     status: OrganizationStatus;
-    validFrom?: string;
-    validTo?: string;
-    location?: string;
-    description?: string;
+    validFrom?: string | null;
+    validTo?: string | null;
+    version: number;
 }
 
 export type OrganizationReadonlyKeys =
     | "id"
+    | "displayLabel"
+    | "status"
+    | "version"
     | "createdAt"
     | "updatedAt"
     | "createdBy"
@@ -37,11 +31,24 @@ export type OrganizationReadonlyKeys =
     | "deletedAt"
     | "deletedBy";
 
-export type OrganizationNodeCreate = Omit<
-    OrganizationNode,
-    OrganizationReadonlyKeys
->;
+export interface OrganizationNodeCreate {
+    code: string;
+    parentOrganizationId?: string | null;
+    validFrom?: string | null;
+    validTo?: string | null;
+}
 
-export type OrganizationNodeUpdate = Partial<
-    Omit<OrganizationNode, OrganizationReadonlyKeys>
->;
+export interface OrganizationNodeUpdate {
+    version: number;
+    validFrom?: string | null;
+    validTo?: string | null;
+}
+
+export interface OrganizationMoveCommand {
+    parentOrganizationId?: string | null;
+    version: number;
+}
+
+export interface OrganizationLifecycleCommand {
+    version: number;
+}

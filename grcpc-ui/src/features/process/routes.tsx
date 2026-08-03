@@ -5,14 +5,6 @@ export const processRoutes = (
     <>
         <Route path="/processes" element={<ProcessesFclShellPage />} />
         <Route path="/processes/new" element={<ProcessesFclShellPage />} />
-        <Route
-            path="/processes/control-assignments/:controlAssignmentId"
-            element={<ProcessesFclShellPage />}
-        />
-        <Route
-            path="/processes/control-assignments/:controlAssignmentId/edit"
-            element={<ProcessesFclShellPage />}
-        />
         <Route path="/processes/:processId" element={<ProcessesFclShellPage />} />
         <Route path="/processes/:processId/edit" element={<ProcessesFclShellPage />} />
     </>

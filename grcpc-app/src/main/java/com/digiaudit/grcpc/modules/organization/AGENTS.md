@@ -3,17 +3,17 @@
 ## Scope
 Applies to the backend `organization` module.
 
-## Feature purpose
-Organization stores the organization tree and its assignments/relationships to processes, risks, regulations, policies, and other references.
+## Master Data V2 structural rules
+- `organization`, `central_process`, and `central_subprocess` are separate persistence structures.
+- Combined Process/Subprocess representation is read-only presentation only.
+- Legacy `process_node` must not return.
+- Structural mutations use Backend-owned Business Revision.
+- Document commands remain outside Revision under the Prompt 4.2 correction.
+- Document temporary upload keeps the simplified Prompt 4.2 contract.
+- No automated tests are part of this task.
 
-## Rules
-- Preserve tree behavior using `parentId`; prevent cycles and invalid parent references.
-- Keep organization code uniqueness and status semantics consistent with existing service logic.
-- Keep API base path `/api/organizations` and assignment endpoints aligned with the UI repositories.
-- Keep assignment APIs explicit: process assignments, risk assignments, controls, and reference assignments should remain understandable and separately testable.
-- Be careful with cross-module references. Use UUID references consistently unless a deliberate FK migration is requested.
-- Delete operations must protect child organizations and dependent assignments/references.
-
-## Verification
-- Run `./mvnw -Dskip.ui=true test` from `grcpc-app`.
-- If DTOs or assignment contracts change, update `grcpc-ui/src/features/organization`.
+## Organization rules
+- Organization maps only the approved V2 `organization` table fields.
+- Use `code` as the derived structural display label; do not add Legacy `name`, `type`, `location`, or description fields.
+- Keep explicit create, update, move, activate, inactivate, delete, and restore commands under `/api/master-data/organizations`.
+- Delete operations must protect child organizations and approved V2 dependents without cascading.
