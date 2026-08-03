@@ -644,22 +644,17 @@ export default function DocumentManager({
                     }),
                 });
             } catch (error) {
-                if (targetId && isAlreadyFinalizedNotFound(error)) {
+                if (isAlreadyFinalizedNotFound(error)) {
                     removeUploadItem(item.id);
+
                     setActionMessage({
                         design: "Information",
-                        text: t("document.upload.alreadyFinalized", {
-                            defaultValue: "Temporary upload is no longer staged. The document list was refreshed.",
+                        text: t("document.upload.finalizationStatusUnknown", {
+                            defaultValue:
+                                "The final save status cannot be determined. Reload the page to check the result.",
                         }),
                     });
-                    void loadForTarget(targetType, targetId).catch(() => {
-                        setActionMessage({
-                            design: "Information",
-                            text: t("document.upload.refreshWarning", {
-                                defaultValue: "Document mutation status is unchanged, but refreshing the list failed. Reload later.",
-                            }),
-                        });
-                    });
+
                     return;
                 }
                 const message =
