@@ -14,6 +14,7 @@ import OrganizationTree from "../components/OrganizationTree";
 
 export interface OrganizationsListReportProps {
     items: OrganizationNode[];
+    selectedItem?: OrganizationNode | null;
     selectedId?: string | null;
     expansionAnchorId?: string | null;
     searchText: string;
@@ -24,11 +25,15 @@ export interface OrganizationsListReportProps {
     onCreate: () => void;
     onShow: (id: string) => void;
     onDelete: (id: string) => void;
+    onActivate: (node: OrganizationNode) => void;
+    onInactivate: (node: OrganizationNode) => void;
+    onShowDeleted: () => void;
     onSelect: (id: string) => void;
 }
 
 export default function OrganizationsListReport({
-                                                    items,
+    items,
+    selectedItem,
                                                     selectedId,
                                                     expansionAnchorId,
                                                     searchText,
@@ -38,7 +43,10 @@ export default function OrganizationsListReport({
                                                     onSearchTextChange,
                                                     onCreate,
                                                     onShow,
-                                                    onDelete,
+    onDelete,
+    onActivate,
+    onInactivate,
+    onShowDeleted,
                                                     onSelect,
                                                 }: OrganizationsListReportProps) {
     const { t } = useTranslation();
@@ -75,6 +83,35 @@ export default function OrganizationsListReport({
                             onClick={onCreate}
                         >
                             {t("common.create", { defaultValue: "ایجاد" })}
+                        </Button>
+
+                        {selectedItem?.status === "ACTIVE" ? (
+                            <Button
+                                disabled={busy}
+                                style={actionButtonStyle}
+                                onClick={() => onInactivate(selectedItem)}
+                            >
+                                {t("organization.lifecycle.inactivate", { defaultValue: "Inactivate" })}
+                            </Button>
+                        ) : null}
+
+                        {selectedItem?.status === "INACTIVE" ? (
+                            <Button
+                                disabled={busy}
+                                style={actionButtonStyle}
+                                onClick={() => onActivate(selectedItem)}
+                            >
+                                {t("organization.lifecycle.activate", { defaultValue: "Activate" })}
+                            </Button>
+                        ) : null}
+
+                        <Button
+                            design="Transparent"
+                            disabled={busy}
+                            style={actionButtonStyle}
+                            onClick={onShowDeleted}
+                        >
+                            {t("organization.deleted.action", { defaultValue: "Deleted items" })}
                         </Button>
 
                         <Button

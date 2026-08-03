@@ -23,6 +23,7 @@ import type {
 import { ROOT_PARENT, useProcessState } from "../state/process.state";
 import { hasChildren, sortProcesses } from "../utils/process.tree";
 import ProcessSummaryPanel from "../components/ProcessSummaryPanel";
+import DeletedProcessesDialog from "../components/DeletedProcessesDialog";
 import ProcessesListReport from "./ProcessesListReport";
 import ProcessObjectPage, { type ProcessTabKey } from "./ProcessObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
@@ -94,6 +95,14 @@ function mapError(
             return t("process.errors.hasChildren", {
                 defaultValue: "امکان حذف آیتمی که زیرمجموعه دارد وجود ندارد",
             });
+        case "DEPENDENT_MASTER_DATA_EXISTS":
+            return t("process.errors.hasDependencies", {
+                defaultValue: "Dependent master data prevents this action.",
+            });
+        case "INVALID_LIFECYCLE_TRANSITION":
+            return t("process.errors.invalidLifecycleTransition", {
+                defaultValue: "This lifecycle action is not valid for the current status.",
+            });
         case "VERSION_CONFLICT":
             return t("process.errors.versionConflict", {
                 defaultValue: "رکورد توسط کاربر دیگری تغییر کرده است. صفحه را دوباره بارگذاری کنید.",
@@ -107,7 +116,7 @@ function mapError(
                 defaultValue: "بازه اعتبار معتبر نیست",
             });
         default:
-            return error instanceof Error && error.message ? error.message : fallback;
+            return fallback;
     }
 }
 
@@ -220,6 +229,12 @@ export default function ProcessesFclShellPage() {
     const updateNode = useProcessState((state) => state.updateNode);
     const moveNode = useProcessState((state) => state.moveNode);
     const removeNode = useProcessState((state) => state.removeNode);
+    const activateNode = useProcessState((state) => state.activateNode);
+    const inactivateNode = useProcessState((state) => state.inactivateNode);
+    const restoreNode = useProcessState((state) => state.restoreNode);
+    const loadDeleted = useProcessState((state) => state.loadDeleted);
+    const deletedNodesById = useProcessState((state) => state.deletedNodesById);
+    const deletedLoading = useProcessState((state) => state.deletedLoading);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -229,6 +244,8 @@ export default function ProcessesFclShellPage() {
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
     const [objectActiveTab, setObjectActiveTab] = useState<ProcessTabKey>("general");
+    const [deletedDialogOpen, setDeletedDialogOpen] = useState(false);
+    const [savedCreateNode, setSavedCreateNode] = useState<ProcessNode | null>(null);
 
     const processItems = useMemo(() => sortProcesses(Object.values(nodesById)), [nodesById]);
     const selectedRouteItem = processId ? nodesById[processId] ?? null : null;
@@ -259,6 +276,7 @@ export default function ProcessesFclShellPage() {
 
     useEffect(() => {
         setObjectActiveTab("general");
+        setSavedCreateNode(null);
     }, [objectTabScopeKey]);
 
     const treeSelectedId = useMemo(() => {
@@ -357,6 +375,11 @@ export default function ProcessesFclShellPage() {
     const handleCancel = useCallback(() => {
         setObjectError(null);
 
+        if (savedCreateNode) {
+            navigate(`/processes/${savedCreateNode.id}`);
+            return;
+        }
+
         const currentAnchorId =
             routeMode === "create" ? queryParentId ?? selectedTreeId : processId ?? selectedTreeId;
 
@@ -366,7 +389,7 @@ export default function ProcessesFclShellPage() {
         }
 
         navigate("/processes");
-    }, [navigate, processId, queryParentId, routeMode, selectedTreeId]);
+    }, [navigate, processId, queryParentId, routeMode, savedCreateNode, selectedTreeId]);
 
     const requestDelete = useCallback(
         (id: string) => {
@@ -440,20 +463,29 @@ export default function ProcessesFclShellPage() {
                 setPageError(null);
                 setObjectError(null);
 
-                if (routeMode === "create") {
+                if (routeMode === "create" && !savedCreateNode) {
                     const created = await createNode(payload as ProcessNodeCreate);
-
+                    const confirmed = useProcessState.getState().nodesById[created.entityId];
+                    if (confirmed) {
+                        setSavedCreateNode(confirmed);
+                    }
                     setSelectedTreeId(created.entityId);
                     setTreeExpansionAnchorId(created.entityId);
-                    navigate(`/processes/${created.entityId}`);
                     return;
                 }
 
-                if (routeMode === "edit" && selectedRouteItem) {
-                    await updateNode(selectedRouteItem, payload as ProcessNodeUpdate);
-                    setSelectedTreeId(selectedRouteItem.id);
-                    setTreeExpansionAnchorId(selectedRouteItem.id);
-                    navigate(`/processes/${selectedRouteItem.id}`);
+                const target = selectedRouteItem ?? savedCreateNode;
+                if ((routeMode === "edit" || savedCreateNode) && target) {
+                    await updateNode(target, payload as ProcessNodeUpdate);
+                    const confirmed = useProcessState.getState().nodesById[target.id];
+                    if (savedCreateNode && confirmed) {
+                        setSavedCreateNode(confirmed);
+                    }
+                    setSelectedTreeId(target.id);
+                    setTreeExpansionAnchorId(target.id);
+                    if (!savedCreateNode) {
+                        navigate(`/processes/${target.id}`);
+                    }
                 }
             } catch (error) {
                 setObjectError(
@@ -469,12 +501,13 @@ export default function ProcessesFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [createNode, navigate, routeMode, selectedRouteItem, t, updateNode],
+        [createNode, navigate, routeMode, savedCreateNode, selectedRouteItem, t, updateNode],
     );
 
     const handleMove = useCallback(
         async (payload: ProcessMoveCommand) => {
-            if (!selectedRouteItem) {
+            const target = selectedRouteItem ?? savedCreateNode;
+            if (!target) {
                 return;
             }
 
@@ -483,11 +516,17 @@ export default function ProcessesFclShellPage() {
                 setPageError(null);
                 setObjectError(null);
 
-                await moveNode(selectedRouteItem, payload);
+                await moveNode(target, payload);
+                const confirmed = useProcessState.getState().nodesById[target.id];
+                if (savedCreateNode && confirmed) {
+                    setSavedCreateNode(confirmed);
+                }
 
-                setSelectedTreeId(selectedRouteItem.id);
-                setTreeExpansionAnchorId(payload.parentId ?? selectedRouteItem.id);
-                navigate(`/processes/${selectedRouteItem.id}`);
+                setSelectedTreeId(target.id);
+                setTreeExpansionAnchorId(payload.parentId ?? target.id);
+                if (!savedCreateNode) {
+                    navigate(`/processes/${target.id}`);
+                }
             } catch (error) {
                 setObjectError(
                     mapError(
@@ -502,8 +541,56 @@ export default function ProcessesFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [moveNode, navigate, selectedRouteItem, t],
+        [moveNode, navigate, savedCreateNode, selectedRouteItem, t],
     );
+
+    const handleActivate = useCallback(async (node: ProcessNode) => {
+        try {
+            setSubmitting(true);
+            setPageError(null);
+            await activateNode(node, { version: node.version });
+        } catch (error) {
+            setPageError(mapError(error, t("process.errors.lifecycle"), t));
+        } finally {
+            setSubmitting(false);
+        }
+    }, [activateNode, t]);
+
+    const handleInactivate = useCallback(async (node: ProcessNode) => {
+        try {
+            setSubmitting(true);
+            setPageError(null);
+            await inactivateNode(node, { version: node.version });
+        } catch (error) {
+            setPageError(mapError(error, t("process.errors.lifecycle"), t));
+        } finally {
+            setSubmitting(false);
+        }
+    }, [inactivateNode, t]);
+
+    const handleShowDeleted = useCallback(async () => {
+        setDeletedDialogOpen(true);
+        try {
+            setPageError(null);
+            await loadDeleted();
+        } catch (error) {
+            setPageError(mapError(error, t("process.errors.loadDeleted"), t));
+        }
+    }, [loadDeleted, t]);
+
+    const handleRestore = useCallback(async (node: ProcessNode) => {
+        try {
+            setSubmitting(true);
+            setPageError(null);
+            await restoreNode(node, { version: node.version });
+            setSelectedTreeId(node.id);
+            setTreeExpansionAnchorId(node.parentId ?? node.id);
+        } catch (error) {
+            setPageError(mapError(error, t("process.errors.restore"), t));
+        } finally {
+            setSubmitting(false);
+        }
+    }, [restoreNode, t]);
 
     const showModal =
         routeMode === "create" || routeMode === "view" || routeMode === "edit";
@@ -520,7 +607,11 @@ export default function ProcessesFclShellPage() {
     );
 
     const objectMode =
-        routeMode === "create" ? "create" : routeMode === "edit" ? "edit" : "view";
+        routeMode === "create" && !savedCreateNode
+            ? "create"
+            : routeMode === "edit" || savedCreateNode
+              ? "edit"
+              : "view";
 
     const createInitialValue = useMemo<ProcessNode | null>(() => {
         if (routeMode !== "create") {
@@ -542,7 +633,9 @@ export default function ProcessesFclShellPage() {
         };
     }, [queryParentId, requestedNodeType, routeMode]);
 
-    const objectValue = routeMode === "create" ? createInitialValue : selectedRouteItem;
+    const objectValue = routeMode === "create"
+        ? savedCreateNode ?? createInitialValue
+        : selectedRouteItem;
     const fclLayout: FclLayout = selectedTreeItem
         ? "TwoColumnsStartExpanded"
         : "OneColumn";
@@ -622,6 +715,9 @@ export default function ProcessesFclShellPage() {
                 onCreate={handleCreate}
                 onShow={handleShow}
                 onDelete={requestDelete}
+                onActivate={(node) => { void handleActivate(node); }}
+                onInactivate={(node) => { void handleInactivate(node); }}
+                onShowDeleted={() => { void handleShowDeleted(); }}
                 onSelect={handleSelect}
             />
         </div>,
@@ -682,7 +778,7 @@ export default function ProcessesFclShellPage() {
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <ProcessObjectPage
-                            key={`${objectValue?.id ?? "new"}:${queryParentId ?? "root"}:${requestedNodeType}`}
+                            key={routeMode === "create" ? objectTabScopeKey : `process:${objectValue?.id ?? "none"}`}
                             mode={objectMode}
                             allItems={processItems}
                             value={objectValue}
@@ -722,6 +818,14 @@ export default function ProcessesFclShellPage() {
                 onConfirm={() => {
                     void handleConfirmDelete();
                 }}
+            />
+
+            <DeletedProcessesDialog
+                open={deletedDialogOpen}
+                items={sortProcesses(Object.values(deletedNodesById))}
+                busy={deletedLoading || submitting}
+                onClose={() => setDeletedDialogOpen(false)}
+                onRestore={(node) => { void handleRestore(node); }}
             />
         </>
     );

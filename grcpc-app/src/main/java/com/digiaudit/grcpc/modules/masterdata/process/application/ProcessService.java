@@ -96,8 +96,11 @@ public class ProcessService {
     }
 
     @Transactional(readOnly = true)
-    public List<CentralProcessResponse> listProcesses() {
-        return processRepository.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(DELETED)
+    public List<CentralProcessResponse> listProcesses(MasterDataLifecycleStatus lifecycleStatus) {
+        List<CentralProcessEntity> processes = lifecycleStatus == null
+                ? processRepository.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(DELETED)
+                : processRepository.findByStatusOrderBySortOrderAscTitleAscIdAsc(lifecycleStatus);
+        return processes
                 .stream()
                 .sorted(PROCESS_ORDER)
                 .map(this::toProcessResponse)
@@ -110,8 +113,11 @@ public class ProcessService {
     }
 
     @Transactional(readOnly = true)
-    public List<CentralSubprocessResponse> listSubprocesses() {
-        return subprocessRepository.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(DELETED)
+    public List<CentralSubprocessResponse> listSubprocesses(MasterDataLifecycleStatus lifecycleStatus) {
+        List<CentralSubprocessEntity> subprocesses = lifecycleStatus == null
+                ? subprocessRepository.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(DELETED)
+                : subprocessRepository.findByStatusOrderBySortOrderAscTitleAscIdAsc(lifecycleStatus);
+        return subprocesses
                 .stream()
                 .sorted(SUBPROCESS_ORDER)
                 .map(this::toSubprocessResponse)
@@ -303,6 +309,7 @@ public class ProcessService {
     ) {
         CentralProcessEntity entity = lockProcess(processId);
         assertVersion(entity, expectedVersion, "Process");
+        requireMutableProcess(entity);
         JsonNode before = processSnapshot(entity);
         entity.updateDetails(title, description, sortOrder, validFrom, validTo, actorProvider.currentActorId(), Instant.now(clock));
         CentralProcessEntity saved = processRepository.saveAndFlush(entity);
@@ -317,6 +324,7 @@ public class ProcessService {
     ) {
         CentralProcessEntity entity = lockProcess(processId);
         assertVersion(entity, expectedVersion, "Process");
+        requireMutableProcess(entity);
         JsonNode before = processSnapshot(entity);
         lockAndValidateProcessParent(processId, parentProcessId);
         entity.move(parentProcessId, actorProvider.currentActorId(), Instant.now(clock));
@@ -341,6 +349,7 @@ public class ProcessService {
     ) {
         CentralProcessEntity entity = lockProcess(processId);
         assertVersion(entity, expectedVersion, "Process");
+        validateProcessLifecycleTransition(entity, operationType);
         if (operationType == RevisionOperationType.DELETE) {
             validateProcessDeleteDependencies(processId);
         }
@@ -348,10 +357,6 @@ public class ProcessService {
             validateProcessRestoreParent(entity);
             validateValidity(entity.getValidFrom(), entity.getValidTo());
         }
-        if (operationType != RevisionOperationType.RESTORE && entity.getStatus() == DELETED) {
-            throw processNotFound(processId);
-        }
-
         JsonNode before = processSnapshot(entity);
         UUID actorId = actorProvider.currentActorId();
         Instant now = Instant.now(clock);
@@ -426,6 +431,7 @@ public class ProcessService {
     ) {
         CentralSubprocessEntity entity = lockSubprocess(subprocessId);
         assertVersion(entity, expectedVersion, "Subprocess");
+        requireMutableSubprocess(entity);
         JsonNode before = subprocessSnapshot(entity);
         entity.updateDetails(title, description, sortOrder, validFrom, validTo, actorProvider.currentActorId(), Instant.now(clock));
         CentralSubprocessEntity saved = subprocessRepository.saveAndFlush(entity);
@@ -440,6 +446,7 @@ public class ProcessService {
     ) {
         CentralSubprocessEntity entity = lockSubprocess(subprocessId);
         assertVersion(entity, expectedVersion, "Subprocess");
+        requireMutableSubprocess(entity);
         JsonNode before = subprocessSnapshot(entity);
         lockSubprocessOwner(processId);
         entity.move(processId, actorProvider.currentActorId(), Instant.now(clock));
@@ -464,6 +471,7 @@ public class ProcessService {
     ) {
         CentralSubprocessEntity entity = lockSubprocess(subprocessId);
         assertVersion(entity, expectedVersion, "Subprocess");
+        validateSubprocessLifecycleTransition(entity, operationType);
         if (operationType == RevisionOperationType.DELETE) {
             validateSubprocessDeleteDependencies(subprocessId);
         }
@@ -471,10 +479,6 @@ public class ProcessService {
             lockSubprocessOwner(entity.getProcessId());
             validateValidity(entity.getValidFrom(), entity.getValidTo());
         }
-        if (operationType != RevisionOperationType.RESTORE && entity.getStatus() == DELETED) {
-            throw subprocessNotFound(subprocessId);
-        }
-
         JsonNode before = subprocessSnapshot(entity);
         UUID actorId = actorProvider.currentActorId();
         Instant now = Instant.now(clock);
@@ -611,6 +615,52 @@ public class ProcessService {
     private CentralProcessEntity lockProcess(UUID processId) {
         return processRepository.lockById(processId)
                 .orElseThrow(() -> processNotFound(processId));
+    }
+
+    private void requireMutableProcess(CentralProcessEntity entity) {
+        if (entity.getStatus() == DELETED) {
+            throw processNotFound(entity.getId());
+        }
+    }
+
+    private void requireMutableSubprocess(CentralSubprocessEntity entity) {
+        if (entity.getStatus() == DELETED) {
+            throw subprocessNotFound(entity.getId());
+        }
+    }
+
+    private void validateProcessLifecycleTransition(CentralProcessEntity entity, RevisionOperationType operationType) {
+        validateLifecycleTransition(entity.getStatus(), operationType, () -> processNotFound(entity.getId()), "process");
+    }
+
+    private void validateSubprocessLifecycleTransition(CentralSubprocessEntity entity, RevisionOperationType operationType) {
+        validateLifecycleTransition(entity.getStatus(), operationType, () -> subprocessNotFound(entity.getId()), "subprocess");
+    }
+
+    private void validateLifecycleTransition(
+            MasterDataLifecycleStatus current,
+            RevisionOperationType operationType,
+            java.util.function.Supplier<NotFoundException> deletedNotFound,
+            String family
+    ) {
+        if (current == DELETED && operationType != RevisionOperationType.RESTORE) {
+            throw deletedNotFound.get();
+        }
+
+        boolean valid = switch (operationType) {
+            case ACTIVATE -> current == MasterDataLifecycleStatus.INACTIVE;
+            case INACTIVATE -> current == MasterDataLifecycleStatus.ACTIVE;
+            case DELETE -> current == MasterDataLifecycleStatus.ACTIVE || current == MasterDataLifecycleStatus.INACTIVE;
+            case RESTORE -> current == DELETED;
+            default -> false;
+        };
+        if (!valid) {
+            throw new UnprocessableEntityException(
+                    "INVALID_LIFECYCLE_TRANSITION",
+                    "error.masterdata.v2.invalidLifecycleTransition",
+                    "Invalid " + family + " lifecycle transition from " + current + " using " + operationType
+            );
+        }
     }
 
     private CentralSubprocessEntity lockSubprocess(UUID subprocessId) {

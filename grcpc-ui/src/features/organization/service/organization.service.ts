@@ -63,6 +63,7 @@ function normalizeLifecyclePayload(
 
 export interface OrganizationService {
     list(): Promise<OrganizationNode[]>;
+    listDeleted(): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
     create(payload: OrganizationNodeCreate): Promise<MasterDataRevisionMutationResponse>;
     update(
@@ -97,6 +98,11 @@ export function createOrganizationService(
     return {
         async list() {
             const items = await repo.list();
+            return sortOrganizations(items);
+        },
+
+        async listDeleted() {
+            const items = await repo.list("DELETED");
             return sortOrganizations(items);
         },
 

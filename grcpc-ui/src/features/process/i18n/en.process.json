@@ -63,6 +63,23 @@
     "view": {
       "title": "View Process Item"
     },
+    "move": {
+      "action": "Move",
+      "title": "Move Process Item",
+      "confirm": "Move"
+    },
+    "lifecycle": {
+      "activate": "Activate",
+      "inactivate": "Inactivate"
+    },
+    "deleted": {
+      "action": "Deleted Items",
+      "title": "Deleted Processes and Subprocesses",
+      "empty": "No deleted item was found."
+    },
+    "restore": {
+      "action": "Restore"
+    },
     "delete": {
       "title": "Delete Process Item",
       "confirm": "Are you sure you want to delete \"{{title}}\"?"
@@ -73,12 +90,17 @@
       "duplicateCode": "Process code already exists",
       "parentNotFound": "The selected parent was not found",
       "hasChildren": "You cannot delete an item that has children",
+      "hasDependencies": "Dependent master data prevents this action",
       "invalidHierarchy": "The selected process structure is not valid",
+      "invalidLifecycleTransition": "This lifecycle action is not valid for the current status",
       "versionConflict": "The record was changed by another user. Reload the page.",
       "delete": "Failed to delete process item",
       "save": "Failed to save process item",
       "move": "Failed to move process item",
-      "selectProcessParent": "Select a process before creating a subprocess."
+      "selectProcessParent": "Select a process before creating a subprocess.",
+      "lifecycle": "Failed to change process item status",
+      "loadDeleted": "Failed to load deleted process items",
+      "restore": "Failed to restore process item"
     },
     "validation": {
       "codeRequired": "Code is required",

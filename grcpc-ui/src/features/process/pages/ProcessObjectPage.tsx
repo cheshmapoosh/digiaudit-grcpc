@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
     Button,
     DatePicker,
+    Dialog,
     Input,
     Label,
     MessageStrip,
@@ -16,6 +17,7 @@ import {
 } from "@ui5/webcomponents-react";
 
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
+import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import {
     DocumentIntegrationDeferredMessage,
     DocumentManager,
@@ -33,6 +35,7 @@ import type {
     ProcessNodeType,
     ProcessNodeUpdate,
 } from "../domain/process.model";
+import { buildTree, collectDescendantIds } from "../utils/process.tree";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
 
@@ -373,14 +376,23 @@ export default function ProcessObjectPage({
     );
     const [validationError, setValidationError] = useState<string | null>(null);
     const [internalActiveTab, setInternalActiveTab] = useState<ProcessTabKey>("general");
+    const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+    const [moveParentId, setMoveParentId] = useState<string | null>(value?.parentId ?? null);
 
     const readOnly = mode === "view";
     const activeTab = controlledActiveTab ?? internalActiveTab;
     const tabs = getTabs();
-    const processParents = useMemo(
-        () => allItems.filter((item) => item.nodeType === "PROCESS" && item.id !== value?.id),
-        [allItems, value?.id],
-    );
+    const processParents = useMemo(() => {
+        const excluded = new Set<string>([
+            ...(value?.id ? [value.id] : []),
+            ...(value?.nodeType === "PROCESS"
+                ? collectDescendantIds(buildTree(allItems), value.id)
+                : []),
+        ]);
+        return allItems.filter(
+            (item) => item.nodeType === "PROCESS" && !excluded.has(item.id),
+        );
+    }, [allItems, value]);
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? null
         : null;
@@ -478,20 +490,8 @@ export default function ProcessObjectPage({
             return;
         }
 
-        const version = value?.version ?? 0;
-        const nextParentId = form.parentId ?? null;
-        const currentParentId = value?.parentId ?? null;
-
-        if (nextParentId !== currentParentId) {
-            await onMove?.({
-                parentId: nextParentId,
-                version,
-            });
-            return;
-        }
-
         await onSubmit({
-            version,
+            version: value?.version ?? 0,
             title: form.title.trim(),
             sortOrder,
             description: normalizeOptionalText(form.description),
@@ -531,7 +531,7 @@ export default function ProcessObjectPage({
                 required={form.nodeType === "SUBPROCESS"}
             >
                 <Select
-                    disabled={readOnly || busy}
+                    disabled={readOnly || busy || mode !== "create"}
                     onChange={(event) => {
                         const nextValue = readSelectedDataValue(event, form.parentId ?? "");
                         handleChange("parentId", nextValue || null);
@@ -634,14 +634,26 @@ export default function ProcessObjectPage({
     const renderFooterActions = () => (
         <div style={FOOTER_STYLE}>
             {mode === "view" ? (
-                <Button
-                    design="Emphasized"
-                    disabled={busy || !onEdit}
-                    style={ACTION_BUTTON_STYLE}
-                    onClick={onEdit}
-                >
-                    {t("common.edit", { defaultValue: "ویرایش" })}
-                </Button>
+                <>
+                    <Button
+                        design="Emphasized"
+                        disabled={busy || !onEdit}
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={onEdit}
+                    >
+                        {t("common.edit", { defaultValue: "Edit" })}
+                    </Button>
+                    <Button
+                        disabled={busy || !onMove}
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={() => {
+                            setMoveParentId(value?.parentId ?? null);
+                            setMoveDialogOpen(true);
+                        }}
+                    >
+                        {t("process.move.action", { defaultValue: "Move" })}
+                    </Button>
+                </>
             ) : (
                 <Button
                     design="Emphasized"
@@ -734,6 +746,57 @@ export default function ProcessObjectPage({
             </div>
 
             {renderFooterActions()}
+
+            <Dialog
+                open={moveDialogOpen}
+                accessibleName={t("process.move.title", { defaultValue: "Move" })}
+                onClose={() => setMoveDialogOpen(false)}
+            >
+                <ModalDialogHeader
+                    title={t("process.move.title", { defaultValue: "Move" })}
+                    onClose={() => setMoveDialogOpen(false)}
+                />
+                <div style={{ display: "grid", gap: "1rem", minWidth: "28rem" }}>
+                    <Select
+                        disabled={busy}
+                        onChange={(event) => {
+                            const nextValue = readSelectedDataValue(event, moveParentId ?? "");
+                            setMoveParentId(nextValue || null);
+                        }}
+                    >
+                        {value?.nodeType === "PROCESS" ? (
+                            <Option data-value="" selected={!moveParentId}>
+                                {t("process.parent.none", { defaultValue: "No parent" })}
+                            </Option>
+                        ) : null}
+                        {processParents.map((item) => (
+                            <Option
+                                key={item.id}
+                                data-value={item.id}
+                                selected={item.id === moveParentId}
+                            >
+                                {item.code} - {item.title}
+                            </Option>
+                        ))}
+                    </Select>
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+                        <Button
+                            design="Emphasized"
+                            disabled={busy || !value || (value.nodeType === "SUBPROCESS" && !moveParentId)}
+                            onClick={() => {
+                                if (!value || !onMove) return;
+                                setMoveDialogOpen(false);
+                                void onMove({ parentId: moveParentId, version: value.version });
+                            }}
+                        >
+                            {t("process.move.confirm", { defaultValue: "Move" })}
+                        </Button>
+                        <Button design="Transparent" onClick={() => setMoveDialogOpen(false)}>
+                            {t("common.cancel", { defaultValue: "Cancel" })}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
         </div>
     );
 }

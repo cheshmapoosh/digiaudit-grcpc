@@ -40,21 +40,7 @@
     "tabs": {
       "general": "General Information",
       "organizationUnits": "Organization Unit",
-      "relatedOrganizations": "Related Organizations",
       "documents": "Documents"
-    },
-    "relatedOrganizations": {
-      "title": "Organizations Related to Objective",
-      "hint": "Selected organizations are saved together with the objective information.",
-      "selectPlaceholder": "Select organization",
-      "add": "Add",
-      "remove": "Remove",
-      "empty": "No organization has been selected for this objective.",
-      "columns": {
-        "organization": "Organization",
-        "status": "Status",
-        "actions": "Actions"
-      }
     },
     "documents": {
       "saveFirst": "Save the objective first, then upload documents.",

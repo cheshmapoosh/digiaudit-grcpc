@@ -32,11 +32,6 @@ import ObjectivesListReport from "./ObjectivesListReport";
 import ObjectiveObjectPage from "./ObjectiveObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
-import {
-    ROOT_PARENT as ORGANIZATION_ROOT_PARENT,
-    useOrganizationState,
-} from "@/features/organization";
-import { sortOrganizations } from "@/features/organization/utils/organization.tree";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -194,9 +189,6 @@ export default function ObjectivesFclShellPage() {
     const createNode = useObjectiveState((state) => state.createNode);
     const updateNode = useObjectiveState((state) => state.updateNode);
     const removeNode = useObjectiveState((state) => state.removeNode);
-    const organizationNodesById = useOrganizationState((state) => state.nodesById);
-    const organizationLoading = useOrganizationState((state) => state.loading);
-    const loadOrganizationChildren = useOrganizationState((state) => state.loadChildren);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -208,10 +200,6 @@ export default function ObjectivesFclShellPage() {
     const [manualExpandedIds, setManualExpandedIds] = useState<Set<string>>(() => new Set());
     const [manualCollapsedIds, setManualCollapsedIds] = useState<Set<string>>(() => new Set());
     const items = useMemo(() => sortObjectives(Object.values(nodesById)), [nodesById]);
-    const organizationItems = useMemo(
-        () => sortOrganizations(Object.values(organizationNodesById)),
-        [organizationNodesById],
-    );
 
     const selectedRouteItem = objectiveId ? nodesById[objectiveId] ?? null : null;
     const selectedTreeItem = selectedTreeId ? nodesById[selectedTreeId] ?? null : null;
@@ -244,18 +232,6 @@ export default function ObjectivesFclShellPage() {
             );
         });
     }, [loadChildren, t]);
-
-    useEffect(() => {
-        void loadOrganizationChildren(ORGANIZATION_ROOT_PARENT).catch((error: unknown) => {
-            setPageError(
-                mapError(
-                    error,
-                    t("objective.errors.loadOrganizations"),
-                    t,
-                ),
-            );
-        });
-    }, [loadOrganizationChildren, t]);
 
 
 
@@ -632,8 +608,6 @@ export default function ObjectivesFclShellPage() {
                             value={objectValue}
                             parent={selectedParentForCreate}
                             requestedNodeType={requestedNodeType}
-                            availableOrganizations={organizationItems}
-                            organizationsBusy={organizationLoading}
                             busy={loading || submitting}
                             error={objectError}
                             onErrorClose={() => setObjectError(null)}

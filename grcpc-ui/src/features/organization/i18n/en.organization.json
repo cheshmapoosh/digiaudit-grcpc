@@ -57,6 +57,21 @@
     "view": {
       "title": "View Organization"
     },
+    "move": {
+      "action": "Move"
+    },
+    "lifecycle": {
+      "activate": "Activate",
+      "inactivate": "Inactivate"
+    },
+    "deleted": {
+      "action": "Deleted Items",
+      "title": "Deleted Organizations",
+      "empty": "No deleted organization was found."
+    },
+    "restore": {
+      "action": "Restore"
+    },
     "delete": {
       "title": "Delete Organization",
       "confirm": "Are you sure you want to delete \"{{title}}\"?"
@@ -67,12 +82,17 @@
       "duplicateCode": "Organization code already exists",
       "parentNotFound": "The selected parent was not found",
       "hasChildren": "You cannot delete an organization that has children",
+      "hasDependencies": "Dependent master data prevents this action",
       "invalidHierarchy": "The organization hierarchy is not valid",
+      "invalidLifecycleTransition": "This lifecycle action is not valid for the current status",
       "versionConflict": "The record was changed by another user. Reload the page.",
       "create": "Failed to create organization",
       "update": "Failed to update organization",
       "move": "Failed to move organization",
-      "delete": "Failed to delete organization"
+      "delete": "Failed to delete organization",
+      "lifecycle": "Failed to change organization status",
+      "loadDeleted": "Failed to load deleted organizations",
+      "restore": "Failed to restore organization"
     },
     "validation": {
       "codeRequired": "Code is required",

@@ -15,6 +15,8 @@ import java.util.UUID;
 public interface OrganizationRepository extends JpaRepository<OrganizationEntity, UUID> {
     List<OrganizationEntity> findByStatusNotOrderByCodeAscIdAsc(MasterDataLifecycleStatus status);
 
+    List<OrganizationEntity> findByStatusOrderByCodeAscIdAsc(MasterDataLifecycleStatus status);
+
     Optional<OrganizationEntity> findByIdAndStatusNot(UUID id, MasterDataLifecycleStatus status);
 
     boolean existsByIdAndStatusNot(UUID id, MasterDataLifecycleStatus status);

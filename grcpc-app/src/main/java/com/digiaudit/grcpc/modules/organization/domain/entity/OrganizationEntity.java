@@ -117,27 +117,29 @@ public class OrganizationEntity {
     }
 
     public void activate(UUID actorId, Instant now) {
-        requireNotDeleted();
+        requireStatus(MasterDataLifecycleStatus.INACTIVE, "Only an inactive organization can be activated");
         this.status = MasterDataLifecycleStatus.ACTIVE;
         touch(actorId, now);
     }
 
     public void inactivate(UUID actorId, Instant now) {
-        requireNotDeleted();
+        requireStatus(MasterDataLifecycleStatus.ACTIVE, "Only an active organization can be inactivated");
         this.status = MasterDataLifecycleStatus.INACTIVE;
         touch(actorId, now);
     }
 
     public void delete(UUID actorId, Instant now) {
-        if (status != MasterDataLifecycleStatus.DELETED) {
-            this.status = MasterDataLifecycleStatus.DELETED;
-            this.deletedAt = Objects.requireNonNull(now, "now is required");
-            this.deletedBy = Objects.requireNonNull(actorId, "actorId is required");
+        if (status != MasterDataLifecycleStatus.ACTIVE && status != MasterDataLifecycleStatus.INACTIVE) {
+            throw new IllegalStateException("Only an active or inactive organization can be deleted");
         }
+        this.status = MasterDataLifecycleStatus.DELETED;
+        this.deletedAt = Objects.requireNonNull(now, "now is required");
+        this.deletedBy = Objects.requireNonNull(actorId, "actorId is required");
         touch(actorId, now);
     }
 
     public void restore(UUID actorId, Instant now) {
+        requireStatus(MasterDataLifecycleStatus.DELETED, "Only a deleted organization can be restored");
         this.status = MasterDataLifecycleStatus.ACTIVE;
         this.deletedAt = null;
         this.deletedBy = null;
@@ -152,6 +154,7 @@ public class OrganizationEntity {
     }
 
     public void reactivateFromCreate(UUID parentOrganizationId, LocalDate validFrom, LocalDate validTo, UUID actorId, Instant now) {
+        requireStatus(MasterDataLifecycleStatus.INACTIVE, "Only an inactive organization can be reactivated");
         this.parentOrganizationId = parentOrganizationId;
         this.validFrom = validFrom;
         this.validTo = validTo;
@@ -162,6 +165,12 @@ public class OrganizationEntity {
     public void requireNotDeleted() {
         if (status == MasterDataLifecycleStatus.DELETED) {
             throw new IllegalStateException("Deleted organization cannot be mutated");
+        }
+    }
+
+    private void requireStatus(MasterDataLifecycleStatus requiredStatus, String message) {
+        if (status != requiredStatus) {
+            throw new IllegalStateException(message);
         }
     }
 

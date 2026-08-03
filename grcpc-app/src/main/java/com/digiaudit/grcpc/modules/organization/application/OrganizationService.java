@@ -78,8 +78,11 @@ public class OrganizationService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrganizationResponse> findAll() {
-        return organizationRepository.findByStatusNotOrderByCodeAscIdAsc(DELETED)
+    public List<OrganizationResponse> findAll(MasterDataLifecycleStatus lifecycleStatus) {
+        List<OrganizationEntity> organizations = lifecycleStatus == null
+                ? organizationRepository.findByStatusNotOrderByCodeAscIdAsc(DELETED)
+                : organizationRepository.findByStatusOrderByCodeAscIdAsc(lifecycleStatus);
+        return organizations
                 .stream()
                 .sorted(ORGANIZATION_ORDER)
                 .map(this::toResponse)
@@ -199,6 +202,7 @@ public class OrganizationService {
     ) {
         OrganizationEntity entity = lockExisting(organizationId, "ORGANIZATION_NOT_FOUND");
         assertVersion(entity, expectedVersion);
+        requireMutable(entity);
         JsonNode before = snapshot(entity);
         entity.updateValidity(validFrom, validTo, actorProvider.currentActorId(), Instant.now(clock));
         OrganizationEntity saved = organizationRepository.saveAndFlush(entity);
@@ -213,6 +217,7 @@ public class OrganizationService {
     ) {
         OrganizationEntity entity = lockExisting(organizationId, "ORGANIZATION_NOT_FOUND");
         assertVersion(entity, expectedVersion);
+        requireMutable(entity);
         JsonNode before = snapshot(entity);
         lockAndValidateParent(organizationId, parentOrganizationId);
         entity.move(parentOrganizationId, actorProvider.currentActorId(), Instant.now(clock));
@@ -241,6 +246,7 @@ public class OrganizationService {
     ) {
         OrganizationEntity entity = lockExisting(organizationId, "ORGANIZATION_NOT_FOUND");
         assertVersion(entity, expectedVersion);
+        validateLifecycleTransition(entity, operationType);
         if (operationType == RevisionOperationType.DELETE) {
             validateDeleteDependencies(entity.getId());
         }
@@ -343,10 +349,35 @@ public class OrganizationService {
     private OrganizationEntity lockExisting(UUID organizationId, String errorCode) {
         OrganizationEntity entity = organizationRepository.lockById(organizationId)
                 .orElseThrow(() -> new NotFoundException(errorCode, "error.masterdata.v2.organizationNotFound", "Organization not found: " + organizationId, organizationId));
-        if (entity.getStatus() == DELETED && !"ORGANIZATION_NOT_FOUND".equals(errorCode)) {
-            throw new NotFoundException(errorCode, "error.masterdata.v2.organizationNotFound", "Organization not found: " + organizationId, organizationId);
-        }
         return entity;
+    }
+
+    private void requireMutable(OrganizationEntity entity) {
+        if (entity.getStatus() == DELETED) {
+            throw new NotFoundException("ORGANIZATION_NOT_FOUND", "error.masterdata.v2.organizationNotFound", "Organization not found: " + entity.getId(), entity.getId());
+        }
+    }
+
+    private void validateLifecycleTransition(OrganizationEntity entity, RevisionOperationType operationType) {
+        MasterDataLifecycleStatus current = entity.getStatus();
+        if (current == DELETED && operationType != RevisionOperationType.RESTORE) {
+            throw new NotFoundException("ORGANIZATION_NOT_FOUND", "error.masterdata.v2.organizationNotFound", "Organization not found: " + entity.getId(), entity.getId());
+        }
+
+        boolean valid = switch (operationType) {
+            case ACTIVATE -> current == MasterDataLifecycleStatus.INACTIVE;
+            case INACTIVATE -> current == MasterDataLifecycleStatus.ACTIVE;
+            case DELETE -> current == MasterDataLifecycleStatus.ACTIVE || current == MasterDataLifecycleStatus.INACTIVE;
+            case RESTORE -> current == DELETED;
+            default -> false;
+        };
+        if (!valid) {
+            throw new UnprocessableEntityException(
+                    "INVALID_LIFECYCLE_TRANSITION",
+                    "error.masterdata.v2.invalidLifecycleTransition",
+                    "Invalid organization lifecycle transition from " + current + " using " + operationType
+            );
+        }
     }
 
     private OrganizationEntity findActiveReadable(UUID id) {

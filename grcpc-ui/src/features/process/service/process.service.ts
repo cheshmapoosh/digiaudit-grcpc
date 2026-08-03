@@ -14,7 +14,7 @@ import type {
 } from "../domain/process.model";
 import type { ProcessRepo } from "../infra/process.repo";
 import { createProcessRepo } from "../infra/process.factory";
-import { canCreateChild, sortProcesses } from "../utils/process.tree";
+import { sortProcesses } from "../utils/process.tree";
 
 function normalizeCode(value: string): string {
     return value.trim().toLocaleUpperCase("en-US");
@@ -27,24 +27,6 @@ function normalizeOptionalText(value: string | null | undefined): string | null 
 
 function normalizeSortOrder(value: number | null | undefined): number {
     return value ?? 0;
-}
-
-function assertCreateHierarchy(items: ProcessNode[], payload: ProcessNodeCreate): void {
-    const parent = payload.parentId
-        ? items.find((item) => item.id === payload.parentId) ?? null
-        : null;
-
-    if (payload.parentId && !parent) {
-        throw new Error(
-            payload.nodeType === "PROCESS"
-                ? "PARENT_PROCESS_NOT_FOUND"
-                : "PROCESS_FOR_SUBPROCESS_NOT_FOUND",
-        );
-    }
-
-    if (!canCreateChild(parent?.nodeType ?? null, payload.nodeType)) {
-        throw new Error("HIERARCHY_CYCLE");
-    }
 }
 
 function normalizeCreatePayload(payload: ProcessNodeCreate): ProcessNodeCreate {
@@ -90,6 +72,7 @@ function normalizeLifecyclePayload(payload: ProcessLifecycleCommand): ProcessLif
 
 export interface ProcessService {
     list(): Promise<ProcessNode[]>;
+    listDeleted(): Promise<ProcessNode[]>;
     getById(id: string, node?: ProcessNode): Promise<ProcessNode | null>;
     create(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
     update(
@@ -125,15 +108,17 @@ export function createProcessService(repo: ProcessRepo): ProcessService {
             return sortProcesses(items);
         },
 
+        async listDeleted() {
+            const items = await repo.list("DELETED");
+            return sortProcesses(items);
+        },
+
         async getById(id, node) {
             return repo.getById(id, node?.nodeType);
         },
 
         async create(payload) {
             const normalized = normalizeCreatePayload(payload);
-            const items = await repo.list();
-            assertCreateHierarchy(items, normalized);
-
             return repo.create(normalized);
         },
 

@@ -15,6 +15,8 @@ import java.util.UUID;
 public interface CentralSubprocessRepository extends JpaRepository<CentralSubprocessEntity, UUID> {
     List<CentralSubprocessEntity> findByStatusNotOrderBySortOrderAscTitleAscIdAsc(MasterDataLifecycleStatus status);
 
+    List<CentralSubprocessEntity> findByStatusOrderBySortOrderAscTitleAscIdAsc(MasterDataLifecycleStatus status);
+
     Optional<CentralSubprocessEntity> findByIdAndStatusNot(UUID id, MasterDataLifecycleStatus status);
 
     boolean existsByProcessIdAndStatusNot(UUID processId, MasterDataLifecycleStatus status);

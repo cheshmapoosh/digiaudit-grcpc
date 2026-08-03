@@ -22,11 +22,10 @@ public class ObjectiveController {
     @GetMapping
     @PreAuthorize("hasAuthority('OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
     public List<ObjectiveNodeResponse> findAll(
-            @RequestParam(required = false) String nodeType,
-            @RequestParam(required = false) UUID organizationId
+            @RequestParam(required = false) String nodeType
     ) {
         log.debug("REST request to find all objectives");
-        return objectiveService.findAll(nodeType, organizationId);
+        return objectiveService.findAll(nodeType);
     }
 
     @GetMapping("/roots")

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -39,8 +40,10 @@ public class OrganizationController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('ORGANIZATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public List<OrganizationResponse> findAll() {
-        return organizationService.findAll();
+    public List<OrganizationResponse> findAll(
+            @RequestParam(required = false) com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus lifecycleStatus
+    ) {
+        return organizationService.findAll(lifecycleStatus);
     }
 
     @GetMapping("/tree")

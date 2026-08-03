@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,8 +39,10 @@ public class CentralSubprocessController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('CONTROL_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public List<CentralSubprocessResponse> findAll() {
-        return processService.listSubprocesses();
+    public List<CentralSubprocessResponse> findAll(
+            @RequestParam(required = false) com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus lifecycleStatus
+    ) {
+        return processService.listSubprocesses(lifecycleStatus);
     }
 
     @GetMapping("/{subprocessId}")

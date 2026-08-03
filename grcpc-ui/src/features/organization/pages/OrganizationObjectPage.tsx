@@ -328,6 +328,7 @@ export default function OrganizationObjectPage({
     const [form, setForm] = useState<OrganizationFormState>(() => toFormState(value));
     const [validationError, setValidationError] = useState<string | null>(null);
     const [parentDialogOpen, setParentDialogOpen] = useState(false);
+    const [parentDialogPurpose, setParentDialogPurpose] = useState<"create" | "move">("create");
     const [internalActiveTab, setInternalActiveTab] = useState<OrganizationTabKey>("general");
 
     const readOnly = mode === "view";
@@ -397,20 +398,8 @@ export default function OrganizationObjectPage({
             return;
         }
 
-        const version = value?.version ?? 0;
-        const nextParentId = form.parentOrganizationId ?? null;
-        const currentParentId = value?.parentOrganizationId ?? null;
-
-        if (nextParentId !== currentParentId) {
-            await onMove?.({
-                parentOrganizationId: nextParentId,
-                version,
-            });
-            return;
-        }
-
         await onSubmit({
-            version,
+            version: value?.version ?? 0,
             validFrom: normalizeOptionalText(form.validFrom),
             validTo: normalizeOptionalText(form.validTo),
         });
@@ -433,19 +422,26 @@ export default function OrganizationObjectPage({
             <FormField label={t("organization.fields.parent", { defaultValue: "والد" })}>
                 <div style={PARENT_PICKER_STYLE}>
                     <Input value={parentLabel} readonly />
-                    <Button
-                        disabled={readOnly || busy}
-                        onClick={() => setParentDialogOpen(true)}
-                    >
-                        {t("organization.parent.select", { defaultValue: "انتخاب" })}
-                    </Button>
-                    <Button
-                        disabled={readOnly || busy || !form.parentOrganizationId}
-                        design="Transparent"
-                        onClick={() => handleChange("parentOrganizationId", null)}
-                    >
-                        {t("organization.parent.clear", { defaultValue: "پاک کردن" })}
-                    </Button>
+                    {mode === "create" ? (
+                        <>
+                            <Button
+                                disabled={busy}
+                                onClick={() => {
+                                    setParentDialogPurpose("create");
+                                    setParentDialogOpen(true);
+                                }}
+                            >
+                                {t("organization.parent.select", { defaultValue: "Select" })}
+                            </Button>
+                            <Button
+                                disabled={busy || !form.parentOrganizationId}
+                                design="Transparent"
+                                onClick={() => handleChange("parentOrganizationId", null)}
+                            >
+                                {t("organization.parent.clear", { defaultValue: "Clear" })}
+                            </Button>
+                        </>
+                    ) : null}
                 </div>
             </FormField>
 
@@ -507,14 +503,26 @@ export default function OrganizationObjectPage({
     const renderFooterActions = () => (
         <div style={FOOTER_STYLE}>
             {mode === "view" ? (
-                <Button
-                    design="Emphasized"
-                    disabled={busy || !onEdit}
-                    style={ACTION_BUTTON_STYLE}
-                    onClick={onEdit}
-                >
-                    {t("common.edit", { defaultValue: "ویرایش" })}
-                </Button>
+                <>
+                    <Button
+                        design="Emphasized"
+                        disabled={busy || !onEdit}
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={onEdit}
+                    >
+                        {t("common.edit", { defaultValue: "Edit" })}
+                    </Button>
+                    <Button
+                        disabled={busy || !onMove}
+                        style={ACTION_BUTTON_STYLE}
+                        onClick={() => {
+                            setParentDialogPurpose("move");
+                            setParentDialogOpen(true);
+                        }}
+                    >
+                        {t("organization.move.action", { defaultValue: "Move" })}
+                    </Button>
+                </>
             ) : (
                 <Button
                     design="Emphasized"
@@ -602,11 +610,24 @@ export default function OrganizationObjectPage({
                 open={parentDialogOpen}
                 items={allItems}
                 currentId={value?.id || null}
-                selectedParentId={form.parentOrganizationId}
+                selectedParentId={
+                    parentDialogPurpose === "create"
+                        ? form.parentOrganizationId
+                        : value?.parentOrganizationId ?? null
+                }
                 onClose={() => setParentDialogOpen(false)}
                 onSelect={(parentId) => {
-                    handleChange("parentOrganizationId", parentId);
                     setParentDialogOpen(false);
+                    if (parentDialogPurpose === "create") {
+                        handleChange("parentOrganizationId", parentId);
+                        return;
+                    }
+                    if (value && onMove) {
+                        void onMove({
+                            parentOrganizationId: parentId,
+                            version: value.version,
+                        });
+                    }
                 }}
             />
         </div>

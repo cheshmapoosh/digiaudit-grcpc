@@ -9,6 +9,7 @@ import type {
     ProcessNodeCreate,
     ProcessNodeType,
     ProcessNodeUpdate,
+    ProcessStatus,
 } from "../domain/process.model";
 import type { ProcessRepo } from "./process.repo";
 
@@ -101,10 +102,13 @@ function endpointForNode(node: ProcessNode): string {
 }
 
 export class ProcessApiRepo implements ProcessRepo {
-    async list(): Promise<ProcessNode[]> {
+    async list(lifecycleStatus?: ProcessStatus): Promise<ProcessNode[]> {
+        const query = lifecycleStatus
+            ? `?lifecycleStatus=${encodeURIComponent(lifecycleStatus)}`
+            : "";
         const [processes, subprocesses] = await Promise.all([
-            httpClient.get<CentralProcessResponse[]>(PROCESS_URL),
-            httpClient.get<CentralSubprocessResponse[]>(SUBPROCESS_URL),
+            httpClient.get<CentralProcessResponse[]>(`${PROCESS_URL}${query}`),
+            httpClient.get<CentralSubprocessResponse[]>(`${SUBPROCESS_URL}${query}`),
         ]);
 
         return [...processes.map(mapProcess), ...subprocesses.map(mapSubprocess)];

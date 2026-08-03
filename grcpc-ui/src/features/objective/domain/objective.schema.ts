@@ -72,7 +72,6 @@ const baseObjectivePayloadSchema = z.object({
     effectiveFrom: optionalDateTextSchema,
     validUntil: optionalDateTextSchema,
     documentsCount: z.number().int().min(0).optional(),
-    organizationIds: z.array(z.string().trim().min(1)).optional(),
 });
 
 const forbiddenReadonlyFields = {

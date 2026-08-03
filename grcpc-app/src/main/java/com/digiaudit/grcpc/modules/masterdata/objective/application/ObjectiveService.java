@@ -12,19 +12,12 @@ import com.digiaudit.grcpc.modules.audit.domain.enums.AuditEventType;
 import com.digiaudit.grcpc.modules.audit.domain.enums.AuditTargetType;
 import com.digiaudit.grcpc.modules.masterdata.objective.api.dto.ObjectiveNodeRequest;
 import com.digiaudit.grcpc.modules.masterdata.objective.api.dto.ObjectiveNodeResponse;
-import com.digiaudit.grcpc.modules.masterdata.objective.api.dto.ObjectiveOrganizationResponse;
 import com.digiaudit.grcpc.modules.masterdata.objective.api.mapper.ObjectiveMapper;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.entity.ObjectiveNodeEntity;
-import com.digiaudit.grcpc.modules.masterdata.objective.domain.entity.ObjectiveOrganizationAssignmentEntity;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.repository.ObjectiveNodeRepository;
-import com.digiaudit.grcpc.modules.masterdata.objective.domain.repository.ObjectiveOrganizationAssignmentRepository;
-import com.digiaudit.grcpc.modules.organization.domain.entity.OrganizationEntity;
-import com.digiaudit.grcpc.modules.organization.domain.repository.OrganizationRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,8 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ObjectiveService {
     private final ObjectiveNodeRepository repository;
-    private final ObjectiveOrganizationAssignmentRepository organizationAssignmentRepository;
-    private final OrganizationRepository organizationRepository;
     private final ObjectiveMapper mapper;
     private final AuditService auditService;
     private final CurrentUserProvider currentUserProvider;
@@ -47,14 +38,6 @@ public class ObjectiveService {
     }
 
     public List<ObjectiveNodeResponse> findAll(String nodeType) {
-        return findAll(nodeType, null);
-    }
-
-    public List<ObjectiveNodeResponse> findAll(String nodeType, UUID organizationId) {
-        if (organizationId != null) {
-            return findByOrganization(organizationId, nodeType);
-        }
-
         String normalizedNodeType = normalizeNullable(nodeType);
         return normalizedNodeType == null ? findAll() : findByNodeType(normalizedNodeType);
     }
@@ -63,31 +46,6 @@ public class ObjectiveService {
         String normalizedNodeType = normalizeRequired(nodeType);
         validateNodeType(normalizedNodeType);
         return toResponses(repository.findByNodeTypeOrderBySortOrderAscTitleAsc(normalizedNodeType));
-    }
-
-    public List<ObjectiveNodeResponse> findByOrganization(UUID organizationId, String nodeType) {
-        ensureOrganization(organizationId);
-        String normalizedNodeType = normalizeNullable(nodeType);
-        if (normalizedNodeType != null) {
-            validateNodeType(normalizedNodeType);
-        }
-
-        List<UUID> objectiveIds = organizationAssignmentRepository
-                .findByOrganizationIdAndActiveTrueOrderByCreatedAtAsc(organizationId)
-                .stream()
-                .map(ObjectiveOrganizationAssignmentEntity::getObjectiveNodeId)
-                .toList();
-        if (objectiveIds.isEmpty()) {
-            return List.of();
-        }
-
-        List<ObjectiveNodeEntity> objectives = repository.findAllById(objectiveIds)
-                .stream()
-                .filter(entity -> normalizedNodeType == null || normalizedNodeType.equals(entity.getNodeType()))
-                .sorted(this::compareObjectives)
-                .toList();
-
-        return toResponses(objectives);
     }
 
     public List<ObjectiveNodeResponse> findRoots() {
@@ -105,23 +63,16 @@ public class ObjectiveService {
 
     @Transactional
     public ObjectiveNodeResponse create(ObjectiveNodeRequest request, HttpServletRequest httpRequest) {
-        List<UUID> organizationIds = normalizeOrganizationIds(request.organizationIds());
-        ensureOrganizations(organizationIds);
         validateNodeType(request.nodeType() == null ? "objective" : request.nodeType());
         validateCode(request.code(), null);
         validateParent(request.parentId());
         ObjectiveNodeEntity saved = repository.save(fill(ObjectiveNodeEntity.builder().build(), request));
-        syncOrganizationAssignments(saved.getId(), organizationIds);
         audit("OBJECTIVE_CREATED", saved.getId(), httpRequest, Map.of("code", saved.getCode()));
         return toResponse(saved);
     }
 
     @Transactional
     public ObjectiveNodeResponse update(UUID id, ObjectiveNodeRequest request, HttpServletRequest httpRequest) {
-        List<UUID> organizationIds = request.organizationIds() == null ? null : normalizeOrganizationIds(request.organizationIds());
-        if (organizationIds != null) {
-            ensureOrganizations(organizationIds);
-        }
         ObjectiveNodeEntity entity = get(id);
         String targetCode = request.code() == null ? entity.getCode() : request.code();
         String targetNodeType = request.nodeType() == null ? entity.getNodeType() : request.nodeType();
@@ -133,9 +84,6 @@ public class ObjectiveService {
         validateParent(request.parentId());
         ensureNoCycle(id, request.parentId());
         ObjectiveNodeEntity saved = repository.save(fillUpdate(entity, request));
-        if (organizationIds != null) {
-            syncOrganizationAssignments(saved.getId(), organizationIds);
-        }
         audit("OBJECTIVE_UPDATED", saved.getId(), httpRequest, Map.of("code", saved.getCode()));
         return toResponse(saved);
     }
@@ -155,7 +103,6 @@ public class ObjectiveService {
         if (repository.existsByParentId(id)) {
             throw new ConflictException("MASTER_DATA_HAS_CHILDREN", "error.masterdata.hasChildren", "Objective node has children: " + id);
         }
-        organizationAssignmentRepository.deleteByObjectiveNodeId(id);
         repository.delete(entity);
         audit("OBJECTIVE_DELETED", id, httpRequest, Map.of("code", entity.getCode()));
     }
@@ -233,103 +180,8 @@ public class ObjectiveService {
         return entity;
     }
 
-    private void syncOrganizationAssignments(UUID objectiveId, List<UUID> organizationIds) {
-        Set<UUID> requestedOrganizationIds = new LinkedHashSet<>(organizationIds);
-        List<ObjectiveOrganizationAssignmentEntity> existingAssignments =
-                organizationAssignmentRepository.findByObjectiveNodeIdOrderByCreatedAtAsc(objectiveId);
-        Map<UUID, ObjectiveOrganizationAssignmentEntity> assignmentsByOrganizationId =
-                existingAssignments.stream()
-                        .collect(Collectors.toMap(
-                                ObjectiveOrganizationAssignmentEntity::getOrganizationId,
-                                Function.identity(),
-                                (left, right) -> left,
-                                LinkedHashMap::new
-                        ));
-
-        List<ObjectiveOrganizationAssignmentEntity> toSave = new ArrayList<>();
-
-        for (ObjectiveOrganizationAssignmentEntity assignment : existingAssignments) {
-            boolean shouldBeActive = requestedOrganizationIds.contains(assignment.getOrganizationId());
-            if (assignment.isActive() != shouldBeActive) {
-                assignment.setActive(shouldBeActive);
-                toSave.add(assignment);
-            }
-        }
-
-        for (UUID organizationId : requestedOrganizationIds) {
-            if (!assignmentsByOrganizationId.containsKey(organizationId)) {
-                toSave.add(ObjectiveOrganizationAssignmentEntity.builder()
-                        .objectiveNodeId(objectiveId)
-                        .organizationId(organizationId)
-                        .active(true)
-                        .build());
-            }
-        }
-
-        if (!toSave.isEmpty()) {
-            organizationAssignmentRepository.saveAll(toSave);
-        }
-    }
-
-    private List<UUID> normalizeOrganizationIds(List<UUID> organizationIds) {
-        if (organizationIds == null || organizationIds.isEmpty()) {
-            return List.of();
-        }
-
-        Set<UUID> uniqueIds = new LinkedHashSet<>();
-        for (UUID organizationId : organizationIds) {
-            if (organizationId == null || !uniqueIds.add(organizationId)) {
-                throw new ConflictException(
-                        "MASTER_DATA_DUPLICATE_ASSIGNMENT",
-                        "error.masterdata.duplicateAssignment",
-                        "Duplicate or empty objective organization assignment: " + organizationId,
-                        organizationId
-                );
-            }
-        }
-
-        return List.copyOf(uniqueIds);
-    }
-
-    private void ensureOrganizations(List<UUID> organizationIds) {
-        if (organizationIds.isEmpty()) {
-            return;
-        }
-
-        Set<UUID> foundIds = organizationRepository.findAllById(organizationIds)
-                .stream()
-                .map(OrganizationEntity::getId)
-                .collect(Collectors.toSet());
-
-        UUID missingId = organizationIds.stream()
-                .filter(organizationId -> !foundIds.contains(organizationId))
-                .findFirst()
-                .orElse(null);
-
-        if (missingId != null) {
-            throw new NotFoundException(
-                    "MASTER_DATA_NOT_FOUND",
-                    "error.masterdata.notFound",
-                    "Organization not found: " + missingId,
-                    missingId
-            );
-        }
-    }
-
-    private void ensureOrganization(UUID id) {
-        if (!organizationRepository.existsById(id)) {
-            throw new NotFoundException(
-                    "MASTER_DATA_NOT_FOUND",
-                    "error.masterdata.notFound",
-                    "Organization not found: " + id,
-                    id
-            );
-        }
-    }
-
     private ObjectiveNodeResponse toResponse(ObjectiveNodeEntity entity) {
-        return mapper.toResponse(entity, loadOrganizationResponsesByObjectiveId(List.of(entity.getId()))
-                .getOrDefault(entity.getId(), List.of()));
+        return mapper.toResponse(entity);
     }
 
     private List<ObjectiveNodeResponse> toResponses(List<ObjectiveNodeEntity> entities) {
@@ -337,67 +189,9 @@ public class ObjectiveService {
             return List.of();
         }
 
-        Map<UUID, List<ObjectiveOrganizationResponse>> organizationsByObjectiveId =
-                loadOrganizationResponsesByObjectiveId(
-                        entities.stream().map(ObjectiveNodeEntity::getId).toList()
-                );
-
         return entities.stream()
-                .map(entity -> mapper.toResponse(
-                        entity,
-                        organizationsByObjectiveId.getOrDefault(entity.getId(), List.of())
-                ))
+                .map(mapper::toResponse)
                 .toList();
-    }
-
-    private Map<UUID, List<ObjectiveOrganizationResponse>> loadOrganizationResponsesByObjectiveId(
-            List<UUID> objectiveIds
-    ) {
-        if (objectiveIds.isEmpty()) {
-            return Map.of();
-        }
-
-        List<ObjectiveOrganizationAssignmentEntity> assignments = organizationAssignmentRepository
-                .findByObjectiveNodeIdInAndActiveTrueOrderByCreatedAtAsc(objectiveIds);
-        if (assignments.isEmpty()) {
-            return Map.of();
-        }
-
-        Map<UUID, OrganizationEntity> organizationsById = organizationRepository.findAllById(
-                        assignments.stream()
-                                .map(ObjectiveOrganizationAssignmentEntity::getOrganizationId)
-                                .distinct()
-                                .toList()
-                )
-                .stream()
-                .collect(Collectors.toMap(OrganizationEntity::getId, Function.identity()));
-        Map<UUID, List<ObjectiveOrganizationResponse>> responsesByObjectiveId = new LinkedHashMap<>();
-
-        for (ObjectiveOrganizationAssignmentEntity assignment : assignments) {
-            OrganizationEntity organization = organizationsById.get(assignment.getOrganizationId());
-            if (organization == null) {
-                continue;
-            }
-
-            responsesByObjectiveId
-                    .computeIfAbsent(assignment.getObjectiveNodeId(), ignored -> new ArrayList<>())
-                    .add(new ObjectiveOrganizationResponse(
-                            organization.getId(),
-                            organization.getCode(),
-                            organization.getCode(),
-                            organization.getStatus().wireValue()
-                    ));
-        }
-
-        return responsesByObjectiveId;
-    }
-
-    private int compareObjectives(ObjectiveNodeEntity left, ObjectiveNodeEntity right) {
-        Comparator<ObjectiveNodeEntity> comparator = Comparator
-                .comparing(ObjectiveNodeEntity::getSortOrder, Comparator.nullsLast(Integer::compareTo))
-                .thenComparing(ObjectiveNodeEntity::getTitle, Comparator.nullsLast(String::compareToIgnoreCase));
-
-        return comparator.compare(left, right);
     }
 
     private void validateParent(UUID parentId) {

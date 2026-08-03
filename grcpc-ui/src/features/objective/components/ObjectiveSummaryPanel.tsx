@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -24,7 +24,7 @@ export interface ObjectiveSummaryPanelProps {
     onClose: () => void;
 }
 
-type ObjectiveDetailTabKey = "general" | "relatedOrganizations" | "documents";
+type ObjectiveDetailTabKey = "general" | "documents";
 
 interface DetailTabDefinition {
     key: ObjectiveDetailTabKey;
@@ -69,32 +69,6 @@ const FIELD_GRID_STYLE: CSSProperties = {
     gridTemplateColumns: "9rem minmax(0, 1fr)",
     gap: "0.75rem",
     alignItems: "start",
-};
-
-const TABLE_STYLE: CSSProperties = {
-    display: "grid",
-    borderInlineStart: "1px solid var(--sapList_BorderColor)",
-    borderBlockStart: "1px solid var(--sapList_BorderColor)",
-    background: "var(--sapList_Background)",
-};
-
-const TABLE_HEADER_CELL_STYLE: CSSProperties = {
-    minHeight: "2rem",
-    padding: "0.35rem 0.5rem",
-    borderInlineEnd: "1px solid var(--sapList_BorderColor)",
-    borderBlockEnd: "1px solid var(--sapList_BorderColor)",
-    background: "var(--sapList_HeaderBackground)",
-    fontWeight: 700,
-    boxSizing: "border-box",
-};
-
-const TABLE_CELL_STYLE: CSSProperties = {
-    minHeight: "2rem",
-    padding: "0.35rem 0.5rem",
-    borderInlineEnd: "1px solid var(--sapList_BorderColor)",
-    borderBlockEnd: "1px solid var(--sapList_BorderColor)",
-    background: "var(--sapList_Background)",
-    boxSizing: "border-box",
 };
 
 function readSelectedTabKey(event: unknown): ObjectiveDetailTabKey | null {
@@ -153,37 +127,6 @@ function DetailField({ label, value }: { label: string; value?: string | number 
     );
 }
 
-function SimpleTable({
-    columns,
-    rows,
-}: {
-    columns: string[];
-    rows: Array<Array<string | number | null | undefined>>;
-}) {
-    const template = `repeat(${columns.length}, minmax(8rem, 1fr))`;
-    const visibleRows = rows.length > 0 ? rows : [["", "", "", ""]];
-
-    return (
-        <div style={{ ...TABLE_STYLE, gridTemplateColumns: template }}>
-            {columns.map((column) => (
-                <div key={column} style={TABLE_HEADER_CELL_STYLE}>
-                    {column}
-                </div>
-            ))}
-
-            {visibleRows.map((row, rowIndex) => (
-                <Fragment key={rowIndex}>
-                    {columns.map((column, columnIndex) => (
-                        <div key={`${rowIndex}-${column}`} style={TABLE_CELL_STYLE}>
-                            {renderValue(row[columnIndex])}
-                        </div>
-                    ))}
-                </Fragment>
-            ))}
-        </div>
-    );
-}
-
 export default function ObjectiveSummaryPanel({
     value,
     error,
@@ -197,10 +140,6 @@ export default function ObjectiveSummaryPanel({
             {
                 key: "general",
                 label: t("objective.tabs.general", { defaultValue: "Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒ" }),
-            },
-            {
-                key: "relatedOrganizations",
-                label: t("objective.tabs.relatedOrganizations"),
             },
             {
                 key: "documents",
@@ -259,39 +198,10 @@ export default function ObjectiveSummaryPanel({
         </div>
     );
 
-    const renderRelatedOrganizations = () => {
-        const organizations = value.organizations ?? [];
-
-        return (
-            <SimpleTable
-                columns={[
-                    t("objective.relatedOrganizations.columns.organization"),
-                    t("objective.relatedOrganizations.columns.status"),
-                ]}
-                rows={
-                    organizations.length > 0
-                        ? organizations.map((organization) => [
-                              organization.organizationCode
-                                  ? `${organization.organizationCode} - ${organization.organizationName ?? ""}`
-                                  : organization.organizationName,
-                              organization.organizationStatus
-                                  ? resolveStatusLabel(organization.organizationStatus, t)
-                                  : "-",
-                          ])
-                        : [[t("objective.relatedOrganizations.empty"), ""]]
-                }
-            />
-        );
-    };
-
     const renderDocuments = () => (
         <DocumentIntegrationDeferredMessage />
     );
     const renderActiveTab = () => {
-        if (activeTab === "relatedOrganizations") {
-            return renderRelatedOrganizations();
-        }
-
         if (activeTab === "documents") {
             return renderDocuments();
         }

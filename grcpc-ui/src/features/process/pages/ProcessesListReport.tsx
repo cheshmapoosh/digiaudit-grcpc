@@ -27,6 +27,9 @@ export interface ProcessesListReportProps {
     onCreate: (nodeType: ProcessNodeType) => void;
     onShow: (id: string) => void;
     onDelete: (id: string) => void;
+    onActivate: (node: ProcessNode) => void;
+    onInactivate: (node: ProcessNode) => void;
+    onShowDeleted: () => void;
     onSelect: (id: string) => void;
 }
 
@@ -48,6 +51,9 @@ export default function ProcessesListReport({
     onCreate,
     onShow,
     onDelete,
+    onActivate,
+    onInactivate,
+    onShowDeleted,
     onSelect,
 }: ProcessesListReportProps) {
     const { t } = useTranslation();
@@ -64,7 +70,7 @@ export default function ProcessesListReport({
             display: "inline-flex",
             alignItems: "center",
             gap: "0.5rem",
-            flexWrap: "nowrap",
+            flexWrap: "wrap",
             whiteSpace: "nowrap",
         }),
         [],
@@ -104,15 +110,42 @@ export default function ProcessesListReport({
                             {t("common.view", { defaultValue: "نمایش" })}
                         </Button>
 
+                        {selectedItem?.status === "ACTIVE" ? (
+                            <Button
+                                disabled={busy}
+                                style={actionButtonStyle}
+                                onClick={() => onInactivate(selectedItem)}
+                            >
+                                {t("process.lifecycle.inactivate", { defaultValue: "Inactivate" })}
+                            </Button>
+                        ) : null}
+
+                        {selectedItem?.status === "INACTIVE" ? (
+                            <Button
+                                disabled={busy}
+                                style={actionButtonStyle}
+                                onClick={() => onActivate(selectedItem)}
+                            >
+                                {t("process.lifecycle.activate", { defaultValue: "Activate" })}
+                            </Button>
+                        ) : null}
+
+                        <Button
+                            design="Transparent"
+                            disabled={busy}
+                            style={actionButtonStyle}
+                            onClick={onShowDeleted}
+                        >
+                            {t("process.deleted.action", { defaultValue: "Deleted items" })}
+                        </Button>
+
                         <Button
                             design="Negative"
                             disabled={!selectedId || busy}
                             style={actionButtonStyle}
                             onClick={() => selectedId && onDelete(selectedId)}
                         >
-                            {selectedItem?.status === "DELETED"
-                                ? t("common.restore", { defaultValue: "بازگردانی" })
-                                : t("common.delete", { defaultValue: "حذف" })}
+                            {t("common.delete", { defaultValue: "Delete" })}
                         </Button>
                     </div>
                 }
