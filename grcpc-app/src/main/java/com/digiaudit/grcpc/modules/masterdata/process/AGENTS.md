@@ -10,7 +10,16 @@ Applies to the backend process feature under `modules/masterdata/process`.
 - Structural mutations use Backend-owned Business Revision.
 - Document commands remain outside Revision under the Prompt 4.2 correction.
 - Document temporary upload keeps the simplified Prompt 4.2 contract.
-- No automated tests are part of this task.
+- No automated tests are part of the current task unless explicitly authorized.
+
+## Process hierarchy Guard
+- Process and Subprocess form one structural hierarchy and share the exact hierarchy key `PROCESS`.
+- Do not create a separate `SUBPROCESS` Guard Row.
+- Every Process or Subprocess create, move/re-parent, delete, restore, structural import/initialization, and lifecycle command that affects ownership or parent eligibility must acquire the `PROCESS` row from `masterdata_hierarchy_guard` with `PESSIMISTIC_WRITE`.
+- Acquire the Guard before reading either Process or Subprocess structural state, validating the owner Process, checking children/dependencies, validating a Process cycle, or changing a structural relation.
+- Guard acquisition, validation, Process/Subprocess mutation, and Business Revision persistence must execute in the same transaction.
+- The shared Guard removes the need to lock the complete Process and Subprocess tables or to define competing lock orders across both tables.
+- Do not use JVM or cache locks as the source of correctness.
 
 ## Process/Subprocess rules
 - Persist Process rows only in `central_process`.

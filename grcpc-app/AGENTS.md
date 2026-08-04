@@ -16,6 +16,22 @@ These instructions apply to `grcpc-app`. Feature-specific instructions under `sr
 - Prefer UUID identifiers consistently with the existing code.
 - Reuse shared code from `common` for exceptions, auditing, persistence, security, logging, and utilities.
 
+## Structural hierarchy Guard Row
+- The authoritative hierarchy-concurrency mechanism is the database table `masterdata_hierarchy_guard`.
+- Identify the hierarchy boundary before implementing any structural mutation.
+- Acquire the corresponding Guard Row with `PESSIMISTIC_WRITE` inside the same business transaction and before the first hierarchy read, parent check, cycle check, lifecycle check, dependency check, or structural write.
+- Keep the Guard Row locked until transaction completion. Do not manually unlock it.
+- `Create`, `Move`, `Delete`, `Restore`, re-parenting, structural bulk/import/initialization operations, and lifecycle changes that alter parent/child eligibility are guarded operations.
+- Purely descriptive updates do not require a hierarchy Guard unless they also change a structural invariant.
+- If one command touches more than one independent hierarchy, acquire all Guard Rows in ascending `hierarchy_key` order.
+- A missing Guard Row is a configuration/integrity failure. Never create Guard Rows lazily inside a business command.
+- Lock timeout or acquisition failure must fail closed and be translated to a stable concurrency response such as `HIERARCHY_BUSY` (`409`). Do not report success and do not silently retry in the initial implementation.
+- `@Version` remains required on mutable business entities for stale-client detection, but it does not replace the hierarchy Guard Row.
+- Do not use `Caffeine`, `ReentrantLock`, JVM synchronization, table-wide locks, or distributed-cache locks as the source of correctness.
+- Read the binding decision and contract:
+  - `grcpc-docs/architecture/decisions/ADR-0001-database-hierarchy-guard-row.md`
+  - `grcpc-docs/master-data/hierarchy-guard-row-contract.md`
+
 ## API and error handling
 - Use DTOs at API boundaries; do not expose JPA entities directly.
 - Use MapStruct mappers when an existing feature does so.
@@ -28,6 +44,7 @@ These instructions apply to `grcpc-app`. Feature-specific instructions under `sr
 - Preserve Oracle compatibility in vendor migrations.
 - Put seed data shared across databases in `db/migration/common` when appropriate.
 - Keep audit fields and soft-delete behavior consistent with existing entities.
+- Guard Row definitions and seed rows are Flyway-owned. Runtime code must not create, rename, or repair them automatically.
 
 ## Security and audit
 - Do not bypass Spring Security or `CurrentUserProvider`.
@@ -38,3 +55,4 @@ These instructions apply to `grcpc-app`. Feature-specific instructions under `sr
 - Preferred quick verification: `./mvnw -Dskip.ui=true test`.
 - For packaging backend without rebuilding UI: `./mvnw -Dskip.ui=true package`.
 - If changing frontend contract from backend, also run the UI checks from `grcpc-ui`.
+- Hierarchy changes require real concurrent-transaction verification against the supported database engine; a single-threaded unit test is not sufficient evidence.

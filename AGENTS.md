@@ -19,6 +19,17 @@ These instructions apply to the whole repository. More specific `AGENTS.md` file
 - When adding backend database changes, use Flyway migrations. Do not edit old migrations that may already be applied.
 - Maintain backend/frontend API contract compatibility. If a DTO or endpoint changes, update the matching UI repository/model/schema in the same task.
 
+## Structural hierarchy concurrency rule
+- Before implementing, modifying, or reviewing a structural mutation, identify the affected hierarchy boundary.
+- Every `Create`, `Move`, `Delete`, `Restore`, re-parenting operation, and lifecycle change that affects structural eligibility must acquire the corresponding row in `masterdata_hierarchy_guard` with `PESSIMISTIC_WRITE` before reading or validating the hierarchy.
+- The Guard Row lock, hierarchy validation, source mutation, and Business Revision persistence must remain inside the same database transaction.
+- Related entities that form one hierarchy must share one Guard Row. `central_process` and `central_subprocess` share the `PROCESS` Guard Row.
+- JVM-local locks, `Caffeine`, distributed-cache locks, table-wide locks, and entity `@Version` alone are not authoritative protection for hierarchy correctness.
+- Read and follow:
+  - `grcpc-docs/architecture/decisions/ADR-0001-database-hierarchy-guard-row.md`
+  - `grcpc-docs/master-data/hierarchy-guard-row-contract.md`
+  - `grcpc-app/AGENTS.md`
+
 ## Useful commands
 Run commands from the relevant subproject directory.
 
@@ -46,3 +57,4 @@ cd grcpc-app
 - Mention the important files changed.
 - Mention verification commands you ran, or state clearly if you could not run them.
 - For risky changes, explain the migration/configuration impact.
+- For every hierarchy-related change, report the hierarchy key, guarded entry points, transaction boundary, and concurrency verification performed.

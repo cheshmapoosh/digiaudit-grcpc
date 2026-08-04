@@ -10,7 +10,16 @@ Applies to the backend `organization` module.
 - Structural mutations use Backend-owned Business Revision.
 - Document commands remain outside Revision under the Prompt 4.2 correction.
 - Document temporary upload keeps the simplified Prompt 4.2 contract.
-- No automated tests are part of this task.
+- No automated tests are part of the current task unless explicitly authorized.
+
+## Organization hierarchy Guard
+- The Organization hierarchy key is exactly `ORGANIZATION`.
+- Every Organization create, move/re-parent, delete, restore, structural import/initialization, and lifecycle command that affects parent eligibility must acquire the `ORGANIZATION` row from `masterdata_hierarchy_guard` with `PESSIMISTIC_WRITE`.
+- Acquire the Guard before reading the Organization tree, checking the destination parent, checking children/dependencies, validating a cycle, or changing `parent_organization_id`.
+- Guard acquisition, validation, Organization mutation, and Business Revision persistence must execute in the same transaction.
+- Purely descriptive changes do not require the Guard unless they also affect a structural invariant.
+- Do not lock the complete `organization` table and do not lock every Organization row as the hierarchy mutex.
+- Do not use JVM or cache locks as the source of correctness.
 
 ## Organization rules
 - Organization maps only the approved V2 `organization` table fields.
