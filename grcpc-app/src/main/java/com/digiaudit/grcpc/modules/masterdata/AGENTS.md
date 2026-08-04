@@ -60,7 +60,7 @@ The following operations must acquire the relevant Guard Row with `PESSIMISTIC_W
 - Restore a deleted node.
 - Add or remove a parent-child relation.
 - Change structural ordering when ordering participates in a hierarchy invariant.
-- Activate or inactivate when lifecycle status affects parent/child eligibility or dependency validity.
+- Activate or inactivate only when lifecycle status affects parent/child eligibility or dependency validity. For Organization, Process, and Subprocess, accepted `ACTIVE`/`INACTIVE` General Information Update is non-structural because inactive rows remain structurally eligible; it uses a targeted row lock and no hierarchy Guard.
 - Perform structural imports, bulk operations, initialization, repair, or administrative commands.
 
 The required sequence is:
@@ -107,6 +107,7 @@ Prohibited authoritative alternatives:
 - Local mutations must be tied to exactly one Organization.
 - Applied revisions are immutable; corrections use a new compensating revision.
 - Structural commands acquire the hierarchy Guard Row before hierarchy reads and keep it through revision-controlled mutation completion.
+- Organization, Process, and Subprocess General Information Update may include `ACTIVE`/`INACTIVE` in the same non-structural command and must produce exactly one Revision and one `UPDATE` Revision Content. `DELETED` remains exclusive to lifecycle commands.
 
 ## Prohibitions
 

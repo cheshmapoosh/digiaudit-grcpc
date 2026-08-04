@@ -167,10 +167,25 @@ public class ProcessService {
         String title = normalizeTitle(request.title());
         String description = normalizeDescription(request.description());
         int sortOrder = normalizeSortOrder(request.sortOrder());
+        MasterDataLifecycleStatus status = requireGeneralInformationStatus(request.status(), "Process");
         validateValidity(request.validFrom(), request.validTo());
         RevisionExecutionResult result = revisionCoordinator.execute(
-                RevisionRequest.central("Update central process " + processId, "Central process structural update", null),
-                context -> updateProcessInsideRevision(context, processId, expectedVersion, title, description, sortOrder, request.validFrom(), request.validTo())
+                RevisionRequest.central(
+                        "Update central process " + processId,
+                        "Central process General Information update",
+                        null
+                ),
+                context -> updateProcessInsideRevision(
+                        context,
+                        processId,
+                        expectedVersion,
+                        title,
+                        description,
+                        sortOrder,
+                        status,
+                        request.validFrom(),
+                        request.validTo()
+                )
         );
         return MasterDataRevisionMutationResponse.from(result.primaryResult());
     }
@@ -224,10 +239,25 @@ public class ProcessService {
         String title = normalizeTitle(request.title());
         String description = normalizeDescription(request.description());
         int sortOrder = normalizeSortOrder(request.sortOrder());
+        MasterDataLifecycleStatus status = requireGeneralInformationStatus(request.status(), "Subprocess");
         validateValidity(request.validFrom(), request.validTo());
         RevisionExecutionResult result = revisionCoordinator.execute(
-                RevisionRequest.central("Update central subprocess " + subprocessId, "Central subprocess structural update", null),
-                context -> updateSubprocessInsideRevision(context, subprocessId, expectedVersion, title, description, sortOrder, request.validFrom(), request.validTo())
+                RevisionRequest.central(
+                        "Update central subprocess " + subprocessId,
+                        "Central subprocess General Information update",
+                        null
+                ),
+                context -> updateSubprocessInsideRevision(
+                        context,
+                        subprocessId,
+                        expectedVersion,
+                        title,
+                        description,
+                        sortOrder,
+                        status,
+                        request.validFrom(),
+                        request.validTo()
+                )
         );
         return MasterDataRevisionMutationResponse.from(result.primaryResult());
     }
@@ -318,6 +348,7 @@ public class ProcessService {
             String title,
             String description,
             int sortOrder,
+            MasterDataLifecycleStatus status,
             LocalDate validFrom,
             LocalDate validTo
     ) {
@@ -325,7 +356,16 @@ public class ProcessService {
         assertVersion(entity, expectedVersion, "Process");
         requireMutableProcess(entity);
         JsonNode before = processSnapshot(entity);
-        entity.updateDetails(title, description, sortOrder, validFrom, validTo, actorProvider.currentActorId(), Instant.now(clock));
+        entity.updateDetails(
+                title,
+                description,
+                sortOrder,
+                status,
+                validFrom,
+                validTo,
+                actorProvider.currentActorId(),
+                Instant.now(clock)
+        );
         CentralProcessEntity saved = processRepository.saveAndFlush(entity);
         return completedProcess(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
     }
@@ -471,6 +511,7 @@ public class ProcessService {
             String title,
             String description,
             int sortOrder,
+            MasterDataLifecycleStatus status,
             LocalDate validFrom,
             LocalDate validTo
     ) {
@@ -478,7 +519,16 @@ public class ProcessService {
         assertVersion(entity, expectedVersion, "Subprocess");
         requireMutableSubprocess(entity);
         JsonNode before = subprocessSnapshot(entity);
-        entity.updateDetails(title, description, sortOrder, validFrom, validTo, actorProvider.currentActorId(), Instant.now(clock));
+        entity.updateDetails(
+                title,
+                description,
+                sortOrder,
+                status,
+                validFrom,
+                validTo,
+                actorProvider.currentActorId(),
+                Instant.now(clock)
+        );
         CentralSubprocessEntity saved = subprocessRepository.saveAndFlush(entity);
         return completedSubprocess(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
     }
@@ -842,6 +892,20 @@ public class ProcessService {
         if (validFrom != null && validTo != null && validTo.isBefore(validFrom)) {
             throw new UnprocessableEntityException("INVALID_VALIDITY_RANGE", "error.masterdata.v2.invalidValidityRange", "Validity range is invalid");
         }
+    }
+
+    private MasterDataLifecycleStatus requireGeneralInformationStatus(
+            MasterDataLifecycleStatus status,
+            String family
+    ) {
+        if (status == MasterDataLifecycleStatus.ACTIVE || status == MasterDataLifecycleStatus.INACTIVE) {
+            return status;
+        }
+        throw new UnprocessableEntityException(
+                "INVALID_LIFECYCLE_TRANSITION",
+                "error.masterdata.v2.invalidLifecycleTransition",
+                family + " Update accepts only ACTIVE or INACTIVE"
+        );
     }
 
     private ConflictException duplicateProcessCode(String code) {

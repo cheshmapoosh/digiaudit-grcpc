@@ -114,10 +114,18 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Targeted locks remain for ordinary Update/Activate/Inactivate and the exact `document_temp_upload` finalization row.
 - [ ] Guard lock acquisition/timeout failures return `HIERARCHY_BUSY` with HTTP 409, disclose no persistence details, and are not retried.
 - [ ] A missing Guard row returns `HIERARCHY_GUARD_NOT_CONFIGURED` with HTTP 500 and persists no source or Revision change.
+- [ ] Organization, Process, and Subprocess General Information Update applies details plus `ACTIVE`/`INACTIVE` through one targeted row lock, one transaction, one Revision, and one `UPDATE` Revision Content without a hierarchy Guard.
+- [ ] General Information Update rejects requested `DELETED` as `INVALID_LIFECYCLE_TRANSITION` and persists no source or Revision change.
+- [ ] Move, Delete, Restore, and Create Guard behavior is unchanged after atomic status Update is introduced.
 
 ## 5. Structural and Central definition acceptance
 
 - [ ] `organization` exists as structural reference data and Local Context anchor.
+- [ ] Organization maps required `name` and closed `organization_type`, nullable `location`, and nullable CLOB `description` in Oracle, JPA, API DTOs, and Revision snapshots.
+- [ ] Organization `displayLabel` equals `name`; tree nodes include name/type but exclude location and description.
+- [ ] Organization Create is server-owned `ACTIVE`, and Create-based reactivation/restore refreshes all current descriptive and structural input fields on the existing ID.
+- [ ] Organization Update excludes code and parent; Process Update excludes parent; Subprocess Update excludes owner Process.
+- [ ] Process and Subprocess Update include required `ACTIVE`/`INACTIVE` status while code and structural ownership remain immutable.
 - [ ] `central_process` exists as a separate table/entity.
 - [ ] `central_subprocess` exists as a separate table/entity.
 - [ ] A Subprocess belongs to exactly one Process.
@@ -423,7 +431,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Backend returns `MASTERDATA_REVISION_REQUIRED` for guarded mutation without revision context.
 - [ ] Backend returns document and temp-upload error codes without leaking storage secrets.
 - [ ] Backend build succeeds with the repository’s prescribed command.
-- [ ] Backend tests relevant to the implemented slice pass.
+- [ ] Verification follows the active prompt policy; Prompt 5.8 compiles/packages without running automated tests, and deletion of the temporary accepted Oracle acceptance class does not remove the concurrency acceptance requirements.
 
 ## 18. UI acceptance
 

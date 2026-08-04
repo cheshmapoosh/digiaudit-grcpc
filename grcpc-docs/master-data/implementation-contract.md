@@ -13,8 +13,9 @@ The authority order is deliberate.
 1. The Conceptual Model owns business meaning and domain boundaries.
 2. The Final Logical Model owns final entity names, relationships, and dependency rules.
 3. The Physical Design Reference owns Oracle, Flyway, physical constraints, indexes, and MinIO rules.
-4. Customer UI documents can shape compatible user experience only.
-5. Existing source is Legacy implementation evidence only.
+4. Explicit accepted project-owner corrections and ADRs own decisions approved after the retained references, including the Prompt 5.8 Organization General Information and atomic status-update correction.
+5. Customer UI documents can shape compatible user experience only.
+6. Existing source is Legacy implementation evidence only.
 
 An older implementation, customer wireframe, or convenient generic abstraction cannot override an approved model rule.
 
@@ -172,11 +173,17 @@ Every mutable entity has optimistic locking.
 
 `version` is required for update, status change, delete, and restore commands.
 
+Organization General Information consists of `code`, `name`, `organizationType`, `parentOrganizationId`, `status`, `location`, `validFrom`, `validTo`, and `description`. `name` and the closed `OrganizationType` are required, and `displayLabel` is derived from `name`. This accepted detailed-design correction is not a Legacy compatibility layer.
+
+Organization, Process, and Subprocess General Information Update may request only `ACTIVE` or `INACTIVE` and applies status and descriptive fields atomically through one targeted row lock, one transaction, one Business Revision, and one `UPDATE` Revision Content. Update rejects `DELETED`; code and structural parent/owner fields remain immutable and Move-only.
+
 Structural Organization commands acquire the `ORGANIZATION` database Guard row. Structural Process and Subprocess commands share the `PROCESS` database Guard row. The guarded operations are Create (including reactivate/restore by matching code), Move, Delete, and explicit Restore. Ordinary Update, Activate, Inactivate, and reads do not acquire a hierarchy Guard in this slice.
 
 Guard acquisition uses `PESSIMISTIC_WRITE` with the configured JPA lock-timeout hint and precedes revision-number allocation, hierarchy reads, validation, source mutation, and Revision persistence. Fresh normal business-table reads occur only after acquisition. A recognized lock acquisition/timeout failure returns `HIERARCHY_BUSY` with HTTP 409 and is not retried. A missing configured Guard row fails closed with `HIERARCHY_GUARD_NOT_CONFIGURED` and HTTP 500.
 
 The Guard is the transaction-scoped structural serialization mechanism; full-hierarchy business-row locking, JVM locks, caches, advisory locks, and runtime Guard-row creation are prohibited. Targeted business-row locks remain valid for non-structural commands, and `document_temp_upload` retains its exact single-use finalization lock.
+
+Removal of the temporary `HierarchyGuardOracleAcceptanceTest` after its evidence was accepted does not alter the binding concurrency design or its acceptance requirements.
 
 Soft-delete consistency requires deleted metadata when, and only when, `status = DELETED`.
 

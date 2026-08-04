@@ -1,7 +1,11 @@
 create table organization (
     id raw(16) not null,
     code varchar2(64 byte) not null,
+    name varchar2(255 char) not null,
+    organization_type varchar2(32 byte) not null,
     parent_organization_id raw(16),
+    location varchar2(255 char),
+    description clob,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -15,6 +19,10 @@ create table organization (
     constraint pk_organization primary key (id),
     constraint uk_organization_code unique (code),
     constraint fk_organization_parent foreign key (parent_organization_id) references organization(id),
+    constraint ck_organization_type check (organization_type in (
+        'HOLDING', 'COMPANY', 'DEPUTY', 'OFFICE', 'MANAGEMENT', 'DEPARTMENT',
+        'BRANCH', 'UNIT', 'COMMITTEE', 'GROUP', 'OTHER'
+    )),
     constraint ck_organization_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_organization_valid_range check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_organization_deleted check (

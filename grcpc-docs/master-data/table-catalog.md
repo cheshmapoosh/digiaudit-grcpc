@@ -173,17 +173,17 @@ Document Link Target Type rules:
 
 **Purpose and family.** Structural organization tree and the organizational anchor for all Local Context; it is not a Central-prefixed definition.
 
-**Fields.** `ID`; documented business code; `parent_organization_id RAW(16) NULL`; `L+V`.
+**Fields.** `ID`; `code VARCHAR2(64 BYTE) NOT NULL`; `name VARCHAR2(255 CHAR) NOT NULL`; `organization_type VARCHAR2(32 BYTE) NOT NULL`; `parent_organization_id RAW(16) NULL`; `location VARCHAR2(255 CHAR) NULL`; `description CLOB NULL`; `L+V`.
 
 **Keys and relationships.** PK: `id`. Business key: unique organization code, including deleted rows. FK: `parent_organization_id -> organization(id)`. No composite FK.
 
 **Lifecycle, validity, and lock.** `L+V`; `version` is the optimistic-lock field. A root may have a null parent.
 
-**Constraints and indexes.** Unique code; `parent_organization_id <> id`; backend hierarchy-cycle validation; parent FK index; date and soft-delete consistency checks from the shared profile.
+**Constraints and indexes.** Unique code; closed `organization_type` check with the 11 approved uppercase values; `parent_organization_id <> id`; backend hierarchy-cycle validation; parent FK index; date and soft-delete consistency checks from the shared profile. No name, type, or status index and no unique name constraint exists.
 
-**Mutability and Revision.** Central-domain structural mutation only, through a Backend-owned Central revision. Roll-up reads descendants but never changes their ownership or rows.
+**Mutability and Revision.** Central-domain mutation only, through a Backend-owned Central revision. General Information Update atomically applies editable details and `ACTIVE`/`INACTIVE` without changing code or parent; structural Create/Move/Delete/Restore remains Guard-protected. Roll-up reads descendants but never changes their ownership or rows.
 
-**Authority / non-invention note.** Final Logical Model §5-1 and §16; Conceptual Model organization boundary; Physical Design §5–§10. The logical model specifies a unique code and parent relation; no additional organization attributes are enumerated here.
+**Authority / non-invention note.** Final Logical Model §5-1 and §16; Conceptual Model organization boundary; Physical Design §5–§10; Prompt 5.8 accepted project-owner detailed-design correction for `name`, `organization_type`, `location`, and `description`.
 
 ### 02. `central_process`
 

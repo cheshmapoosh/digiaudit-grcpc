@@ -23,6 +23,9 @@ Applies to the backend `organization` module.
 
 ## Organization rules
 - Organization maps only the approved V2 `organization` table fields.
-- Use `code` as the derived structural display label; do not add Legacy `name`, `type`, `location`, or description fields.
+- General Information contains `code`, `name`, `organizationType`, `parentOrganizationId`, `status`, `location`, `validFrom`, `validTo`, and `description`; `displayLabel` is derived from `name`.
+- `OrganizationType` is the closed uppercase V2 vocabulary; these detailed attributes are not a Legacy compatibility layer.
+- Create is server-owned `ACTIVE`. General Information Update atomically applies editable details plus a requested `ACTIVE` or `INACTIVE` status through one targeted row lock, one transaction, one Business Revision, and one Revision Content. Update never accepts `DELETED`, `code`, or `parentOrganizationId`.
+- Move, Delete, Restore, and Create (including create-based reactivate/restore) remain structural and acquire `ORGANIZATION`; ordinary General Information Update does not.
 - Keep explicit create, update, move, activate, inactivate, delete, and restore commands under `/api/master-data/organizations`.
 - Delete operations must protect child organizations and approved V2 dependents without cascading.

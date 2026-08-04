@@ -18,6 +18,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.infrastructure.persistenc
 import com.digiaudit.grcpc.modules.masterdata.shared.infrastructure.persistence.MasterDataHierarchyGuardEntity;
 import com.digiaudit.grcpc.modules.masterdata.shared.infrastructure.persistence.MasterDataLifecycleStatusConverter;
 import com.digiaudit.grcpc.modules.organization.domain.entity.OrganizationEntity;
+import com.digiaudit.grcpc.modules.organization.infrastructure.persistence.OrganizationTypeConverter;
 import com.digiaudit.grcpc.modules.securityacl.domain.entity.ResourceAclEntryEntity;
 import com.digiaudit.grcpc.modules.setup.domain.entity.SystemSetupEntity;
 import com.digiaudit.grcpc.modules.usermanagement.domain.entity.AppUserEntity;
@@ -60,6 +61,7 @@ public class GrcpcPersistenceConfiguration {
                 MasterDataHierarchyGuardEntity.class.getName(),
                 MasterDataLifecycleStatusConverter.class.getName(),
                 OrganizationEntity.class.getName(),
+                OrganizationTypeConverter.class.getName(),
                 ResourceAclEntryEntity.class.getName(),
                 SystemSetupEntity.class.getName(),
                 AppUserEntity.class.getName(),

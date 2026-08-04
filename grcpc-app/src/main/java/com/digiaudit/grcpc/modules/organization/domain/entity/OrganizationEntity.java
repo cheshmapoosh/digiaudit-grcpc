@@ -2,10 +2,13 @@ package com.digiaudit.grcpc.modules.organization.domain.entity;
 
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import com.digiaudit.grcpc.modules.masterdata.shared.infrastructure.persistence.MasterDataLifecycleStatusConverter;
+import com.digiaudit.grcpc.modules.organization.domain.OrganizationType;
+import com.digiaudit.grcpc.modules.organization.infrastructure.persistence.OrganizationTypeConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -27,9 +30,23 @@ public class OrganizationEntity {
     @Column(name = "code", nullable = false, length = 64)
     private String code;
 
+    @Column(name = "name", nullable = false, length = 255)
+    private String name;
+
+    @Convert(converter = OrganizationTypeConverter.class)
+    @Column(name = "organization_type", nullable = false, length = 32)
+    private OrganizationType organizationType;
+
     @JdbcTypeCode(SqlTypes.BINARY)
     @Column(name = "parent_organization_id", columnDefinition = "RAW(16)")
     private UUID parentOrganizationId;
+
+    @Column(name = "location", length = 255)
+    private String location;
+
+    @Lob
+    @Column(name = "description", columnDefinition = "CLOB")
+    private String description;
 
     @Convert(converter = MasterDataLifecycleStatusConverter.class)
     @Column(name = "status", nullable = false, length = 32)
@@ -72,7 +89,11 @@ public class OrganizationEntity {
     private OrganizationEntity(
             UUID id,
             String code,
+            String name,
+            OrganizationType organizationType,
             UUID parentOrganizationId,
+            String location,
+            String description,
             LocalDate validFrom,
             LocalDate validTo,
             UUID actorId,
@@ -80,7 +101,11 @@ public class OrganizationEntity {
     ) {
         this.id = Objects.requireNonNull(id, "id is required");
         this.code = Objects.requireNonNull(code, "code is required");
+        this.name = Objects.requireNonNull(name, "name is required");
+        this.organizationType = Objects.requireNonNull(organizationType, "organizationType is required");
         this.parentOrganizationId = parentOrganizationId;
+        this.location = location;
+        this.description = description;
         this.status = MasterDataLifecycleStatus.ACTIVE;
         this.validFrom = validFrom;
         this.validTo = validTo;
@@ -94,17 +119,51 @@ public class OrganizationEntity {
     public static OrganizationEntity create(
             UUID id,
             String code,
+            String name,
+            OrganizationType organizationType,
             UUID parentOrganizationId,
+            String location,
+            String description,
             LocalDate validFrom,
             LocalDate validTo,
             UUID actorId,
             Instant now
     ) {
-        return new OrganizationEntity(id, code, parentOrganizationId, validFrom, validTo, actorId, now);
+        return new OrganizationEntity(
+                id,
+                code,
+                name,
+                organizationType,
+                parentOrganizationId,
+                location,
+                description,
+                validFrom,
+                validTo,
+                actorId,
+                now
+        );
     }
 
-    public void updateValidity(LocalDate validFrom, LocalDate validTo, UUID actorId, Instant now) {
+    public void updateGeneralInformation(
+            String name,
+            OrganizationType organizationType,
+            String location,
+            String description,
+            MasterDataLifecycleStatus requestedStatus,
+            LocalDate validFrom,
+            LocalDate validTo,
+            UUID actorId,
+            Instant now
+    ) {
         requireNotDeleted();
+        if (requestedStatus == MasterDataLifecycleStatus.DELETED) {
+            throw new IllegalArgumentException("DELETED is not valid for Organization General Information update");
+        }
+        this.name = Objects.requireNonNull(name, "name is required");
+        this.organizationType = Objects.requireNonNull(organizationType, "organizationType is required");
+        this.location = location;
+        this.description = description;
+        this.status = Objects.requireNonNull(requestedStatus, "requestedStatus is required");
         this.validFrom = validFrom;
         this.validTo = validTo;
         touch(actorId, now);
@@ -146,16 +205,44 @@ public class OrganizationEntity {
         touch(actorId, now);
     }
 
-    public void restoreFromCreate(UUID parentOrganizationId, LocalDate validFrom, LocalDate validTo, UUID actorId, Instant now) {
+    public void restoreFromCreate(
+            String name,
+            OrganizationType organizationType,
+            UUID parentOrganizationId,
+            String location,
+            String description,
+            LocalDate validFrom,
+            LocalDate validTo,
+            UUID actorId,
+            Instant now
+    ) {
+        this.name = Objects.requireNonNull(name, "name is required");
+        this.organizationType = Objects.requireNonNull(organizationType, "organizationType is required");
         this.parentOrganizationId = parentOrganizationId;
+        this.location = location;
+        this.description = description;
         this.validFrom = validFrom;
         this.validTo = validTo;
         restore(actorId, now);
     }
 
-    public void reactivateFromCreate(UUID parentOrganizationId, LocalDate validFrom, LocalDate validTo, UUID actorId, Instant now) {
+    public void reactivateFromCreate(
+            String name,
+            OrganizationType organizationType,
+            UUID parentOrganizationId,
+            String location,
+            String description,
+            LocalDate validFrom,
+            LocalDate validTo,
+            UUID actorId,
+            Instant now
+    ) {
         requireStatus(MasterDataLifecycleStatus.INACTIVE, "Only an inactive organization can be reactivated");
+        this.name = Objects.requireNonNull(name, "name is required");
+        this.organizationType = Objects.requireNonNull(organizationType, "organizationType is required");
         this.parentOrganizationId = parentOrganizationId;
+        this.location = location;
+        this.description = description;
         this.validFrom = validFrom;
         this.validTo = validTo;
         this.status = MasterDataLifecycleStatus.ACTIVE;
@@ -187,8 +274,24 @@ public class OrganizationEntity {
         return code;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public OrganizationType getOrganizationType() {
+        return organizationType;
+    }
+
     public UUID getParentOrganizationId() {
         return parentOrganizationId;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public MasterDataLifecycleStatus getStatus() {

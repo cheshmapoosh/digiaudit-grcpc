@@ -24,6 +24,7 @@ import com.digiaudit.grcpc.modules.organization.api.dto.OrganizationLifecycleCom
 import com.digiaudit.grcpc.modules.organization.api.dto.OrganizationResponse;
 import com.digiaudit.grcpc.modules.organization.api.dto.OrganizationTreeNodeResponse;
 import com.digiaudit.grcpc.modules.organization.api.dto.UpdateOrganizationRequest;
+import com.digiaudit.grcpc.modules.organization.domain.OrganizationType;
 import com.digiaudit.grcpc.modules.organization.domain.entity.OrganizationEntity;
 import com.digiaudit.grcpc.modules.organization.domain.repository.OrganizationRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -106,13 +107,26 @@ public class OrganizationService {
     }
 
     public MasterDataRevisionMutationResponse create(CreateOrganizationRequest request) {
-        String code = normalizeCode(request.code(), "DUPLICATE_ORGANIZATION_CODE");
-        validateValidity(request.validFrom(), request.validTo());
+        String code = normalizeCode(request.code());
+        OrganizationGeneralInformation generalInformation = normalizeGeneralInformation(
+                request.name(),
+                request.organizationType(),
+                request.location(),
+                request.description(),
+                MasterDataLifecycleStatus.ACTIVE,
+                request.validFrom(),
+                request.validTo()
+        );
         try {
             RevisionExecutionResult result = revisionCoordinator.executeStructural(
                     MasterDataHierarchyKey.ORGANIZATION,
                     RevisionRequest.central("Create organization " + code, "Organization structural create", null),
-                    context -> createInsideRevision(context, code, request)
+                    context -> createInsideRevision(
+                            context,
+                            code,
+                            request.parentOrganizationId(),
+                            generalInformation
+                    )
             );
             return MasterDataRevisionMutationResponse.from(result.primaryResult());
         } catch (DataIntegrityViolationException ex) {
@@ -122,10 +136,22 @@ public class OrganizationService {
 
     public MasterDataRevisionMutationResponse update(UUID organizationId, UpdateOrganizationRequest request) {
         long expectedVersion = requireVersion(request.version());
-        validateValidity(request.validFrom(), request.validTo());
+        OrganizationGeneralInformation generalInformation = normalizeGeneralInformation(
+                request.name(),
+                request.organizationType(),
+                request.location(),
+                request.description(),
+                requireUpdateStatus(request.status()),
+                request.validFrom(),
+                request.validTo()
+        );
         RevisionExecutionResult result = revisionCoordinator.execute(
-                RevisionRequest.central("Update organization " + organizationId, "Organization structural update", null),
-                context -> updateInsideRevision(context, organizationId, expectedVersion, request.validFrom(), request.validTo())
+                RevisionRequest.central(
+                        "Update organization " + organizationId,
+                        "Organization General Information update",
+                        null
+                ),
+                context -> updateInsideRevision(context, organizationId, expectedVersion, generalInformation)
         );
         return MasterDataRevisionMutationResponse.from(result.primaryResult());
     }
@@ -159,7 +185,8 @@ public class OrganizationService {
     private RevisionOperationResult createInsideRevision(
             RevisionExecutionContext context,
             String code,
-            CreateOrganizationRequest request
+            UUID parentOrganizationId,
+            OrganizationGeneralInformation generalInformation
     ) {
         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
         UUID actorId = actorProvider.currentActorId();
@@ -170,13 +197,17 @@ public class OrganizationService {
 
         if (entity == null) {
             UUID entityId = UUID.randomUUID();
-            validateParent(entityId, request.parentOrganizationId(), byId);
+            validateParent(entityId, parentOrganizationId, byId);
             OrganizationEntity created = OrganizationEntity.create(
                     entityId,
                     code,
-                    request.parentOrganizationId(),
-                    request.validFrom(),
-                    request.validTo(),
+                    generalInformation.name(),
+                    generalInformation.organizationType(),
+                    parentOrganizationId,
+                    generalInformation.location(),
+                    generalInformation.description(),
+                    generalInformation.validFrom(),
+                    generalInformation.validTo(),
                     actorId,
                     now
             );
@@ -189,15 +220,35 @@ public class OrganizationService {
             throw duplicateCode(code);
         }
 
-        validateParent(entity.getId(), request.parentOrganizationId(), byId);
+        validateParent(entity.getId(), parentOrganizationId, byId);
         RevisionOperationType operationType = entity.getStatus() == MasterDataLifecycleStatus.DELETED
                 ? RevisionOperationType.RESTORE
                 : RevisionOperationType.ACTIVATE;
         long expectedVersion = entity.getVersion();
         if (operationType == RevisionOperationType.RESTORE) {
-            entity.restoreFromCreate(request.parentOrganizationId(), request.validFrom(), request.validTo(), actorId, now);
+            entity.restoreFromCreate(
+                    generalInformation.name(),
+                    generalInformation.organizationType(),
+                    parentOrganizationId,
+                    generalInformation.location(),
+                    generalInformation.description(),
+                    generalInformation.validFrom(),
+                    generalInformation.validTo(),
+                    actorId,
+                    now
+            );
         } else {
-            entity.reactivateFromCreate(request.parentOrganizationId(), request.validFrom(), request.validTo(), actorId, now);
+            entity.reactivateFromCreate(
+                    generalInformation.name(),
+                    generalInformation.organizationType(),
+                    parentOrganizationId,
+                    generalInformation.location(),
+                    generalInformation.description(),
+                    generalInformation.validFrom(),
+                    generalInformation.validTo(),
+                    actorId,
+                    now
+            );
         }
 
         OrganizationEntity saved = organizationRepository.saveAndFlush(entity);
@@ -208,14 +259,23 @@ public class OrganizationService {
             RevisionExecutionContext context,
             UUID organizationId,
             long expectedVersion,
-            LocalDate validFrom,
-            LocalDate validTo
+            OrganizationGeneralInformation generalInformation
     ) {
         OrganizationEntity entity = lockExisting(organizationId, "ORGANIZATION_NOT_FOUND");
         assertVersion(entity, expectedVersion);
         requireMutable(entity);
         JsonNode before = snapshot(entity);
-        entity.updateValidity(validFrom, validTo, actorProvider.currentActorId(), Instant.now(clock));
+        entity.updateGeneralInformation(
+                generalInformation.name(),
+                generalInformation.organizationType(),
+                generalInformation.location(),
+                generalInformation.description(),
+                generalInformation.status(),
+                generalInformation.validFrom(),
+                generalInformation.validTo(),
+                actorProvider.currentActorId(),
+                Instant.now(clock)
+        );
         OrganizationEntity saved = organizationRepository.saveAndFlush(entity);
         return completed(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
     }
@@ -459,21 +519,118 @@ public class OrganizationService {
         return version;
     }
 
-    private String normalizeCode(String code, String duplicateCode) {
+    private String normalizeCode(String code) {
         if (code == null || code.isBlank()) {
-            throw new UnprocessableEntityException(duplicateCode, "error.masterdata.v2.codeRequired", "Organization code is required");
+            throw new UnprocessableEntityException(
+                    "INVALID_ORGANIZATION_CODE",
+                    "error.masterdata.v2.organizationCodeRequired",
+                    "Organization code is required"
+            );
         }
         String normalized = code.trim().toUpperCase(Locale.ROOT);
         if (normalized.getBytes(StandardCharsets.UTF_8).length > 64) {
-            throw new UnprocessableEntityException("INVALID_CODE_LENGTH", "error.masterdata.v2.codeLength", "Organization code exceeds 64 bytes", normalized);
+            throw new UnprocessableEntityException(
+                    "INVALID_CODE_LENGTH",
+                    "error.masterdata.v2.organizationCodeLength",
+                    "Organization code exceeds 64 UTF-8 bytes"
+            );
         }
         return normalized;
     }
 
     private void validateValidity(LocalDate validFrom, LocalDate validTo) {
         if (validFrom != null && validTo != null && validTo.isBefore(validFrom)) {
-            throw new UnprocessableEntityException("INVALID_VALIDITY_RANGE", "error.masterdata.v2.invalidValidityRange", "Organization validity range is invalid");
+            throw new UnprocessableEntityException(
+                    "INVALID_VALIDITY_RANGE",
+                    "error.masterdata.v2.dateRangeInvalid",
+                    "Organization validity range is invalid"
+            );
         }
+    }
+
+    private OrganizationGeneralInformation normalizeGeneralInformation(
+            String name,
+            OrganizationType organizationType,
+            String location,
+            String description,
+            MasterDataLifecycleStatus status,
+            LocalDate validFrom,
+            LocalDate validTo
+    ) {
+        String normalizedName = normalizeName(name);
+        OrganizationType normalizedType = requireOrganizationType(organizationType);
+        String normalizedLocation = normalizeLocation(location);
+        String normalizedDescription = normalizeDescription(description);
+        validateValidity(validFrom, validTo);
+        return new OrganizationGeneralInformation(
+                normalizedName,
+                normalizedType,
+                normalizedLocation,
+                normalizedDescription,
+                status,
+                validFrom,
+                validTo
+        );
+    }
+
+    private String normalizeName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new UnprocessableEntityException(
+                    "INVALID_ORGANIZATION_NAME",
+                    "error.masterdata.v2.organizationNameRequired",
+                    "Organization name is required"
+            );
+        }
+        String normalized = name.trim();
+        if (normalized.length() > 255) {
+            throw new UnprocessableEntityException(
+                    "INVALID_ORGANIZATION_NAME",
+                    "error.masterdata.v2.organizationNameLength",
+                    "Organization name exceeds 255 characters"
+            );
+        }
+        return normalized;
+    }
+
+    private OrganizationType requireOrganizationType(OrganizationType organizationType) {
+        if (organizationType == null) {
+            throw new UnprocessableEntityException(
+                    "INVALID_ORGANIZATION_TYPE",
+                    "error.masterdata.v2.organizationTypeRequired",
+                    "Organization type is required"
+            );
+        }
+        return organizationType;
+    }
+
+    private String normalizeLocation(String location) {
+        if (location == null || location.isBlank()) {
+            return null;
+        }
+        String normalized = location.trim();
+        if (normalized.length() > 255) {
+            throw new UnprocessableEntityException(
+                    "INVALID_ORGANIZATION_LOCATION",
+                    "error.masterdata.v2.organizationLocationLength",
+                    "Organization location exceeds 255 characters"
+            );
+        }
+        return normalized;
+    }
+
+    private String normalizeDescription(String description) {
+        return description == null || description.isBlank() ? null : description.trim();
+    }
+
+    private MasterDataLifecycleStatus requireUpdateStatus(MasterDataLifecycleStatus status) {
+        if (status == MasterDataLifecycleStatus.ACTIVE || status == MasterDataLifecycleStatus.INACTIVE) {
+            return status;
+        }
+        throw new UnprocessableEntityException(
+                "INVALID_LIFECYCLE_TRANSITION",
+                "error.masterdata.v2.invalidLifecycleTransition",
+                "Organization Update accepts only ACTIVE or INACTIVE"
+        );
     }
 
     private ConflictException duplicateCode(String code) {
@@ -586,8 +743,10 @@ public class OrganizationService {
         return new OrganizationTreeNodeResponse(
                 node.entity.getId(),
                 node.entity.getCode(),
+                node.entity.getName(),
+                node.entity.getOrganizationType(),
                 node.entity.getParentOrganizationId(),
-                node.entity.getCode(),
+                node.entity.getName(),
                 node.entity.getStatus(),
                 node.entity.getValidFrom(),
                 node.entity.getValidTo(),
@@ -600,9 +759,13 @@ public class OrganizationService {
         return new OrganizationResponse(
                 entity.getId(),
                 entity.getCode(),
+                entity.getName(),
+                entity.getOrganizationType(),
                 entity.getParentOrganizationId(),
-                entity.getCode(),
+                entity.getName(),
                 entity.getStatus(),
+                entity.getLocation(),
+                entity.getDescription(),
                 entity.getValidFrom(),
                 entity.getValidTo(),
                 entity.getVersion(),
@@ -619,9 +782,13 @@ public class OrganizationService {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("id", entity.getId());
         snapshot.put("code", entity.getCode());
+        snapshot.put("name", entity.getName());
+        snapshot.put("organizationType", entity.getOrganizationType().wireValue());
         snapshot.put("parentOrganizationId", entity.getParentOrganizationId());
-        snapshot.put("displayLabel", entity.getCode());
+        snapshot.put("displayLabel", entity.getName());
         snapshot.put("status", entity.getStatus().wireValue());
+        snapshot.put("location", entity.getLocation());
+        snapshot.put("description", entity.getDescription());
         snapshot.put("validFrom", entity.getValidFrom());
         snapshot.put("validTo", entity.getValidTo());
         snapshot.put("version", entity.getVersion());
@@ -636,6 +803,17 @@ public class OrganizationService {
 
     private JsonNode validationSnapshot() {
         return objectMapper.valueToTree(Map.of("validated", true));
+    }
+
+    private record OrganizationGeneralInformation(
+            String name,
+            OrganizationType organizationType,
+            String location,
+            String description,
+            MasterDataLifecycleStatus status,
+            LocalDate validFrom,
+            LocalDate validTo
+    ) {
     }
 
     private static final class MutableOrganizationTreeNode {

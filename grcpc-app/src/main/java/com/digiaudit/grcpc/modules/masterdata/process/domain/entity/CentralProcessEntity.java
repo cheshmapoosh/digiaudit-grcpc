@@ -123,11 +123,24 @@ public class CentralProcessEntity {
         return new CentralProcessEntity(id, code, title, parentProcessId, description, sortOrder, validFrom, validTo, actorId, now);
     }
 
-    public void updateDetails(String title, String description, int sortOrder, LocalDate validFrom, LocalDate validTo, UUID actorId, Instant now) {
+    public void updateDetails(
+            String title,
+            String description,
+            int sortOrder,
+            MasterDataLifecycleStatus requestedStatus,
+            LocalDate validFrom,
+            LocalDate validTo,
+            UUID actorId,
+            Instant now
+    ) {
         requireNotDeleted();
+        if (requestedStatus == MasterDataLifecycleStatus.DELETED) {
+            throw new IllegalArgumentException("DELETED is not valid for Process General Information update");
+        }
         this.title = Objects.requireNonNull(title, "title is required");
         this.description = description;
         this.sortOrder = sortOrder;
+        this.status = Objects.requireNonNull(requestedStatus, "requestedStatus is required");
         this.validFrom = validFrom;
         this.validTo = validTo;
         touch(actorId, now);

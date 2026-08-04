@@ -26,4 +26,6 @@ Applies to the backend process feature under `modules/masterdata/process`.
 - Persist Subprocess rows only in `central_subprocess`.
 - The combined Process/Subprocess tree DTO may expose `PROCESS` and `SUBPROCESS` node types for UI presentation only.
 - Subprocess is a structural leaf and must not expose child creation.
+- Process and Subprocess General Information Update may atomically apply details plus a requested `ACTIVE` or `INACTIVE` status through one targeted row lock, one transaction, one Business Revision, and one `UPDATE` Revision Content. Update never accepts `DELETED` or a structural parent/owner field and does not acquire `PROCESS`.
+- Create, Move, Delete, Restore, and create-based reactivate/restore remain structural and Guard-protected by `PROCESS`; existing activate/inactivate endpoints remain available.
 - Keep explicit typed V2 command routes under `/api/master-data/central/processes` and `/api/master-data/central/subprocesses`.

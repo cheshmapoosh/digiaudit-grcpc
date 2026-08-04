@@ -150,9 +150,11 @@ Document mutation responses are a Prompt 4.2 exception: they do not contain `rev
 
 ### Status, delete, and restore commands
 
-Status changes, explicit delete, and explicit restore are separate typed commands.
+Organization, Process, and Subprocess General Information Update includes required `status` and accepts only `ACTIVE` or `INACTIVE`. Details and status are one Business Command, one transaction, one Business Revision, and one `UPDATE` Revision Content; the Browser must not chain Update plus Activate/Inactivate.
 
-Each requires `version`.
+Existing activate/inactivate routes remain available during the Prompt 5.8/5.9 transition. Explicit delete and explicit restore remain separate typed commands, and Update never accepts `DELETED`.
+
+Update and lifecycle commands require `version`.
 
 Delete sets the business record to `DELETED` through the command service.
 
