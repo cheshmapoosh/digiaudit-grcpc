@@ -144,6 +144,27 @@ P8 provides no mutable read-model replacement; it adds read-only query services 
 
 P9 verifies that no old entity, repository, service, mapper, controller, DTO, permission, or endpoint remains reachable.
 
+### Greenfield runtime quarantine until the owning slice
+
+Future-slice Legacy source may remain temporarily as implementation evidence, but it is excluded from the default Greenfield component, repository, and JPA managed-type runtime. `PersistenceManagedTypes` is the exact JPA allowlist; retaining `@Entity` on quarantined source does not make that class managed.
+
+The central quarantine contains these exact package prefixes:
+
+- `com.digiaudit.grcpc.modules.masterdata.accountgroup.` (P4â€“P5)
+- `com.digiaudit.grcpc.modules.masterdata.control.` (P4â€“P6)
+- `com.digiaudit.grcpc.modules.masterdata.objective.` (P4â€“P6)
+- `com.digiaudit.grcpc.modules.masterdata.policy.` (P4â€“P6)
+- `com.digiaudit.grcpc.modules.masterdata.risk.` (P4â€“P5)
+- `com.digiaudit.grcpc.modules.regulation.` (P4â€“P5)
+
+Mixed active packages use only these exact Legacy class-name prefixes:
+
+- `DocumentAttachment` (P7)
+- `ObjectiveOrganizationAssignment`, `OrganizationProcessAssignment`, `OrganizationProcessRiskAssignment`, and `OrganizationReferenceAssignment` (P4â€“P6)
+- `ProcessAccountGroupAssignment`, `ProcessControlAssignment`, `ProcessObjectiveAssignment`, `ProcessRegulationAssignment`, and `ProcessRiskAssignment` (P5â€“P6)
+
+When an owning V2 slice replaces a quarantined area, it must implement the approved persistence and API, add only the approved managed classes to `PersistenceManagedTypes`, delete the Legacy source, remove the matching quarantine entry, and rerun fresh-Oracle Flyway plus Hibernate validation. Legacy entities cannot be mapped to V2 tables because their columns, lifecycle, and relationship models do not implement the approved typed physical contract; in particular, Legacy `AccountGroupEntity` is incompatible with `central_account_group`.
+
 ## C. Current routes, pages, components, stores, API repositories, and i18n
 
 The UI rows use the same classification rules, but `KEEP_VISUAL_REPLACE_DATA_FLOW` is intentionally common because the approved model preserves useful user experience patterns.

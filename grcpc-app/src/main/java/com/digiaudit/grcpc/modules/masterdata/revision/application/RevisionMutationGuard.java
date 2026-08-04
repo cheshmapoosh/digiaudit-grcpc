@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Component
-public final class RevisionMutationGuard {
+public class RevisionMutationGuard {
     public RevisionExecutionContext requireContext(RevisionExecutionContext context) {
         if (context == null) {
             throw MasterDataRevisionRequiredException.missing();

@@ -472,6 +472,10 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 
 ## 20. Legacy cleanup acceptance
 
+- [ ] Future-slice Legacy source that has not yet been replaced is excluded from component and repository discovery in the default Greenfield runtime.
+- [ ] `PersistenceManagedTypes` contains the exact active JPA managed-class allowlist and contains no quarantined Legacy entity or converter.
+- [ ] The owning V2 slice deletes replaced Legacy source and removes its component, repository, and managed-type quarantine entry.
+- [ ] Runtime quarantine does not weaken Flyway or Hibernate `ddl-auto=validate`.
 - [ ] No Legacy combined `process_node` persistence remains live.
 - [ ] No Legacy combined risk category/template persistence remains live.
 - [ ] No Legacy combined regulation hierarchy persistence remains live.

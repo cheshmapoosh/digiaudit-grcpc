@@ -581,6 +581,10 @@ This corrective planning task changes none of those application files.
 
 ## 16. Contract exit condition for each later slice
 
+The default Greenfield runtime excludes future P4â€“P7 Legacy components and repositories while their source remains temporary implementation evidence. The central `PersistenceManagedTypes` bean is the exact JPA managed-class allowlist; package scanning is not an authority for persistence membership. Hibernate `ddl-auto=validate` and Flyway remain mandatory.
+
+When an owning V2 slice replaces a quarantined Legacy area, it must implement the approved V2 persistence and API, add only its approved managed classes to `PersistenceManagedTypes`, delete the replaced Legacy source, remove its quarantine entry, and prove startup again on fresh Oracle. No Legacy entity may be remapped to an approved V2 table as an interim measure.
+
 A later implementation slice is complete only when it uses exact approved table names.
 
 It must use typed foreign keys for Scope/Coverage rather than generic targets.
