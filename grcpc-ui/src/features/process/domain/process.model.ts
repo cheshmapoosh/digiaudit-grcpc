@@ -1,4 +1,5 @@
 import type { AuditFields } from "@/shared/domain/audit.model";
+import type { DocumentAggregateRequest, DocumentCommandResponse } from "@/features/document";
 
 export type ProcessStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type ProcessEditableStatus = "ACTIVE" | "INACTIVE";
@@ -9,6 +10,10 @@ export interface MasterDataRevisionMutationResponse {
     entityId: string;
     revisionId: string;
     version: number;
+}
+
+export interface MasterDataAggregateMutationResponse extends MasterDataRevisionMutationResponse {
+    finalizedDocuments: DocumentCommandResponse[];
 }
 
 export interface ProcessNode extends AuditFields {
@@ -45,21 +50,19 @@ export interface ProcessNodeCreate {
     sortOrder?: number | null;
     validFrom?: string | null;
     validTo?: string | null;
+    documents: DocumentAggregateRequest;
 }
 
 export interface ProcessNodeUpdate {
     version: number;
     title: string;
     status: ProcessEditableStatus;
+    parentId?: string | null;
     description?: string | null;
     sortOrder?: number | null;
     validFrom?: string | null;
     validTo?: string | null;
-}
-
-export interface ProcessMoveCommand {
-    parentId?: string | null;
-    version: number;
+    documents: DocumentAggregateRequest;
 }
 
 export interface ProcessLifecycleCommand {

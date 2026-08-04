@@ -2,9 +2,9 @@ import { httpClient } from "@/shared/infra/http.client";
 import type {
     CentralProcessResponse,
     CentralSubprocessResponse,
+    MasterDataAggregateMutationResponse,
     MasterDataRevisionMutationResponse,
     ProcessLifecycleCommand,
-    ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
     ProcessNodeType,
@@ -68,6 +68,7 @@ function toProcessCreateBody(payload: ProcessNodeCreate) {
         sortOrder: payload.sortOrder ?? 0,
         validFrom: payload.validFrom ?? null,
         validTo: payload.validTo ?? null,
+        documents: payload.documents,
     };
 }
 
@@ -80,18 +81,35 @@ function toSubprocessCreateBody(payload: ProcessNodeCreate) {
         sortOrder: payload.sortOrder ?? 0,
         validFrom: payload.validFrom ?? null,
         validTo: payload.validTo ?? null,
+        documents: payload.documents,
     };
 }
 
-function toUpdateBody(payload: ProcessNodeUpdate) {
+function toProcessUpdateBody(payload: ProcessNodeUpdate) {
     return {
         version: payload.version,
         title: payload.title,
         status: payload.status,
+        parentProcessId: payload.parentId ?? null,
         description: payload.description ?? null,
         sortOrder: payload.sortOrder ?? 0,
         validFrom: payload.validFrom ?? null,
         validTo: payload.validTo ?? null,
+        documents: payload.documents,
+    };
+}
+
+function toSubprocessUpdateBody(payload: ProcessNodeUpdate) {
+    return {
+        version: payload.version,
+        title: payload.title,
+        status: payload.status,
+        processId: payload.parentId,
+        description: payload.description ?? null,
+        sortOrder: payload.sortOrder ?? 0,
+        validFrom: payload.validFrom ?? null,
+        validTo: payload.validTo ?? null,
+        documents: payload.documents,
     };
 }
 
@@ -134,15 +152,15 @@ export class ProcessApiRepo implements ProcessRepo {
 
     async create(
         payload: ProcessNodeCreate,
-    ): Promise<MasterDataRevisionMutationResponse> {
+    ): Promise<MasterDataAggregateMutationResponse> {
         if (payload.nodeType === "PROCESS") {
-            return httpClient.post<MasterDataRevisionMutationResponse>(
+            return httpClient.post<MasterDataAggregateMutationResponse>(
                 PROCESS_URL,
                 toProcessCreateBody(payload),
             );
         }
 
-        return httpClient.post<MasterDataRevisionMutationResponse>(
+        return httpClient.post<MasterDataAggregateMutationResponse>(
             SUBPROCESS_URL,
             toSubprocessCreateBody(payload),
         );
@@ -151,25 +169,12 @@ export class ProcessApiRepo implements ProcessRepo {
     async update(
         node: ProcessNode,
         payload: ProcessNodeUpdate,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.patch<MasterDataRevisionMutationResponse>(
+    ): Promise<MasterDataAggregateMutationResponse> {
+        return httpClient.patch<MasterDataAggregateMutationResponse>(
             endpointForNode(node),
-            toUpdateBody(payload),
-        );
-    }
-
-    async move(
-        node: ProcessNode,
-        payload: ProcessMoveCommand,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        const body =
             node.nodeType === "PROCESS"
-                ? { parentProcessId: payload.parentId ?? null, version: payload.version }
-                : { processId: payload.parentId, version: payload.version };
-
-        return httpClient.post<MasterDataRevisionMutationResponse>(
-            `${endpointForNode(node)}/move`,
-            body,
+                ? toProcessUpdateBody(payload)
+                : toSubprocessUpdateBody(payload),
         );
     }
 

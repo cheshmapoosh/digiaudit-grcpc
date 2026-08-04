@@ -8,7 +8,7 @@ Applies to `src/features/organization`.
 - Combined Process/Subprocess representation is read-only presentation only.
 - Legacy `process_node` must not return.
 - Structural mutations use Backend-owned Business Revision.
-- Document commands remain outside Revision under the Prompt 4.2 correction.
+- Parent Save submits declarative Document drafts in the same aggregate request; temporary upload remains an immediate target-independent command.
 - Document temporary upload keeps the simplified Prompt 4.2 contract.
 - No automated tests are part of this task.
 
@@ -16,7 +16,7 @@ Applies to `src/features/organization`.
 - Use `/api/master-data/organizations` only for Organization structural data.
 - General Information uses `code`, `name`, `organizationType`, `parentOrganizationId`, `status`, `location`, `validFrom`, `validTo`, and `description`; `displayLabel` is the Organization name.
 - Create displays server-owned `ACTIVE` without sending status. Edit sends only `ACTIVE` or `INACTIVE` with General Information; `DELETED` is never selectable.
-- Code is Create-only. Parent is selectable on Create and Move-only afterward. Inactive nodes remain visible, selectable, editable, searchable, and structurally eligible.
+- Code is Create-only. Parent is selectable on both Create and Edit and is submitted by the same Save command. Exclude the current Organization and its descendants. Inactive nodes remain visible, selectable, editable, searchable, and structurally eligible.
 - Only General Information and Documents tabs are visible. The List Report toolbar exposes only Create, View, and Delete.
 - Keep the FCL tree/list/object-page flow, parent value help, selection, expanded state, RTL, and i18n behavior.
-- Re-enable the shared Document component only with exact persisted V2 `organization.id` and target type `ORG`.
+- Use the shared Document component in `PARENT_SAVE` mode with target type `ORG`; it emits serializable drafts and never performs a separate finalize command from this ObjectPage.

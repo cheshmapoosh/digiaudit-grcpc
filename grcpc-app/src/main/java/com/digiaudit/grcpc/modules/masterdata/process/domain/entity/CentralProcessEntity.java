@@ -125,6 +125,7 @@ public class CentralProcessEntity {
 
     public void updateDetails(
             String title,
+            UUID parentProcessId,
             String description,
             int sortOrder,
             MasterDataLifecycleStatus requestedStatus,
@@ -138,6 +139,7 @@ public class CentralProcessEntity {
             throw new IllegalArgumentException("DELETED is not valid for Process General Information update");
         }
         this.title = Objects.requireNonNull(title, "title is required");
+        this.parentProcessId = parentProcessId;
         this.description = description;
         this.sortOrder = sortOrder;
         this.status = Objects.requireNonNull(requestedStatus, "requestedStatus is required");

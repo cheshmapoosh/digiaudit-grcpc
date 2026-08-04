@@ -7,6 +7,7 @@ import com.digiaudit.grcpc.modules.masterdata.process.api.dto.MoveCentralSubproc
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.UpdateCentralSubprocessRequest;
 import com.digiaudit.grcpc.modules.masterdata.process.application.ProcessService;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
+import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -33,7 +34,7 @@ public class CentralSubprocessController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public MasterDataRevisionMutationResponse create(@Valid @RequestBody CreateCentralSubprocessRequest request) {
+    public MasterDataAggregateMutationResponse create(@Valid @RequestBody CreateCentralSubprocessRequest request) {
         return processService.createSubprocess(request);
     }
 
@@ -53,7 +54,7 @@ public class CentralSubprocessController {
 
     @PatchMapping("/{subprocessId}")
     @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public MasterDataRevisionMutationResponse update(
+    public MasterDataAggregateMutationResponse update(
             @PathVariable UUID subprocessId,
             @Valid @RequestBody UpdateCentralSubprocessRequest request
     ) {

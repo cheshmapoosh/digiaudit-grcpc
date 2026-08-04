@@ -1,8 +1,13 @@
 package com.digiaudit.grcpc.modules.document.application;
 
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
+import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentMetadataDraftRequest;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentLinkSummaryResponse;
+import com.digiaudit.grcpc.modules.document.api.dto.NewDocumentDraftRequest;
+import com.digiaudit.grcpc.modules.document.api.dto.NewDocumentVersionDraftRequest;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommands.AddVersion;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommands.CreateLinkedDocument;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommands.DocumentLifecycle;
@@ -30,7 +35,10 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -80,6 +88,162 @@ public class DocumentCommandService {
         this.validation = Objects.requireNonNull(validation, "validation is required");
         this.responseMapper = Objects.requireNonNull(responseMapper, "responseMapper is required");
         this.clock = Objects.requireNonNull(clock, "clock is required");
+    }
+
+    @Transactional
+    public void preflightTemporaryUploads(DocumentAggregateBatchRequest requestedBatch) {
+        DocumentAggregateBatchRequest batch = requestedBatch == null
+                ? new DocumentAggregateBatchRequest(null, null, null)
+                : requestedBatch;
+        Set<UUID> tempUploadIds = new HashSet<>();
+        for (NewDocumentDraftRequest draft : batch.newDocuments()) {
+            requireUniqueTempUpload(tempUploadIds, draft.tempUploadId());
+            validation.validateDateRange(draft.validFrom(), draft.validTo());
+            validation.requiredText(draft.title(), 255, "INVALID_DOCUMENT_TITLE", "Document title");
+            validation.nullableText(draft.code(), 64, "INVALID_DOCUMENT_CODE", "Document code");
+        }
+        for (NewDocumentVersionDraftRequest draft : batch.newVersions()) {
+            requireUniqueTempUpload(tempUploadIds, draft.tempUploadId());
+            validation.requireExpectedVersion(draft.expectedDocumentVersion());
+            validation.validateDateRange(draft.validFrom(), draft.validTo());
+        }
+
+        UUID actorId = actorId();
+        Instant now = Instant.now(clock);
+        tempUploadIds.stream().sorted().forEach(tempUploadId ->
+                preflightTemporaryUpload(tempUploadId, actorId, now)
+        );
+    }
+
+    @Transactional
+    public List<DocumentCommandResponse> finalizeAggregate(
+            DocumentAggregateBatchRequest requestedBatch,
+            DocumentLinkTargetType targetType,
+            UUID targetId
+    ) {
+        DocumentAggregateBatchRequest batch = requestedBatch == null
+                ? DocumentAggregateBatchRequest.empty()
+                : requestedBatch;
+        if (batch.newDocuments().isEmpty()
+                && batch.newVersions().isEmpty()
+                && batch.metadataUpdates().isEmpty()) {
+            return List.of();
+        }
+
+        DocumentTargetContext targetContext = resolveAndAuthorize(targetType, targetId, UPLOAD_PERMISSION);
+        UUID actorId = actorId();
+        Instant now = Instant.now(clock);
+        preflightAggregate(batch, targetContext, actorId, now);
+
+        List<DocumentCommandResponse> results = new ArrayList<>();
+        for (NewDocumentDraftRequest draft : batch.newDocuments()) {
+            results.add(createLinkedDocument(new CreateLinkedDocument(
+                    draft.tempUploadId(),
+                    draft.code(),
+                    draft.title(),
+                    draft.description(),
+                    null,
+                    targetContext.targetType(),
+                    targetContext.targetId(),
+                    draft.validFrom(),
+                    draft.validTo()
+            )));
+        }
+        for (NewDocumentVersionDraftRequest draft : batch.newVersions()) {
+            results.add(addVersion(new AddVersion(
+                    draft.documentId(),
+                    draft.tempUploadId(),
+                    draft.expectedDocumentVersion(),
+                    targetContext.targetType(),
+                    targetContext.targetId(),
+                    draft.validFrom(),
+                    draft.validTo()
+            )));
+        }
+        for (DocumentMetadataDraftRequest draft : batch.metadataUpdates()) {
+            results.add(updateMetadata(new UpdateMetadata(
+                    draft.documentId(),
+                    draft.expectedVersion(),
+                    targetContext.targetType(),
+                    targetContext.targetId(),
+                    PatchValue.absent(),
+                    PatchValue.present(draft.title()),
+                    PatchValue.absent(),
+                    PatchValue.absent(),
+                    PatchValue.absent(),
+                    PatchValue.absent()
+            )));
+        }
+        return List.copyOf(results);
+    }
+
+    private void preflightAggregate(
+            DocumentAggregateBatchRequest batch,
+            DocumentTargetContext targetContext,
+            UUID actorId,
+            Instant now
+    ) {
+        Set<UUID> tempUploadIds = new HashSet<>();
+        Set<UUID> mutatedDocumentIds = new HashSet<>();
+
+        for (NewDocumentDraftRequest draft : batch.newDocuments()) {
+            requireUniqueTempUpload(tempUploadIds, draft.tempUploadId());
+            validation.validateDateRange(draft.validFrom(), draft.validTo());
+            validation.requiredText(draft.title(), 255, "INVALID_DOCUMENT_TITLE", "Document title");
+            validation.nullableText(draft.code(), 64, "INVALID_DOCUMENT_CODE", "Document code");
+        }
+        for (NewDocumentVersionDraftRequest draft : batch.newVersions()) {
+            requireUniqueTempUpload(tempUploadIds, draft.tempUploadId());
+            requireUniqueDocumentMutation(mutatedDocumentIds, draft.documentId());
+            validation.requireExpectedVersion(draft.expectedDocumentVersion());
+            validation.validateDateRange(draft.validFrom(), draft.validTo());
+        }
+        for (DocumentMetadataDraftRequest draft : batch.metadataUpdates()) {
+            requireUniqueDocumentMutation(mutatedDocumentIds, draft.documentId());
+            validation.requireExpectedVersion(draft.expectedVersion());
+            validation.requiredText(draft.title(), 255, "INVALID_DOCUMENT_TITLE", "Document title");
+        }
+
+        tempUploadIds.stream().sorted().forEach(tempUploadId ->
+                preflightTemporaryUpload(tempUploadId, actorId, now)
+        );
+        mutatedDocumentIds.stream().sorted().forEach(documentId -> {
+            DocumentEntity document = lockDocument(documentId);
+            Long expectedVersion = batch.newVersions().stream()
+                    .filter(draft -> draft.documentId().equals(documentId))
+                    .map(NewDocumentVersionDraftRequest::expectedDocumentVersion)
+                    .findFirst()
+                    .orElseGet(() -> batch.metadataUpdates().stream()
+                            .filter(draft -> draft.documentId().equals(documentId))
+                            .map(DocumentMetadataDraftRequest::expectedVersion)
+                            .findFirst()
+                            .orElse(null));
+            requireVersion(document.getVersion(), expectedVersion);
+            document.requireNotDeleted();
+            requireActiveDocumentLink(document.getId(), targetContext);
+        });
+    }
+
+    private void preflightTemporaryUpload(UUID tempUploadId, UUID actorId, Instant now) {
+        DocumentTempUploadEntity tempUpload = tempUploadRepository.lockById(tempUploadId)
+                .orElseThrow(() -> DocumentFailures.notFound(
+                        "TEMPORARY_UPLOAD_NOT_FOUND",
+                        "Temporary upload was not found. tempUploadId=" + tempUploadId
+                ));
+        validateTemporaryUpload(tempUpload, actorId, now);
+        verifyTemporaryObject(tempUpload);
+    }
+
+    private void requireUniqueTempUpload(Set<UUID> seen, UUID tempUploadId) {
+        if (tempUploadId == null || !seen.add(tempUploadId)) {
+            throw DocumentFailures.invalid("DUPLICATE_TEMP_UPLOAD", "A temporary upload may be used only once per save");
+        }
+    }
+
+    private void requireUniqueDocumentMutation(Set<UUID> seen, UUID documentId) {
+        if (documentId == null || !seen.add(documentId)) {
+            throw DocumentFailures.invalid("DUPLICATE_DOCUMENT_OPERATION", "Conflicting operations for the same document are not allowed in one save");
+        }
     }
 
     @Transactional
@@ -326,7 +490,10 @@ public class DocumentCommandService {
 
     private PromotedUpload lockValidateAndPromote(UUID tempUploadId, UUID actorId, Instant now, UUID documentVersionId) {
         DocumentTempUploadEntity tempUpload = tempUploadRepository.lockById(tempUploadId)
-                .orElseThrow(() -> DocumentFailures.notFound("TEMPORARY_UPLOAD_NOT_FOUND", "Temporary upload was not found"));
+                .orElseThrow(() -> DocumentFailures.notFound(
+                        "TEMPORARY_UPLOAD_NOT_FOUND",
+                        "Temporary upload was not found. tempUploadId=" + tempUploadId
+                ));
         validateTemporaryUpload(tempUpload, actorId, now);
         DocumentStoragePort.DocumentObjectMetadata expectedMetadata = verifyTemporaryObject(tempUpload);
         String permanentObjectKey = objectKeyService.permanentKey(tempUpload.getId(), tempUpload.getOriginalFileName());
@@ -345,16 +512,22 @@ public class DocumentCommandService {
             );
             return new PromotedUpload(tempUpload, promotion.permanentObjectKey());
         } catch (DocumentStorageException ex) {
-            throw DocumentTemporaryUploadService.storageFailure(ex);
+            throw storageFailure(ex, tempUploadId);
         }
     }
 
     private void validateTemporaryUpload(DocumentTempUploadEntity tempUpload, UUID actorId, Instant now) {
         if (!tempUpload.getUploadedBy().equals(actorId)) {
-            throw DocumentFailures.forbidden("TEMPORARY_UPLOAD_OWNERSHIP_DENIED", "Temporary upload is owned by another user");
+            throw DocumentFailures.forbidden(
+                    "TEMPORARY_UPLOAD_OWNERSHIP_DENIED",
+                    "Temporary upload is owned by another user. tempUploadId=" + tempUpload.getId()
+            );
         }
         if (!now.isBefore(tempUpload.getExpiresAt())) {
-            throw DocumentFailures.gone("TEMPORARY_UPLOAD_EXPIRED", "Temporary upload has expired");
+            throw DocumentFailures.gone(
+                    "TEMPORARY_UPLOAD_EXPIRED",
+                    "Temporary upload has expired. tempUploadId=" + tempUpload.getId()
+            );
         }
     }
 
@@ -379,8 +552,21 @@ public class DocumentCommandService {
                     tempUpload.getChecksumValue()
             );
         } catch (DocumentStorageException ex) {
-            throw DocumentTemporaryUploadService.storageFailure(ex);
+            throw storageFailure(ex, tempUpload.getId());
         }
+    }
+
+    private RuntimeException storageFailure(DocumentStorageException ex, UUID tempUploadId) {
+        RuntimeException failure = DocumentTemporaryUploadService.storageFailure(ex);
+        if (failure instanceof ConflictException conflict) {
+            return new ConflictException(
+                    conflict.getErrorCode(),
+                    conflict.getMessageCode(),
+                    conflict.getDeveloperMessage() + ". tempUploadId=" + tempUploadId,
+                    conflict.getMessageArgs()
+            );
+        }
+        return failure;
     }
 
     private DocumentEntity lockDocument(UUID documentId) {

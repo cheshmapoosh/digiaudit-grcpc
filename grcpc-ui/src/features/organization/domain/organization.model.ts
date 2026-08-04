@@ -1,4 +1,5 @@
 import type { AuditFields } from "@/shared/domain/audit.model";
+import type { DocumentAggregateRequest, DocumentCommandResponse } from "@/features/document";
 
 export type OrganizationStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type OrganizationEditableStatus = "ACTIVE" | "INACTIVE";
@@ -23,6 +24,10 @@ export interface MasterDataRevisionMutationResponse {
     entityId: string;
     revisionId: string;
     version: number;
+}
+
+export interface MasterDataAggregateMutationResponse extends MasterDataRevisionMutationResponse {
+    finalizedDocuments: DocumentCommandResponse[];
 }
 
 export interface OrganizationNode extends AuditFields {
@@ -60,6 +65,7 @@ export interface OrganizationNodeCreate {
     description?: string | null;
     validFrom?: string | null;
     validTo?: string | null;
+    documents: DocumentAggregateRequest;
 }
 
 export interface OrganizationNodeUpdate {
@@ -67,15 +73,12 @@ export interface OrganizationNodeUpdate {
     name: string;
     organizationType: OrganizationType;
     status: OrganizationEditableStatus;
+    parentOrganizationId?: string | null;
     location?: string | null;
     description?: string | null;
     validFrom?: string | null;
     validTo?: string | null;
-}
-
-export interface OrganizationMoveCommand {
-    parentOrganizationId?: string | null;
-    version: number;
+    documents: DocumentAggregateRequest;
 }
 
 export interface OrganizationLifecycleCommand {

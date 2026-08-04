@@ -52,6 +52,12 @@ interface DocumentState {
         payload: DocumentLinkLifecyclePayload,
     ): Promise<DocumentCommandResponse>;
     createDownloadAccess(documentVersionId: string): Promise<DocumentDownloadAccess>;
+    applyAggregateResults(
+        targetType: DocumentLinkTargetType,
+        targetId: string,
+        responses: DocumentCommandResponse[],
+        consumedTempUploadIds: string[],
+    ): void;
     reset(): void;
 }
 
@@ -114,6 +120,24 @@ export const useDocumentState = create<DocumentState>((set) => ({
     linkedDocumentsByTarget: {},
     temporaryUploadsById: {},
     loading: false,
+
+    applyAggregateResults(targetType, targetId, responses, consumedTempUploadIds) {
+        set((state) => {
+            const key = targetKey(targetType, targetId);
+            const rows = responses.reduce(updateTargetRows, state.linkedDocumentsByTarget[key] ?? []);
+            const temporaryUploadsById = consumedTempUploadIds.reduce(
+                removeTemporaryUpload,
+                state.temporaryUploadsById,
+            );
+            return {
+                linkedDocumentsByTarget: {
+                    ...state.linkedDocumentsByTarget,
+                    [key]: rows,
+                },
+                temporaryUploadsById,
+            };
+        });
+    },
 
     async loadForTarget(targetType, targetId) {
         set({ loading: true });

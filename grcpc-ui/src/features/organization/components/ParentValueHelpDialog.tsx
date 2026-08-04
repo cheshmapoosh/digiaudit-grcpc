@@ -24,8 +24,6 @@ export interface ParentValueHelpDialogProps {
     selectedParentId?: string | null;
     onClose: () => void;
     onSelect: (parentId: string | null) => void;
-    onConfirm?: () => void;
-    confirmDisabled?: boolean;
     busy?: boolean;
 }
 
@@ -36,8 +34,6 @@ export default function ParentValueHelpDialog({
                                                    selectedParentId,
                                                    onClose,
                                                    onSelect,
-                                                   onConfirm,
-                                                   confirmDisabled = false,
                                                    busy = false,
                                                }: ParentValueHelpDialogProps) {
     const { t } = useTranslation();
@@ -69,10 +65,6 @@ export default function ParentValueHelpDialog({
         defaultValue: "انتخاب والد",
     });
 
-    const selectedParent = selectedParentId
-        ? items.find((item) => item.id === selectedParentId) ?? null
-        : null;
-
     return (
         <Dialog
             open={open}
@@ -89,19 +81,6 @@ export default function ParentValueHelpDialog({
                     })}
                     onInput={(event) => setSearchText(event.target.value)}
                 />
-
-                {onConfirm ? (
-                    <Input
-                        readonly
-                        accessibleName={t("organization.move.candidate", {
-                            defaultValue: "Selected destination",
-                        })}
-                        value={selectedParent ? `${selectedParent.code} - ${selectedParent.name}` : t(
-                            "organization.parent.none",
-                            { defaultValue: "No parent" },
-                        )}
-                    />
-                ) : null}
 
                 <List separators="Inner">
                     <ListItemStandard selected={!selectedParentId} onClick={() => onSelect(null)}>
@@ -122,15 +101,6 @@ export default function ParentValueHelpDialog({
                 </List>
 
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-                    {onConfirm ? (
-                        <Button
-                            design="Emphasized"
-                            disabled={busy || confirmDisabled}
-                            onClick={onConfirm}
-                        >
-                            {t("organization.move.confirm", { defaultValue: "Move" })}
-                        </Button>
-                    ) : null}
                     <Button design="Transparent" disabled={busy} onClick={onClose}>
                         {t("common.close", { defaultValue: "بستن" })}
                     </Button>

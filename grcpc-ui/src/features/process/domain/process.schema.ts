@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { t } from "@/shared/utils/i18n.util";
+import { documentAggregateRequestSchema } from "@/features/document/domain/document.schema";
 
 export const processStatusSchema = z.enum(["ACTIVE", "INACTIVE", "DELETED"]);
 export const processEditableStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
@@ -74,6 +75,7 @@ const baseProcessPayloadSchema = validitySchema.extend({
     parentId: z.string().trim().min(1).nullable().optional(),
     sortOrder: z.number().int().min(0).nullable().optional(),
     description: optionalTextSchema,
+    documents: documentAggregateRequestSchema,
 });
 
 export const processCreateSchema = baseProcessPayloadSchema;
@@ -92,13 +94,10 @@ export const processUpdateSchema = validitySchema.extend({
             ),
         ),
     status: processEditableStatusSchema,
+    parentId: z.string().trim().min(1).nullable().optional(),
     sortOrder: z.number().int().min(0).nullable().optional(),
     description: optionalTextSchema,
-});
-
-export const processMoveSchema = z.object({
-    parentId: z.string().trim().min(1).nullable().optional(),
-    version: z.number().int().min(0),
+    documents: documentAggregateRequestSchema,
 });
 
 export const processLifecycleSchema = z.object({
@@ -107,4 +106,3 @@ export const processLifecycleSchema = z.object({
 
 export type ProcessCreateInput = z.infer<typeof processCreateSchema>;
 export type ProcessUpdateInput = z.infer<typeof processUpdateSchema>;
-export type ProcessMoveInput = z.infer<typeof processMoveSchema>;

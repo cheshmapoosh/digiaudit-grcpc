@@ -108,13 +108,13 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Valid dates have no time component.
 - [ ] Valid ranges reject an end before a start.
 - [ ] Effective evaluation uses one common evaluation date across all dependencies.
-- [ ] Structural Organization Create/Move/Delete/Restore acquires `ORGANIZATION` before revision allocation or hierarchy reads.
-- [ ] Structural Process and Subprocess Create/Move/Delete/Restore share `PROCESS` and acquire it before revision allocation or hierarchy reads.
+- [ ] Structural Organization Create/Update/Move/Delete/Restore acquires `ORGANIZATION` before revision allocation or hierarchy reads.
+- [ ] Structural Process and Subprocess Create/Update/Move/Delete/Restore share `PROCESS` and acquire it before revision allocation or hierarchy reads.
 - [ ] Post-Guard hierarchy and dependency reads are fresh normal reads; no full-hierarchy `PESSIMISTIC_WRITE` query remains.
-- [ ] Targeted locks remain for ordinary Update/Activate/Inactivate and the exact `document_temp_upload` finalization row.
+- [ ] Targeted locks remain for Activate/Inactivate and exact Document/temp-upload rows; aggregate Update additionally owns the hierarchy Guard.
 - [ ] Guard lock acquisition/timeout failures return `HIERARCHY_BUSY` with HTTP 409, disclose no persistence details, and are not retried.
 - [ ] A missing Guard row returns `HIERARCHY_GUARD_NOT_CONFIGURED` with HTTP 500 and persists no source or Revision change.
-- [ ] Organization, Process, and Subprocess General Information Update applies details plus `ACTIVE`/`INACTIVE` through one targeted row lock, one transaction, one Revision, and one `UPDATE` Revision Content without a hierarchy Guard.
+- [ ] Organization, Process, and Subprocess aggregate Update applies details, typed parent/owner, `ACTIVE`/`INACTIVE`, and Document drafts through one hierarchy Guard, one Oracle transaction, one parent Revision, and one parent `UPDATE` Revision Content.
 - [ ] General Information Update rejects requested `DELETED` as `INVALID_LIFECYCLE_TRANSITION` and persists no source or Revision change.
 - [ ] Move, Delete, Restore, and Create Guard behavior is unchanged after atomic status Update is introduced.
 
@@ -124,14 +124,16 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Organization maps required `name` and closed `organization_type`, nullable `location`, and nullable CLOB `description` in Oracle, JPA, API DTOs, and Revision snapshots.
 - [ ] Organization `displayLabel` equals `name`; tree nodes include name/type but exclude location and description.
 - [ ] Organization Create is server-owned `ACTIVE`, and Create-based reactivation/restore refreshes all current descriptive and structural input fields on the existing ID.
-- [ ] Organization Update excludes code and parent; Process Update excludes parent; Subprocess Update excludes owner Process.
-- [ ] Process and Subprocess Update include required `ACTIVE`/`INACTIVE` status while code and structural ownership remain immutable.
-- [ ] Prompt 5.9 Organization Create/Update browser payloads exactly match Prompt 5.8, and Process/Subprocess Update payloads include `status` while Create payloads omit it.
+- [ ] Organization Update excludes code and includes `parentOrganizationId`; Process Update includes `parentProcessId`; Subprocess Update includes required `processId`.
+- [ ] Process and Subprocess Update include required `ACTIVE`/`INACTIVE` status while code remains immutable.
+- [ ] Prompt 5.10 Create/Update sends one typed aggregate request containing General Information, typed parent/owner, and Document drafts; Create omits status.
 - [ ] Organization and Process/Subprocess show only General Information and Documents tabs and only Create, View, and Delete toolbar actions.
 - [ ] Inactive hierarchy nodes remain visible, selectable, searchable, and editable with theme-aware Critical semantic presentation.
 - [ ] One shared UI5 Persian-calendar DatePicker supplies Gregorian `yyyy-MM-dd` values for Organization, Process, Subprocess, and Document business dates.
 - [ ] Free-text Document Category is absent from staged metadata while the nullable API response field remains compatible.
-- [ ] General Information and unfinished Document work feed one SPA-navigation and hard-unload guard; create-to-persisted transitions preserve temporary-upload references.
+- [ ] General Information, parent, invalid visible date drafts, and unfinished Document work feed one SPA-navigation and hard-unload guard; confirmed internal navigation uses a one-shot bypass before the action.
+- [ ] No Organization/Process/Subprocess Move button/dialog or frontend Move call remains in the target UI.
+- [ ] Successful Create/Edit clears submitted drafts and replaces the route with canonical View in the same modal while preserving tree selection and expansion.
 - [ ] Identity-scoped form Effects do not overwrite dirty edits or permit stale reads to replace newer mutations.
 - [ ] `central_process` exists as a separate table/entity.
 - [ ] `central_subprocess` exists as a separate table/entity.
@@ -328,6 +330,8 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] A repeated finalization does not create another Document Version and receives a safe not-found/already-finalized response.
 - [ ] The Backend rejects object/checksum/authorization failures with `INVALID_TEMP_UPLOAD`.
 - [ ] The Backend validates MinIO object presence and checksum before finalization.
+- [ ] Aggregate Save preflights every referenced temporary upload before applying the parent Oracle mutation and rejects duplicate temp IDs.
+- [ ] Aggregate Save rejects conflicting new-version/metadata operations for one Document before any Document mutation.
 - [ ] The Frontend never supplies final `storageObjectKey`.
 - [ ] There is no direct final file upload path.
 - [ ] Final confirmation transfers original filename, MIME type, file size, checksum algorithm, and checksum value into `document_version`.
@@ -336,6 +340,8 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Permanent MinIO objects use the approved permanent bucket or prefix convention.
 - [ ] Successful finalization deletes the temporary MinIO object after database commit.
 - [ ] Rollback retains the temporary row and object, and removes only a permanent object created by that failed attempt.
+- [ ] Parent, parent Revision Content, Document, Document Version, Document Link, metadata, and temporary-row consumption commit or roll back in one Oracle transaction.
+- [ ] Parent-save Document drafts omit target type/ID; the owning endpoint derives and authorizes the typed target.
 - [ ] No Job/Scheduler table is introduced for abandoned expired temporary cleanup.
 - [ ] No distributed Oracle–MinIO transaction is used.
 - [ ] No Outbox is introduced to coordinate Oracle and MinIO in version one.

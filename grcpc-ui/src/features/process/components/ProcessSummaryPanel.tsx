@@ -51,7 +51,7 @@ export default function ProcessSummaryPanel({ value, allItems = [], busy = false
                         <DetailRow label={t("process.fields.validity", { defaultValue: "Validity" })} value={`${formatPersianDate(value.validFrom)} - ${formatPersianDate(value.validTo)}`} />
                         <DetailRow label={t("process.fields.description", { defaultValue: "Description" })} value={value.description} />
                         <DetailRow label={t("process.fields.createdAt", { defaultValue: "Created at" })} value={formatPersianDateTime(value.createdAt)} />
-                        <DetailRow label={t("process.fields.updatedAt", { defaultValue: "Updated at" })} value={formatPersianDateTime(value.updatedAt)} />
+                        <DetailRow label={t("process.fields.updatedAt")} value={formatPersianDateTime(value.updatedAt)} />
                     </div> : <DocumentManager title={t("process.tabs.documents", { defaultValue: "Documents" })} targetType={documentTarget(value.nodeType)} targetId={value.id} readOnly showActions={false} />}
                 </div>
             </div> : <MessageStrip design="Information" hideCloseButton>{t("process.object.selectPrompt", { defaultValue: "Select an item to view details." })}</MessageStrip>}

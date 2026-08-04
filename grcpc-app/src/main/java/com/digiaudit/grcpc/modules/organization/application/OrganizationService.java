@@ -3,6 +3,9 @@ package com.digiaudit.grcpc.modules.organization.application;
 import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
+import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
+import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionActorProvider;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionCoordinator;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionContext;
@@ -14,6 +17,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentRes
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionEntityType;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationType;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
+import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
@@ -30,7 +34,6 @@ import com.digiaudit.grcpc.modules.organization.domain.repository.OrganizationRe
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +52,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class OrganizationService {
@@ -64,6 +68,7 @@ public class OrganizationService {
     private final ObjectMapper objectMapper;
     private final MasterDataStructuralDependencyChecker dependencyChecker;
     private final RevisionMutationGuard mutationGuard;
+    private final DocumentCommandService documentCommandService;
 
     public OrganizationService(
             OrganizationRepository organizationRepository,
@@ -72,7 +77,8 @@ public class OrganizationService {
             @Qualifier("masterDataRevisionClock") Clock clock,
             ObjectMapper objectMapper,
             MasterDataStructuralDependencyChecker dependencyChecker,
-            RevisionMutationGuard mutationGuard
+            RevisionMutationGuard mutationGuard,
+            DocumentCommandService documentCommandService
     ) {
         this.organizationRepository = Objects.requireNonNull(organizationRepository, "organizationRepository is required");
         this.revisionCoordinator = Objects.requireNonNull(revisionCoordinator, "revisionCoordinator is required");
@@ -81,6 +87,7 @@ public class OrganizationService {
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper is required");
         this.dependencyChecker = Objects.requireNonNull(dependencyChecker, "dependencyChecker is required");
         this.mutationGuard = Objects.requireNonNull(mutationGuard, "mutationGuard is required");
+        this.documentCommandService = Objects.requireNonNull(documentCommandService, "documentCommandService is required");
     }
 
     @Transactional(readOnly = true)
@@ -106,7 +113,7 @@ public class OrganizationService {
         return toResponse(findActiveReadable(id));
     }
 
-    public MasterDataRevisionMutationResponse create(CreateOrganizationRequest request) {
+    public MasterDataAggregateMutationResponse create(CreateOrganizationRequest request) {
         String code = normalizeCode(request.code());
         OrganizationGeneralInformation generalInformation = normalizeGeneralInformation(
                 request.name(),
@@ -117,24 +124,31 @@ public class OrganizationService {
                 request.validFrom(),
                 request.validTo()
         );
-        try {
-            RevisionExecutionResult result = revisionCoordinator.executeStructural(
+        AtomicReference<List<DocumentCommandResponse>> finalizedDocuments = new AtomicReference<>(List.of());
+        RevisionExecutionResult result = revisionCoordinator.executeStructural(
                     MasterDataHierarchyKey.ORGANIZATION,
                     RevisionRequest.central("Create organization " + code, "Organization structural create", null),
-                    context -> createInsideRevision(
-                            context,
-                            code,
-                            request.parentOrganizationId(),
-                            generalInformation
-                    )
-            );
-            return MasterDataRevisionMutationResponse.from(result.primaryResult());
-        } catch (DataIntegrityViolationException ex) {
-            throw duplicateCode(code);
-        }
+                    context -> {
+                        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
+                        documentCommandService.preflightTemporaryUploads(request.documents());
+                        RevisionOperationResult operation = createInsideRevision(
+                                context,
+                                code,
+                                request.parentOrganizationId(),
+                                generalInformation
+                        );
+                        finalizedDocuments.set(documentCommandService.finalizeAggregate(
+                                request.documents(),
+                                DocumentLinkTargetType.ORGANIZATION,
+                                operation.primaryResult().entityId()
+                        ));
+                        return operation;
+                    }
+        );
+        return aggregateResponse(result, finalizedDocuments.get());
     }
 
-    public MasterDataRevisionMutationResponse update(UUID organizationId, UpdateOrganizationRequest request) {
+    public MasterDataAggregateMutationResponse update(UUID organizationId, UpdateOrganizationRequest request) {
         long expectedVersion = requireVersion(request.version());
         OrganizationGeneralInformation generalInformation = normalizeGeneralInformation(
                 request.name(),
@@ -145,15 +159,33 @@ public class OrganizationService {
                 request.validFrom(),
                 request.validTo()
         );
-        RevisionExecutionResult result = revisionCoordinator.execute(
+        AtomicReference<List<DocumentCommandResponse>> finalizedDocuments = new AtomicReference<>(List.of());
+        RevisionExecutionResult result = revisionCoordinator.executeStructural(
+                MasterDataHierarchyKey.ORGANIZATION,
                 RevisionRequest.central(
                         "Update organization " + organizationId,
                         "Organization General Information update",
                         null
                 ),
-                context -> updateInsideRevision(context, organizationId, expectedVersion, generalInformation)
+                context -> {
+                    mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
+                    documentCommandService.preflightTemporaryUploads(request.documents());
+                    RevisionOperationResult operation = updateInsideRevision(
+                            context,
+                            organizationId,
+                            expectedVersion,
+                            request.parentOrganizationId(),
+                            generalInformation
+                    );
+                    finalizedDocuments.set(documentCommandService.finalizeAggregate(
+                            request.documents(),
+                            DocumentLinkTargetType.ORGANIZATION,
+                            organizationId
+                    ));
+                    return operation;
+                }
         );
-        return MasterDataRevisionMutationResponse.from(result.primaryResult());
+        return aggregateResponse(result, finalizedDocuments.get());
     }
 
     public MasterDataRevisionMutationResponse move(UUID organizationId, MoveOrganizationRequest request) {
@@ -259,15 +291,20 @@ public class OrganizationService {
             RevisionExecutionContext context,
             UUID organizationId,
             long expectedVersion,
+            UUID parentOrganizationId,
             OrganizationGeneralInformation generalInformation
     ) {
-        OrganizationEntity entity = lockExisting(organizationId, "ORGANIZATION_NOT_FOUND");
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
+        Map<UUID, OrganizationEntity> byId = indexById(organizationRepository.findAllByOrderByIdAsc());
+        OrganizationEntity entity = requireFromSnapshot(byId, organizationId);
         assertVersion(entity, expectedVersion);
         requireMutable(entity);
+        validateParent(organizationId, parentOrganizationId, byId);
         JsonNode before = snapshot(entity);
         entity.updateGeneralInformation(
                 generalInformation.name(),
                 generalInformation.organizationType(),
+                parentOrganizationId,
                 generalInformation.location(),
                 generalInformation.description(),
                 generalInformation.status(),
@@ -278,6 +315,19 @@ public class OrganizationService {
         );
         OrganizationEntity saved = organizationRepository.saveAndFlush(entity);
         return completed(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
+    }
+
+    private MasterDataAggregateMutationResponse aggregateResponse(
+            RevisionExecutionResult result,
+            List<DocumentCommandResponse> finalizedDocuments
+    ) {
+        MasterDataMutationResult primary = result.primaryResult();
+        return new MasterDataAggregateMutationResponse(
+                primary.entityId(),
+                primary.revisionId(),
+                primary.version(),
+                finalizedDocuments
+        );
     }
 
     private RevisionOperationResult moveInsideRevision(

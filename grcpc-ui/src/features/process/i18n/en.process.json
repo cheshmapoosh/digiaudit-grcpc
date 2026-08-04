@@ -22,6 +22,7 @@
       "status": "Status",
       "description": "Description",
       "createdAt": "Created At",
+      "updatedAt": "Updated At",
       "identifier": "Identifier",
       "parentProcess": "Parent Process",
       "owningProcess": "Owning Process",

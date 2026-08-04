@@ -1,14 +1,15 @@
 import { create } from "zustand";
 import type {
+    MasterDataAggregateMutationResponse,
     MasterDataRevisionMutationResponse,
     OrganizationLifecycleCommand,
-    OrganizationMoveCommand,
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
 } from "../domain/organization.model";
 import { organizationService } from "../service/organization.service";
 import { sortOrganizations } from "../utils/organization.tree";
+import { useDocumentState } from "@/features/document";
 
 export const ROOT_PARENT = "ROOT_PARENT";
 
@@ -19,9 +20,8 @@ interface OrganizationState {
     loading: boolean;
 
     loadChildren(parentId?: string): Promise<void>;
-    createNode(payload: OrganizationNodeCreate): Promise<MasterDataRevisionMutationResponse>;
-    updateNode(id: string, payload: OrganizationNodeUpdate): Promise<MasterDataRevisionMutationResponse>;
-    moveNode(id: string, payload: OrganizationMoveCommand): Promise<MasterDataRevisionMutationResponse>;
+    createNode(payload: OrganizationNodeCreate): Promise<MasterDataAggregateMutationResponse>;
+    updateNode(id: string, payload: OrganizationNodeUpdate): Promise<MasterDataAggregateMutationResponse>;
     removeNode(id: string, payload: OrganizationLifecycleCommand): Promise<MasterDataRevisionMutationResponse>;
     refresh(): Promise<void>;
     reset(): void;
@@ -159,6 +159,15 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
                 ...state.nodesById,
                 [confirmed.id]: confirmed,
             }));
+            useDocumentState.getState().applyAggregateResults(
+                "ORG",
+                result.entityId,
+                result.finalizedDocuments,
+                [
+                    ...payload.documents.newDocuments.map((draft) => draft.tempUploadId),
+                    ...payload.documents.newVersions.map((draft) => draft.tempUploadId),
+                ],
+            );
             completeMutation(set);
             return result;
         } catch (error) {
@@ -183,6 +192,7 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
                     organizationType: payload.organizationType,
                     displayLabel: payload.name.trim(),
                     status: payload.status,
+                    parentOrganizationId: payload.parentOrganizationId?.trim() || null,
                     location: normalizeOptional(payload.location),
                     description: normalizeOptional(payload.description),
                     validFrom: normalizeOptional(payload.validFrom),
@@ -190,30 +200,15 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
                     version: result.version,
                 },
             }));
-            completeMutation(set);
-            return result;
-        } catch (error) {
-            failMutation();
-            throw error;
-        } finally {
-            endActiveLoading(set, loadingEpoch);
-        }
-    },
-
-    async moveNode(id, payload) {
-        const current = get().nodesById[id];
-        if (!current) throw new Error("ORGANIZATION_NOT_FOUND");
-        const loadingEpoch = beginMutation(set);
-        try {
-            const result = await organizationService.move(id, payload);
-            set((state) => withActiveNodes(state, {
-                ...state.nodesById,
-                [id]: {
-                    ...current,
-                    parentOrganizationId: payload.parentOrganizationId?.trim() || null,
-                    version: result.version,
-                },
-            }));
+            useDocumentState.getState().applyAggregateResults(
+                "ORG",
+                id,
+                result.finalizedDocuments,
+                [
+                    ...payload.documents.newDocuments.map((draft) => draft.tempUploadId),
+                    ...payload.documents.newVersions.map((draft) => draft.tempUploadId),
+                ],
+            );
             completeMutation(set);
             return result;
         } catch (error) {

@@ -1,13 +1,12 @@
 import {
     organizationCreateSchema,
     organizationLifecycleSchema,
-    organizationMoveSchema,
     organizationUpdateSchema,
 } from "@/features/organization";
 import type {
+    MasterDataAggregateMutationResponse,
     MasterDataRevisionMutationResponse,
     OrganizationLifecycleCommand,
-    OrganizationMoveCommand,
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
@@ -46,6 +45,7 @@ function normalizeCreatePayload(payload: OrganizationNodeCreate): OrganizationNo
         description: normalizeOptionalText(parsed.description),
         validFrom: normalizeOptionalDate(parsed.validFrom),
         validTo: normalizeOptionalDate(parsed.validTo),
+        documents: parsed.documents,
     };
 }
 
@@ -57,19 +57,12 @@ function normalizeUpdatePayload(payload: OrganizationNodeUpdate): OrganizationNo
         name: normalizeRequiredText(parsed.name),
         organizationType: parsed.organizationType,
         status: parsed.status,
+        parentOrganizationId: parsed.parentOrganizationId?.trim() || null,
         location: normalizeOptionalText(parsed.location),
         description: normalizeOptionalText(parsed.description),
         validFrom: normalizeOptionalDate(parsed.validFrom),
         validTo: normalizeOptionalDate(parsed.validTo),
-    };
-}
-
-function normalizeMovePayload(payload: OrganizationMoveCommand): OrganizationMoveCommand {
-    const parsed = organizationMoveSchema.parse(payload);
-
-    return {
-        parentOrganizationId: parsed.parentOrganizationId?.trim() || null,
-        version: parsed.version,
+        documents: parsed.documents,
     };
 }
 
@@ -82,15 +75,11 @@ function normalizeLifecyclePayload(
 export interface OrganizationService {
     list(): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
-    create(payload: OrganizationNodeCreate): Promise<MasterDataRevisionMutationResponse>;
+    create(payload: OrganizationNodeCreate): Promise<MasterDataAggregateMutationResponse>;
     update(
         id: string,
         payload: OrganizationNodeUpdate,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    move(
-        id: string,
-        payload: OrganizationMoveCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
+    ): Promise<MasterDataAggregateMutationResponse>;
     delete(
         id: string,
         payload: OrganizationLifecycleCommand,
@@ -116,10 +105,6 @@ export function createOrganizationService(
 
         async update(id, payload) {
             return repo.update(id, normalizeUpdatePayload(payload));
-        },
-
-        async move(id, payload) {
-            return repo.move(id, normalizeMovePayload(payload));
         },
 
         async delete(id, payload) {

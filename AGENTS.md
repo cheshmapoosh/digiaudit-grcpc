@@ -17,12 +17,13 @@ These instructions apply to the whole repository. More specific `AGENTS.md` file
 - Keep Persian as the default user-facing language where the existing UI expects Persian.
 - When adding user-facing UI text, use i18n keys instead of hardcoded text.
 - When adding backend database changes, use Flyway migrations. Do not edit migrations that may already be applied in normal operational delivery. Before production activation, explicitly designated Master Data V2 Day-Zero migrations may be refined only to create the final schema directly on a fresh Oracle database; this exception does not authorize rewriting operational migrations or upgrading populated Master Data V2 schemas.
-- Maintain backend/frontend API contract compatibility. A DTO and its bundled UI normally change in the same task. Prompt 5.8 and Prompt 5.9 are one explicitly approved staged vertical slice: 5.8 finalized the Backend contract, and 5.9 must restore full bundled-client compatibility before the slice is accepted.
+- Maintain backend/frontend API contract compatibility. A DTO and its bundled UI normally change in the same task. Prompt 5.10 supersedes the remaining conflicting Prompt 5.8/5.9 browser rules: target Create/Edit uses one structural aggregate command for General Information, typed parent/owner, and Document drafts; temporary upload remains immediate and target-independent.
 
 ## Structural hierarchy concurrency rule
 - Before implementing, modifying, or reviewing a structural mutation, identify the affected hierarchy boundary.
 - Every `Create`, `Move`, `Delete`, `Restore`, re-parenting operation, and lifecycle change that affects structural eligibility must acquire the corresponding row in `masterdata_hierarchy_guard` with `PESSIMISTIC_WRITE` before reading or validating the hierarchy.
 - The Guard Row lock, hierarchy validation, source mutation, and Business Revision persistence must remain inside the same database transaction.
+- Prompt 5.10 Organization, Process, and Subprocess aggregate Update is structural because it owns the parent/owner field and must acquire the corresponding Guard even when the submitted parent value is unchanged.
 - Related entities that form one hierarchy must share one Guard Row. `central_process` and `central_subprocess` share the `PROCESS` Guard Row.
 - JVM-local locks, `Caffeine`, distributed-cache locks, table-wide locks, and entity `@Version` alone are not authoritative protection for hierarchy correctness.
 - Read and follow:

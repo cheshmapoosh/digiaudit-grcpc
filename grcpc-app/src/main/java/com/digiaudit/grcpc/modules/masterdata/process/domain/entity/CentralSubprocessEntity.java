@@ -125,6 +125,7 @@ public class CentralSubprocessEntity {
 
     public void updateDetails(
             String title,
+            UUID processId,
             String description,
             int sortOrder,
             MasterDataLifecycleStatus requestedStatus,
@@ -138,6 +139,7 @@ public class CentralSubprocessEntity {
             throw new IllegalArgumentException("DELETED is not valid for Subprocess General Information update");
         }
         this.title = Objects.requireNonNull(title, "title is required");
+        this.processId = Objects.requireNonNull(processId, "processId is required");
         this.description = description;
         this.sortOrder = sortOrder;
         this.status = Objects.requireNonNull(requestedStatus, "requestedStatus is required");

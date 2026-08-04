@@ -1,8 +1,8 @@
 import { httpClient } from "@/shared/infra/http.client";
 import type {
+    MasterDataAggregateMutationResponse,
     MasterDataRevisionMutationResponse,
     OrganizationLifecycleCommand,
-    OrganizationMoveCommand,
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
@@ -21,6 +21,7 @@ function toCreateBody(payload: OrganizationNodeCreate) {
         description: payload.description ?? null,
         validFrom: payload.validFrom ?? null,
         validTo: payload.validTo ?? null,
+        documents: payload.documents,
     };
 }
 
@@ -30,10 +31,12 @@ function toUpdateBody(payload: OrganizationNodeUpdate) {
         name: payload.name,
         organizationType: payload.organizationType,
         status: payload.status,
+        parentOrganizationId: payload.parentOrganizationId ?? null,
         location: payload.location ?? null,
         description: payload.description ?? null,
         validFrom: payload.validFrom ?? null,
         validTo: payload.validTo ?? null,
+        documents: payload.documents,
     };
 }
 
@@ -52,27 +55,17 @@ export class OrganizationApiRepo implements OrganizationRepo {
 
     async create(
         payload: OrganizationNodeCreate,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.post<MasterDataRevisionMutationResponse>(BASE_URL, toCreateBody(payload));
+    ): Promise<MasterDataAggregateMutationResponse> {
+        return httpClient.post<MasterDataAggregateMutationResponse>(BASE_URL, toCreateBody(payload));
     }
 
     async update(
         id: string,
         payload: OrganizationNodeUpdate,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.patch<MasterDataRevisionMutationResponse>(
+    ): Promise<MasterDataAggregateMutationResponse> {
+        return httpClient.patch<MasterDataAggregateMutationResponse>(
             `${BASE_URL}/${id}`,
             toUpdateBody(payload),
-        );
-    }
-
-    async move(
-        id: string,
-        payload: OrganizationMoveCommand,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.post<MasterDataRevisionMutationResponse>(
-            `${BASE_URL}/${id}/move`,
-            payload,
         );
     }
 

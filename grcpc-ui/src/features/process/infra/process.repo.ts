@@ -1,7 +1,7 @@
 import type {
+    MasterDataAggregateMutationResponse,
     MasterDataRevisionMutationResponse,
     ProcessLifecycleCommand,
-    ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
     ProcessNodeUpdate,
@@ -11,15 +11,11 @@ import type {
 export interface ProcessRepo {
     list(): Promise<ProcessNode[]>;
     getById(id: string, nodeType?: ProcessNodeType): Promise<ProcessNode | null>;
-    create(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
+    create(payload: ProcessNodeCreate): Promise<MasterDataAggregateMutationResponse>;
     update(
         node: ProcessNode,
         payload: ProcessNodeUpdate,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    move(
-        node: ProcessNode,
-        payload: ProcessMoveCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
+    ): Promise<MasterDataAggregateMutationResponse>;
     delete(
         node: ProcessNode,
         payload: ProcessLifecycleCommand,

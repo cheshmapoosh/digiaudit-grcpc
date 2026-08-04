@@ -3,10 +3,10 @@ export { processRoutes } from "./routes";
 export type {
     CentralProcessResponse,
     CentralSubprocessResponse,
+    MasterDataAggregateMutationResponse,
     MasterDataRevisionMutationResponse,
     ProcessLifecycleCommand,
     ProcessEditableStatus,
-    ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
     ProcessNodeType,
@@ -17,7 +17,6 @@ export type {
 
 export type {
     ProcessCreateInput,
-    ProcessMoveInput,
     ProcessUpdateInput,
 } from "./domain/process.schema";
 
@@ -25,7 +24,6 @@ export {
     processCreateSchema,
     processEditableStatusSchema,
     processLifecycleSchema,
-    processMoveSchema,
     processNodeTypeSchema,
     processStatusSchema,
     processUpdateSchema,

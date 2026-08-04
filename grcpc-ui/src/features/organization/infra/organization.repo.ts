@@ -1,7 +1,7 @@
 import type {
+    MasterDataAggregateMutationResponse,
     MasterDataRevisionMutationResponse,
     OrganizationLifecycleCommand,
-    OrganizationMoveCommand,
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
@@ -10,15 +10,11 @@ import type {
 export interface OrganizationRepo {
     list(): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
-    create(payload: OrganizationNodeCreate): Promise<MasterDataRevisionMutationResponse>;
+    create(payload: OrganizationNodeCreate): Promise<MasterDataAggregateMutationResponse>;
     update(
         id: string,
         payload: OrganizationNodeUpdate,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    move(
-        id: string,
-        payload: OrganizationMoveCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
+    ): Promise<MasterDataAggregateMutationResponse>;
     delete(
         id: string,
         payload: OrganizationLifecycleCommand,

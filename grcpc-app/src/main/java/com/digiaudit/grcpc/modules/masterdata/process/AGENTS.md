@@ -8,7 +8,7 @@ Applies to the backend process feature under `modules/masterdata/process`.
 - Combined Process/Subprocess representation is read-only presentation only.
 - Legacy `process_node` must not return.
 - Structural mutations use Backend-owned Business Revision.
-- Document commands remain outside Revision under the Prompt 4.2 correction.
+- Document mutations do not create Document Revision Content; when supplied by a parent aggregate Save, they join that parent command's Spring transaction.
 - Document temporary upload keeps the simplified Prompt 4.2 contract.
 - No automated tests are part of the current task unless explicitly authorized.
 
@@ -26,6 +26,7 @@ Applies to the backend process feature under `modules/masterdata/process`.
 - Persist Subprocess rows only in `central_subprocess`.
 - The combined Process/Subprocess tree DTO may expose `PROCESS` and `SUBPROCESS` node types for UI presentation only.
 - Subprocess is a structural leaf and must not expose child creation.
-- Process and Subprocess General Information Update may atomically apply details plus a requested `ACTIVE` or `INACTIVE` status through one targeted row lock, one transaction, one Business Revision, and one `UPDATE` Revision Content. Update never accepts `DELETED` or a structural parent/owner field and does not acquire `PROCESS`.
-- Create, Move, Delete, Restore, and create-based reactivate/restore remain structural and Guard-protected by `PROCESS`; existing activate/inactivate endpoints remain available.
+- Process and Subprocess General Information Update atomically applies details, typed parent/owner, a requested `ACTIVE` or `INACTIVE` status, and staged Document mutations through the `PROCESS` Guard, one transaction, one Business Revision, and one typed `UPDATE` Revision Content. Update never accepts `DELETED` or code.
+- Create and Update are structural and Guard-protected by `PROCESS`. Process Update rejects self/descendant parenting; Subprocess Update requires an eligible owning Process. Move endpoints remain Backend-compatible but are not used by the Prompt 5.10 browser flow.
+- Temporary uploads are preflighted before the Process/Subprocess Oracle mutation. Any parent/owner, document, authorization, optimistic-lock, storage, or finalization failure rolls the aggregate transaction back.
 - Keep explicit typed V2 command routes under `/api/master-data/central/processes` and `/api/master-data/central/subprocesses`.

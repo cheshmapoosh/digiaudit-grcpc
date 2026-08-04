@@ -40,7 +40,7 @@ These instructions apply to `grcpc-app`. Feature-specific instructions under `sr
 
 ## Persistence and migrations
 - Use Flyway for schema/data changes under `src/main/resources/db/migration`.
-- Do not edit existing migrations in normal operational delivery; add a new versioned migration. The accepted Master Data V2 Greenfield exception permits explicitly designated Day-Zero migrations to be refined before production activation so a fresh Oracle schema is created in its final form. `V1162` is already accepted under that exception; Prompt 5.9 must not change it or add a compensating migration.
+- Do not edit existing migrations in normal operational delivery; add a new versioned migration. The accepted Master Data V2 Greenfield exception permits explicitly designated Day-Zero migrations to be refined before production activation so a fresh Oracle schema is created in its final form. `V1162` is already accepted under that exception; Prompt 5.10 must not change it or add a compensating migration.
 - Preserve Oracle compatibility in vendor migrations.
 - Put seed data shared across databases in `db/migration/common` when appropriate.
 - Keep audit fields and soft-delete behavior consistent with existing entities.
@@ -52,6 +52,7 @@ These instructions apply to `grcpc-app`. Feature-specific instructions under `sr
 - Audit sensitive management operations using the existing audit module/pattern.
 
 ## Verification
+- Prompt 5.10 explicitly prohibits automated test creation, modification, and execution.
 - Preferred quick verification: `./mvnw -Dskip.ui=true test`.
 - For packaging backend without rebuilding UI: `./mvnw -Dskip.ui=true package`.
 - If changing frontend contract from backend, also run the UI checks from `grcpc-ui`.

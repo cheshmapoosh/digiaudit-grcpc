@@ -14,7 +14,7 @@ Document is the shared Master Data V2 UI for:
 - Temporary upload is target-independent. It accepts one file only and returns safe metadata plus `tempUploadId`.
 - Do not use `tempSessionId`, browser-generated upload sessions, generic commit endpoints, generic target strings, or `/api/documents`.
 - The shared component receives one approved `DocumentLinkTargetType` and a target ID or null from the owning feature.
-- When target ID is null, disable finalization and show the save-first state; do not chain parent save and document commit in the browser.
+- In `PARENT_SAVE` mode, temporary upload remains immediate, while finalization and metadata/version drafts are declarative input to the owning parent Save; no target ID is nested in those drafts.
 - `Document Version` rows are immutable; adding a file creates a new version and link.
 - Deleting from a target panel deletes the `Document Link`, not the document identity, version, or permanent object.
 - `MASTERDATA_REVISION` is backend-only and must not be selectable or rendered as a normal browser target.
@@ -22,7 +22,7 @@ Document is the shared Master Data V2 UI for:
 - All editable Master Data business dates use the shared UI5 Persian DatePicker while retaining Gregorian ISO `yyyy-MM-dd` API values.
 - Hide free-text Document Category until an approved controlled vocabulary exists; keep the nullable Backend-compatible response field unchanged.
 - Document dirty state includes selected/uploading/staged/finalizing files, retryable failed finalization with a temporary upload, and unsaved metadata drafts.
-- Parent General Information save and Document finalization remain separate browser commands, and temporary-upload references survive the parent Create-to-persisted transition.
+- Parent General Information, hierarchy, and Document drafts use one aggregate browser Save. The component exposes dirty/uploading/valid/ready state, hides per-document Save/finalize controls, and clears consumed drafts only after aggregate success.
 
 ## Verification
 - Run `npm run lint` and `npm run build` from `grcpc-ui`.

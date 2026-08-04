@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { t } from "@/shared/utils/i18n.util";
 import { ORGANIZATION_TYPES } from "./organization.model";
+import { documentAggregateRequestSchema } from "@/features/document/domain/document.schema";
 
 export const organizationStatusSchema = z.enum(["ACTIVE", "INACTIVE", "DELETED"]);
 export const organizationEditableStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
@@ -69,6 +70,7 @@ export const organizationCreateSchema = baseValiditySchema.extend({
     parentOrganizationId: z.string().trim().min(1).nullable().optional(),
     location: optionalLocationSchema,
     description: optionalDescriptionSchema,
+    documents: documentAggregateRequestSchema,
 });
 
 export const organizationUpdateSchema = baseValiditySchema.extend({
@@ -76,13 +78,10 @@ export const organizationUpdateSchema = baseValiditySchema.extend({
     name: nameSchema,
     organizationType: organizationTypeSchema,
     status: organizationEditableStatusSchema,
+    parentOrganizationId: z.string().trim().min(1).nullable().optional(),
     location: optionalLocationSchema,
     description: optionalDescriptionSchema,
-});
-
-export const organizationMoveSchema = z.object({
-    parentOrganizationId: z.string().trim().min(1).nullable().optional(),
-    version: z.number().int().min(0),
+    documents: documentAggregateRequestSchema,
 });
 
 export const organizationLifecycleSchema = z.object({
@@ -91,4 +90,3 @@ export const organizationLifecycleSchema = z.object({
 
 export type OrganizationCreateInput = z.infer<typeof organizationCreateSchema>;
 export type OrganizationUpdateInput = z.infer<typeof organizationUpdateSchema>;
-export type OrganizationMoveInput = z.infer<typeof organizationMoveSchema>;

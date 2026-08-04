@@ -1,14 +1,15 @@
 import { create } from "zustand";
 import type {
+    MasterDataAggregateMutationResponse,
     MasterDataRevisionMutationResponse,
     ProcessLifecycleCommand,
-    ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
     ProcessNodeUpdate,
 } from "../domain/process.model";
 import { processService } from "../service/process.service";
 import { sortProcesses } from "../utils/process.tree";
+import { useDocumentState } from "@/features/document";
 
 export const ROOT_PARENT = "ROOT_PARENT";
 
@@ -19,9 +20,8 @@ interface ProcessState {
     loading: boolean;
 
     loadChildren(parentId?: string): Promise<void>;
-    createNode(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
-    updateNode(node: ProcessNode, payload: ProcessNodeUpdate): Promise<MasterDataRevisionMutationResponse>;
-    moveNode(node: ProcessNode, payload: ProcessMoveCommand): Promise<MasterDataRevisionMutationResponse>;
+    createNode(payload: ProcessNodeCreate): Promise<MasterDataAggregateMutationResponse>;
+    updateNode(node: ProcessNode, payload: ProcessNodeUpdate): Promise<MasterDataAggregateMutationResponse>;
     removeNode(node: ProcessNode, payload: ProcessLifecycleCommand): Promise<MasterDataRevisionMutationResponse>;
     refresh(): Promise<void>;
     reset(): void;
@@ -157,6 +157,15 @@ export const useProcessState = create<ProcessState>((set, get) => ({
                 ...state.nodesById,
                 [confirmed.id]: confirmed,
             }));
+            useDocumentState.getState().applyAggregateResults(
+                payload.nodeType === "PROCESS" ? "CENTRAL_PROCESS" : "CENTRAL_SUBPROCESS",
+                result.entityId,
+                result.finalizedDocuments,
+                [
+                    ...payload.documents.newDocuments.map((draft) => draft.tempUploadId),
+                    ...payload.documents.newVersions.map((draft) => draft.tempUploadId),
+                ],
+            );
             completeMutation(set);
             return result;
         } catch (error) {
@@ -178,6 +187,7 @@ export const useProcessState = create<ProcessState>((set, get) => ({
                     ...current,
                     title: payload.title.trim(),
                     status: payload.status,
+                    parentId: payload.parentId?.trim() || null,
                     description: normalizeOptional(payload.description),
                     sortOrder: payload.sortOrder ?? 0,
                     validFrom: normalizeOptional(payload.validFrom),
@@ -185,29 +195,15 @@ export const useProcessState = create<ProcessState>((set, get) => ({
                     version: result.version,
                 },
             }));
-            completeMutation(set);
-            return result;
-        } catch (error) {
-            failMutation();
-            throw error;
-        } finally {
-            endActiveLoading(set, loadingEpoch);
-        }
-    },
-
-    async moveNode(node, payload) {
-        const current = get().nodesById[node.id] ?? node;
-        const loadingEpoch = beginMutation(set);
-        try {
-            const result = await processService.move(node, payload);
-            set((state) => withActiveNodes(state, {
-                ...state.nodesById,
-                [node.id]: {
-                    ...current,
-                    parentId: payload.parentId?.trim() || null,
-                    version: result.version,
-                },
-            }));
+            useDocumentState.getState().applyAggregateResults(
+                node.nodeType === "PROCESS" ? "CENTRAL_PROCESS" : "CENTRAL_SUBPROCESS",
+                node.id,
+                result.finalizedDocuments,
+                [
+                    ...payload.documents.newDocuments.map((draft) => draft.tempUploadId),
+                    ...payload.documents.newVersions.map((draft) => draft.tempUploadId),
+                ],
+            );
             completeMutation(set);
             return result;
         } catch (error) {

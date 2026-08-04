@@ -8,7 +8,7 @@ Applies to the backend `organization` module.
 - Combined Process/Subprocess representation is read-only presentation only.
 - Legacy `process_node` must not return.
 - Structural mutations use Backend-owned Business Revision.
-- Document commands remain outside Revision under the Prompt 4.2 correction.
+- Document mutations do not create Document Revision Content; when supplied by a parent aggregate Save, they join that parent command's Spring transaction.
 - Document temporary upload keeps the simplified Prompt 4.2 contract.
 - No automated tests are part of the current task unless explicitly authorized.
 
@@ -25,7 +25,8 @@ Applies to the backend `organization` module.
 - Organization maps only the approved V2 `organization` table fields.
 - General Information contains `code`, `name`, `organizationType`, `parentOrganizationId`, `status`, `location`, `validFrom`, `validTo`, and `description`; `displayLabel` is derived from `name`.
 - `OrganizationType` is the closed uppercase V2 vocabulary; these detailed attributes are not a Legacy compatibility layer.
-- Create is server-owned `ACTIVE`. General Information Update atomically applies editable details plus a requested `ACTIVE` or `INACTIVE` status through one targeted row lock, one transaction, one Business Revision, and one Revision Content. Update never accepts `DELETED`, `code`, or `parentOrganizationId`.
-- Move, Delete, Restore, and Create (including create-based reactivate/restore) remain structural and acquire `ORGANIZATION`; ordinary General Information Update does not.
+- Create is server-owned `ACTIVE`. General Information Update atomically applies editable details, `parentOrganizationId`, a requested `ACTIVE` or `INACTIVE` status, and staged Document mutations through one hierarchy Guard, one transaction, one Business Revision, and one Organization Revision Content. Update never accepts `DELETED` or `code`.
+- Create and Update are structural and acquire `ORGANIZATION`; Update validates parent existence and eligibility, rejects self/descendant parenting, and performs one Organization mutation. Move endpoints remain Backend-compatible but are not used by the Prompt 5.10 browser flow.
+- Temporary uploads are preflighted before the Organization Oracle mutation. Any parent, document, authorization, optimistic-lock, storage, or finalization failure rolls the aggregate transaction back.
 - Keep explicit create, update, move, activate, inactivate, delete, and restore commands under `/api/master-data/organizations`.
 - Delete operations must protect child organizations and approved V2 dependents without cascading.

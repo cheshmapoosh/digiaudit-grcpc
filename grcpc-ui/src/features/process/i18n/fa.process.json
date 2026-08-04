@@ -22,6 +22,7 @@
       "status": "وضعیت",
       "description": "شرح",
       "createdAt": "تاریخ ایجاد",
+      "updatedAt": "تاریخ به‌روزرسانی",
       "identifier": "شناسه",
       "parentProcess": "والد فرآیند",
       "owningProcess": "فرآیند مالک",

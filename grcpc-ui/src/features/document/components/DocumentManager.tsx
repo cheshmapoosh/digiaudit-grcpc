@@ -26,6 +26,7 @@ import type {
     DocumentLinkSummary,
     DocumentLinkTargetType,
     DocumentTemporaryUpload,
+    ParentSaveDocumentDraftState,
 } from "../domain/document.model";
 import { getDocumentTargetKey, useDocumentState } from "../state/document.state";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
@@ -45,6 +46,9 @@ export interface DocumentManagerProps {
     editHint?: string;
     onPendingUploadsChange?: (hasPendingUploads: boolean) => void;
     onDirtyChange?: (dirty: boolean) => void;
+    persistenceMode?: "STANDALONE" | "PARENT_SAVE";
+    onDraftStateChange?: (state: ParentSaveDocumentDraftState) => void;
+    draftResetKey?: string | number;
 }
 
 type UploadFlowState =
@@ -77,6 +81,8 @@ interface UploadFlowItem {
     description: string;
     validFrom: string;
     validTo: string;
+    validFromDraftValid: boolean;
+    validToDraftValid: boolean;
 }
 
 type ActionMessageDesign = "Information" | "Positive" | "Negative";
@@ -310,6 +316,9 @@ export default function DocumentManager({
     editHint,
     onPendingUploadsChange,
     onDirtyChange,
+    persistenceMode = "STANDALONE",
+    onDraftStateChange,
+    draftResetKey,
 }: DocumentManagerProps) {
     const { t } = useTranslation();
     const mountedRef = useRef(true);
@@ -322,6 +331,8 @@ export default function DocumentManager({
     const [deleteCandidate, setDeleteCandidate] = useState<DocumentLinkSummary | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [actionMessage, setActionMessage] = useState<ActionMessage | null>(null);
+    const parentSaveMode = persistenceMode === "PARENT_SAVE";
+    const resetKeyRef = useRef(draftResetKey);
 
     const linkedDocumentsByTarget = useDocumentState((state) => state.linkedDocumentsByTarget);
     const loading = useDocumentState((state) => state.loading);
@@ -363,6 +374,67 @@ export default function DocumentManager({
         || savingMetadataIds.size > 0
         || versioningDocumentIds.size > 0;
 
+    const parentSaveDraftState = useMemo<ParentSaveDocumentDraftState>(() => {
+        const uploading = uploadItems.some((item) =>
+            item.state === "SELECTED" || item.state === "UPLOADING" || item.state === "FINALIZING",
+        );
+        const invalidUpload = uploadItems.some((item) => {
+            const missingTitle = !item.existingDocument && !item.title.trim();
+            const invalidRange = Boolean(item.validFrom && item.validTo && item.validFrom > item.validTo);
+            return missingTitle
+                || invalidRange
+                || !item.validFromDraftValid
+                || !item.validToDraftValid
+                || !item.tempUploadId
+                || item.state !== "UPLOADED"
+                || Boolean(item.failureState)
+                || isExpired(item.expiresAt);
+        });
+        const metadataUpdates = Object.entries(metadataDrafts).flatMap(([documentId, draftTitle]) => {
+            const row = rows.find((candidate) => candidate.documentId === documentId);
+            if (!row || draftTitle.trim() === row.title) return [];
+            return [{
+                documentId,
+                expectedVersion: row.documentVersion,
+                title: draftTitle.trim(),
+            }];
+        });
+        const invalidMetadata = metadataUpdates.some((draft) => !draft.title);
+        const newDocuments = uploadItems
+            .filter((item) => !item.existingDocument && Boolean(item.tempUploadId))
+            .map((item) => ({
+                rowId: item.id,
+                tempUploadId: item.tempUploadId as string,
+                code: optionalText(item.code),
+                title: item.title.trim(),
+                description: optionalText(item.description),
+                validFrom: optionalText(item.validFrom),
+                validTo: optionalText(item.validTo),
+            }));
+        const newVersions = uploadItems
+            .filter((item) => Boolean(item.existingDocument && item.tempUploadId))
+            .map((item) => ({
+                rowId: item.id,
+                documentId: item.existingDocument!.documentId,
+                expectedDocumentVersion: item.existingDocument!.documentVersion,
+                tempUploadId: item.tempUploadId as string,
+                validFrom: optionalText(item.validFrom),
+                validTo: optionalText(item.validTo),
+            }));
+        const stateDirty = uploadItems.length > 0 || metadataUpdates.length > 0;
+        const invalid = invalidUpload || invalidMetadata;
+        return {
+            dirty: stateDirty,
+            ready: !uploading && !invalid,
+            uploading,
+            invalid,
+            newDocuments,
+            newVersions,
+            metadataUpdates,
+        };
+    }, [metadataDrafts, rows, uploadItems]);
+    const effectiveDirty = parentSaveMode ? parentSaveDraftState.dirty : dirty;
+
     useEffect(() => {
         mountedRef.current = true;
         const progressFallbackTimers = progressFallbackTimersRef.current;
@@ -379,13 +451,36 @@ export default function DocumentManager({
     }, [hasPendingUploads, onPendingUploadsChange]);
 
     useEffect(() => {
-        onDirtyChange?.(dirty);
-    }, [dirty, onDirtyChange]);
+        onDirtyChange?.(effectiveDirty);
+    }, [effectiveDirty, onDirtyChange]);
+
+    useEffect(() => {
+        if (parentSaveMode) onDraftStateChange?.(parentSaveDraftState);
+    }, [onDraftStateChange, parentSaveDraftState, parentSaveMode]);
+
+    useEffect(() => {
+        if (resetKeyRef.current === draftResetKey) return;
+        resetKeyRef.current = draftResetKey;
+        setUploadItems([]);
+        setMetadataDrafts({});
+        setActionMessage(null);
+    }, [draftResetKey]);
 
     useEffect(() => () => {
         onPendingUploadsChange?.(false);
         onDirtyChange?.(false);
-    }, [onDirtyChange, onPendingUploadsChange]);
+        if (parentSaveMode) {
+            onDraftStateChange?.({
+                dirty: false,
+                ready: true,
+                uploading: false,
+                invalid: false,
+                newDocuments: [],
+                newVersions: [],
+                metadataUpdates: [],
+            });
+        }
+    }, [onDirtyChange, onDraftStateChange, onPendingUploadsChange, parentSaveMode]);
 
     useEffect(() => {
         if (!targetId) {
@@ -413,9 +508,19 @@ export default function DocumentManager({
             return;
         }
 
-        setUploadItems((current) =>
-            current.map((row) => (row.id === rowId ? { ...row, ...patch } : row)),
-        );
+        setUploadItems((current) => {
+            let changed = false;
+            const next = current.map((row) => {
+                if (row.id !== rowId) return row;
+                const needsChange = Object.entries(patch).some(
+                    ([key, value]) => row[key as keyof UploadFlowItem] !== value,
+                );
+                if (!needsChange) return row;
+                changed = true;
+                return { ...row, ...patch };
+            });
+            return changed ? next : current;
+        });
     }, []);
 
     const updateStagedField = useCallback((
@@ -565,6 +670,8 @@ export default function DocumentManager({
                 description: existingDocument?.description ?? "",
                 validFrom: "",
                 validTo: "",
+                validFromDraftValid: true,
+                validToDraftValid: true,
             };
 
             setUploadItems((current) => [...current, initialItem]);
@@ -884,7 +991,7 @@ export default function DocumentManager({
 
         return (
             <div style={ACTIONS_STYLE}>
-                {!readOnly ? (
+                {!readOnly && !parentSaveMode ? (
                     <Button
                         design="Transparent"
                         icon="save"
@@ -1009,6 +1116,7 @@ export default function DocumentManager({
                     const canFinalize =
                         staged &&
                         Boolean(targetId) &&
+                        !parentSaveMode &&
                         !busy &&
                         !readOnly &&
                         !titleMissing &&
@@ -1033,7 +1141,7 @@ export default function DocumentManager({
                                     </span>
                                 </div>
                                 <div style={ACTIONS_STYLE}>
-                                    {showMetadata ? (
+                                    {showMetadata && !parentSaveMode ? (
                                         <Button
                                             design="Emphasized"
                                             icon="save"
@@ -1050,7 +1158,7 @@ export default function DocumentManager({
                                             {finalizeText}
                                         </Button>
                                     ) : null}
-                                    {item.failureState ? (
+                                    {item.failureState || parentSaveMode ? (
                                         <Button
                                             design="Transparent"
                                             onClick={() => removeUploadItem(item.id)}
@@ -1120,6 +1228,7 @@ export default function DocumentManager({
                                         disabled={busy || item.state === "FINALIZING"}
                                         invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
                                         onChange={(value) => updateStagedField(item.id, "validFrom", value)}
+                                        onDraftStateChange={(state) => updateUploadItem(item.id, { validFromDraftValid: state.valid })}
                                     />
                                     <PersianDatePicker
                                         accessibleName={t("document.fields.validTo", {
@@ -1132,6 +1241,7 @@ export default function DocumentManager({
                                             ? t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })
                                             : t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
                                         onChange={(value) => updateStagedField(item.id, "validTo", value)}
+                                        onDraftStateChange={(state) => updateUploadItem(item.id, { validToDraftValid: state.valid })}
                                     />
                                     {invalidValidityRange ? <span style={ERROR_TEXT_STYLE}>{t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })}</span> : null}
                                 </div>

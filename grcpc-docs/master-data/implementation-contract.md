@@ -175,9 +175,9 @@ Every mutable entity has optimistic locking.
 
 Organization General Information consists of `code`, `name`, `organizationType`, `parentOrganizationId`, `status`, `location`, `validFrom`, `validTo`, and `description`. `name` and the closed `OrganizationType` are required, and `displayLabel` is derived from `name`. This accepted detailed-design correction is not a Legacy compatibility layer.
 
-Organization, Process, and Subprocess General Information Update may request only `ACTIVE` or `INACTIVE` and applies status and descriptive fields atomically through one targeted row lock, one transaction, one Business Revision, and one `UPDATE` Revision Content. Update rejects `DELETED`; code and structural parent/owner fields remain immutable and Move-only.
+Organization, Process, and Subprocess General Information Update may request only `ACTIVE` or `INACTIVE` and atomically applies status, descriptive fields, the typed parent/owner field, and staged Document mutations through one hierarchy Guard and one Oracle transaction. The parent receives one Business Revision and one `UPDATE` Revision Content; Document entities remain outside Revision Content. Update rejects `DELETED`, and code remains immutable.
 
-Structural Organization commands acquire the `ORGANIZATION` database Guard row. Structural Process and Subprocess commands share the `PROCESS` database Guard row. The guarded operations are Create (including reactivate/restore by matching code), Move, Delete, and explicit Restore. Ordinary Update, Activate, Inactivate, and reads do not acquire a hierarchy Guard in this slice.
+Structural Organization commands acquire the `ORGANIZATION` database Guard row. Structural Process and Subprocess commands share the `PROCESS` database Guard row. The guarded operations are Create (including reactivate/restore by matching code), Prompt 5.10 aggregate Update, Move, Delete, and explicit Restore. Activate, Inactivate, and reads do not acquire a hierarchy Guard in this slice.
 
 Guard acquisition uses `PESSIMISTIC_WRITE` with the configured JPA lock-timeout hint and precedes revision-number allocation, hierarchy reads, validation, source mutation, and Revision persistence. Fresh normal business-table reads occur only after acquisition. A recognized lock acquisition/timeout failure returns `HIERARCHY_BUSY` with HTTP 409 and is not retried. A missing configured Guard row fails closed with `HIERARCHY_GUARD_NOT_CONFIGURED` and HTTP 500.
 
@@ -185,7 +185,7 @@ The Guard is the transaction-scoped structural serialization mechanism; full-hie
 
 Removal of the temporary `HierarchyGuardOracleAcceptanceTest` after its evidence was accepted does not alter the binding concurrency design or its acceptance requirements.
 
-Prompt 5.9 completes the explicitly staged Prompt 5.8 Backend/UI vertical slice. The bundled Organization UI now supplies required name/type fields, Process and Subprocess Update supply status, and no compatibility wrapper weakens the Prompt 5.8 contract. Target ObjectPages expose General Information and Documents only, share a Persian-calendar DatePicker with Gregorian `yyyy-MM-dd` wire values, preserve temporary uploads across parent Create, and protect normalized form plus Document drafts from SPA and hard-unload navigation.
+Prompt 5.10 completes the Prompt 5 vertical slice. Organization, Process, and Subprocess Create/Edit use one modal Save for General Information, status, typed parent/owner, staged new Documents, new Document Versions, and supported metadata drafts. There is no target Move UI or browser mutation chain. Temporary upload remains immediate and target-independent. Successful Create/Edit replaces the route with canonical View in the same modal. The shared Persian-calendar DatePicker owns Gregorian `yyyy-MM-dd` model values and reports invalid visible drafts to Save readiness and navigation protection.
 
 Soft-delete consistency requires deleted metadata when, and only when, `status = DELETED`.
 
@@ -464,6 +464,8 @@ It is created only for a finalized permanent object.
 
 The final Document command confirms a verified Temporary Upload, creates or updates Document identity as needed, creates the immutable Document Version, creates the Document Link where applicable, and deletes the temporary row.
 
+For Prompt 5.10 Organization, Process, and Subprocess aggregate Create/Update, the owning endpoint supplies the target type and authoritative created/path target ID. It preflights every referenced temporary upload before the parent Oracle mutation and rejects duplicate temp IDs or conflicting operations for one Document. Parent mutation, parent Revision Content, Document identity/version/link/metadata changes, and temporary-row consumption share one Oracle transaction. The Browser sends exactly one aggregate mutation request.
+
 The temporary table is exactly `document_temp_upload`; it is technical and contains only uploads that already completed MinIO upload and object verification.
 
 `tempUploadId` is the only upload identifier sent into a final document-aware command.
@@ -507,6 +509,8 @@ The Backend uses validation, ordered operations, and best-effort cleanup to mana
 No Outbox is introduced for this version.
 
 Successful finalization deletes the temporary MinIO object after commit. Abandoned expired rows and objects require a separately approved maintenance design or infrastructure lifecycle behavior.
+
+Oracle and MinIO do not form a distributed transaction. Permanent copies are verified before Oracle commit; after commit, temporary objects are deleted Best-Effort. On Oracle rollback, temporary rows and objects remain retryable and only permanent objects created by the failed attempt are removed Best-Effort. Cleanup failure is logged without leaking storage identifiers and never changes an already-committed API result.
 
 No Job or Scheduler table is introduced for temporary cleanup.
 

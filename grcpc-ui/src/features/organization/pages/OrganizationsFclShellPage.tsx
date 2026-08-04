@@ -208,7 +208,6 @@ export default function OrganizationsFclShellPage() {
     const loadChildren = useOrganizationState((state) => state.loadChildren);
     const createNode = useOrganizationState((state) => state.createNode);
     const updateNode = useOrganizationState((state) => state.updateNode);
-    const moveNode = useOrganizationState((state) => state.moveNode);
     const removeNode = useOrganizationState((state) => state.removeNode);
 
     const [searchText, setSearchText] = useState("");
@@ -220,13 +219,12 @@ export default function OrganizationsFclShellPage() {
         useState<OrganizationTabKey>("general");
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
-    const [savedCreateNode, setSavedCreateNode] = useState<OrganizationNode | null>(null);
     const [generalInformationDirty, setGeneralInformationDirty] = useState(false);
     const [documentDirty, setDocumentDirty] = useState(false);
     const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
     const pendingLeaveActionRef = useRef<(() => void) | null>(null);
     const objectPageDirty = generalInformationDirty || documentDirty;
-    const { blocker, allowNextNavigation } = useUnsavedChangesGuard(objectPageDirty);
+    const { blocker, runWithNavigationBypass } = useUnsavedChangesGuard(objectPageDirty);
 
     const requestObjectPageLeave = useCallback((action: () => void) => {
         if (!objectPageDirty) {
@@ -250,8 +248,8 @@ export default function OrganizationsFclShellPage() {
         setGeneralInformationDirty(false);
         setDocumentDirty(false);
         if (blocker.state === "blocked") blocker.proceed();
-        else action?.();
-    }, [blocker]);
+        else if (action) runWithNavigationBypass(action);
+    }, [blocker, runWithNavigationBypass]);
 
     useEffect(() => () => {
         useOrganizationState.getState().reset();
@@ -290,7 +288,6 @@ export default function OrganizationsFclShellPage() {
 
     useEffect(() => {
         setObjectActiveTab("general");
-        setSavedCreateNode(null);
         setGeneralInformationDirty(false);
         setDocumentDirty(false);
     }, [objectTabScopeKey]);
@@ -386,10 +383,6 @@ export default function OrganizationsFclShellPage() {
     const handleCancel = useCallback(() => {
         requestObjectPageLeave(() => {
             setObjectError(null);
-            if (savedCreateNode) {
-                navigate(`/organizations/${savedCreateNode.id}`);
-                return;
-            }
             const currentAnchorId = routeMode === "create"
                 ? queryParentId ?? selectedTreeId
                 : organizationId ?? selectedTreeId;
@@ -399,7 +392,7 @@ export default function OrganizationsFclShellPage() {
             }
             navigate("/organizations");
         });
-    }, [navigate, organizationId, queryParentId, requestObjectPageLeave, routeMode, savedCreateNode, selectedTreeId]);
+    }, [navigate, organizationId, queryParentId, requestObjectPageLeave, routeMode, selectedTreeId]);
 
     const handleSubmitCreate = useCallback(
         async (payload: OrganizationNodeCreate | OrganizationNodeUpdate): Promise<boolean> => {
@@ -409,12 +402,11 @@ export default function OrganizationsFclShellPage() {
 
                 const createPayload = payload as OrganizationNodeCreate;
                 const result = await createNode(createPayload);
-                const confirmed = useOrganizationState.getState().nodesById[result.entityId];
-                if (confirmed) {
-                    setSavedCreateNode(confirmed);
-                }
                 setSelectedTreeId(result.entityId);
                 setTreeExpansionAnchorId(createPayload.parentOrganizationId ?? result.entityId);
+                setGeneralInformationDirty(false);
+                setDocumentDirty(false);
+                runWithNavigationBypass(() => navigate(`/organizations/${result.entityId}`, { replace: true }));
                 return true;
             } catch (error) {
                 setObjectError(
@@ -431,12 +423,12 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [createNode, t],
+        [createNode, navigate, runWithNavigationBypass, t],
     );
 
     const handleSubmitUpdate = useCallback(
         async (payload: OrganizationNodeCreate | OrganizationNodeUpdate): Promise<boolean> => {
-            const target = selectedRouteItem ?? savedCreateNode;
+            const target = selectedRouteItem;
             if (!target) {
                 return false;
             }
@@ -447,16 +439,11 @@ export default function OrganizationsFclShellPage() {
 
                 const updatePayload = payload as OrganizationNodeUpdate;
                 await updateNode(target.id, updatePayload);
-                const confirmed = useOrganizationState.getState().nodesById[target.id];
-                if (savedCreateNode && confirmed) {
-                    setSavedCreateNode(confirmed);
-                }
                 setSelectedTreeId(target.id);
-                setTreeExpansionAnchorId(target.parentOrganizationId ?? target.id);
-                if (!savedCreateNode && !documentDirty) {
-                    allowNextNavigation();
-                    navigate(`/organizations/${target.id}`);
-                }
+                setTreeExpansionAnchorId(updatePayload.parentOrganizationId ?? target.id);
+                setGeneralInformationDirty(false);
+                setDocumentDirty(false);
+                runWithNavigationBypass(() => navigate(`/organizations/${target.id}`, { replace: true }));
                 return true;
             } catch (error) {
                 setObjectError(
@@ -473,45 +460,7 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [allowNextNavigation, documentDirty, navigate, savedCreateNode, selectedRouteItem, t, updateNode],
-    );
-
-    const handleMove = useCallback(
-        async (payload: Parameters<typeof moveNode>[1]): Promise<boolean> => {
-            const target = selectedRouteItem ?? savedCreateNode;
-            if (!target) {
-                return false;
-            }
-
-            try {
-                setSubmitting(true);
-                setObjectError(null);
-
-                await moveNode(target.id, payload);
-                const confirmed = useOrganizationState.getState().nodesById[target.id];
-                if (savedCreateNode && confirmed) {
-                    setSavedCreateNode(confirmed);
-                }
-
-                setSelectedTreeId(target.id);
-                setTreeExpansionAnchorId(payload.parentOrganizationId ?? target.id);
-                return true;
-            } catch (error) {
-                setObjectError(
-                    mapError(
-                        error,
-                        t("organization.errors.move", {
-                            defaultValue: "خطا در انتقال واحد سازمانی",
-                        }),
-                        t,
-                    ),
-                );
-                return false;
-            } finally {
-                setSubmitting(false);
-            }
-        },
-        [moveNode, savedCreateNode, selectedRouteItem, t],
+        [navigate, runWithNavigationBypass, selectedRouteItem, t, updateNode],
     );
 
     const requestDelete = useCallback(
@@ -614,15 +563,10 @@ export default function OrganizationsFclShellPage() {
         [handleCancel, showModal],
     );
 
-    const objectMode =
-        routeMode === "create" && !savedCreateNode
-            ? "create"
-            : routeMode === "edit" || savedCreateNode
-              ? "edit"
-              : "view";
+    const objectMode = routeMode === "create" ? "create" : routeMode === "edit" ? "edit" : "view";
 
     const objectValue = routeMode === "create"
-        ? savedCreateNode ?? createInitialValue
+        ? createInitialValue
         : selectedRouteItem;
 
     const fclLayout: FclLayout = selectedTreeItem
@@ -759,7 +703,7 @@ export default function OrganizationsFclShellPage() {
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <OrganizationObjectPage
-                            key={routeMode === "create" ? objectTabScopeKey : `org:${objectValue?.id ?? "none"}`}
+                            key={routeMode === "create" ? objectTabScopeKey : `org:${objectValue?.id ?? "none"}:${objectMode}`}
                             mode={objectMode}
                             allItems={items}
                             value={objectValue}
@@ -772,7 +716,6 @@ export default function OrganizationsFclShellPage() {
                                     ? handleSubmitCreate
                                     : handleSubmitUpdate
                             }
-                            onMove={handleMove}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
                             onActiveTabChange={setObjectActiveTab}

@@ -147,6 +147,7 @@ public class OrganizationEntity {
     public void updateGeneralInformation(
             String name,
             OrganizationType organizationType,
+            UUID parentOrganizationId,
             String location,
             String description,
             MasterDataLifecycleStatus requestedStatus,
@@ -161,6 +162,7 @@ public class OrganizationEntity {
         }
         this.name = Objects.requireNonNull(name, "name is required");
         this.organizationType = Objects.requireNonNull(organizationType, "organizationType is required");
+        this.parentOrganizationId = parentOrganizationId;
         this.location = location;
         this.description = description;
         this.status = Objects.requireNonNull(requestedStatus, "requestedStatus is required");

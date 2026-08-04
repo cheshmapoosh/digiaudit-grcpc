@@ -1,5 +1,7 @@
 package com.digiaudit.grcpc.modules.masterdata.process.api.dto;
 
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -16,6 +18,7 @@ public record CreateCentralSubprocessRequest(
         String description,
         Integer sortOrder,
         LocalDate validFrom,
-        LocalDate validTo
+        LocalDate validTo,
+        @Valid DocumentAggregateBatchRequest documents
 ) {
 }

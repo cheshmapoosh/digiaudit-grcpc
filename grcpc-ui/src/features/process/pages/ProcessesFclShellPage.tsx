@@ -15,7 +15,6 @@ import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
 import { Dialog, MessageStrip } from "@ui5/webcomponents-react";
 
 import type {
-    ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
     ProcessNodeType,
@@ -236,7 +235,6 @@ export default function ProcessesFclShellPage() {
     const loadChildren = useProcessState((state) => state.loadChildren);
     const createNode = useProcessState((state) => state.createNode);
     const updateNode = useProcessState((state) => state.updateNode);
-    const moveNode = useProcessState((state) => state.moveNode);
     const removeNode = useProcessState((state) => state.removeNode);
 
     const [searchText, setSearchText] = useState("");
@@ -247,13 +245,12 @@ export default function ProcessesFclShellPage() {
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
     const [objectActiveTab, setObjectActiveTab] = useState<ProcessTabKey>("general");
-    const [savedCreateNode, setSavedCreateNode] = useState<ProcessNode | null>(null);
     const [generalInformationDirty, setGeneralInformationDirty] = useState(false);
     const [documentDirty, setDocumentDirty] = useState(false);
     const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
     const pendingLeaveActionRef = useRef<(() => void) | null>(null);
     const objectPageDirty = generalInformationDirty || documentDirty;
-    const { blocker, allowNextNavigation } = useUnsavedChangesGuard(objectPageDirty);
+    const { blocker, runWithNavigationBypass } = useUnsavedChangesGuard(objectPageDirty);
 
     const requestObjectPageLeave = useCallback((action: () => void) => {
         if (!objectPageDirty) {
@@ -277,8 +274,8 @@ export default function ProcessesFclShellPage() {
         setGeneralInformationDirty(false);
         setDocumentDirty(false);
         if (blocker.state === "blocked") blocker.proceed();
-        else action?.();
-    }, [blocker]);
+        else if (action) runWithNavigationBypass(action);
+    }, [blocker, runWithNavigationBypass]);
 
     useEffect(() => () => {
         useProcessState.getState().reset();
@@ -313,7 +310,6 @@ export default function ProcessesFclShellPage() {
 
     useEffect(() => {
         setObjectActiveTab("general");
-        setSavedCreateNode(null);
         setGeneralInformationDirty(false);
         setDocumentDirty(false);
     }, [objectTabScopeKey]);
@@ -425,10 +421,6 @@ export default function ProcessesFclShellPage() {
     const handleCancel = useCallback(() => {
         requestObjectPageLeave(() => {
             setObjectError(null);
-            if (savedCreateNode) {
-                navigate(`/processes/${savedCreateNode.id}`);
-                return;
-            }
             const currentAnchorId = routeMode === "create"
                 ? queryParentId ?? selectedTreeId
                 : processId ?? selectedTreeId;
@@ -438,7 +430,7 @@ export default function ProcessesFclShellPage() {
             }
             navigate("/processes");
         });
-    }, [navigate, processId, queryParentId, requestObjectPageLeave, routeMode, savedCreateNode, selectedTreeId]);
+    }, [navigate, processId, queryParentId, requestObjectPageLeave, routeMode, selectedTreeId]);
 
     const requestDelete = useCallback(
         (id: string) => {
@@ -512,30 +504,26 @@ export default function ProcessesFclShellPage() {
                 setPageError(null);
                 setObjectError(null);
 
-                if (routeMode === "create" && !savedCreateNode) {
-                    const created = await createNode(payload as ProcessNodeCreate);
-                    const confirmed = useProcessState.getState().nodesById[created.entityId];
-                    if (confirmed) {
-                        setSavedCreateNode(confirmed);
-                    }
+                if (routeMode === "create") {
+                    const createPayload = payload as ProcessNodeCreate;
+                    const created = await createNode(createPayload);
                     setSelectedTreeId(created.entityId);
-                    setTreeExpansionAnchorId(created.entityId);
+                    setTreeExpansionAnchorId(createPayload.parentId ?? created.entityId);
+                    setGeneralInformationDirty(false);
+                    setDocumentDirty(false);
+                    runWithNavigationBypass(() => navigate(`/processes/${created.entityId}`, { replace: true }));
                     return true;
                 }
 
-                const target = selectedRouteItem ?? savedCreateNode;
-                if ((routeMode === "edit" || savedCreateNode) && target) {
-                    await updateNode(target, payload as ProcessNodeUpdate);
-                    const confirmed = useProcessState.getState().nodesById[target.id];
-                    if (savedCreateNode && confirmed) {
-                        setSavedCreateNode(confirmed);
-                    }
+                const target = selectedRouteItem;
+                if (routeMode === "edit" && target) {
+                    const updatePayload = payload as ProcessNodeUpdate;
+                    await updateNode(target, updatePayload);
                     setSelectedTreeId(target.id);
-                    setTreeExpansionAnchorId(target.id);
-                    if (!savedCreateNode && !documentDirty) {
-                        allowNextNavigation();
-                        navigate(`/processes/${target.id}`);
-                    }
+                    setTreeExpansionAnchorId(updatePayload.parentId ?? target.id);
+                    setGeneralInformationDirty(false);
+                    setDocumentDirty(false);
+                    runWithNavigationBypass(() => navigate(`/processes/${target.id}`, { replace: true }));
                     return true;
                 }
                 return false;
@@ -554,46 +542,7 @@ export default function ProcessesFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [allowNextNavigation, createNode, documentDirty, navigate, routeMode, savedCreateNode, selectedRouteItem, t, updateNode],
-    );
-
-    const handleMove = useCallback(
-        async (payload: ProcessMoveCommand): Promise<boolean> => {
-            const target = selectedRouteItem ?? savedCreateNode;
-            if (!target) {
-                return false;
-            }
-
-            try {
-                setSubmitting(true);
-                setPageError(null);
-                setObjectError(null);
-
-                await moveNode(target, payload);
-                const confirmed = useProcessState.getState().nodesById[target.id];
-                if (savedCreateNode && confirmed) {
-                    setSavedCreateNode(confirmed);
-                }
-
-                setSelectedTreeId(target.id);
-                setTreeExpansionAnchorId(payload.parentId ?? target.id);
-                return true;
-            } catch (error) {
-                setObjectError(
-                    mapError(
-                        error,
-                        t("process.errors.move", {
-                            defaultValue: "خطا در انتقال آیتم فرآیندی",
-                        }),
-                        t,
-                    ),
-                );
-                return false;
-            } finally {
-                setSubmitting(false);
-            }
-        },
-        [moveNode, savedCreateNode, selectedRouteItem, t],
+        [createNode, navigate, routeMode, runWithNavigationBypass, selectedRouteItem, t, updateNode],
     );
 
     const showModal =
@@ -610,12 +559,7 @@ export default function ProcessesFclShellPage() {
         [handleCancel, showModal],
     );
 
-    const objectMode =
-        routeMode === "create" && !savedCreateNode
-            ? "create"
-            : routeMode === "edit" || savedCreateNode
-              ? "edit"
-              : "view";
+    const objectMode = routeMode === "create" ? "create" : routeMode === "edit" ? "edit" : "view";
 
     const createInitialValue = useMemo<ProcessNode | null>(() => {
         if (routeMode !== "create") {
@@ -638,7 +582,7 @@ export default function ProcessesFclShellPage() {
     }, [queryParentId, requestedNodeType, routeMode]);
 
     const objectValue = routeMode === "create"
-        ? savedCreateNode ?? createInitialValue
+        ? createInitialValue
         : selectedRouteItem;
     const fclLayout: FclLayout = selectedTreeItem
         ? "TwoColumnsStartExpanded"
@@ -779,7 +723,7 @@ export default function ProcessesFclShellPage() {
                 <div style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <ProcessObjectPage
-                            key={routeMode === "create" ? objectTabScopeKey : `process:${objectValue?.id ?? "none"}`}
+                            key={routeMode === "create" ? objectTabScopeKey : `process:${objectValue?.id ?? "none"}:${objectMode}`}
                             mode={objectMode}
                             allItems={processItems}
                             value={objectValue}
@@ -790,7 +734,6 @@ export default function ProcessesFclShellPage() {
                             error={objectError}
                             onErrorClose={() => setObjectError(null)}
                             onSubmit={handleObjectSubmit}
-                            onMove={handleMove}
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
                             onActiveTabChange={setObjectActiveTab}

@@ -95,7 +95,7 @@ function OrganizationTreeItem({
                     }}
                 >
           {label}
-          {node.status === "INACTIVE" ? <ObjectStatus state="Critical" stateAnnouncementText={t("organization.tree.inactive", { defaultValue: "Inactive" })}>{t("common.inactive", { defaultValue: "Inactive" })}</ObjectStatus> : null}
+          {node.status === "INACTIVE" ? <ObjectStatus state="Critical" stateAnnouncementText={t("organization.tree.inactive", { defaultValue: "Inactive" })}/> : null}
         </span>
             }
         >

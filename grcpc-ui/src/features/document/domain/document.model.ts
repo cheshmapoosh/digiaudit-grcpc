@@ -173,3 +173,77 @@ export interface DocumentDownloadAccess {
     fileName: string;
     mimeType?: string | null;
 }
+
+export interface ParentSaveNewDocumentDraft {
+    rowId: string;
+    tempUploadId: string;
+    code?: string | null;
+    title: string;
+    description?: string | null;
+    validFrom?: string | null;
+    validTo?: string | null;
+}
+
+export interface ParentSaveNewDocumentVersionDraft {
+    rowId: string;
+    documentId: string;
+    expectedDocumentVersion: number;
+    tempUploadId: string;
+    validFrom?: string | null;
+    validTo?: string | null;
+}
+
+export interface ParentSaveDocumentMetadataDraft {
+    documentId: string;
+    expectedVersion: number;
+    title: string;
+}
+
+export interface ParentSaveDocumentDraftState {
+    dirty: boolean;
+    ready: boolean;
+    uploading: boolean;
+    invalid: boolean;
+    newDocuments: ParentSaveNewDocumentDraft[];
+    newVersions: ParentSaveNewDocumentVersionDraft[];
+    metadataUpdates: ParentSaveDocumentMetadataDraft[];
+}
+
+export interface DocumentAggregateRequest {
+    newDocuments: Omit<ParentSaveNewDocumentDraft, "rowId">[];
+    newVersions: Omit<ParentSaveNewDocumentVersionDraft, "rowId">[];
+    metadataUpdates: ParentSaveDocumentMetadataDraft[];
+}
+
+export const EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE: ParentSaveDocumentDraftState = {
+    dirty: false,
+    ready: true,
+    uploading: false,
+    invalid: false,
+    newDocuments: [],
+    newVersions: [],
+    metadataUpdates: [],
+};
+
+export function toDocumentAggregateRequest(
+    state: ParentSaveDocumentDraftState,
+): DocumentAggregateRequest {
+    return {
+        newDocuments: state.newDocuments.map((draft) => ({
+            tempUploadId: draft.tempUploadId,
+            code: draft.code,
+            title: draft.title,
+            description: draft.description,
+            validFrom: draft.validFrom,
+            validTo: draft.validTo,
+        })),
+        newVersions: state.newVersions.map((draft) => ({
+            documentId: draft.documentId,
+            expectedDocumentVersion: draft.expectedDocumentVersion,
+            tempUploadId: draft.tempUploadId,
+            validFrom: draft.validFrom,
+            validTo: draft.validTo,
+        })),
+        metadataUpdates: state.metadataUpdates,
+    };
+}

@@ -126,9 +126,18 @@ Example shape:
   "version": 7,
   "title": "Payments and Settlements",
   "description": "Updated official definition",
-  "validTo": null
+  "status": "ACTIVE",
+  "parentProcessId": null,
+  "validTo": null,
+  "documents": {
+    "newDocuments": [],
+    "newVersions": [],
+    "metadataUpdates": []
+  }
 }
 ```
+
+Prompt 5.10 Organization, Process, and Subprocess Create/Update commands are typed aggregate commands. Their `documents` batch contains only `newDocuments`, `newVersions`, and `metadataUpdates`; nested drafts never contain a target type or target ID. The owning endpoint derives `ORG`, `CENTRAL_PROCESS`, or `CENTRAL_SUBPROCESS` and the authoritative target ID.
 
 ### Standard mutation response
 
@@ -148,13 +157,15 @@ The response must not expose internal Revision Content ordering or snapshots unl
 
 Document mutation responses are a Prompt 4.2 exception: they do not contain `revisionId`, do not require Revision Content, and return Document-specific IDs/versions plus any safe linked summary built from entities already available in the command transaction.
 
+Prompt 5.10 parent aggregate responses contain `entityId`, the parent `revisionId`, parent `version`, and `finalizedDocuments`. Each finalized result contains the safe Document, Document Version, and Document Link IDs/versions and summary produced inside the transaction. This parent `revisionId` does not mean Document entities receive Revision Content.
+
 ### Status, delete, and restore commands
 
 Organization, Process, and Subprocess General Information Update includes required `status` and accepts only `ACTIVE` or `INACTIVE`. Details and status are one Business Command, one transaction, one Business Revision, and one `UPDATE` Revision Content; the Browser must not chain Update plus Activate/Inactivate.
 
-Existing activate/inactivate routes remain available as Backend commands, but the Prompt 5.9 Organization and Process/Subprocess UI does not expose separate lifecycle controls. Explicit delete and explicit restore remain separate typed Backend commands, and Update never accepts `DELETED`.
+Existing activate/inactivate routes remain available as Backend commands, but the Prompt 5.10 Organization and Process/Subprocess UI does not expose separate lifecycle controls. Explicit delete and explicit restore remain separate typed Backend commands, and Update never accepts `DELETED`.
 
-Prompt 5.9 closes the approved staged compatibility gap: bundled Create requests omit status, bundled Update requests include `ACTIVE` or `INACTIVE`, and the Browser never sends structural parent/owner fields in Update. Parent save and Document finalization remain separate browser commands.
+Prompt 5.10 supersedes the Move-only browser rule: bundled Create requests omit status; bundled Update requests include `ACTIVE` or `INACTIVE` plus the typed parent/owner field. Parent information, General Information, and staged Document mutations are one aggregate browser command. Temporary upload remains an immediate, target-independent command, but the Browser must not chain Parent, Move, Document Create, Document Version, or metadata mutations to construct modal Save.
 
 Update and lifecycle commands require `version`.
 
@@ -446,7 +457,7 @@ The client refreshes the typed Read DTO and lets the user resolve the conflict; 
 
 Create commands use approved business-key uniqueness plus explicit inactive reactivation/deleted restore behavior for safe duplicate handling.
 
-Structural Organization Create, Move, Delete, and Restore acquire the `ORGANIZATION` Guard. Structural Process and Subprocess Create, Move, Delete, and Restore acquire the shared `PROCESS` Guard. Acquisition occurs before revision-number allocation and fresh hierarchy reads. Ordinary Update, Activate, Inactivate, and reads remain unguarded.
+Structural Organization Create, Update, Move, Delete, and Restore acquire the `ORGANIZATION` Guard. Structural Process and Subprocess Create, Update, Move, Delete, and Restore acquire the shared `PROCESS` Guard. Acquisition occurs before revision-number allocation and fresh hierarchy reads. Activate, Inactivate, and reads remain unguarded; Prompt 5.10 aggregate Update is guarded because its accepted shape always owns the structural parent/owner field.
 
 Guard acquisition applies the configured JPA lock-timeout hint. Recognized lock acquisition/timeout failures return `HIERARCHY_BUSY` and are not retried automatically. A missing configured Guard row returns `HIERARCHY_GUARD_NOT_CONFIGURED` and fails the operation before source or Revision persistence.
 

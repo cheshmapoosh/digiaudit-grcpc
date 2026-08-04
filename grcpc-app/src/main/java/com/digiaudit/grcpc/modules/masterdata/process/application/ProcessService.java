@@ -3,6 +3,10 @@ package com.digiaudit.grcpc.modules.masterdata.process.application;
 import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
+import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
+import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CentralProcessLifecycleCommandRequest;
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CentralProcessResponse;
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CentralSubprocessLifecycleCommandRequest;
@@ -30,6 +34,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentRes
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionEntityType;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationType;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
+import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
@@ -37,7 +42,6 @@ import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataMutationRe
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,6 +60,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class ProcessService {
@@ -79,6 +84,7 @@ public class ProcessService {
     private final ObjectMapper objectMapper;
     private final MasterDataStructuralDependencyChecker dependencyChecker;
     private final RevisionMutationGuard mutationGuard;
+    private final DocumentCommandService documentCommandService;
 
     public ProcessService(
             CentralProcessRepository processRepository,
@@ -88,7 +94,8 @@ public class ProcessService {
             @Qualifier("masterDataRevisionClock") Clock clock,
             ObjectMapper objectMapper,
             MasterDataStructuralDependencyChecker dependencyChecker,
-            RevisionMutationGuard mutationGuard
+            RevisionMutationGuard mutationGuard,
+            DocumentCommandService documentCommandService
     ) {
         this.processRepository = Objects.requireNonNull(processRepository, "processRepository is required");
         this.subprocessRepository = Objects.requireNonNull(subprocessRepository, "subprocessRepository is required");
@@ -98,6 +105,7 @@ public class ProcessService {
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper is required");
         this.dependencyChecker = Objects.requireNonNull(dependencyChecker, "dependencyChecker is required");
         this.mutationGuard = Objects.requireNonNull(mutationGuard, "mutationGuard is required");
+        this.documentCommandService = Objects.requireNonNull(documentCommandService, "documentCommandService is required");
     }
 
     @Transactional(readOnly = true)
@@ -144,32 +152,41 @@ public class ProcessService {
         );
     }
 
-    public MasterDataRevisionMutationResponse createProcess(CreateCentralProcessRequest request) {
+    public MasterDataAggregateMutationResponse createProcess(CreateCentralProcessRequest request) {
         String code = normalizeCode(request.code(), "DUPLICATE_PROCESS_CODE");
         String title = normalizeTitle(request.title());
         String description = normalizeDescription(request.description());
         int sortOrder = normalizeSortOrder(request.sortOrder());
         validateValidity(request.validFrom(), request.validTo());
-        try {
-            RevisionExecutionResult result = revisionCoordinator.executeStructural(
+        AtomicReference<List<DocumentCommandResponse>> finalizedDocuments = new AtomicReference<>(List.of());
+        RevisionExecutionResult result = revisionCoordinator.executeStructural(
                     MasterDataHierarchyKey.PROCESS,
                     RevisionRequest.central("Create central process " + code, "Central process structural create", null),
-                    context -> createProcessInsideRevision(context, code, title, request.parentProcessId(), description, sortOrder, request.validFrom(), request.validTo())
-            );
-            return MasterDataRevisionMutationResponse.from(result.primaryResult());
-        } catch (DataIntegrityViolationException ex) {
-            throw duplicateProcessCode(code);
-        }
+                    context -> {
+                        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
+                        documentCommandService.preflightTemporaryUploads(request.documents());
+                        RevisionOperationResult operation = createProcessInsideRevision(context, code, title, request.parentProcessId(), description, sortOrder, request.validFrom(), request.validTo());
+                        finalizedDocuments.set(documentCommandService.finalizeAggregate(
+                                request.documents(),
+                                DocumentLinkTargetType.CENTRAL_PROCESS,
+                                operation.primaryResult().entityId()
+                        ));
+                        return operation;
+                    }
+        );
+        return aggregateResponse(result, finalizedDocuments.get());
     }
 
-    public MasterDataRevisionMutationResponse updateProcess(UUID processId, UpdateCentralProcessRequest request) {
+    public MasterDataAggregateMutationResponse updateProcess(UUID processId, UpdateCentralProcessRequest request) {
         long expectedVersion = requireVersion(request.version());
         String title = normalizeTitle(request.title());
         String description = normalizeDescription(request.description());
         int sortOrder = normalizeSortOrder(request.sortOrder());
         MasterDataLifecycleStatus status = requireGeneralInformationStatus(request.status(), "Process");
         validateValidity(request.validFrom(), request.validTo());
-        RevisionExecutionResult result = revisionCoordinator.execute(
+        AtomicReference<List<DocumentCommandResponse>> finalizedDocuments = new AtomicReference<>(List.of());
+        RevisionExecutionResult result = revisionCoordinator.executeStructural(
+                MasterDataHierarchyKey.PROCESS,
                 RevisionRequest.central(
                         "Update central process " + processId,
                         "Central process General Information update",
@@ -180,14 +197,17 @@ public class ProcessService {
                         processId,
                         expectedVersion,
                         title,
+                        request.parentProcessId(),
                         description,
                         sortOrder,
                         status,
                         request.validFrom(),
-                        request.validTo()
+                        request.validTo(),
+                        request.documents(),
+                        finalizedDocuments
                 )
         );
-        return MasterDataRevisionMutationResponse.from(result.primaryResult());
+        return aggregateResponse(result, finalizedDocuments.get());
     }
 
     public MasterDataRevisionMutationResponse moveProcess(UUID processId, MoveCentralProcessRequest request) {
@@ -216,32 +236,41 @@ public class ProcessService {
         return processLifecycle(processId, request.version(), RevisionOperationType.RESTORE);
     }
 
-    public MasterDataRevisionMutationResponse createSubprocess(CreateCentralSubprocessRequest request) {
+    public MasterDataAggregateMutationResponse createSubprocess(CreateCentralSubprocessRequest request) {
         String code = normalizeCode(request.code(), "DUPLICATE_SUBPROCESS_CODE");
         String title = normalizeTitle(request.title());
         String description = normalizeDescription(request.description());
         int sortOrder = normalizeSortOrder(request.sortOrder());
         validateValidity(request.validFrom(), request.validTo());
-        try {
-            RevisionExecutionResult result = revisionCoordinator.executeStructural(
+        AtomicReference<List<DocumentCommandResponse>> finalizedDocuments = new AtomicReference<>(List.of());
+        RevisionExecutionResult result = revisionCoordinator.executeStructural(
                     MasterDataHierarchyKey.PROCESS,
                     RevisionRequest.central("Create central subprocess " + code, "Central subprocess structural create", null),
-                    context -> createSubprocessInsideRevision(context, code, title, request.processId(), description, sortOrder, request.validFrom(), request.validTo())
-            );
-            return MasterDataRevisionMutationResponse.from(result.primaryResult());
-        } catch (DataIntegrityViolationException ex) {
-            throw duplicateSubprocessCode(code);
-        }
+                    context -> {
+                        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
+                        documentCommandService.preflightTemporaryUploads(request.documents());
+                        RevisionOperationResult operation = createSubprocessInsideRevision(context, code, title, request.processId(), description, sortOrder, request.validFrom(), request.validTo());
+                        finalizedDocuments.set(documentCommandService.finalizeAggregate(
+                                request.documents(),
+                                DocumentLinkTargetType.CENTRAL_SUBPROCESS,
+                                operation.primaryResult().entityId()
+                        ));
+                        return operation;
+                    }
+        );
+        return aggregateResponse(result, finalizedDocuments.get());
     }
 
-    public MasterDataRevisionMutationResponse updateSubprocess(UUID subprocessId, UpdateCentralSubprocessRequest request) {
+    public MasterDataAggregateMutationResponse updateSubprocess(UUID subprocessId, UpdateCentralSubprocessRequest request) {
         long expectedVersion = requireVersion(request.version());
         String title = normalizeTitle(request.title());
         String description = normalizeDescription(request.description());
         int sortOrder = normalizeSortOrder(request.sortOrder());
         MasterDataLifecycleStatus status = requireGeneralInformationStatus(request.status(), "Subprocess");
         validateValidity(request.validFrom(), request.validTo());
-        RevisionExecutionResult result = revisionCoordinator.execute(
+        AtomicReference<List<DocumentCommandResponse>> finalizedDocuments = new AtomicReference<>(List.of());
+        RevisionExecutionResult result = revisionCoordinator.executeStructural(
+                MasterDataHierarchyKey.PROCESS,
                 RevisionRequest.central(
                         "Update central subprocess " + subprocessId,
                         "Central subprocess General Information update",
@@ -252,14 +281,17 @@ public class ProcessService {
                         subprocessId,
                         expectedVersion,
                         title,
+                        request.processId(),
                         description,
                         sortOrder,
                         status,
                         request.validFrom(),
-                        request.validTo()
+                        request.validTo(),
+                        request.documents(),
+                        finalizedDocuments
                 )
         );
-        return MasterDataRevisionMutationResponse.from(result.primaryResult());
+        return aggregateResponse(result, finalizedDocuments.get());
     }
 
     public MasterDataRevisionMutationResponse moveSubprocess(UUID subprocessId, MoveCentralSubprocessRequest request) {
@@ -346,18 +378,26 @@ public class ProcessService {
             UUID processId,
             long expectedVersion,
             String title,
+            UUID parentProcessId,
             String description,
             int sortOrder,
             MasterDataLifecycleStatus status,
             LocalDate validFrom,
-            LocalDate validTo
+            LocalDate validTo,
+            DocumentAggregateBatchRequest documents,
+            AtomicReference<List<DocumentCommandResponse>> finalizedDocuments
     ) {
-        CentralProcessEntity entity = lockProcess(processId);
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
+        documentCommandService.preflightTemporaryUploads(documents);
+        Map<UUID, CentralProcessEntity> byId = indexProcesses(processRepository.findAllByOrderByIdAsc());
+        CentralProcessEntity entity = requireProcessFromSnapshot(byId, processId);
         assertVersion(entity, expectedVersion, "Process");
         requireMutableProcess(entity);
+        validateProcessParent(processId, parentProcessId, byId);
         JsonNode before = processSnapshot(entity);
         entity.updateDetails(
                 title,
+                parentProcessId,
                 description,
                 sortOrder,
                 status,
@@ -367,6 +407,11 @@ public class ProcessService {
                 Instant.now(clock)
         );
         CentralProcessEntity saved = processRepository.saveAndFlush(entity);
+        finalizedDocuments.set(documentCommandService.finalizeAggregate(
+                documents,
+                DocumentLinkTargetType.CENTRAL_PROCESS,
+                processId
+        ));
         return completedProcess(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
     }
 
@@ -509,18 +554,26 @@ public class ProcessService {
             UUID subprocessId,
             long expectedVersion,
             String title,
+            UUID processId,
             String description,
             int sortOrder,
             MasterDataLifecycleStatus status,
             LocalDate validFrom,
-            LocalDate validTo
+            LocalDate validTo,
+            DocumentAggregateBatchRequest documents,
+            AtomicReference<List<DocumentCommandResponse>> finalizedDocuments
     ) {
-        CentralSubprocessEntity entity = lockSubprocess(subprocessId);
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
+        documentCommandService.preflightTemporaryUploads(documents);
+        CentralSubprocessEntity entity = findSubprocessIncludingDeleted(subprocessId);
         assertVersion(entity, expectedVersion, "Subprocess");
         requireMutableSubprocess(entity);
+        Map<UUID, CentralProcessEntity> processById = indexProcesses(processRepository.findAllByOrderByIdAsc());
+        requireSubprocessOwner(processId, processById);
         JsonNode before = subprocessSnapshot(entity);
         entity.updateDetails(
                 title,
+                processId,
                 description,
                 sortOrder,
                 status,
@@ -530,6 +583,11 @@ public class ProcessService {
                 Instant.now(clock)
         );
         CentralSubprocessEntity saved = subprocessRepository.saveAndFlush(entity);
+        finalizedDocuments.set(documentCommandService.finalizeAggregate(
+                documents,
+                DocumentLinkTargetType.CENTRAL_SUBPROCESS,
+                subprocessId
+        ));
         return completedSubprocess(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
     }
 
@@ -662,6 +720,19 @@ public class ProcessService {
                         entity.getVersion(),
                         validationSnapshot()
                 ))
+        );
+    }
+
+    private MasterDataAggregateMutationResponse aggregateResponse(
+            RevisionExecutionResult result,
+            List<DocumentCommandResponse> finalizedDocuments
+    ) {
+        MasterDataMutationResult primary = result.primaryResult();
+        return new MasterDataAggregateMutationResponse(
+                primary.entityId(),
+                primary.revisionId(),
+                primary.version(),
+                finalizedDocuments
         );
     }
 

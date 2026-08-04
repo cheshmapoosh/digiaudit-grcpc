@@ -1,13 +1,12 @@
 import {
     processCreateSchema,
     processLifecycleSchema,
-    processMoveSchema,
     processUpdateSchema,
 } from "../domain/process.schema";
 import type {
+    MasterDataAggregateMutationResponse,
     MasterDataRevisionMutationResponse,
     ProcessLifecycleCommand,
-    ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
     ProcessNodeUpdate,
@@ -41,6 +40,7 @@ function normalizeCreatePayload(payload: ProcessNodeCreate): ProcessNodeCreate {
         sortOrder: normalizeSortOrder(parsed.sortOrder),
         validFrom: normalizeOptionalText(parsed.validFrom),
         validTo: normalizeOptionalText(parsed.validTo),
+        documents: parsed.documents,
     };
 }
 
@@ -51,19 +51,12 @@ function normalizeUpdatePayload(payload: ProcessNodeUpdate): ProcessNodeUpdate {
         version: parsed.version,
         title: parsed.title.trim(),
         status: parsed.status,
+        parentId: parsed.parentId?.trim() || null,
         description: normalizeOptionalText(parsed.description),
         sortOrder: normalizeSortOrder(parsed.sortOrder),
         validFrom: normalizeOptionalText(parsed.validFrom),
         validTo: normalizeOptionalText(parsed.validTo),
-    };
-}
-
-function normalizeMovePayload(payload: ProcessMoveCommand): ProcessMoveCommand {
-    const parsed = processMoveSchema.parse(payload);
-
-    return {
-        parentId: parsed.parentId?.trim() || null,
-        version: parsed.version,
+        documents: parsed.documents,
     };
 }
 
@@ -74,15 +67,11 @@ function normalizeLifecyclePayload(payload: ProcessLifecycleCommand): ProcessLif
 export interface ProcessService {
     list(): Promise<ProcessNode[]>;
     getById(id: string, node?: ProcessNode): Promise<ProcessNode | null>;
-    create(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
+    create(payload: ProcessNodeCreate): Promise<MasterDataAggregateMutationResponse>;
     update(
         node: ProcessNode,
         payload: ProcessNodeUpdate,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    move(
-        node: ProcessNode,
-        payload: ProcessMoveCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
+    ): Promise<MasterDataAggregateMutationResponse>;
     delete(
         node: ProcessNode,
         payload: ProcessLifecycleCommand,
@@ -107,10 +96,6 @@ export function createProcessService(repo: ProcessRepo): ProcessService {
 
         async update(node, payload) {
             return repo.update(node, normalizeUpdatePayload(payload));
-        },
-
-        async move(node, payload) {
-            return repo.move(node, normalizeMovePayload(payload));
         },
 
         async delete(node, payload) {

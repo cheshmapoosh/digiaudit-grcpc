@@ -1,6 +1,7 @@
 package com.digiaudit.grcpc.modules.organization.api;
 
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
+import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.organization.api.dto.CreateOrganizationRequest;
 import com.digiaudit.grcpc.modules.organization.api.dto.MoveOrganizationRequest;
 import com.digiaudit.grcpc.modules.organization.api.dto.OrganizationLifecycleCommandRequest;
@@ -34,7 +35,7 @@ public class OrganizationController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('ORGANIZATION_CREATE') or hasAuthority('ORGANIZATION_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public MasterDataRevisionMutationResponse create(@Valid @RequestBody CreateOrganizationRequest request) {
+    public MasterDataAggregateMutationResponse create(@Valid @RequestBody CreateOrganizationRequest request) {
         return organizationService.create(request);
     }
 
@@ -60,7 +61,7 @@ public class OrganizationController {
 
     @PatchMapping("/{organizationId}")
     @PreAuthorize("hasAuthority('ORGANIZATION_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public MasterDataRevisionMutationResponse update(
+    public MasterDataAggregateMutationResponse update(
             @PathVariable UUID organizationId,
             @Valid @RequestBody UpdateOrganizationRequest request
     ) {
