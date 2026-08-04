@@ -6,6 +6,8 @@ import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentRes
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionDomain;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionStatus;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataMutationResult;
+import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataHierarchyGuard;
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,16 +23,21 @@ public class TransactionalMasterDataRevisionCoordinator implements MasterDataRev
     private final MasterDataRevisionPersistencePort persistencePort;
     private final MasterDataRevisionActorProvider actorProvider;
     private final Clock clock;
-    private final RevisionMutationGuard mutationGuard = new RevisionMutationGuard();
+    private final RevisionMutationGuard mutationGuard;
+    private final MasterDataHierarchyGuard hierarchyGuard;
 
     public TransactionalMasterDataRevisionCoordinator(
             MasterDataRevisionPersistencePort persistencePort,
             MasterDataRevisionActorProvider actorProvider,
-            @Qualifier("masterDataRevisionClock") Clock clock
+            @Qualifier("masterDataRevisionClock") Clock clock,
+            RevisionMutationGuard mutationGuard,
+            MasterDataHierarchyGuard hierarchyGuard
     ) {
         this.persistencePort = Objects.requireNonNull(persistencePort, "persistencePort is required");
         this.actorProvider = Objects.requireNonNull(actorProvider, "actorProvider is required");
         this.clock = Objects.requireNonNull(clock, "clock is required");
+        this.mutationGuard = Objects.requireNonNull(mutationGuard, "mutationGuard is required");
+        this.hierarchyGuard = Objects.requireNonNull(hierarchyGuard, "hierarchyGuard is required");
     }
 
     @Override
@@ -39,8 +46,34 @@ public class TransactionalMasterDataRevisionCoordinator implements MasterDataRev
         Objects.requireNonNull(request, "request is required");
         Objects.requireNonNull(operation, "operation is required");
 
+        return executeRevision(null, request, operation);
+    }
+
+    @Override
+    @Transactional
+    public RevisionExecutionResult executeStructural(
+            MasterDataHierarchyKey hierarchyKey,
+            RevisionRequest request,
+            RevisionOperation operation
+    ) {
+        Objects.requireNonNull(hierarchyKey, "hierarchyKey is required");
+        Objects.requireNonNull(request, "request is required");
+        Objects.requireNonNull(operation, "operation is required");
+
+        hierarchyGuard.lock(hierarchyKey);
+        return executeRevision(hierarchyKey, request, operation);
+    }
+
+    private RevisionExecutionResult executeRevision(
+            MasterDataHierarchyKey hierarchyKey,
+            RevisionRequest request,
+            RevisionOperation operation
+    ) {
+
         MasterDataRevision revision = startRevision(request);
-        RevisionExecutionContext draftContext = RevisionExecutionContext.from(revision);
+        RevisionExecutionContext draftContext = hierarchyKey == null
+                ? RevisionExecutionContext.ordinaryFrom(revision)
+                : RevisionExecutionContext.structuralFrom(revision, hierarchyKey);
 
         RevisionOperationResult operationResult = Objects.requireNonNull(
                 operation.execute(draftContext),
@@ -64,7 +97,9 @@ public class TransactionalMasterDataRevisionCoordinator implements MasterDataRev
         persistencePort.saveAppliedRevision(revision, orderedContents, new RevisionAuditMetadata(actorId, occurredAt));
         persistencePort.flush();
 
-        RevisionExecutionContext appliedContext = RevisionExecutionContext.from(revision);
+        RevisionExecutionContext appliedContext = hierarchyKey == null
+                ? RevisionExecutionContext.ordinaryFrom(revision)
+                : RevisionExecutionContext.structuralFrom(revision, hierarchyKey);
         return new RevisionExecutionResult(appliedContext, primaryResult, orderedContents);
     }
 

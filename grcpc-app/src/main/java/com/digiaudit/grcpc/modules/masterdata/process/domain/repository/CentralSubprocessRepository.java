@@ -25,7 +25,6 @@ public interface CentralSubprocessRepository extends JpaRepository<CentralSubpro
     @Query("select subprocess from CentralSubprocessEntity subprocess where subprocess.id = :id")
     Optional<CentralSubprocessEntity> lockById(@Param("id") UUID id);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select subprocess from CentralSubprocessEntity subprocess where upper(subprocess.code) = upper(:code)")
-    Optional<CentralSubprocessEntity> lockByNormalizedCode(@Param("code") String code);
+    Optional<CentralSubprocessEntity> findByNormalizedCode(@Param("code") String code);
 }

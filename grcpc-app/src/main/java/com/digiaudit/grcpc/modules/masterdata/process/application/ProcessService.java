@@ -23,6 +23,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRev
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionCoordinator;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionContext;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionResult;
+import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionMutationGuard;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionOperationResult;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionRequest;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentResult;
@@ -31,6 +32,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationT
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataMutationResult;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -76,6 +78,7 @@ public class ProcessService {
     private final Clock clock;
     private final ObjectMapper objectMapper;
     private final MasterDataStructuralDependencyChecker dependencyChecker;
+    private final RevisionMutationGuard mutationGuard;
 
     public ProcessService(
             CentralProcessRepository processRepository,
@@ -84,7 +87,8 @@ public class ProcessService {
             MasterDataRevisionActorProvider actorProvider,
             @Qualifier("masterDataRevisionClock") Clock clock,
             ObjectMapper objectMapper,
-            MasterDataStructuralDependencyChecker dependencyChecker
+            MasterDataStructuralDependencyChecker dependencyChecker,
+            RevisionMutationGuard mutationGuard
     ) {
         this.processRepository = Objects.requireNonNull(processRepository, "processRepository is required");
         this.subprocessRepository = Objects.requireNonNull(subprocessRepository, "subprocessRepository is required");
@@ -93,6 +97,7 @@ public class ProcessService {
         this.clock = Objects.requireNonNull(clock, "clock is required");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper is required");
         this.dependencyChecker = Objects.requireNonNull(dependencyChecker, "dependencyChecker is required");
+        this.mutationGuard = Objects.requireNonNull(mutationGuard, "mutationGuard is required");
     }
 
     @Transactional(readOnly = true)
@@ -146,7 +151,8 @@ public class ProcessService {
         int sortOrder = normalizeSortOrder(request.sortOrder());
         validateValidity(request.validFrom(), request.validTo());
         try {
-            RevisionExecutionResult result = revisionCoordinator.execute(
+            RevisionExecutionResult result = revisionCoordinator.executeStructural(
+                    MasterDataHierarchyKey.PROCESS,
                     RevisionRequest.central("Create central process " + code, "Central process structural create", null),
                     context -> createProcessInsideRevision(context, code, title, request.parentProcessId(), description, sortOrder, request.validFrom(), request.validTo())
             );
@@ -171,7 +177,8 @@ public class ProcessService {
 
     public MasterDataRevisionMutationResponse moveProcess(UUID processId, MoveCentralProcessRequest request) {
         long expectedVersion = requireVersion(request.version());
-        RevisionExecutionResult result = revisionCoordinator.execute(
+        RevisionExecutionResult result = revisionCoordinator.executeStructural(
+                MasterDataHierarchyKey.PROCESS,
                 RevisionRequest.central("Move central process " + processId, "Central process hierarchy move", null),
                 context -> moveProcessInsideRevision(context, processId, expectedVersion, request.parentProcessId())
         );
@@ -201,7 +208,8 @@ public class ProcessService {
         int sortOrder = normalizeSortOrder(request.sortOrder());
         validateValidity(request.validFrom(), request.validTo());
         try {
-            RevisionExecutionResult result = revisionCoordinator.execute(
+            RevisionExecutionResult result = revisionCoordinator.executeStructural(
+                    MasterDataHierarchyKey.PROCESS,
                     RevisionRequest.central("Create central subprocess " + code, "Central subprocess structural create", null),
                     context -> createSubprocessInsideRevision(context, code, title, request.processId(), description, sortOrder, request.validFrom(), request.validTo())
             );
@@ -226,7 +234,8 @@ public class ProcessService {
 
     public MasterDataRevisionMutationResponse moveSubprocess(UUID subprocessId, MoveCentralSubprocessRequest request) {
         long expectedVersion = requireVersion(request.version());
-        RevisionExecutionResult result = revisionCoordinator.execute(
+        RevisionExecutionResult result = revisionCoordinator.executeStructural(
+                MasterDataHierarchyKey.PROCESS,
                 RevisionRequest.central("Move central subprocess " + subprocessId, "Central subprocess owner move", null),
                 context -> moveSubprocessInsideRevision(context, subprocessId, expectedVersion, request.processId())
         );
@@ -259,9 +268,10 @@ public class ProcessService {
             LocalDate validFrom,
             LocalDate validTo
     ) {
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
         UUID actorId = actorProvider.currentActorId();
         Instant now = Instant.now(clock);
-        List<CentralProcessEntity> hierarchy = processRepository.lockProcessHierarchyOrderedById();
+        List<CentralProcessEntity> hierarchy = processRepository.findAllByOrderByIdAsc();
         Map<UUID, CentralProcessEntity> byId = indexProcesses(hierarchy);
         CentralProcessEntity entity = findProcessByNormalizedCode(hierarchy, code);
         if (entity == null) {
@@ -326,8 +336,9 @@ public class ProcessService {
             long expectedVersion,
             UUID parentProcessId
     ) {
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
         Map<UUID, CentralProcessEntity> byId = indexProcesses(
-                processRepository.lockProcessHierarchyOrderedById()
+                processRepository.findAllByOrderByIdAsc()
         );
         CentralProcessEntity entity = requireProcessFromSnapshot(byId, processId);
         assertVersion(entity, expectedVersion, "Process");
@@ -344,10 +355,22 @@ public class ProcessService {
 
     private MasterDataRevisionMutationResponse processLifecycle(UUID processId, Long version, RevisionOperationType operationType) {
         long expectedVersion = requireVersion(version);
-        RevisionExecutionResult result = revisionCoordinator.execute(
-                RevisionRequest.central(operationType.name() + " central process " + processId, "Central process lifecycle command", null),
-                context -> processLifecycleInsideRevision(context, processId, expectedVersion, operationType)
+        RevisionRequest revisionRequest = RevisionRequest.central(
+                operationType.name() + " central process " + processId,
+                "Central process lifecycle command",
+                null
         );
+        RevisionExecutionResult result = operationType == RevisionOperationType.DELETE
+                || operationType == RevisionOperationType.RESTORE
+                ? revisionCoordinator.executeStructural(
+                        MasterDataHierarchyKey.PROCESS,
+                        revisionRequest,
+                        context -> processLifecycleInsideRevision(context, processId, expectedVersion, operationType)
+                )
+                : revisionCoordinator.execute(
+                        revisionRequest,
+                        context -> processLifecycleInsideRevision(context, processId, expectedVersion, operationType)
+                );
         return MasterDataRevisionMutationResponse.from(result.primaryResult());
     }
 
@@ -360,7 +383,8 @@ public class ProcessService {
         Map<UUID, CentralProcessEntity> hierarchyById = null;
         CentralProcessEntity entity;
         if (operationType == RevisionOperationType.DELETE || operationType == RevisionOperationType.RESTORE) {
-            hierarchyById = indexProcesses(processRepository.lockProcessHierarchyOrderedById());
+            mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
+            hierarchyById = indexProcesses(processRepository.findAllByOrderByIdAsc());
             entity = requireProcessFromSnapshot(hierarchyById, processId);
         } else {
             entity = lockProcess(processId);
@@ -398,13 +422,14 @@ public class ProcessService {
             LocalDate validFrom,
             LocalDate validTo
     ) {
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
         UUID actorId = actorProvider.currentActorId();
         Instant now = Instant.now(clock);
         Map<UUID, CentralProcessEntity> processById = indexProcesses(
-                processRepository.lockProcessHierarchyOrderedById()
+                processRepository.findAllByOrderByIdAsc()
         );
         requireSubprocessOwner(processId, processById);
-        CentralSubprocessEntity entity = subprocessRepository.lockByNormalizedCode(code).orElse(null);
+        CentralSubprocessEntity entity = subprocessRepository.findByNormalizedCode(code).orElse(null);
         if (entity == null) {
             CentralSubprocessEntity created = CentralSubprocessEntity.create(
                     UUID.randomUUID(),
@@ -464,16 +489,17 @@ public class ProcessService {
             long expectedVersion,
             UUID processId
     ) {
-        Map<UUID, CentralProcessEntity> processById = indexProcesses(
-                processRepository.lockProcessHierarchyOrderedById()
-        );
-        requireSubprocessOwner(processId, processById);
-        CentralSubprocessEntity entity = lockSubprocess(subprocessId);
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
+        CentralSubprocessEntity entity = findSubprocessIncludingDeleted(subprocessId);
         assertVersion(entity, expectedVersion, "Subprocess");
         requireMutableSubprocess(entity);
         if (Objects.equals(entity.getProcessId(), processId)) {
             throw invalidHierarchyMove();
         }
+        Map<UUID, CentralProcessEntity> processById = indexProcesses(
+                processRepository.findAllByOrderByIdAsc()
+        );
+        requireSubprocessOwner(processId, processById);
         JsonNode before = subprocessSnapshot(entity);
         entity.move(processId, actorProvider.currentActorId(), Instant.now(clock));
         CentralSubprocessEntity saved = subprocessRepository.saveAndFlush(entity);
@@ -482,10 +508,22 @@ public class ProcessService {
 
     private MasterDataRevisionMutationResponse subprocessLifecycle(UUID subprocessId, Long version, RevisionOperationType operationType) {
         long expectedVersion = requireVersion(version);
-        RevisionExecutionResult result = revisionCoordinator.execute(
-                RevisionRequest.central(operationType.name() + " central subprocess " + subprocessId, "Central subprocess lifecycle command", null),
-                context -> subprocessLifecycleInsideRevision(context, subprocessId, expectedVersion, operationType)
+        RevisionRequest revisionRequest = RevisionRequest.central(
+                operationType.name() + " central subprocess " + subprocessId,
+                "Central subprocess lifecycle command",
+                null
         );
+        RevisionExecutionResult result = operationType == RevisionOperationType.DELETE
+                || operationType == RevisionOperationType.RESTORE
+                ? revisionCoordinator.executeStructural(
+                        MasterDataHierarchyKey.PROCESS,
+                        revisionRequest,
+                        context -> subprocessLifecycleInsideRevision(context, subprocessId, expectedVersion, operationType)
+                )
+                : revisionCoordinator.execute(
+                        revisionRequest,
+                        context -> subprocessLifecycleInsideRevision(context, subprocessId, expectedVersion, operationType)
+                );
         return MasterDataRevisionMutationResponse.from(result.primaryResult());
     }
 
@@ -495,17 +533,23 @@ public class ProcessService {
             long expectedVersion,
             RevisionOperationType operationType
     ) {
-        Map<UUID, CentralProcessEntity> processById = null;
-        if (operationType == RevisionOperationType.RESTORE) {
-            processById = indexProcesses(processRepository.lockProcessHierarchyOrderedById());
+        boolean structural = operationType == RevisionOperationType.DELETE
+                || operationType == RevisionOperationType.RESTORE;
+        if (structural) {
+            mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
         }
-        CentralSubprocessEntity entity = lockSubprocess(subprocessId);
+        CentralSubprocessEntity entity = structural
+                ? findSubprocessIncludingDeleted(subprocessId)
+                : lockSubprocess(subprocessId);
         assertVersion(entity, expectedVersion, "Subprocess");
         validateSubprocessLifecycleTransition(entity, operationType);
         if (operationType == RevisionOperationType.DELETE) {
             validateSubprocessDeleteDependencies(subprocessId);
         }
         if (operationType == RevisionOperationType.RESTORE) {
+            Map<UUID, CentralProcessEntity> processById = indexProcesses(
+                    processRepository.findAllByOrderByIdAsc()
+            );
             requireSubprocessOwner(entity.getProcessId(), processById);
             validateValidity(entity.getValidFrom(), entity.getValidTo());
         }
@@ -720,6 +764,11 @@ public class ProcessService {
 
     private CentralSubprocessEntity lockSubprocess(UUID subprocessId) {
         return subprocessRepository.lockById(subprocessId)
+                .orElseThrow(() -> subprocessNotFound(subprocessId));
+    }
+
+    private CentralSubprocessEntity findSubprocessIncludingDeleted(UUID subprocessId) {
+        return subprocessRepository.findById(subprocessId)
                 .orElseThrow(() -> subprocessNotFound(subprocessId));
     }
 

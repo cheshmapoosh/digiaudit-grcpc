@@ -23,11 +23,10 @@ public interface CentralProcessRepository extends JpaRepository<CentralProcessEn
 
     boolean existsByParentProcessIdAndStatusNot(UUID parentProcessId, MasterDataLifecycleStatus status);
 
+    List<CentralProcessEntity> findAllByOrderByIdAsc();
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select process from CentralProcessEntity process where process.id = :id")
     Optional<CentralProcessEntity> lockById(@Param("id") UUID id);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select process from CentralProcessEntity process order by process.id")
-    List<CentralProcessEntity> lockProcessHierarchyOrderedById();
 }

@@ -442,6 +442,10 @@ The client refreshes the typed Read DTO and lets the user resolve the conflict; 
 
 Create commands use approved business-key uniqueness plus explicit inactive reactivation/deleted restore behavior for safe duplicate handling.
 
+Structural Organization Create, Move, Delete, and Restore acquire the `ORGANIZATION` Guard. Structural Process and Subprocess Create, Move, Delete, and Restore acquire the shared `PROCESS` Guard. Acquisition occurs before revision-number allocation and fresh hierarchy reads. Ordinary Update, Activate, Inactivate, and reads remain unguarded.
+
+Guard acquisition applies the configured JPA lock-timeout hint. Recognized lock acquisition/timeout failures return `HIERARCHY_BUSY` and are not retried automatically. A missing configured Guard row returns `HIERARCHY_GUARD_NOT_CONFIGURED` and fails the operation before source or Revision persistence.
+
 Compound commands must be retried only when their preconditions can be evaluated safely inside one Backend transaction.
 
 Temporary-upload finalization is safe against replay through a pessimistic write lock on the exact temporary row and deletion of that row on success.
@@ -484,7 +488,7 @@ Validation errors add field-level information.
 }
 ```
 
-Do not disclose raw database constraint names, MinIO credentials, or internal object-storage paths in an error response.
+Do not disclose raw database constraint or table names, SQL, Oracle errors, lock syntax, internal persistence details, MinIO credentials, or internal object-storage paths in an error response.
 
 ## 14. Required domain error codes
 
@@ -492,7 +496,10 @@ Do not disclose raw database constraint names, MinIO credentials, or internal ob
 | --- | --- | --- |
 | `DUPLICATE_RELATION` | 409 | A business key, typed Scope pair, Coverage pair, classification pair, policy target, or document link already exists. |
 | `VERSION_CONFLICT` | 409 | Optimistic lock version does not match the current mutable record. |
+| `HIERARCHY_BUSY` | 409 | The required Organization or Process hierarchy Guard could not be acquired within the configured timeout. |
+| `HIERARCHY_GUARD_NOT_CONFIGURED` | 500 | A required seeded Guard row is absent; the operation fails closed without exposing persistence details. |
 | `HIERARCHY_CYCLE` | 422 | A process, organization, risk category, account group, regulation group, or policy group move would create a cycle. |
+| `INVALID_HIERARCHY_MOVE` | 422 | The requested structural destination is unchanged or otherwise not an allowed move. |
 | `LOCAL_VALIDITY_OUTSIDE_CENTRAL_VALIDITY` | 422 | An inherited Local Scope/Coverage validity range is outside its current typed Central reference range. |
 | `CROSS_SUBPROCESS_COVERAGE` | 422 | Central Coverage endpoints do not belong to the same Central Subprocess. |
 | `CROSS_LOCAL_CONTEXT_COVERAGE` | 422 | Local Coverage endpoints do not belong to the requested Local Organization–Subprocess Context. |

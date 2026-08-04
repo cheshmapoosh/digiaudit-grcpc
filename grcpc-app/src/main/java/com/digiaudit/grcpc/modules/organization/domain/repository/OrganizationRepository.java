@@ -23,11 +23,10 @@ public interface OrganizationRepository extends JpaRepository<OrganizationEntity
 
     boolean existsByParentOrganizationIdAndStatusNot(UUID parentOrganizationId, MasterDataLifecycleStatus status);
 
+    List<OrganizationEntity> findAllByOrderByIdAsc();
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select organization from OrganizationEntity organization where organization.id = :id")
     Optional<OrganizationEntity> lockById(@Param("id") UUID id);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select organization from OrganizationEntity organization order by organization.id")
-    List<OrganizationEntity> lockOrganizationHierarchyOrderedById();
 }

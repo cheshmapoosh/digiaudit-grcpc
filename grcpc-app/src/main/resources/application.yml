@@ -36,6 +36,8 @@ server:
 app:
   logging:
     path: ${APP_LOGGING_PATH:logs}
+  master-data:
+    hierarchy-lock-timeout-ms: ${MASTER_DATA_HIERARCHY_LOCK_TIMEOUT_MS:5000}
   minio:
     enabled: ${MINIO_ENABLED:true}
     endpoint: ${MINIO_ENDPOINT:http://localhost:9000}

@@ -6,6 +6,7 @@ import com.digiaudit.grcpc.common.exception.BusinessException;
 import com.digiaudit.grcpc.common.exception.GoneException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
+import com.digiaudit.grcpc.modules.masterdata.shared.exception.HierarchyGuardNotConfiguredException;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,15 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleGone(GoneException ex, Locale locale) {
         log.warn("Handling GoneException: {}", ex.getMessage());
         return build(HttpStatus.GONE, ex, locale, List.of());
+    }
+
+    @ExceptionHandler(HierarchyGuardNotConfiguredException.class)
+    public ResponseEntity<ApiErrorResponse> handleHierarchyGuardNotConfigured(
+            HierarchyGuardNotConfiguredException ex,
+            Locale locale
+    ) {
+        log.error("Required hierarchy coordination is not configured");
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, ex, locale, List.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

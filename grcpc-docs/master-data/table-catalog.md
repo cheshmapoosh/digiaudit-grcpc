@@ -2,11 +2,11 @@
 
 ## Catalog authority and count rule
 
-This catalog is rebuilt from the Final Logical Model, §5, §6–§14, the Physical Design Reference, §4–§20, and the Prompt 3.3 project-owner Document scope correction. The correction governs the exact Document physical scope for implementation. The active catalog contains 45 business-table names and relationships. The Physical Design Reference is authoritative for physical types, sizes, keys, checks, indexes, Flyway, and the single technical table.
+This catalog is rebuilt from the Final Logical Model, §5, §6–§14, the Physical Design Reference, §4–§20, the Prompt 3.3 project-owner Document scope correction, and ADR-0001. The corrections govern the exact Document and hierarchy Guard physical scope for implementation. The active catalog contains 45 business-table names and relationships plus two technical tables.
 
 Authoritative source files: `GRC_Master_Data_Logical_Model_Final_FA.docx` and `GRC_Master_Data_Physical_Design_Reference_FA.docx`; business meaning is cross-checked against `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`.
 
-No table below is inferred merely to satisfy a count. The business list is exactly the 14 + 13 + 13 + 3 + 2 active implementation structures. The technical temporary-upload table is outside that count.
+No table below is inferred merely to satisfy a count. The business list is exactly the 14 + 13 + 13 + 3 + 2 active implementation structures. The two technical tables are outside that count.
 
 Document non-invention rule: there is no Retention Policy table, no Hold table, and no purge-state persistence model in Master Data V2. No future implementation prompt may recreate these concepts without a new explicit approved design decision.
 
@@ -981,11 +981,11 @@ Document Link Target Type rules:
 
 **Authority / non-invention note.** Final Logical Model §14-2 and §14-3; Physical Design §8 and §14.
 
-## 6. Technical Temporary Upload — 1 technical table
+## 6. Technical Tables — 2 technical tables
 
 ### T1. `document_temp_upload`
 
-**Purpose and family.** The sole technical table in this redesign scope. Row existence means the temporary object was uploaded successfully, verified, and is waiting for explicit user confirmation.
+**Purpose and family.** The sole technical temporary-upload table in this redesign scope. Row existence means the temporary object was uploaded successfully, verified, and is waiting for explicit user confirmation.
 
 **Fields and Oracle types.** `id RAW(16) NOT NULL`; `original_file_name VARCHAR2(512 CHAR) NOT NULL`; `mime_type VARCHAR2(255 BYTE) NOT NULL`; `file_size NUMBER(19,0) NOT NULL`; `storage_object_key VARCHAR2(1024 BYTE) NOT NULL`; `checksum_algorithm VARCHAR2(32 BYTE) NOT NULL`; `checksum_value VARCHAR2(128 BYTE) NOT NULL`; `uploaded_by RAW(16) NOT NULL`; `uploaded_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `expires_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `version NUMBER(19,0) NOT NULL`.
 
@@ -1001,6 +1001,20 @@ Document Link Target Type rules:
 
 **Authority / non-invention note.** Physical Design §12-1 through §12-4. It is technical, not one of the 45 business tables, and there is no distributed Oracle–MinIO transaction or Outbox.
 
+### T2. `masterdata_hierarchy_guard`
+
+**Purpose and family.** Internal database concurrency Guard for structural Organization and Process/Subprocess commands. It is technical and is not business Master Data.
+
+**Fields and Oracle types.** `hierarchy_key VARCHAR2(64 BYTE) NOT NULL`; no UUID, version, lifecycle, audit, timestamp, status, description, or user columns.
+
+**Keys and relationships.** PK: `hierarchy_key`. No foreign keys. The seeded key set contains exactly `ORGANIZATION` and `PROCESS`; there is no `SUBPROCESS` key because Process and Subprocess share `PROCESS`.
+
+**Lifecycle, validity, and lock.** The key must equal `UPPER(TRIM(hierarchy_key))`. Structural command transactions acquire the exact row with `PESSIMISTIC_WRITE` and a configured JPA lock-timeout hint before revision allocation, hierarchy reads, validation, or mutation. Runtime code never creates, repairs, renames, or reseeds rows.
+
+**Mutability and Revision.** Guard rows are immutable configuration and never create Revision Content. The table has no repository, API, controller, or generic CRUD exposure and is not a Document Link target.
+
+**Authority / non-invention note.** ADR-0001 and [hierarchy-guard-row-contract.md](hierarchy-guard-row-contract.md). No additional Guard key, lock table, JVM lock, cache lock, or advisory-lock abstraction is authorized.
+
 ## Final count and verification rule
 
 | Catalog family | Numbered tables |
@@ -1011,9 +1025,9 @@ Document Link Target Type rules:
 | Document | 3 (`41`–`43`) |
 | Business Revision | 2 (`44`–`45`) |
 | **Business tables** | **45** |
-| Technical Temporary Upload | 1 (`T1`) |
-| **Total physical tables in this redesign scope** | **46** |
+| Technical tables | 2 (`T1`–`T2`) |
+| **Total physical tables in this redesign scope** | **47** |
 
-Manual proof: the contiguous numbered business list starts at `01` and ends at `45` exactly once; `T1` is outside the business list. Programmatic gates for later implementation tasks must count Markdown headings in the form `### NN. table_name` and confirm 45 numbered business headings, plus exactly one `### T1.` heading.
+Manual proof: the contiguous numbered business list starts at `01` and ends at `45` exactly once; `T1` and `T2` are outside the business list. Programmatic gates for later implementation tasks must count Markdown headings in the form `### NN. table_name` and confirm 45 numbered business headings, plus exactly one `### T1.` and one `### T2.` heading.
 
 No KPI, KRI, risk-assessment, control-test, workflow, monitoring, job, scheduler, cache, outbox, Audit, generic assignment, generic Scope, generic Coverage, or invented relationship table is part of this catalog.

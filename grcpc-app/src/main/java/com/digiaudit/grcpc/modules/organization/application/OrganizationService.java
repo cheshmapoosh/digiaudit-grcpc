@@ -7,6 +7,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRev
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionCoordinator;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionContext;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionResult;
+import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionMutationGuard;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionOperationResult;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionRequest;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentResult;
@@ -15,6 +16,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationT
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataMutationResult;
 import com.digiaudit.grcpc.modules.organization.api.dto.CreateOrganizationRequest;
 import com.digiaudit.grcpc.modules.organization.api.dto.MoveOrganizationRequest;
@@ -60,6 +62,7 @@ public class OrganizationService {
     private final Clock clock;
     private final ObjectMapper objectMapper;
     private final MasterDataStructuralDependencyChecker dependencyChecker;
+    private final RevisionMutationGuard mutationGuard;
 
     public OrganizationService(
             OrganizationRepository organizationRepository,
@@ -67,7 +70,8 @@ public class OrganizationService {
             MasterDataRevisionActorProvider actorProvider,
             @Qualifier("masterDataRevisionClock") Clock clock,
             ObjectMapper objectMapper,
-            MasterDataStructuralDependencyChecker dependencyChecker
+            MasterDataStructuralDependencyChecker dependencyChecker,
+            RevisionMutationGuard mutationGuard
     ) {
         this.organizationRepository = Objects.requireNonNull(organizationRepository, "organizationRepository is required");
         this.revisionCoordinator = Objects.requireNonNull(revisionCoordinator, "revisionCoordinator is required");
@@ -75,6 +79,7 @@ public class OrganizationService {
         this.clock = Objects.requireNonNull(clock, "clock is required");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper is required");
         this.dependencyChecker = Objects.requireNonNull(dependencyChecker, "dependencyChecker is required");
+        this.mutationGuard = Objects.requireNonNull(mutationGuard, "mutationGuard is required");
     }
 
     @Transactional(readOnly = true)
@@ -104,7 +109,8 @@ public class OrganizationService {
         String code = normalizeCode(request.code(), "DUPLICATE_ORGANIZATION_CODE");
         validateValidity(request.validFrom(), request.validTo());
         try {
-            RevisionExecutionResult result = revisionCoordinator.execute(
+            RevisionExecutionResult result = revisionCoordinator.executeStructural(
+                    MasterDataHierarchyKey.ORGANIZATION,
                     RevisionRequest.central("Create organization " + code, "Organization structural create", null),
                     context -> createInsideRevision(context, code, request)
             );
@@ -126,7 +132,8 @@ public class OrganizationService {
 
     public MasterDataRevisionMutationResponse move(UUID organizationId, MoveOrganizationRequest request) {
         long expectedVersion = requireVersion(request.version());
-        RevisionExecutionResult result = revisionCoordinator.execute(
+        RevisionExecutionResult result = revisionCoordinator.executeStructural(
+                MasterDataHierarchyKey.ORGANIZATION,
                 RevisionRequest.central("Move organization " + organizationId, "Organization hierarchy move", null),
                 context -> moveInsideRevision(context, organizationId, expectedVersion, request.parentOrganizationId())
         );
@@ -154,9 +161,10 @@ public class OrganizationService {
             String code,
             CreateOrganizationRequest request
     ) {
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
         UUID actorId = actorProvider.currentActorId();
         Instant now = Instant.now(clock);
-        List<OrganizationEntity> hierarchy = organizationRepository.lockOrganizationHierarchyOrderedById();
+        List<OrganizationEntity> hierarchy = organizationRepository.findAllByOrderByIdAsc();
         Map<UUID, OrganizationEntity> byId = indexById(hierarchy);
         OrganizationEntity entity = findByNormalizedCode(hierarchy, code);
 
@@ -218,7 +226,8 @@ public class OrganizationService {
             long expectedVersion,
             UUID parentOrganizationId
     ) {
-        List<OrganizationEntity> hierarchy = organizationRepository.lockOrganizationHierarchyOrderedById();
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
+        List<OrganizationEntity> hierarchy = organizationRepository.findAllByOrderByIdAsc();
         Map<UUID, OrganizationEntity> byId = indexById(hierarchy);
         OrganizationEntity entity = requireFromSnapshot(byId, organizationId);
         assertVersion(entity, expectedVersion);
@@ -239,10 +248,22 @@ public class OrganizationService {
             RevisionOperationType operationType
     ) {
         long expectedVersion = requireVersion(request.version());
-        RevisionExecutionResult result = revisionCoordinator.execute(
-                RevisionRequest.central(operationType.name() + " organization " + organizationId, "Organization lifecycle command", null),
-                context -> lifecycleInsideRevision(context, organizationId, expectedVersion, operationType)
+        RevisionRequest revisionRequest = RevisionRequest.central(
+                operationType.name() + " organization " + organizationId,
+                "Organization lifecycle command",
+                null
         );
+        RevisionExecutionResult result = operationType == RevisionOperationType.DELETE
+                || operationType == RevisionOperationType.RESTORE
+                ? revisionCoordinator.executeStructural(
+                        MasterDataHierarchyKey.ORGANIZATION,
+                        revisionRequest,
+                        context -> lifecycleInsideRevision(context, organizationId, expectedVersion, operationType)
+                )
+                : revisionCoordinator.execute(
+                        revisionRequest,
+                        context -> lifecycleInsideRevision(context, organizationId, expectedVersion, operationType)
+                );
         return MasterDataRevisionMutationResponse.from(result.primaryResult());
     }
 
@@ -255,7 +276,8 @@ public class OrganizationService {
         Map<UUID, OrganizationEntity> hierarchyById = null;
         OrganizationEntity entity;
         if (operationType == RevisionOperationType.DELETE || operationType == RevisionOperationType.RESTORE) {
-            hierarchyById = indexById(organizationRepository.lockOrganizationHierarchyOrderedById());
+            mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
+            hierarchyById = indexById(organizationRepository.findAllByOrderByIdAsc());
             entity = requireFromSnapshot(hierarchyById, organizationId);
         } else {
             entity = lockExisting(organizationId, "ORGANIZATION_NOT_FOUND");

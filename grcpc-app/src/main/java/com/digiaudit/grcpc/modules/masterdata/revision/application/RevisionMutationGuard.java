@@ -4,11 +4,14 @@ import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentRes
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionDomain;
 import com.digiaudit.grcpc.modules.masterdata.revision.exception.MasterDataRevisionRequiredException;
 import com.digiaudit.grcpc.modules.masterdata.revision.exception.RevisionDomainMismatchException;
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
+import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
 
+@Component
 public final class RevisionMutationGuard {
     public RevisionExecutionContext requireContext(RevisionExecutionContext context) {
         if (context == null) {
@@ -42,6 +45,20 @@ public final class RevisionMutationGuard {
         RevisionExecutionContext verifiedContext = requireContext(context);
         if (!verifiedContext.isDraft()) {
             throw MasterDataRevisionRequiredException.notDraft(verifiedContext.revisionId());
+        }
+    }
+
+    public void requireHierarchyGuard(
+            RevisionExecutionContext context,
+            MasterDataHierarchyKey expectedKey
+    ) {
+        RevisionExecutionContext verifiedContext = requireContext(context);
+        Objects.requireNonNull(expectedKey, "expectedKey is required");
+        if (verifiedContext.acquiredHierarchyKey() == null) {
+            throw MasterDataRevisionRequiredException.hierarchyGuardMissing();
+        }
+        if (verifiedContext.acquiredHierarchyKey() != expectedKey) {
+            throw MasterDataRevisionRequiredException.hierarchyGuardMismatch();
         }
     }
 

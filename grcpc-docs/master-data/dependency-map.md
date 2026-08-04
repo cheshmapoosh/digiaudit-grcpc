@@ -2,7 +2,7 @@
 
 ## Purpose and authority
 
-This map sequences the approved 45-business-table model and the one `document_temp_upload` technical table for 46 physical tables total across Flyway, Backend, UI, revision processing, document handling, and read models.
+This map sequences the approved 45-business-table model and the two technical tables, `document_temp_upload` and `masterdata_hierarchy_guard`, for 47 Master Data V2 physical tables across Flyway, Backend, UI, revision processing, document handling, concurrency control, and read models.
 
 Entity names and arrows follow the Final Logical Model §5–§14.
 
@@ -22,6 +22,7 @@ The map is a delivery dependency map; it does not add any table, cache, outbox, 
 - A Central reference is validated before an inherited Local Scope or Coverage can be applied.
 - Document Version is created from a confirmed Temporary Upload before a Document Link is created, and successful finalization deletes the temporary row.
 - A Business Revision header exists before Backend-created Revision Content is persisted and applied.
+- Structural Organization commands acquire the `ORGANIZATION` Guard before revision allocation or hierarchy reads; structural Process and Subprocess commands share the `PROCESS` Guard.
 - Read models depend on source tables and never become source-table dependencies.
 - Central changes can affect read results and impact analysis; they never create physical Local mutations.
 
@@ -148,6 +149,7 @@ The dotted arrows identify inherited-reference validation and Effective dependen
 | T1 | `document_temp_upload` | Successful temporary object upload and verification | Technical staging metadata waiting for explicit confirmation; no Document Version FK or status. |
 | R1 | `masterdata_revision` | Organization for Local domain; self parent optional | Revision header before contents. |
 | R2 | `masterdata_revision_content` | Master Data Revision | Ordered controlled mutation records. |
+| T2 | `masterdata_hierarchy_guard` | Oracle + exact seeded hierarchy keys | Technical database serialization for structural commands; no business relation or Revision Content. |
 
 ## Scope-before-Coverage rule
 
@@ -181,8 +183,9 @@ The Physical Design Reference §16-1 provides the migration sequence.
 6. Create `document`, `document_version`, and `document_link`.
 7. Create `document_temp_upload`.
 8. Create `masterdata_revision` and `masterdata_revision_content`.
-9. Add supplementary unique constraints, composite foreign keys, checks, and indexes.
-10. Create read-only Effective, Diagnostic, Roll-up, and Policy Applicability views or query-facing database objects.
+9. Create and seed `masterdata_hierarchy_guard` through V1167, after the V1166 Business Revision migration.
+10. Add supplementary unique constraints, composite foreign keys, checks, and indexes.
+11. Create read-only Effective, Diagnostic, Roll-up, and Policy Applicability views or query-facing database objects.
 
 The sequence is Day-Zero creation on a fresh Oracle schema.
 
@@ -192,7 +195,7 @@ It is not a chain of Legacy `DROP`, `ALTER`, data-copy, or compatibility migrati
 
 | Backend slice | Implement after | Deliverable | Key dependency check |
 | --- | --- | --- | --- |
-| 1. Shared foundation | Flyway conventions | UUID RAW mapping, lifecycle/validity, status enums, optimistic locking, revision guard | Hibernate validates rather than creates DDL. |
+| 1. Shared foundation | Flyway conventions | UUID RAW mapping, lifecycle/validity, status enums, optimistic locking, revision guard, hierarchy Guard port/adapter | Hibernate validates rather than creates DDL; Guard lookup uses the configured timeout. |
 | 2. Structural trees | Shared foundation | Organization, Process, Subprocess command/query services | Cycle validation before revision apply. |
 | 3. Central catalogs | Structural trees | Control, Control Objective, Risk Category/Template, Account Group, Regulation hierarchy, Policy/Version | Separate formerly combined concepts. |
 | 4. Central relations | Central catalogs | Typed scopes, classifications, policy scopes, coverage commands | Same-subprocess composite FKs and typed validation. |
@@ -203,6 +206,8 @@ It is not a chain of Legacy `DROP`, `ALTER`, data-copy, or compatibility migrati
 | 9. Legacy removal | Each owning slice | Remove old endpoints/entities/services/permissions | No compatibility API or dual write remains. |
 
 The Revision command service is a cross-slice dependency but not a generic persistence shortcut.
+
+For structural commands, the transaction order is Guard acquisition, in-memory Revision allocation, fresh normal hierarchy reads and validation, source mutation, Revision persistence, flush, and commit. Recognized Guard lock acquisition/timeout failures return `HIERARCHY_BUSY`; a missing seeded row fails closed as `HIERARCHY_GUARD_NOT_CONFIGURED`. Ordinary reads and non-structural commands do not acquire the Guard.
 
 It determines revision domain, creates the header/content, validates, performs required impact analysis, applies all mutations in one transaction, and returns the mutation result.
 

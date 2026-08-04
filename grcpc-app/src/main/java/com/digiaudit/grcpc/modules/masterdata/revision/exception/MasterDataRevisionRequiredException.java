@@ -22,4 +22,16 @@ public final class MasterDataRevisionRequiredException extends ConflictException
     public static MasterDataRevisionRequiredException notDraft(UUID revisionId) {
         return new MasterDataRevisionRequiredException("Revision context is not draft: " + revisionId, revisionId);
     }
+
+    public static MasterDataRevisionRequiredException hierarchyGuardMissing() {
+        return new MasterDataRevisionRequiredException(
+                "Structural mutation requires an acquired hierarchy guard"
+        );
+    }
+
+    public static MasterDataRevisionRequiredException hierarchyGuardMismatch() {
+        return new MasterDataRevisionRequiredException(
+                "Structural mutation hierarchy guard does not match the expected hierarchy"
+        );
+    }
 }

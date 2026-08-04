@@ -6,7 +6,7 @@ This directory is the implementation-planning baseline for the greenfield Master
 
 It reconciles the approved Conceptual Model, Final Logical Model, Physical Design Reference, the retained customer UI documents, and the current application solely as Legacy implementation evidence.
 
-The eight Markdown files in this directory are planning artifacts. They do not change the application, database, runtime configuration, permissions, or the retained Word documents.
+The nine Markdown files in this directory are planning artifacts. They describe the approved application and database contract without modifying the retained Word documents.
 
 ## Execution record
 
@@ -52,12 +52,13 @@ Customer documents describe the existing customer-facing vocabulary and visual w
 ### Generated implementation documents
 
 1. [Implementation contract](implementation-contract.md) — non-negotiable architecture and ownership rules.
-2. [Table catalog](table-catalog.md) — the exact 45 business tables and one technical table.
+2. [Table catalog](table-catalog.md) — the exact 45 business tables and two technical tables.
 3. [Dependency map](dependency-map.md) — schema, backend, UI, revision, document, and read-model sequencing.
 4. [Legacy deletion map](legacy-deletion-map.md) — current implementation inventory and slice-owned replacement/removal work.
 5. [API conventions](api-conventions.md) — use-case APIs, commands, DTOs, errors, authorization, documents, and read queries.
 6. [UI compatibility map](ui-compatibility-map.md) — customer/current/target UI traceability.
 7. [Acceptance checklist](acceptance-checklist.md) — implementation and full-stack verification gates.
+8. [Hierarchy Guard Row contract](hierarchy-guard-row-contract.md) — the binding database concurrency protocol for structural Organization and Process/Subprocess commands.
 
 ## Authority hierarchy
 
@@ -73,6 +74,8 @@ Prompt 3.3 records an explicit project-owner scope correction for the exact Docu
 
 Prompt 4.2 records an explicit project-owner correction for Document temporary upload finalization: a temporary row is created only after successful MinIO upload and verification, has no persisted status/history, is deleted on successful finalization, and its temporary object is deleted only after the permanent database transaction commits. Document commands do not create or require Business Revision, and command success must not depend on a secondary Summary query or UI refresh. This correction does not claim that the retained DOCX files already contained these simplifications.
 
+ADR-0001 and the Hierarchy Guard Row contract add the exact `masterdata_hierarchy_guard` technical table for database-backed serialization of structural Organization and Process/Subprocess commands. This does not expand the 45-table business model.
+
 ## Recommended reading order
 
 1. Read the three authoritative Word documents in the authority order above.
@@ -85,7 +88,7 @@ Prompt 4.2 records an explicit project-owner correction for Document temporary u
 
 ## Approved table baseline
 
-Prompt 3.3 records an explicit project-owner scope correction for the counted Document physical scope. The active implementation baseline is 45 business tables plus one technical temporary-upload table; this correction does not claim that the retained DOCX files already contained the four-table correction.
+Prompt 3.3 records an explicit project-owner scope correction for the counted Document physical scope. ADR-0001 then adds one hierarchy Guard technical table. The active implementation baseline is 45 business tables plus two technical tables; these corrections do not claim that the retained DOCX files already contained them.
 
 ### 1. Structural and Central Definitions — 14
 
@@ -147,13 +150,13 @@ Prompt 3.3 records an explicit project-owner scope correction for the counted Do
 44. `masterdata_revision`
 45. `masterdata_revision_content`
 
-The approved technical table outside the business-table count remains `document_temp_upload`.
+The approved technical tables outside the business-table count are `document_temp_upload` and `masterdata_hierarchy_guard`.
 
 | Count | Value |
 | --- | ---: |
 | Business tables | 45 |
-| Technical temporary-upload tables | 1 |
-| Total physical tables in this redesign scope | 46 |
+| Technical tables | 2 |
+| Total physical tables in this redesign scope | 47 |
 
 Effective, Diagnostic, Roll-up, and Policy Applicability are read-only derived views or specialized queries. They are not stored business tables, cache tables, or materialized results.
 
@@ -186,4 +189,4 @@ Policy approval is an external workflow dependency for publishing a policy versi
 
 ## Change-scope confirmation
 
-This corrective pass rewrites only the eight Markdown planning files listed above. No Java, TypeScript, React, CSS, Flyway, Maven, npm, runtime configuration, permissions, i18n, tests, or Word document was changed.
+These planning documents are maintained alongside the implementation. Retained Word documents remain unchanged, and the Guard Row decision does not authorize frontend, permission, business-model, or unrelated runtime changes.
