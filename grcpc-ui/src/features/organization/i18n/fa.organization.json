@@ -3,7 +3,7 @@
     "list": {
       "title": "ساختار سازمانی",
       "empty": "هیچ سازمانی ثبت نشده است.",
-      "search": "جستجو بر اساس کد"
+      "search": "جستجو بر اساس نام یا کد"
     },
     "parent": {
       "none": "بدون والد",
@@ -11,13 +11,17 @@
       "clear": "پاک کردن",
       "dialog": {
         "title": "انتخاب والد",
-        "search": "جستجو بر اساس کد"
+        "search": "جستجو بر اساس نام یا کد"
       }
     },
     "fields": {
       "code": "کد",
+      "name": "نام",
+      "organizationType": "نوع سازمان",
       "parent": "والد",
       "status": "وضعیت",
+      "location": "موقعیت",
+      "description": "توضیحات",
       "validFrom": "از تاریخ",
       "validTo": "تا تاریخ",
       "validity": "اعتبار",
@@ -27,16 +31,22 @@
     },
     "tabs": {
       "general": "اطلاعات کلی",
-      "subProcesses": "زیر فرآیند",
-      "risks": "ریسک‌ها",
-      "controls": "کنترل‌ها",
-      "rules": "قوانین",
-      "policies": "سیاست‌ها",
-      "goals": {
-        "label": "اهداف"
-      },
       "documents": "مستندات"
     },
+    "types": {
+      "HOLDING": "هلدینگ",
+      "COMPANY": "شرکت",
+      "DEPUTY": "معاونت",
+      "OFFICE": "دفتر",
+      "MANAGEMENT": "مدیریت",
+      "DEPARTMENT": "اداره",
+      "BRANCH": "شعبه",
+      "UNIT": "واحد",
+      "COMMITTEE": "کمیته",
+      "GROUP": "گروه",
+      "OTHER": "سایر"
+    },
+    "tree": { "inactive": "سازمان غیرفعال" },
     "documents": {
       "empty": "مستندی برای این سازمان ثبت نشده است.",
       "saveFirst": "ابتدا سازمان را ذخیره کنید، سپس مستندات را نهایی کنید.",
@@ -68,18 +78,6 @@
       "candidate": "مقصد انتخاب‌شده",
       "confirm": "انتقال"
     },
-    "lifecycle": {
-      "activate": "فعال‌سازی",
-      "inactivate": "غیرفعال‌سازی"
-    },
-    "deleted": {
-      "action": "موارد حذف‌شده",
-      "title": "سازمان‌های حذف‌شده",
-      "empty": "سازمان حذف‌شده‌ای یافت نشد."
-    },
-    "restore": {
-      "action": "بازگردانی"
-    },
     "delete": {
       "title": "حذف واحد سازمانی",
       "confirm": "آیا از حذف «{{title}}» مطمئن هستید؟"
@@ -107,6 +105,10 @@
     "validation": {
       "codeRequired": "کد الزامی است",
       "codeMaxBytes": "کد نمی‌تواند بیشتر از 64 بایت باشد",
+      "nameRequired": "نام الزامی است",
+      "nameMaxLength": "نام نمی‌تواند بیشتر از ۲۵۵ کاراکتر باشد",
+      "locationMaxLength": "موقعیت نمی‌تواند بیشتر از ۲۵۵ کاراکتر باشد",
+      "invalidDate": "تاریخ باید با قالب yyyy-MM-dd باشد",
       "invalidValidityRange": "بازه اعتبار معتبر نیست"
     }
   }

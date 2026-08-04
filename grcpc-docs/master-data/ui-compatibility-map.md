@@ -71,8 +71,8 @@ Current API/storage evidence: `/api/organizations`, generic organization-process
 | Customer field, tab, action, or relationship | Current UI/API/storage | Approved target entity or use case | Status | Future action and rationale |
 | --- | --- | --- | --- | --- |
 | Organization hierarchy and parent selection | Organization FCL/tree and `/api/organizations` | `organization` tree | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Keep tree, search, parent Value Help, and Object Page; use V2 lifecycle/version/revision command flow. |
-| Organization General Information | Current organization form | `organization` | `REMAP` | Prompt 5.9 consumes `code`, `name`, `organizationType`, `parentOrganizationId`, `status`, `location`, `validFrom`, `validTo`, and `description`; `displayLabel` is `name`. Create remains server-owned `ACTIVE`. |
-| Organization atomic edit/status save | Current object page/form and lifecycle controls | Organization Update command | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Prompt 5.9 sends one Update containing editable details plus `ACTIVE`/`INACTIVE`; it must not chain Update and Activate/Inactivate, and Move/Delete/Restore remain separate. |
+| Organization General Information | Organization General Information form | `organization` | `REMAP_COMPLETE` | Prompt 5.9 consumes `code`, `name`, `organizationType`, `parentOrganizationId`, `status`, `location`, `validFrom`, `validTo`, and `description`; `displayLabel` is `name`. Create remains server-owned `ACTIVE`. |
+| Organization atomic edit/status save | Organization ObjectPage form | Organization Update command | `REMAP_COMPLETE` | Prompt 5.9 sends one Update containing editable details plus `ACTIVE`/`INACTIVE`; it does not chain Update and Activate/Inactivate, while Move/Delete/Restore remain separate Backend commands. |
 | Process/Subprocess tab | Generic organization-process assignments | `local_organization_subprocess_scope` | `REMAP` | Replace generic Process assignment with exact Organization + Subprocess Context; only Subprocess is selectable. |
 | Organization-to-risk tab | `organization_process_risk_assignment` and generic UI | Typed Local Risk Scope/Coverage under `local_organization_subprocess_scope` | `REMAP` | Expose risk as a typed Local Scope or Coverage view, not a direct Organization–Risk relation. |
 | Organization-to-control tab | Generic reference/assignment UI | Local Control Scope and Local Coverage | `REMAP` | Render approved context-bound control data after Local Context exists. |
@@ -100,7 +100,7 @@ Current API/storage evidence: `/api/processes`, legacy process assignment endpoi
 | Create Process | Current process form/API | `central_process` create command | `REMAP` | Use typed Process create/update/status commands and hierarchy cycle validation. |
 | Create Subprocess | Current node-type form/API | `central_subprocess` create command | `REMAP` | Use distinct Subprocess form/command with exactly one parent Process. |
 | Parent move/reorder | Current tree behavior | Process parent and sort order | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Preserve drag/select UX only if it maps to typed move/reorder commands and version validation. |
-| Process/Subprocess General Information | Current combined node form | Separate Process/Subprocess Update DTOs | `REMAP` | Keep shared visual fields but use two typed DTOs; Prompt 5.9 sends details plus `ACTIVE`/`INACTIVE` in one Update and never includes code or structural parent/owner fields. |
+| Process/Subprocess General Information | Shared typed node form | Separate Process/Subprocess Update DTOs | `REMAP_COMPLETE` | The shared visual form uses two typed DTOs; Prompt 5.9 sends details plus `ACTIVE`/`INACTIVE` in one Update and never includes code or structural parent/owner fields. |
 | Controls tab | `ProcessControlsTab.tsx`, generic assignments | Central/Local Control Scope and typed Coverage | `REMAP` | Replace generic Process-to-Control assignment with Subprocess Scope view/commands. |
 | Risks tab | `ProcessRisksTab.tsx`, generic process-risk assignment | Central/Local Risk Template Scope and Coverage | `REMAP` | Requirement is scope-specific; use typed Scope/Coverage, no raw risk relation. |
 | Regulation tab | `ProcessRegulationsTab.tsx`, process-regulation assignment | Central/Local Requirement Scope | `REMAP` | Show Regulation hierarchy for context, but commands select a Requirement Scope. |
@@ -109,6 +109,8 @@ Current API/storage evidence: `/api/processes`, legacy process assignment endpoi
 | Documents tab | Generic attachment UI | Version-specific Document Link | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Reuse visual panel only for approved document-link targets. |
 | Process-level coverage editing | Current generic links/controls | Central Coverage under Subprocess | `REMAP` | Move entry point to selected Subprocess; enforce Scope-before-Coverage. |
 | Tree selection/expanded state/search | Current process tree UX | V2 combined read DTO | `KEEP` | Preserve user interaction state and route synchronization. |
+
+Prompt 5.9 closes the approved Prompt 5.8/5.9 staged compatibility gap. Organization and Process/Subprocess screens expose only General Information and Documents tabs; visible structural toolbar actions are Create, View, and Delete. Inactive nodes remain visible and selectable with semantic Critical presentation. All target business dates use the shared Persian UI5 DatePicker and submit Gregorian `yyyy-MM-dd`; free-text Document Category is hidden until a controlled vocabulary exists.
 
 ## 6. Control and Control Objective comparison
 

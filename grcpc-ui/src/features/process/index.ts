@@ -5,6 +5,7 @@ export type {
     CentralSubprocessResponse,
     MasterDataRevisionMutationResponse,
     ProcessLifecycleCommand,
+    ProcessEditableStatus,
     ProcessMoveCommand,
     ProcessNode,
     ProcessNodeCreate,
@@ -22,6 +23,7 @@ export type {
 
 export {
     processCreateSchema,
+    processEditableStatusSchema,
     processLifecycleSchema,
     processMoveSchema,
     processNodeTypeSchema,

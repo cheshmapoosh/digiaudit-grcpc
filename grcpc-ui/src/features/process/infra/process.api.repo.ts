@@ -87,6 +87,7 @@ function toUpdateBody(payload: ProcessNodeUpdate) {
     return {
         version: payload.version,
         title: payload.title,
+        status: payload.status,
         description: payload.description ?? null,
         sortOrder: payload.sortOrder ?? 0,
         validFrom: payload.validFrom ?? null,
@@ -101,13 +102,10 @@ function endpointForNode(node: ProcessNode): string {
 }
 
 export class ProcessApiRepo implements ProcessRepo {
-    async list(lifecycleStatus?: "DELETED"): Promise<ProcessNode[]> {
-        const query = lifecycleStatus
-            ? `?lifecycleStatus=${encodeURIComponent(lifecycleStatus)}`
-            : "";
+    async list(): Promise<ProcessNode[]> {
         const [processes, subprocesses] = await Promise.all([
-            httpClient.get<CentralProcessResponse[]>(`${PROCESS_URL}${query}`),
-            httpClient.get<CentralSubprocessResponse[]>(`${SUBPROCESS_URL}${query}`),
+            httpClient.get<CentralProcessResponse[]>(PROCESS_URL),
+            httpClient.get<CentralSubprocessResponse[]>(SUBPROCESS_URL),
         ]);
 
         return [...processes.map(mapProcess), ...subprocesses.map(mapSubprocess)];
@@ -175,26 +173,6 @@ export class ProcessApiRepo implements ProcessRepo {
         );
     }
 
-    async activate(
-        node: ProcessNode,
-        payload: ProcessLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.post<MasterDataRevisionMutationResponse>(
-            `${endpointForNode(node)}/activate`,
-            payload,
-        );
-    }
-
-    async inactivate(
-        node: ProcessNode,
-        payload: ProcessLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.post<MasterDataRevisionMutationResponse>(
-            `${endpointForNode(node)}/inactivate`,
-            payload,
-        );
-    }
-
     async delete(
         node: ProcessNode,
         payload: ProcessLifecycleCommand,
@@ -205,13 +183,4 @@ export class ProcessApiRepo implements ProcessRepo {
         );
     }
 
-    async restore(
-        node: ProcessNode,
-        payload: ProcessLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.post<MasterDataRevisionMutationResponse>(
-            `${endpointForNode(node)}/restore`,
-            payload,
-        );
-    }
 }

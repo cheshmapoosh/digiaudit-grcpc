@@ -15,7 +15,9 @@ Applies to `src/features/process`.
 ## Process/Subprocess UI rules
 - Use `/api/master-data/central/processes`, `/api/master-data/central/subprocesses`, and `/api/master-data/central/process-tree` only for structural data.
 - Keep one combined visual tree, but persist Process and Subprocess through separate typed command models.
-- Do not send `nodeType`, generic parent IDs, process category, owner, document count, objective, or operation-cycle fields in mutation payloads.
+- Create does not send status. Edit sends `ACTIVE` or `INACTIVE` with General Information and never sends code, node type, parent Process, or owning Process.
+- Process parent and Subprocess owner are selectable on Create and Move-only afterward. Inactive nodes remain visible, selectable, editable, searchable, and structurally eligible in the combined tree.
+- Only General Information and Documents tabs are visible. The List Report toolbar exposes typed Create, View, and Delete.
+- Do not send `nodeType`, generic parent IDs, process category, owner, document count, objective, or operation-cycle fields in Update payloads.
 - Subprocess is a leaf and must not offer structural child creation.
-- Remove the Account Group tab and show deferred relation-tab messaging for other unavailable V2 relation slices without calling Legacy APIs.
 - Re-enable the shared Document component only with exact persisted V2 IDs and target types `CENTRAL_PROCESS` or `CENTRAL_SUBPROCESS`.

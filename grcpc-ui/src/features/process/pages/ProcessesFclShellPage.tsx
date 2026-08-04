@@ -24,9 +24,9 @@ import type {
 import { ROOT_PARENT, useProcessState } from "../state/process.state";
 import { hasChildren, sortProcesses } from "../utils/process.tree";
 import ProcessSummaryPanel from "../components/ProcessSummaryPanel";
-import DeletedProcessesDialog from "../components/DeletedProcessesDialog";
 import ProcessesListReport from "./ProcessesListReport";
 import ProcessObjectPage, { type ProcessTabKey } from "./ProcessObjectPage";
+import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
@@ -238,12 +238,6 @@ export default function ProcessesFclShellPage() {
     const updateNode = useProcessState((state) => state.updateNode);
     const moveNode = useProcessState((state) => state.moveNode);
     const removeNode = useProcessState((state) => state.removeNode);
-    const activateNode = useProcessState((state) => state.activateNode);
-    const inactivateNode = useProcessState((state) => state.inactivateNode);
-    const restoreNode = useProcessState((state) => state.restoreNode);
-    const loadDeleted = useProcessState((state) => state.loadDeleted);
-    const deletedNodesById = useProcessState((state) => state.deletedNodesById);
-    const deletedLoading = useProcessState((state) => state.deletedLoading);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -253,43 +247,38 @@ export default function ProcessesFclShellPage() {
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
     const [objectActiveTab, setObjectActiveTab] = useState<ProcessTabKey>("general");
-    const [deletedDialogOpen, setDeletedDialogOpen] = useState(false);
     const [savedCreateNode, setSavedCreateNode] = useState<ProcessNode | null>(null);
-    const [hasPendingDocuments, setHasPendingDocuments] = useState(false);
+    const [generalInformationDirty, setGeneralInformationDirty] = useState(false);
+    const [documentDirty, setDocumentDirty] = useState(false);
     const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
     const pendingLeaveActionRef = useRef<(() => void) | null>(null);
+    const objectPageDirty = generalInformationDirty || documentDirty;
+    const { blocker, allowNextNavigation } = useUnsavedChangesGuard(objectPageDirty);
 
     const requestObjectPageLeave = useCallback((action: () => void) => {
-        if (!hasPendingDocuments) {
+        if (!objectPageDirty) {
             action();
             return;
         }
         pendingLeaveActionRef.current = action;
         setLeaveConfirmationOpen(true);
-    }, [hasPendingDocuments]);
+    }, [objectPageDirty]);
 
     const stayOnObjectPage = useCallback(() => {
+        if (blocker.state === "blocked") blocker.reset();
         pendingLeaveActionRef.current = null;
         setLeaveConfirmationOpen(false);
-    }, []);
+    }, [blocker]);
 
     const confirmObjectPageLeave = useCallback(() => {
         const action = pendingLeaveActionRef.current;
         pendingLeaveActionRef.current = null;
         setLeaveConfirmationOpen(false);
-        setHasPendingDocuments(false);
-        action?.();
-    }, []);
-
-    useEffect(() => {
-        if (!hasPendingDocuments) return;
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-            event.preventDefault();
-            event.returnValue = "";
-        };
-        window.addEventListener("beforeunload", handleBeforeUnload);
-        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-    }, [hasPendingDocuments]);
+        setGeneralInformationDirty(false);
+        setDocumentDirty(false);
+        if (blocker.state === "blocked") blocker.proceed();
+        else action?.();
+    }, [blocker]);
 
     useEffect(() => () => {
         useProcessState.getState().reset();
@@ -325,6 +314,8 @@ export default function ProcessesFclShellPage() {
     useEffect(() => {
         setObjectActiveTab("general");
         setSavedCreateNode(null);
+        setGeneralInformationDirty(false);
+        setDocumentDirty(false);
     }, [objectTabScopeKey]);
 
     const treeSelectedId = useMemo(() => {
@@ -339,7 +330,6 @@ export default function ProcessesFclShellPage() {
         return selectedTreeId;
     }, [processId, queryParentId, routeMode, selectedTreeId]);
 
-    const selectedListItem = treeSelectedId ? nodesById[treeSelectedId] ?? null : null;
 
     const treeExpansionAnchorIdValue = useMemo(() => {
         if (routeMode === "create") {
@@ -516,7 +506,7 @@ export default function ProcessesFclShellPage() {
     }, [deleteCandidate, navigate, removeNode, t]);
 
     const handleObjectSubmit = useCallback(
-        async (payload: ProcessNodeCreate | ProcessNodeUpdate) => {
+        async (payload: ProcessNodeCreate | ProcessNodeUpdate): Promise<boolean> => {
             try {
                 setSubmitting(true);
                 setPageError(null);
@@ -530,7 +520,7 @@ export default function ProcessesFclShellPage() {
                     }
                     setSelectedTreeId(created.entityId);
                     setTreeExpansionAnchorId(created.entityId);
-                    return;
+                    return true;
                 }
 
                 const target = selectedRouteItem ?? savedCreateNode;
@@ -542,10 +532,13 @@ export default function ProcessesFclShellPage() {
                     }
                     setSelectedTreeId(target.id);
                     setTreeExpansionAnchorId(target.id);
-                    if (!savedCreateNode) {
+                    if (!savedCreateNode && !documentDirty) {
+                        allowNextNavigation();
                         navigate(`/processes/${target.id}`);
                     }
+                    return true;
                 }
+                return false;
             } catch (error) {
                 setObjectError(
                     mapError(
@@ -556,11 +549,12 @@ export default function ProcessesFclShellPage() {
                         t,
                     ),
                 );
+                return false;
             } finally {
                 setSubmitting(false);
             }
         },
-        [createNode, navigate, routeMode, savedCreateNode, selectedRouteItem, t, updateNode],
+        [allowNextNavigation, createNode, documentDirty, navigate, routeMode, savedCreateNode, selectedRouteItem, t, updateNode],
     );
 
     const handleMove = useCallback(
@@ -601,54 +595,6 @@ export default function ProcessesFclShellPage() {
         },
         [moveNode, savedCreateNode, selectedRouteItem, t],
     );
-
-    const handleActivate = useCallback(async (node: ProcessNode) => {
-        try {
-            setSubmitting(true);
-            setPageError(null);
-            await activateNode(node, { version: node.version });
-        } catch (error) {
-            setPageError(mapError(error, t("process.errors.lifecycle"), t));
-        } finally {
-            setSubmitting(false);
-        }
-    }, [activateNode, t]);
-
-    const handleInactivate = useCallback(async (node: ProcessNode) => {
-        try {
-            setSubmitting(true);
-            setPageError(null);
-            await inactivateNode(node, { version: node.version });
-        } catch (error) {
-            setPageError(mapError(error, t("process.errors.lifecycle"), t));
-        } finally {
-            setSubmitting(false);
-        }
-    }, [inactivateNode, t]);
-
-    const handleShowDeleted = useCallback(async () => {
-        setDeletedDialogOpen(true);
-        try {
-            setPageError(null);
-            await loadDeleted();
-        } catch (error) {
-            setPageError(mapError(error, t("process.errors.loadDeleted"), t));
-        }
-    }, [loadDeleted, t]);
-
-    const handleRestore = useCallback(async (node: ProcessNode) => {
-        try {
-            setSubmitting(true);
-            setPageError(null);
-            await restoreNode(node, { version: node.version });
-            setSelectedTreeId(node.id);
-            setTreeExpansionAnchorId(node.parentId ?? node.id);
-        } catch (error) {
-            setPageError(mapError(error, t("process.errors.restore"), t));
-        } finally {
-            setSubmitting(false);
-        }
-    }, [restoreNode, t]);
 
     const showModal =
         routeMode === "create" || routeMode === "view" || routeMode === "edit";
@@ -761,7 +707,6 @@ export default function ProcessesFclShellPage() {
         <div style={frameStyle}>
             <ProcessesListReport
                 items={processItems}
-                selectedItem={selectedListItem}
                 selectedId={treeSelectedId}
                 expansionAnchorId={treeExpansionAnchorIdValue}
                 searchText={searchText}
@@ -773,9 +718,6 @@ export default function ProcessesFclShellPage() {
                 onCreate={handleCreate}
                 onShow={handleShow}
                 onDelete={requestDelete}
-                onActivate={(node) => { void handleActivate(node); }}
-                onInactivate={(node) => { void handleInactivate(node); }}
-                onShowDeleted={() => { void handleShowDeleted(); }}
                 onSelect={handleSelect}
             />
         </div>,
@@ -792,6 +734,7 @@ export default function ProcessesFclShellPage() {
               <div style={frameStyle}>
                   <ProcessSummaryPanel
                       value={selectedTreeItem}
+                      allItems={processItems}
                       busy={loading || submitting}
                       error={!showModal ? pageError : null}
                       onErrorClose={() => setPageError(null)}
@@ -851,7 +794,8 @@ export default function ProcessesFclShellPage() {
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
                             onActiveTabChange={setObjectActiveTab}
-                            onPendingDocumentsChange={setHasPendingDocuments}
+                            onDirtyChange={setGeneralInformationDirty}
+                            onDocumentDirtyChange={setDocumentDirty}
                         />
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
@@ -864,15 +808,15 @@ export default function ProcessesFclShellPage() {
             </Dialog>
 
             <DeleteConfirmDialog
-                open={leaveConfirmationOpen}
-                title={t("process.documents.pendingLeave.title", {
-                    defaultValue: "Unfinished document upload",
+                open={leaveConfirmationOpen || blocker.state === "blocked"}
+                title={t("common.unsavedChanges.title", {
+                    defaultValue: "Unsaved changes",
                 })}
-                message={t("process.documents.pendingLeave.message", {
-                    defaultValue: "A staged document still needs attention. Leaving will lose its local reference.",
+                message={t("common.unsavedChanges.message", {
+                    defaultValue: "General Information or Document changes have not been saved. Leave and discard them?",
                 })}
-                confirmText={t("process.documents.pendingLeave.leave", { defaultValue: "Leave" })}
-                cancelText={t("process.documents.pendingLeave.stay", { defaultValue: "Stay" })}
+                confirmText={t("common.unsavedChanges.leave", { defaultValue: "Leave" })}
+                cancelText={t("common.unsavedChanges.stay", { defaultValue: "Stay" })}
                 loading={false}
                 onClose={stayOnObjectPage}
                 onConfirm={confirmObjectPageLeave}
@@ -896,14 +840,6 @@ export default function ProcessesFclShellPage() {
                 }}
             />
 
-            <DeletedProcessesDialog
-                open={deletedDialogOpen}
-                items={sortProcesses(Object.values(deletedNodesById))}
-                parentItems={processItems}
-                busy={deletedLoading || submitting}
-                onClose={() => setDeletedDialogOpen(false)}
-                onRestore={(node) => { void handleRestore(node); }}
-            />
         </>
     );
 }

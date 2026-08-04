@@ -33,15 +33,12 @@
     },
     "tabs": {
       "general": "اطلاعات کلی",
-      "risks": "ریسک‌ها",
-      "rules": "قوانین",
-      "objectives": "اهداف",
-      "documents": "مستندات",
-      "controls": "کنترل‌ها"
+      "documents": "مستندات"
     },
     "tree": {
       "expand": "باز کردن شاخه",
-      "collapse": "بستن شاخه"
+      "collapse": "بستن شاخه",
+      "inactive": "آیتم فرآیندی غیرفعال"
     },
     "documents": {
       "empty": "مستندی برای این آیتم ثبت نشده است.",
@@ -73,20 +70,6 @@
       "action": "انتقال",
       "title": "انتقال آیتم فرآیندی",
       "confirm": "انتقال"
-    },
-    "lifecycle": {
-      "activate": "فعال‌سازی",
-      "inactivate": "غیرفعال‌سازی"
-    },
-    "deleted": {
-      "action": "موارد حذف‌شده",
-      "title": "فرآیندها و زیر فرآیندهای حذف‌شده",
-      "empty": "آیتم حذف‌شده‌ای یافت نشد.",
-      "parent": "والد: {{parent}}",
-      "parentUnavailable": "والد در دسترس نیست"
-    },
-    "restore": {
-      "action": "بازگردانی"
     },
     "delete": {
       "title": "حذف آیتم فرآیندی",
@@ -120,6 +103,7 @@
       "textMaxLength": "متن نمی‌تواند بیشتر از 2000 کاراکتر باشد",
       "sortOrderInvalid": "ترتیب نمایش باید عدد صحیح نامنفی باشد",
       "processRequired": "فرآیند مالک برای زیر فرآیند الزامی است",
+      "invalidDate": "تاریخ باید با قالب yyyy-MM-dd باشد",
       "invalidValidityRange": "بازه اعتبار معتبر نیست"
     }
   }

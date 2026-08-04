@@ -193,7 +193,7 @@ export function filterTree(
             .filter((item): item is OrganizationTreeNode => item !== null);
 
         const matched =
-            containsText(node.displayLabel, searchText) ||
+            containsText(node.name, searchText) ||
             containsText(node.code, searchText);
 
         if (!matched && filteredChildren.length === 0) {

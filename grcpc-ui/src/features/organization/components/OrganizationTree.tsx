@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, ObjectStatus, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 
 import type { OrganizationNode } from "../domain/organization.model";
 import {
@@ -71,6 +71,7 @@ function OrganizationTreeItem({
     selectedId,
     expandedIds,
 }: OrganizationTreeItemProps) {
+    const { t } = useTranslation();
     const isSelected = node.id === selectedId;
     const label = node.displayLabel || node.code;
 
@@ -89,11 +90,12 @@ function OrganizationTreeItem({
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        color: "var(--sapTextColor)",
+                        color: node.status === "INACTIVE" ? "var(--sapCriticalTextColor)" : "var(--sapTextColor)",
                         fontWeight: isSelected ? 700 : 400,
                     }}
                 >
           {label}
+          {node.status === "INACTIVE" ? <ObjectStatus state="Critical" stateAnnouncementText={t("organization.tree.inactive", { defaultValue: "Inactive" })}>{t("common.inactive", { defaultValue: "Inactive" })}</ObjectStatus> : null}
         </span>
             }
         >

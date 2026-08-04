@@ -14,7 +14,9 @@ Applies to `src/features/organization`.
 
 ## Organization UI rules
 - Use `/api/master-data/organizations` only for Organization structural data.
-- Use `code`/`displayLabel` as the structural label; do not send or render Legacy `name`, `type`, `location`, or description fields.
+- General Information uses `code`, `name`, `organizationType`, `parentOrganizationId`, `status`, `location`, `validFrom`, `validTo`, and `description`; `displayLabel` is the Organization name.
+- Create displays server-owned `ACTIVE` without sending status. Edit sends only `ACTIVE` or `INACTIVE` with General Information; `DELETED` is never selectable.
+- Code is Create-only. Parent is selectable on Create and Move-only afterward. Inactive nodes remain visible, selectable, editable, searchable, and structurally eligible.
+- Only General Information and Documents tabs are visible. The List Report toolbar exposes only Create, View, and Delete.
 - Keep the FCL tree/list/object-page flow, parent value help, selection, expanded state, RTL, and i18n behavior.
-- Show deferred relation-tab messaging instead of calling Legacy assignment APIs until typed V2 relation slices exist.
 - Re-enable the shared Document component only with exact persisted V2 `organization.id` and target type `ORG`.

@@ -16,8 +16,8 @@ These instructions apply to the whole repository. More specific `AGENTS.md` file
 - Do not modify generated/build output such as `grcpc-ui/dist` unless the task explicitly requires packaging static assets.
 - Keep Persian as the default user-facing language where the existing UI expects Persian.
 - When adding user-facing UI text, use i18n keys instead of hardcoded text.
-- When adding backend database changes, use Flyway migrations. Do not edit old migrations that may already be applied.
-- Maintain backend/frontend API contract compatibility. If a DTO or endpoint changes, update the matching UI repository/model/schema in the same task.
+- When adding backend database changes, use Flyway migrations. Do not edit migrations that may already be applied in normal operational delivery. Before production activation, explicitly designated Master Data V2 Day-Zero migrations may be refined only to create the final schema directly on a fresh Oracle database; this exception does not authorize rewriting operational migrations or upgrading populated Master Data V2 schemas.
+- Maintain backend/frontend API contract compatibility. A DTO and its bundled UI normally change in the same task. Prompt 5.8 and Prompt 5.9 are one explicitly approved staged vertical slice: 5.8 finalized the Backend contract, and 5.9 must restore full bundled-client compatibility before the slice is accepted.
 
 ## Structural hierarchy concurrency rule
 - Before implementing, modifying, or reviewing a structural mutation, identify the affected hierarchy boundary.

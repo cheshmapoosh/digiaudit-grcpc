@@ -9,7 +9,7 @@ import type {
 } from "../domain/process.model";
 
 export interface ProcessRepo {
-    list(lifecycleStatus?: "DELETED"): Promise<ProcessNode[]>;
+    list(): Promise<ProcessNode[]>;
     getById(id: string, nodeType?: ProcessNodeType): Promise<ProcessNode | null>;
     create(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
     update(
@@ -20,19 +20,7 @@ export interface ProcessRepo {
         node: ProcessNode,
         payload: ProcessMoveCommand,
     ): Promise<MasterDataRevisionMutationResponse>;
-    activate(
-        node: ProcessNode,
-        payload: ProcessLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    inactivate(
-        node: ProcessNode,
-        payload: ProcessLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
     delete(
-        node: ProcessNode,
-        payload: ProcessLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    restore(
         node: ProcessNode,
         payload: ProcessLifecycleCommand,
     ): Promise<MasterDataRevisionMutationResponse>;

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { t } from "@/shared/utils/i18n.util";
 
 export const processStatusSchema = z.enum(["ACTIVE", "INACTIVE", "DELETED"]);
+export const processEditableStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 
 export const processNodeTypeSchema = z.enum(["PROCESS", "SUBPROCESS"]);
 
@@ -29,10 +30,19 @@ const optionalTextSchema = z
     .nullable()
     .optional();
 
+const optionalDateSchema = z
+    .string()
+    .trim()
+    .refine((value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value), {
+        message: t("process.validation.invalidDate", "Invalid date"),
+    })
+    .nullable()
+    .optional();
+
 const validitySchema = z
     .object({
-        validFrom: z.string().trim().nullable().optional(),
-        validTo: z.string().trim().nullable().optional(),
+        validFrom: optionalDateSchema,
+        validTo: optionalDateSchema,
     })
     .refine(hasValidDateRange, {
         message: t("process.validation.invalidValidityRange", "بازه اعتبار معتبر نیست"),
@@ -81,6 +91,7 @@ export const processUpdateSchema = validitySchema.extend({
                 "نام نمی‌تواند بیشتر از 255 کاراکتر باشد",
             ),
         ),
+    status: processEditableStatusSchema,
     sortOrder: z.number().int().min(0).nullable().optional(),
     description: optionalTextSchema,
 });

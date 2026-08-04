@@ -22,11 +22,11 @@ import type {
 import { useOrganizationState, ROOT_PARENT } from "../state/organization.state";
 import { hasChildren, sortOrganizations } from "../utils/organization.tree";
 import OrganizationSummaryPanel from "../components/OrganizationSummaryPanel";
-import DeletedOrganizationsDialog from "../components/DeletedOrganizationsDialog";
 import OrganizationsListReport from "./OrganizationsListReport";
 import OrganizationObjectPage, { type OrganizationTabKey } from "./OrganizationObjectPage";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -210,12 +210,6 @@ export default function OrganizationsFclShellPage() {
     const updateNode = useOrganizationState((state) => state.updateNode);
     const moveNode = useOrganizationState((state) => state.moveNode);
     const removeNode = useOrganizationState((state) => state.removeNode);
-    const activateNode = useOrganizationState((state) => state.activateNode);
-    const inactivateNode = useOrganizationState((state) => state.inactivateNode);
-    const restoreNode = useOrganizationState((state) => state.restoreNode);
-    const loadDeleted = useOrganizationState((state) => state.loadDeleted);
-    const deletedNodesById = useOrganizationState((state) => state.deletedNodesById);
-    const deletedLoading = useOrganizationState((state) => state.deletedLoading);
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -226,43 +220,38 @@ export default function OrganizationsFclShellPage() {
         useState<OrganizationTabKey>("general");
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
-    const [deletedDialogOpen, setDeletedDialogOpen] = useState(false);
     const [savedCreateNode, setSavedCreateNode] = useState<OrganizationNode | null>(null);
-    const [hasPendingDocuments, setHasPendingDocuments] = useState(false);
+    const [generalInformationDirty, setGeneralInformationDirty] = useState(false);
+    const [documentDirty, setDocumentDirty] = useState(false);
     const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
     const pendingLeaveActionRef = useRef<(() => void) | null>(null);
+    const objectPageDirty = generalInformationDirty || documentDirty;
+    const { blocker, allowNextNavigation } = useUnsavedChangesGuard(objectPageDirty);
 
     const requestObjectPageLeave = useCallback((action: () => void) => {
-        if (!hasPendingDocuments) {
+        if (!objectPageDirty) {
             action();
             return;
         }
         pendingLeaveActionRef.current = action;
         setLeaveConfirmationOpen(true);
-    }, [hasPendingDocuments]);
+    }, [objectPageDirty]);
 
     const stayOnObjectPage = useCallback(() => {
+        if (blocker.state === "blocked") blocker.reset();
         pendingLeaveActionRef.current = null;
         setLeaveConfirmationOpen(false);
-    }, []);
+    }, [blocker]);
 
     const confirmObjectPageLeave = useCallback(() => {
         const action = pendingLeaveActionRef.current;
         pendingLeaveActionRef.current = null;
         setLeaveConfirmationOpen(false);
-        setHasPendingDocuments(false);
-        action?.();
-    }, []);
-
-    useEffect(() => {
-        if (!hasPendingDocuments) return;
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-            event.preventDefault();
-            event.returnValue = "";
-        };
-        window.addEventListener("beforeunload", handleBeforeUnload);
-        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-    }, [hasPendingDocuments]);
+        setGeneralInformationDirty(false);
+        setDocumentDirty(false);
+        if (blocker.state === "blocked") blocker.proceed();
+        else action?.();
+    }, [blocker]);
 
     useEffect(() => () => {
         useOrganizationState.getState().reset();
@@ -302,6 +291,8 @@ export default function OrganizationsFclShellPage() {
     useEffect(() => {
         setObjectActiveTab("general");
         setSavedCreateNode(null);
+        setGeneralInformationDirty(false);
+        setDocumentDirty(false);
     }, [objectTabScopeKey]);
 
     const treeSelectedId = useMemo(() => {
@@ -411,7 +402,7 @@ export default function OrganizationsFclShellPage() {
     }, [navigate, organizationId, queryParentId, requestObjectPageLeave, routeMode, savedCreateNode, selectedTreeId]);
 
     const handleSubmitCreate = useCallback(
-        async (payload: OrganizationNodeCreate | OrganizationNodeUpdate) => {
+        async (payload: OrganizationNodeCreate | OrganizationNodeUpdate): Promise<boolean> => {
             try {
                 setSubmitting(true);
                 setObjectError(null);
@@ -424,6 +415,7 @@ export default function OrganizationsFclShellPage() {
                 }
                 setSelectedTreeId(result.entityId);
                 setTreeExpansionAnchorId(createPayload.parentOrganizationId ?? result.entityId);
+                return true;
             } catch (error) {
                 setObjectError(
                     mapError(
@@ -434,6 +426,7 @@ export default function OrganizationsFclShellPage() {
                         t,
                     ),
                 );
+                return false;
             } finally {
                 setSubmitting(false);
             }
@@ -442,10 +435,10 @@ export default function OrganizationsFclShellPage() {
     );
 
     const handleSubmitUpdate = useCallback(
-        async (payload: OrganizationNodeCreate | OrganizationNodeUpdate) => {
+        async (payload: OrganizationNodeCreate | OrganizationNodeUpdate): Promise<boolean> => {
             const target = selectedRouteItem ?? savedCreateNode;
             if (!target) {
-                return;
+                return false;
             }
 
             try {
@@ -460,9 +453,11 @@ export default function OrganizationsFclShellPage() {
                 }
                 setSelectedTreeId(target.id);
                 setTreeExpansionAnchorId(target.parentOrganizationId ?? target.id);
-                if (!savedCreateNode) {
+                if (!savedCreateNode && !documentDirty) {
+                    allowNextNavigation();
                     navigate(`/organizations/${target.id}`);
                 }
+                return true;
             } catch (error) {
                 setObjectError(
                     mapError(
@@ -473,11 +468,12 @@ export default function OrganizationsFclShellPage() {
                         t,
                     ),
                 );
+                return false;
             } finally {
                 setSubmitting(false);
             }
         },
-        [navigate, savedCreateNode, selectedRouteItem, t, updateNode],
+        [allowNextNavigation, documentDirty, navigate, savedCreateNode, selectedRouteItem, t, updateNode],
     );
 
     const handleMove = useCallback(
@@ -517,54 +513,6 @@ export default function OrganizationsFclShellPage() {
         },
         [moveNode, savedCreateNode, selectedRouteItem, t],
     );
-
-    const handleActivate = useCallback(async (node: OrganizationNode) => {
-        try {
-            setSubmitting(true);
-            setPageError(null);
-            await activateNode(node.id, { version: node.version });
-        } catch (error) {
-            setPageError(mapError(error, t("organization.errors.lifecycle"), t));
-        } finally {
-            setSubmitting(false);
-        }
-    }, [activateNode, t]);
-
-    const handleInactivate = useCallback(async (node: OrganizationNode) => {
-        try {
-            setSubmitting(true);
-            setPageError(null);
-            await inactivateNode(node.id, { version: node.version });
-        } catch (error) {
-            setPageError(mapError(error, t("organization.errors.lifecycle"), t));
-        } finally {
-            setSubmitting(false);
-        }
-    }, [inactivateNode, t]);
-
-    const handleShowDeleted = useCallback(async () => {
-        setDeletedDialogOpen(true);
-        try {
-            setPageError(null);
-            await loadDeleted();
-        } catch (error) {
-            setPageError(mapError(error, t("organization.errors.loadDeleted"), t));
-        }
-    }, [loadDeleted, t]);
-
-    const handleRestore = useCallback(async (node: OrganizationNode) => {
-        try {
-            setSubmitting(true);
-            setPageError(null);
-            await restoreNode(node, { version: node.version });
-            setSelectedTreeId(node.id);
-            setTreeExpansionAnchorId(node.parentOrganizationId ?? node.id);
-        } catch (error) {
-            setPageError(mapError(error, t("organization.errors.restore"), t));
-        } finally {
-            setSubmitting(false);
-        }
-    }, [restoreNode, t]);
 
     const requestDelete = useCallback(
         (id: string) => {
@@ -640,9 +588,13 @@ export default function OrganizationsFclShellPage() {
         return {
             id: "",
             code: "",
+            name: "",
+            organizationType: "OTHER",
             parentOrganizationId: queryParentId,
             displayLabel: "",
             status: "ACTIVE",
+            location: null,
+            description: null,
             validFrom: "",
             validTo: "",
             version: 0,
@@ -736,7 +688,6 @@ export default function OrganizationsFclShellPage() {
         <div style={frameStyle}>
             <OrganizationsListReport
                 items={items}
-                selectedItem={selectedTreeItem}
                 selectedId={treeSelectedId}
                 expansionAnchorId={treeExpansionAnchorIdValue}
                 searchText={searchText}
@@ -747,9 +698,6 @@ export default function OrganizationsFclShellPage() {
                 onCreate={handleCreate}
                 onShow={handleShow}
                 onDelete={requestDelete}
-                onActivate={(node) => { void handleActivate(node); }}
-                onInactivate={(node) => { void handleInactivate(node); }}
-                onShowDeleted={() => { void handleShowDeleted(); }}
                 onSelect={handleSelect}
             />
         </div>,
@@ -766,6 +714,7 @@ export default function OrganizationsFclShellPage() {
               <div style={frameStyle}>
                   <OrganizationSummaryPanel
                       value={selectedTreeItem}
+                      allItems={items}
                       busy={loading || submitting}
                       error={!showModal ? pageError : null}
                       onErrorClose={() => setPageError(null)}
@@ -827,7 +776,8 @@ export default function OrganizationsFclShellPage() {
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
                             onActiveTabChange={setObjectActiveTab}
-                            onPendingDocumentsChange={setHasPendingDocuments}
+                            onDirtyChange={setGeneralInformationDirty}
+                            onDocumentDirtyChange={setDocumentDirty}
                         />
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
@@ -840,15 +790,15 @@ export default function OrganizationsFclShellPage() {
             </Dialog>
 
             <DeleteConfirmDialog
-                open={leaveConfirmationOpen}
-                title={t("organization.documents.pendingLeave.title", {
-                    defaultValue: "Unfinished document upload",
+                open={leaveConfirmationOpen || blocker.state === "blocked"}
+                title={t("common.unsavedChanges.title", {
+                    defaultValue: "Unsaved changes",
                 })}
-                message={t("organization.documents.pendingLeave.message", {
-                    defaultValue: "A staged document still needs attention. Leaving will lose its local reference.",
+                message={t("common.unsavedChanges.message", {
+                    defaultValue: "General Information or Document changes have not been saved. Leave and discard them?",
                 })}
-                confirmText={t("organization.documents.pendingLeave.leave", { defaultValue: "Leave" })}
-                cancelText={t("organization.documents.pendingLeave.stay", { defaultValue: "Stay" })}
+                confirmText={t("common.unsavedChanges.leave", { defaultValue: "Leave" })}
+                cancelText={t("common.unsavedChanges.stay", { defaultValue: "Stay" })}
                 loading={false}
                 onClose={stayOnObjectPage}
                 onConfirm={confirmObjectPageLeave}
@@ -874,13 +824,6 @@ export default function OrganizationsFclShellPage() {
                 }}
             />
 
-            <DeletedOrganizationsDialog
-                open={deletedDialogOpen}
-                items={sortOrganizations(Object.values(deletedNodesById))}
-                busy={deletedLoading || submitting}
-                onClose={() => setDeletedDialogOpen(false)}
-                onRestore={(node) => { void handleRestore(node); }}
-            />
         </>
     );
 }

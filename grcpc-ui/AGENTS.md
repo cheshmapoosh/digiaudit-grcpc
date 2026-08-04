@@ -10,6 +10,7 @@ These instructions apply to `grcpc-ui`. Feature-specific instructions under `src
 - Export feature public API through `index.ts`.
 - Keep app-wide routing/layout in `src/app`, `src/pages`, and `src/layout`.
 - Put shared reusable components/utilities in `src/shared` only when they are genuinely cross-feature.
+- Organization, Process, Subprocess, and Document business-date editors share the UI5 Persian-calendar DatePicker while retaining Gregorian `yyyy-MM-dd` API values.
 
 ## UI and UX
 - Use SAP UI5 Web Components for React first. Avoid custom widgets where a UI5 component already fits.
@@ -17,6 +18,7 @@ These instructions apply to `grcpc-ui`. Feature-specific instructions under `src
 - Use i18n for all user-facing text. Do not hardcode labels, messages, button text, tab text, or menu text in components.
 - Prefer existing FCL/list-report/object-page patterns for master-detail pages.
 - Preserve tree expansion and selected node state during navigation, refresh, create, edit, and delete flows.
+- General Information and Document draft state must feed one SPA-navigation and hard-unload guard; never synchronize form state during render.
 - Avoid large inline style objects. Prefer feature CSS or reusable classes, except for small dynamic values.
 
 ## TypeScript and state

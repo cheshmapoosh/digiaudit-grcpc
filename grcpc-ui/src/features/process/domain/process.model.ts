@@ -1,6 +1,7 @@
 import type { AuditFields } from "@/shared/domain/audit.model";
 
 export type ProcessStatus = "ACTIVE" | "INACTIVE" | "DELETED";
+export type ProcessEditableStatus = "ACTIVE" | "INACTIVE";
 
 export type ProcessNodeType = "PROCESS" | "SUBPROCESS";
 
@@ -27,7 +28,6 @@ export interface ProcessNode extends AuditFields {
 export type ProcessReadonlyKeys =
     | "id"
     | "nodeType"
-    | "status"
     | "version"
     | "createdAt"
     | "updatedAt"
@@ -50,6 +50,7 @@ export interface ProcessNodeCreate {
 export interface ProcessNodeUpdate {
     version: number;
     title: string;
+    status: ProcessEditableStatus;
     description?: string | null;
     sortOrder?: number | null;
     validFrom?: string | null;

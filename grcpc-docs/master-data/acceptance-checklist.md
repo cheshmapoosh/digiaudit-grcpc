@@ -126,6 +126,13 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Organization Create is server-owned `ACTIVE`, and Create-based reactivation/restore refreshes all current descriptive and structural input fields on the existing ID.
 - [ ] Organization Update excludes code and parent; Process Update excludes parent; Subprocess Update excludes owner Process.
 - [ ] Process and Subprocess Update include required `ACTIVE`/`INACTIVE` status while code and structural ownership remain immutable.
+- [ ] Prompt 5.9 Organization Create/Update browser payloads exactly match Prompt 5.8, and Process/Subprocess Update payloads include `status` while Create payloads omit it.
+- [ ] Organization and Process/Subprocess show only General Information and Documents tabs and only Create, View, and Delete toolbar actions.
+- [ ] Inactive hierarchy nodes remain visible, selectable, searchable, and editable with theme-aware Critical semantic presentation.
+- [ ] One shared UI5 Persian-calendar DatePicker supplies Gregorian `yyyy-MM-dd` values for Organization, Process, Subprocess, and Document business dates.
+- [ ] Free-text Document Category is absent from staged metadata while the nullable API response field remains compatible.
+- [ ] General Information and unfinished Document work feed one SPA-navigation and hard-unload guard; create-to-persisted transitions preserve temporary-upload references.
+- [ ] Identity-scoped form Effects do not overwrite dirty edits or permit stale reads to replace newer mutations.
 - [ ] `central_process` exists as a separate table/entity.
 - [ ] `central_subprocess` exists as a separate table/entity.
 - [ ] A Subprocess belongs to exactly one Process.

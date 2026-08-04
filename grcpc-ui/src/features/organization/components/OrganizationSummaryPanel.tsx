@@ -7,6 +7,7 @@ import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.ut
 
 export interface OrganizationSummaryPanelProps {
     value?: OrganizationNode | null;
+    allItems?: OrganizationNode[];
     busy?: boolean;
     error?: string | null;
     onErrorClose?: () => void;
@@ -31,6 +32,7 @@ function resolveStatusLabel(
 
 export default function OrganizationSummaryPanel({
     value,
+    allItems = [],
     busy = false,
     error,
     onErrorClose,
@@ -56,15 +58,34 @@ export default function OrganizationSummaryPanel({
         if (!value) {
             return [];
         }
+        const parent = value.parentOrganizationId
+            ? allItems.find((item) => item.id === value.parentOrganizationId)
+            : null;
 
         return [
+            {
+                label: t("organization.fields.name", { defaultValue: "Name" }),
+                value: value.name,
+            },
             {
                 label: t("organization.fields.code", { defaultValue: "کد" }),
                 value: value.code,
             },
             {
                 label: t("organization.fields.parent", { defaultValue: "والد" }),
-                value: value.parentOrganizationId ?? "-",
+                value: parent ? `${parent.code} - ${parent.name}` : "-",
+            },
+            {
+                label: t("organization.fields.organizationType", { defaultValue: "Organization type" }),
+                value: t(`organization.types.${value.organizationType}`, { defaultValue: value.organizationType }),
+            },
+            {
+                label: t("organization.fields.location", { defaultValue: "Location" }),
+                value: value.location ?? "-",
+            },
+            {
+                label: t("organization.fields.description", { defaultValue: "Description" }),
+                value: value.description ?? "-",
             },
             {
                 label: t("organization.fields.status", { defaultValue: "وضعیت" }),
@@ -91,7 +112,7 @@ export default function OrganizationSummaryPanel({
                 value: formatPersianDateTime(value.updatedAt),
             },
         ];
-    }, [t, value]);
+    }, [allItems, t, value]);
 
     return (
         <div

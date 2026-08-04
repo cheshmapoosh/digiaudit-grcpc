@@ -25,12 +25,25 @@ function normalizeOptionalDate(value: string | null | undefined): string | null 
     return trimmed ? trimmed : null;
 }
 
+function normalizeRequiredText(value: string): string {
+    return value.trim();
+}
+
+function normalizeOptionalText(value: string | null | undefined): string | null {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : null;
+}
+
 function normalizeCreatePayload(payload: OrganizationNodeCreate): OrganizationNodeCreate {
     const parsed = organizationCreateSchema.parse(payload);
 
     return {
         code: normalizeCode(parsed.code),
+        name: normalizeRequiredText(parsed.name),
+        organizationType: parsed.organizationType,
         parentOrganizationId: parsed.parentOrganizationId?.trim() || null,
+        location: normalizeOptionalText(parsed.location),
+        description: normalizeOptionalText(parsed.description),
         validFrom: normalizeOptionalDate(parsed.validFrom),
         validTo: normalizeOptionalDate(parsed.validTo),
     };
@@ -41,6 +54,11 @@ function normalizeUpdatePayload(payload: OrganizationNodeUpdate): OrganizationNo
 
     return {
         version: parsed.version,
+        name: normalizeRequiredText(parsed.name),
+        organizationType: parsed.organizationType,
+        status: parsed.status,
+        location: normalizeOptionalText(parsed.location),
+        description: normalizeOptionalText(parsed.description),
         validFrom: normalizeOptionalDate(parsed.validFrom),
         validTo: normalizeOptionalDate(parsed.validTo),
     };
@@ -63,7 +81,6 @@ function normalizeLifecyclePayload(
 
 export interface OrganizationService {
     list(): Promise<OrganizationNode[]>;
-    listDeleted(): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
     create(payload: OrganizationNodeCreate): Promise<MasterDataRevisionMutationResponse>;
     update(
@@ -74,19 +91,7 @@ export interface OrganizationService {
         id: string,
         payload: OrganizationMoveCommand,
     ): Promise<MasterDataRevisionMutationResponse>;
-    activate(
-        id: string,
-        payload: OrganizationLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    inactivate(
-        id: string,
-        payload: OrganizationLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
     delete(
-        id: string,
-        payload: OrganizationLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    restore(
         id: string,
         payload: OrganizationLifecycleCommand,
     ): Promise<MasterDataRevisionMutationResponse>;
@@ -98,11 +103,6 @@ export function createOrganizationService(
     return {
         async list() {
             const items = await repo.list();
-            return sortOrganizations(items);
-        },
-
-        async listDeleted() {
-            const items = await repo.list("DELETED");
             return sortOrganizations(items);
         },
 
@@ -122,21 +122,10 @@ export function createOrganizationService(
             return repo.move(id, normalizeMovePayload(payload));
         },
 
-        async activate(id, payload) {
-            return repo.activate(id, normalizeLifecyclePayload(payload));
-        },
-
-        async inactivate(id, payload) {
-            return repo.inactivate(id, normalizeLifecyclePayload(payload));
-        },
-
         async delete(id, payload) {
             return repo.delete(id, normalizeLifecyclePayload(payload));
         },
 
-        async restore(id, payload) {
-            return repo.restore(id, normalizeLifecyclePayload(payload));
-        },
     };
 }
 

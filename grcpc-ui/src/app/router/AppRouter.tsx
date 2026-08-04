@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { createBrowserRouter, createRoutesFromElements, Navigate, Route } from "react-router-dom";
 
 import MainLayout from "../../layout/MainLayout";
 import PublicLayout from "../../layout/components/PublicLayout";
@@ -7,6 +7,7 @@ import SetupGuard from "../guards/SetupGuard";
 import AuthGuard from "../guards/AuthGuard";
 
 import NotFoundPage from "@/pages/NotFoundPage";
+import AppRouterRoot from "./AppRouterRoot";
 
 import {
     setupRoutes,
@@ -23,9 +24,9 @@ import {
     usermanagementRoutes,
 } from "@/features";
 
-export default function AppRouter() {
-    return (
-        <Routes>
+export const appRouter = createBrowserRouter(
+    createRoutesFromElements(
+        <Route element={<AppRouterRoot />}>
             <Route element={<PublicLayout />}>
                 {setupRoutes}
                 {loginRoutes}
@@ -55,6 +56,7 @@ export default function AppRouter() {
 
                 <Route path="*" element={<NotFoundPage />} />
             </Route>
-        </Routes>
-    );
-}
+        </Route>,
+    ),
+    { future: { v7_relativeSplatPath: true } },
+);

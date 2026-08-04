@@ -152,7 +152,9 @@ Document mutation responses are a Prompt 4.2 exception: they do not contain `rev
 
 Organization, Process, and Subprocess General Information Update includes required `status` and accepts only `ACTIVE` or `INACTIVE`. Details and status are one Business Command, one transaction, one Business Revision, and one `UPDATE` Revision Content; the Browser must not chain Update plus Activate/Inactivate.
 
-Existing activate/inactivate routes remain available during the Prompt 5.8/5.9 transition. Explicit delete and explicit restore remain separate typed commands, and Update never accepts `DELETED`.
+Existing activate/inactivate routes remain available as Backend commands, but the Prompt 5.9 Organization and Process/Subprocess UI does not expose separate lifecycle controls. Explicit delete and explicit restore remain separate typed Backend commands, and Update never accepts `DELETED`.
+
+Prompt 5.9 closes the approved staged compatibility gap: bundled Create requests omit status, bundled Update requests include `ACTIVE` or `INACTIVE`, and the Browser never sends structural parent/owner fields in Update. Parent save and Document finalization remain separate browser commands.
 
 Update and lifecycle commands require `version`.
 

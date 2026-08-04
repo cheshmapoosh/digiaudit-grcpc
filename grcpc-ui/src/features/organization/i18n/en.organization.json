@@ -3,7 +3,7 @@
     "list": {
       "title": "Organization Structure",
       "empty": "No organization has been registered.",
-      "search": "Search by code"
+      "search": "Search by name or code"
     },
     "parent": {
       "none": "No parent",
@@ -11,13 +11,17 @@
       "clear": "Clear",
       "dialog": {
         "title": "Select Parent",
-        "search": "Search by code"
+        "search": "Search by name or code"
       }
     },
     "fields": {
       "code": "Code",
+      "name": "Name",
+      "organizationType": "Organization Type",
       "parent": "Parent",
       "status": "Status",
+      "location": "Location",
+      "description": "Description",
       "validFrom": "Valid From",
       "validTo": "Valid To",
       "validity": "Validity",
@@ -27,16 +31,22 @@
     },
     "tabs": {
       "general": "General Information",
-      "subProcesses": "Subprocesses",
-      "risks": "Risks",
-      "controls": "Controls",
-      "rules": "Rules",
-      "policies": "Policies",
-      "goals": {
-        "label": "Objectives"
-      },
       "documents": "Documents"
     },
+    "types": {
+      "HOLDING": "Holding",
+      "COMPANY": "Company",
+      "DEPUTY": "Deputy",
+      "OFFICE": "Office",
+      "MANAGEMENT": "Management",
+      "DEPARTMENT": "Department",
+      "BRANCH": "Branch",
+      "UNIT": "Unit",
+      "COMMITTEE": "Committee",
+      "GROUP": "Group",
+      "OTHER": "Other"
+    },
+    "tree": { "inactive": "Inactive organization" },
     "documents": {
       "empty": "No document has been registered for this organization.",
       "saveFirst": "Save the organization before finalizing documents.",
@@ -68,18 +78,6 @@
       "candidate": "Selected destination",
       "confirm": "Move"
     },
-    "lifecycle": {
-      "activate": "Activate",
-      "inactivate": "Inactivate"
-    },
-    "deleted": {
-      "action": "Deleted Items",
-      "title": "Deleted Organizations",
-      "empty": "No deleted organization was found."
-    },
-    "restore": {
-      "action": "Restore"
-    },
     "delete": {
       "title": "Delete Organization",
       "confirm": "Are you sure you want to delete \"{{title}}\"?"
@@ -107,6 +105,10 @@
     "validation": {
       "codeRequired": "Code is required",
       "codeMaxBytes": "Code cannot be longer than 64 bytes",
+      "nameRequired": "Name is required",
+      "nameMaxLength": "Name cannot exceed 255 characters",
+      "locationMaxLength": "Location cannot exceed 255 characters",
+      "invalidDate": "Date must use yyyy-MM-dd",
       "invalidValidityRange": "Validity range is not valid"
     }
   }

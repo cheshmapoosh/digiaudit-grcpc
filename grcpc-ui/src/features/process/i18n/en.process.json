@@ -33,15 +33,12 @@
     },
     "tabs": {
       "general": "General Information",
-      "risks": "Risks",
-      "rules": "Rules",
-      "objectives": "Objectives",
-      "documents": "Documents",
-      "controls": "Controls"
+      "documents": "Documents"
     },
     "tree": {
       "expand": "Expand branch",
-      "collapse": "Collapse branch"
+      "collapse": "Collapse branch",
+      "inactive": "Inactive process item"
     },
     "documents": {
       "empty": "No document has been registered for this item.",
@@ -73,20 +70,6 @@
       "action": "Move",
       "title": "Move Process Item",
       "confirm": "Move"
-    },
-    "lifecycle": {
-      "activate": "Activate",
-      "inactivate": "Inactivate"
-    },
-    "deleted": {
-      "action": "Deleted Items",
-      "title": "Deleted Processes and Subprocesses",
-      "empty": "No deleted item was found.",
-      "parent": "Parent: {{parent}}",
-      "parentUnavailable": "Parent unavailable"
-    },
-    "restore": {
-      "action": "Restore"
     },
     "delete": {
       "title": "Delete Process Item",
@@ -120,6 +103,7 @@
       "textMaxLength": "Text cannot be longer than 2000 characters",
       "sortOrderInvalid": "Sort order must be a non-negative integer",
       "processRequired": "Owning process is required for a subprocess",
+      "invalidDate": "Date must use yyyy-MM-dd",
       "invalidValidityRange": "Validity range is not valid"
     }
   }

@@ -60,7 +60,7 @@ export default function ParentValueHelpDialog({
 
         return selectableItems.filter(
             (item) =>
-                containsText(item.displayLabel, searchText) ||
+                containsText(item.name, searchText) ||
                 containsText(item.code, searchText),
         );
     }, [searchText, selectableItems]);
@@ -96,7 +96,7 @@ export default function ParentValueHelpDialog({
                         accessibleName={t("organization.move.candidate", {
                             defaultValue: "Selected destination",
                         })}
-                        value={selectedParent?.displayLabel || selectedParent?.code || t(
+                        value={selectedParent ? `${selectedParent.code} - ${selectedParent.name}` : t(
                             "organization.parent.none",
                             { defaultValue: "No parent" },
                         )}
@@ -113,10 +113,10 @@ export default function ParentValueHelpDialog({
                             key={item.id}
                             selected={item.id === selectedParentId}
                             additionalText={item.code}
-                            description={item.parentOrganizationId ?? ""}
+                            description={`${item.code} - ${item.name}`}
                             onClick={() => onSelect(item.id)}
                         >
-                            {item.displayLabel || item.code}
+                            {item.name}
                         </ListItemStandard>
                     ))}
                 </List>

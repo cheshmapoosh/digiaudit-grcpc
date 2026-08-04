@@ -50,6 +50,7 @@ function normalizeUpdatePayload(payload: ProcessNodeUpdate): ProcessNodeUpdate {
     return {
         version: parsed.version,
         title: parsed.title.trim(),
+        status: parsed.status,
         description: normalizeOptionalText(parsed.description),
         sortOrder: normalizeSortOrder(parsed.sortOrder),
         validFrom: normalizeOptionalText(parsed.validFrom),
@@ -72,7 +73,6 @@ function normalizeLifecyclePayload(payload: ProcessLifecycleCommand): ProcessLif
 
 export interface ProcessService {
     list(): Promise<ProcessNode[]>;
-    listDeleted(): Promise<ProcessNode[]>;
     getById(id: string, node?: ProcessNode): Promise<ProcessNode | null>;
     create(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
     update(
@@ -83,19 +83,7 @@ export interface ProcessService {
         node: ProcessNode,
         payload: ProcessMoveCommand,
     ): Promise<MasterDataRevisionMutationResponse>;
-    activate(
-        node: ProcessNode,
-        payload: ProcessLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    inactivate(
-        node: ProcessNode,
-        payload: ProcessLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
     delete(
-        node: ProcessNode,
-        payload: ProcessLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    restore(
         node: ProcessNode,
         payload: ProcessLifecycleCommand,
     ): Promise<MasterDataRevisionMutationResponse>;
@@ -105,11 +93,6 @@ export function createProcessService(repo: ProcessRepo): ProcessService {
     return {
         async list() {
             const items = await repo.list();
-            return sortProcesses(items);
-        },
-
-        async listDeleted() {
-            const items = await repo.list("DELETED");
             return sortProcesses(items);
         },
 
@@ -130,21 +113,10 @@ export function createProcessService(repo: ProcessRepo): ProcessService {
             return repo.move(node, normalizeMovePayload(payload));
         },
 
-        async activate(node, payload) {
-            return repo.activate(node, normalizeLifecyclePayload(payload));
-        },
-
-        async inactivate(node, payload) {
-            return repo.inactivate(node, normalizeLifecyclePayload(payload));
-        },
-
         async delete(node, payload) {
             return repo.delete(node, normalizeLifecyclePayload(payload));
         },
 
-        async restore(node, payload) {
-            return repo.restore(node, normalizeLifecyclePayload(payload));
-        },
     };
 }
 

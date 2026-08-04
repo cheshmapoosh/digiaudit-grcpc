@@ -8,7 +8,7 @@ import type {
 } from "@/features/organization";
 
 export interface OrganizationRepo {
-    list(lifecycleStatus?: "DELETED"): Promise<OrganizationNode[]>;
+    list(): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
     create(payload: OrganizationNodeCreate): Promise<MasterDataRevisionMutationResponse>;
     update(
@@ -19,19 +19,7 @@ export interface OrganizationRepo {
         id: string,
         payload: OrganizationMoveCommand,
     ): Promise<MasterDataRevisionMutationResponse>;
-    activate(
-        id: string,
-        payload: OrganizationLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    inactivate(
-        id: string,
-        payload: OrganizationLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
     delete(
-        id: string,
-        payload: OrganizationLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse>;
-    restore(
         id: string,
         payload: OrganizationLifecycleCommand,
     ): Promise<MasterDataRevisionMutationResponse>;

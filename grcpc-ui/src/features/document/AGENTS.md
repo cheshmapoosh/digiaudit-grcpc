@@ -19,6 +19,10 @@ Document is the shared Master Data V2 UI for:
 - Deleting from a target panel deletes the `Document Link`, not the document identity, version, or permanent object.
 - `MASTERDATA_REVISION` is backend-only and must not be selectable or rendered as a normal browser target.
 - Do not expose storage keys, bucket names, endpoints, permanent URLs, Revision Content, or object metadata in UI models.
+- All editable Master Data business dates use the shared UI5 Persian DatePicker while retaining Gregorian ISO `yyyy-MM-dd` API values.
+- Hide free-text Document Category until an approved controlled vocabulary exists; keep the nullable Backend-compatible response field unchanged.
+- Document dirty state includes selected/uploading/staged/finalizing files, retryable failed finalization with a temporary upload, and unsaved metadata drafts.
+- Parent General Information save and Document finalization remain separate browser commands, and temporary-upload references survive the parent Create-to-persisted transition.
 
 ## Verification
 - Run `npm run lint` and `npm run build` from `grcpc-ui`.

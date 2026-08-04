@@ -40,7 +40,7 @@ These instructions apply to `grcpc-app`. Feature-specific instructions under `sr
 
 ## Persistence and migrations
 - Use Flyway for schema/data changes under `src/main/resources/db/migration`.
-- Do not edit existing migrations; add a new versioned migration.
+- Do not edit existing migrations in normal operational delivery; add a new versioned migration. The accepted Master Data V2 Greenfield exception permits explicitly designated Day-Zero migrations to be refined before production activation so a fresh Oracle schema is created in its final form. `V1162` is already accepted under that exception; Prompt 5.9 must not change it or add a compensating migration.
 - Preserve Oracle compatibility in vendor migrations.
 - Put seed data shared across databases in `db/migration/common` when appropriate.
 - Keep audit fields and soft-delete behavior consistent with existing entities.

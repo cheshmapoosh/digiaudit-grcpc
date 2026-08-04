@@ -29,6 +29,7 @@ import type {
 } from "../domain/document.model";
 import { getDocumentTargetKey, useDocumentState } from "../state/document.state";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import { PersianDatePicker } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import { HttpError } from "@/shared/infra/http.client";
 
@@ -43,6 +44,7 @@ export interface DocumentManagerProps {
     viewHint?: string;
     editHint?: string;
     onPendingUploadsChange?: (hasPendingUploads: boolean) => void;
+    onDirtyChange?: (dirty: boolean) => void;
 }
 
 type UploadFlowState =
@@ -73,7 +75,6 @@ interface UploadFlowItem {
     title: string;
     code: string;
     description: string;
-    documentCategoryCode: string;
     validFrom: string;
     validTo: string;
 }
@@ -308,6 +309,7 @@ export default function DocumentManager({
     viewHint,
     editHint,
     onPendingUploadsChange,
+    onDirtyChange,
 }: DocumentManagerProps) {
     const { t } = useTranslation();
     const mountedRef = useRef(true);
@@ -349,6 +351,17 @@ export default function DocumentManager({
         () => uploadItems.some(isPendingUpload),
         [uploadItems],
     );
+    const hasMetadataDrafts = useMemo(
+        () => Object.entries(metadataDrafts).some(([documentId, draft]) => {
+            const row = rows.find((candidate) => candidate.documentId === documentId);
+            return Boolean(row && draft.trim() !== row.title);
+        }),
+        [metadataDrafts, rows],
+    );
+    const dirty = hasPendingUploads
+        || hasMetadataDrafts
+        || savingMetadataIds.size > 0
+        || versioningDocumentIds.size > 0;
 
     useEffect(() => {
         mountedRef.current = true;
@@ -365,9 +378,14 @@ export default function DocumentManager({
         onPendingUploadsChange?.(hasPendingUploads);
     }, [hasPendingUploads, onPendingUploadsChange]);
 
+    useEffect(() => {
+        onDirtyChange?.(dirty);
+    }, [dirty, onDirtyChange]);
+
     useEffect(() => () => {
         onPendingUploadsChange?.(false);
-    }, [onPendingUploadsChange]);
+        onDirtyChange?.(false);
+    }, [onDirtyChange, onPendingUploadsChange]);
 
     useEffect(() => {
         if (!targetId) {
@@ -402,7 +420,7 @@ export default function DocumentManager({
 
     const updateStagedField = useCallback((
         rowId: string,
-        field: "title" | "code" | "description" | "documentCategoryCode" | "validFrom" | "validTo",
+        field: "title" | "code" | "description" | "validFrom" | "validTo",
         value: string,
     ) => {
         setUploadItems((current) =>
@@ -476,6 +494,12 @@ export default function DocumentManager({
                 }));
             }
 
+            if (item.validFrom && item.validTo && item.validFrom > item.validTo) {
+                throw new Error(t("document.validation.invalidValidityRange", {
+                    defaultValue: "Valid to must be on or after valid from.",
+                }));
+            }
+
             updateUploadItem(item.id, {
                 state: "FINALIZING",
                 failureState: undefined,
@@ -507,7 +531,6 @@ export default function DocumentManager({
                 code: optionalText(item.code),
                 title: titleValue,
                 description: optionalText(item.description),
-                documentCategoryCode: optionalText(item.documentCategoryCode),
                 targetType,
                 targetId,
                 validFrom: optionalText(item.validFrom),
@@ -540,7 +563,6 @@ export default function DocumentManager({
                 title: existingDocument?.title ?? initialTitle(file.name),
                 code: existingDocument?.code ?? "",
                 description: existingDocument?.description ?? "",
-                documentCategoryCode: existingDocument?.documentCategoryCode ?? "",
                 validFrom: "",
                 validTo: "",
             };
@@ -682,7 +704,7 @@ export default function DocumentManager({
                 setActionMessage({ design: "Negative", text: message });
             }
         },
-        [finalizeUpload, loadForTarget, removeUploadItem, t, targetId, targetType, updateUploadItem],
+        [finalizeUpload, removeUploadItem, t, updateUploadItem],
     );
 
     const handleDocumentFilesChange = (event: unknown) => {
@@ -981,12 +1003,16 @@ export default function DocumentManager({
                         item.failureState !== "UPLOAD_FAILED" &&
                         item.failureState !== "EXPIRED";
                     const titleMissing = !item.existingDocument && !item.title.trim();
+                    const invalidValidityRange = Boolean(
+                        item.validFrom && item.validTo && item.validFrom > item.validTo,
+                    );
                     const canFinalize =
                         staged &&
                         Boolean(targetId) &&
                         !busy &&
                         !readOnly &&
-                        !titleMissing;
+                        !titleMissing &&
+                        !invalidValidityRange;
                     const showMetadata =
                         item.state === "UPLOADED" ||
                         item.state === "FINALIZING" ||
@@ -1071,20 +1097,6 @@ export default function DocumentManager({
                                                 }
                                             />
                                             <Input
-                                                accessibleName={t("document.fields.category", {
-                                                    defaultValue: "Category",
-                                                })}
-                                                placeholder={t("document.fields.category", {
-                                                    defaultValue: "Category",
-                                                })}
-                                                value={item.documentCategoryCode}
-                                                maxlength={64}
-                                                disabled={busy || item.state === "FINALIZING"}
-                                                onInput={(event) =>
-                                                    updateStagedField(item.id, "documentCategoryCode", readInputValue(event))
-                                                }
-                                            />
-                                            <Input
                                                 accessibleName={t("document.fields.description", {
                                                     defaultValue: "Description",
                                                 })}
@@ -1100,34 +1112,28 @@ export default function DocumentManager({
                                             />
                                         </>
                                     ) : null}
-                                    <Input
+                                    <PersianDatePicker
                                         accessibleName={t("document.fields.validFrom", {
                                             defaultValue: "Valid From",
                                         })}
-                                        placeholder={t("document.fields.validFrom", {
-                                            defaultValue: "Valid From",
-                                        })}
                                         value={item.validFrom}
-                                        maxlength={10}
                                         disabled={busy || item.state === "FINALIZING"}
-                                        onInput={(event) =>
-                                            updateStagedField(item.id, "validFrom", readInputValue(event))
-                                        }
+                                        invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
+                                        onChange={(value) => updateStagedField(item.id, "validFrom", value)}
                                     />
-                                    <Input
+                                    <PersianDatePicker
                                         accessibleName={t("document.fields.validTo", {
                                             defaultValue: "Valid To",
                                         })}
-                                        placeholder={t("document.fields.validTo", {
-                                            defaultValue: "Valid To",
-                                        })}
                                         value={item.validTo}
-                                        maxlength={10}
                                         disabled={busy || item.state === "FINALIZING"}
-                                        onInput={(event) =>
-                                            updateStagedField(item.id, "validTo", readInputValue(event))
-                                        }
+                                        valueState={invalidValidityRange ? "Negative" : "None"}
+                                        invalidValueMessage={invalidValidityRange
+                                            ? t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })
+                                            : t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
+                                        onChange={(value) => updateStagedField(item.id, "validTo", value)}
                                     />
+                                    {invalidValidityRange ? <span style={ERROR_TEXT_STYLE}>{t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })}</span> : null}
                                 </div>
                             ) : null}
 

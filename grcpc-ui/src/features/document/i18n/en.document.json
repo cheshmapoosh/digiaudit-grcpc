@@ -40,7 +40,6 @@
       "uploadedAt": "Uploaded At",
       "actions": "Actions",
       "code": "Code",
-      "category": "Category",
       "description": "Description",
       "validFrom": "Valid From",
       "validTo": "Valid To"
@@ -54,7 +53,8 @@
     "saveFirst": "Save the item first, then upload documents.",
     "saveFirst.process": "Save the process item first, then upload documents.",
     "validation": {
-      "waitForUpload": "Wait for file uploads to finish."
+      "waitForUpload": "Wait for file uploads to finish.",
+      "invalidValidityRange": "Valid to must be on or after valid from."
     },
     "errors": {
       "load": "Failed to load documents",

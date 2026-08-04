@@ -1,9 +1,34 @@
 import { z } from "zod";
 import { t } from "@/shared/utils/i18n.util";
+import { ORGANIZATION_TYPES } from "./organization.model";
 
 export const organizationStatusSchema = z.enum(["ACTIVE", "INACTIVE", "DELETED"]);
+export const organizationEditableStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
+export const organizationTypeSchema = z.enum(ORGANIZATION_TYPES);
 
-const dateSchema = z.string().trim().nullable().optional();
+const dateSchema = z
+    .string()
+    .trim()
+    .refine((value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value), {
+        message: t("organization.validation.invalidDate", "Invalid date"),
+    })
+    .nullable()
+    .optional();
+
+const nameSchema = z
+    .string()
+    .trim()
+    .min(1, t("organization.validation.nameRequired", "Name is required"))
+    .max(255, t("organization.validation.nameMaxLength", "Name cannot exceed 255 characters"));
+
+const optionalLocationSchema = z
+    .string()
+    .trim()
+    .max(255, t("organization.validation.locationMaxLength", "Location cannot exceed 255 characters"))
+    .nullable()
+    .optional();
+
+const optionalDescriptionSchema = z.string().trim().nullable().optional();
 
 function byteLength(value: string): number {
     return new TextEncoder().encode(value).length;
@@ -39,11 +64,20 @@ export const organizationCreateSchema = baseValiditySchema.extend({
                 "کد نمی‌تواند بیشتر از 64 بایت باشد",
             ),
         }),
+    name: nameSchema,
+    organizationType: organizationTypeSchema,
     parentOrganizationId: z.string().trim().min(1).nullable().optional(),
+    location: optionalLocationSchema,
+    description: optionalDescriptionSchema,
 });
 
 export const organizationUpdateSchema = baseValiditySchema.extend({
     version: z.number().int().min(0),
+    name: nameSchema,
+    organizationType: organizationTypeSchema,
+    status: organizationEditableStatusSchema,
+    location: optionalLocationSchema,
+    description: optionalDescriptionSchema,
 });
 
 export const organizationMoveSchema = z.object({

@@ -185,6 +185,8 @@ The Guard is the transaction-scoped structural serialization mechanism; full-hie
 
 Removal of the temporary `HierarchyGuardOracleAcceptanceTest` after its evidence was accepted does not alter the binding concurrency design or its acceptance requirements.
 
+Prompt 5.9 completes the explicitly staged Prompt 5.8 Backend/UI vertical slice. The bundled Organization UI now supplies required name/type fields, Process and Subprocess Update supply status, and no compatibility wrapper weakens the Prompt 5.8 contract. Target ObjectPages expose General Information and Documents only, share a Persian-calendar DatePicker with Gregorian `yyyy-MM-dd` wire values, preserve temporary uploads across parent Create, and protect normalized form plus Document drafts from SPA and hard-unload navigation.
+
 Soft-delete consistency requires deleted metadata when, and only when, `status = DELETED`.
 
 Business validity uses nullable inclusive `valid_from` and `valid_to` dates.

@@ -15,7 +15,6 @@ import ProcessTree from "../components/ProcessTree";
 
 export interface ProcessesListReportProps {
     items: ProcessNode[];
-    selectedItem?: ProcessNode | null;
     selectedId?: string | null;
     expansionAnchorId?: string | null;
     searchText: string;
@@ -27,9 +26,6 @@ export interface ProcessesListReportProps {
     onCreate: (nodeType: ProcessNodeType) => void;
     onShow: (id: string) => void;
     onDelete: (id: string) => void;
-    onActivate: (node: ProcessNode) => void;
-    onInactivate: (node: ProcessNode) => void;
-    onShowDeleted: () => void;
     onSelect: (id: string) => void;
 }
 
@@ -39,7 +35,6 @@ function readInputValue(event: unknown): string {
 
 export default function ProcessesListReport({
     items,
-    selectedItem,
     selectedId,
     expansionAnchorId,
     searchText,
@@ -51,9 +46,6 @@ export default function ProcessesListReport({
     onCreate,
     onShow,
     onDelete,
-    onActivate,
-    onInactivate,
-    onShowDeleted,
     onSelect,
 }: ProcessesListReportProps) {
     const { t } = useTranslation();
@@ -108,35 +100,6 @@ export default function ProcessesListReport({
                             onClick={() => selectedId && onShow(selectedId)}
                         >
                             {t("common.view", { defaultValue: "نمایش" })}
-                        </Button>
-
-                        {selectedItem?.status === "ACTIVE" ? (
-                            <Button
-                                disabled={busy}
-                                style={actionButtonStyle}
-                                onClick={() => onInactivate(selectedItem)}
-                            >
-                                {t("process.lifecycle.inactivate", { defaultValue: "Inactivate" })}
-                            </Button>
-                        ) : null}
-
-                        {selectedItem?.status === "INACTIVE" ? (
-                            <Button
-                                disabled={busy}
-                                style={actionButtonStyle}
-                                onClick={() => onActivate(selectedItem)}
-                            >
-                                {t("process.lifecycle.activate", { defaultValue: "Activate" })}
-                            </Button>
-                        ) : null}
-
-                        <Button
-                            design="Transparent"
-                            disabled={busy}
-                            style={actionButtonStyle}
-                            onClick={onShowDeleted}
-                        >
-                            {t("process.deleted.action", { defaultValue: "Deleted items" })}
                         </Button>
 
                         <Button

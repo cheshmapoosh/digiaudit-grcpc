@@ -14,21 +14,15 @@ export const ROOT_PARENT = "ROOT_PARENT";
 
 interface OrganizationState {
     nodesById: Record<string, OrganizationNode>;
-    deletedNodesById: Record<string, OrganizationNode>;
     childrenByParent: Record<string, OrganizationNode[]>;
     loadedChildren: Record<string, boolean>;
     loading: boolean;
-    deletedLoading: boolean;
 
     loadChildren(parentId?: string): Promise<void>;
-    loadDeleted(): Promise<void>;
     createNode(payload: OrganizationNodeCreate): Promise<MasterDataRevisionMutationResponse>;
     updateNode(id: string, payload: OrganizationNodeUpdate): Promise<MasterDataRevisionMutationResponse>;
     moveNode(id: string, payload: OrganizationMoveCommand): Promise<MasterDataRevisionMutationResponse>;
-    activateNode(id: string, payload: OrganizationLifecycleCommand): Promise<MasterDataRevisionMutationResponse>;
-    inactivateNode(id: string, payload: OrganizationLifecycleCommand): Promise<MasterDataRevisionMutationResponse>;
     removeNode(id: string, payload: OrganizationLifecycleCommand): Promise<MasterDataRevisionMutationResponse>;
-    restoreNode(node: OrganizationNode, payload: OrganizationLifecycleCommand): Promise<MasterDataRevisionMutationResponse>;
     refresh(): Promise<void>;
     reset(): void;
 }
@@ -39,11 +33,8 @@ type OrganizationSetState = (
 
 let stateGeneration = 0;
 let activeReadSequence = 0;
-let deletedReadSequence = 0;
 let activeLoadingCount = 0;
 let activeLoadingEpoch = 0;
-let deletedLoadingCount = 0;
-let deletedLoadingEpoch = 0;
 
 function buildIndexes(nodes: OrganizationNode[]) {
     const nodesById: Record<string, OrganizationNode> = {};
@@ -56,10 +47,6 @@ function buildIndexes(nodes: OrganizationNode[]) {
     });
 
     return { nodesById, childrenByParent };
-}
-
-function indexDeleted(nodes: OrganizationNode[]): Record<string, OrganizationNode> {
-    return Object.fromEntries(sortOrganizations(nodes).map((node) => [node.id, node]));
 }
 
 function withActiveNodes(
@@ -88,18 +75,6 @@ function endActiveLoading(set: OrganizationSetState, epoch: number): void {
     set({ loading: activeLoadingCount > 0 });
 }
 
-function beginDeletedLoading(set: OrganizationSetState): number {
-    deletedLoadingCount += 1;
-    set({ deletedLoading: true });
-    return deletedLoadingEpoch;
-}
-
-function endDeletedLoading(set: OrganizationSetState, epoch: number): void {
-    if (epoch !== deletedLoadingEpoch) return;
-    deletedLoadingCount = Math.max(0, deletedLoadingCount - 1);
-    set({ deletedLoading: deletedLoadingCount > 0 });
-}
-
 async function runActiveRead(
     set: OrganizationSetState,
     parentId: string,
@@ -117,19 +92,6 @@ async function runActiveRead(
         }));
     } finally {
         if (loadingEpoch !== null) endActiveLoading(set, loadingEpoch);
-    }
-}
-
-async function runDeletedRead(set: OrganizationSetState): Promise<void> {
-    const capturedGeneration = stateGeneration;
-    const requestSequence = ++deletedReadSequence;
-    const loadingEpoch = beginDeletedLoading(set);
-    try {
-        const deletedNodesById = indexDeleted(await organizationService.listDeleted());
-        if (capturedGeneration !== stateGeneration || requestSequence !== deletedReadSequence) return;
-        set({ deletedNodesById });
-    } finally {
-        endDeletedLoading(set, loadingEpoch);
     }
 }
 
@@ -153,18 +115,16 @@ function failMutation(): void {
     invalidateReads();
 }
 
-function normalizeDate(value: string | null | undefined): string | null {
+function normalizeOptional(value: string | null | undefined): string | null {
     const normalized = value?.trim();
     return normalized || null;
 }
 
 export const useOrganizationState = create<OrganizationState>((set, get) => ({
     nodesById: {},
-    deletedNodesById: {},
     childrenByParent: {},
     loadedChildren: {},
     loading: false,
-    deletedLoading: false,
 
     async refresh() {
         await runActiveRead(set, ROOT_PARENT, true);
@@ -172,10 +132,6 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
 
     async loadChildren(parentId = ROOT_PARENT) {
         await runActiveRead(set, parentId, true);
-    },
-
-    async loadDeleted() {
-        await runDeletedRead(set);
     },
 
     async createNode(payload) {
@@ -186,20 +142,22 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
             const confirmed: OrganizationNode = {
                 id: result.entityId,
                 code,
-                displayLabel: code,
+                name: payload.name.trim(),
+                organizationType: payload.organizationType,
+                displayLabel: payload.name.trim(),
                 parentOrganizationId: payload.parentOrganizationId?.trim() || null,
                 status: "ACTIVE",
-                validFrom: normalizeDate(payload.validFrom),
-                validTo: normalizeDate(payload.validTo),
+                location: normalizeOptional(payload.location),
+                description: normalizeOptional(payload.description),
+                validFrom: normalizeOptional(payload.validFrom),
+                validTo: normalizeOptional(payload.validTo),
                 version: result.version,
                 deletedAt: null,
                 deletedBy: null,
             };
-            set((state) => ({
-                ...withActiveNodes(state, { ...state.nodesById, [confirmed.id]: confirmed }),
-                deletedNodesById: Object.fromEntries(
-                    Object.entries(state.deletedNodesById).filter(([id]) => id !== confirmed.id),
-                ),
+            set((state) => withActiveNodes(state, {
+                ...state.nodesById,
+                [confirmed.id]: confirmed,
             }));
             completeMutation(set);
             return result;
@@ -221,8 +179,14 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
                 ...state.nodesById,
                 [id]: {
                     ...current,
-                    validFrom: normalizeDate(payload.validFrom),
-                    validTo: normalizeDate(payload.validTo),
+                    name: payload.name.trim(),
+                    organizationType: payload.organizationType,
+                    displayLabel: payload.name.trim(),
+                    status: payload.status,
+                    location: normalizeOptional(payload.location),
+                    description: normalizeOptional(payload.description),
+                    validFrom: normalizeOptional(payload.validFrom),
+                    validTo: normalizeOptional(payload.validTo),
                     version: result.version,
                 },
             }));
@@ -260,46 +224,6 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
         }
     },
 
-    async activateNode(id, payload) {
-        const current = get().nodesById[id];
-        if (!current) throw new Error("ORGANIZATION_NOT_FOUND");
-        const loadingEpoch = beginMutation(set);
-        try {
-            const result = await organizationService.activate(id, payload);
-            set((state) => withActiveNodes(state, {
-                ...state.nodesById,
-                [id]: { ...current, status: "ACTIVE", version: result.version },
-            }));
-            completeMutation(set);
-            return result;
-        } catch (error) {
-            failMutation();
-            throw error;
-        } finally {
-            endActiveLoading(set, loadingEpoch);
-        }
-    },
-
-    async inactivateNode(id, payload) {
-        const current = get().nodesById[id];
-        if (!current) throw new Error("ORGANIZATION_NOT_FOUND");
-        const loadingEpoch = beginMutation(set);
-        try {
-            const result = await organizationService.inactivate(id, payload);
-            set((state) => withActiveNodes(state, {
-                ...state.nodesById,
-                [id]: { ...current, status: "INACTIVE", version: result.version },
-            }));
-            completeMutation(set);
-            return result;
-        } catch (error) {
-            failMutation();
-            throw error;
-        } finally {
-            endActiveLoading(set, loadingEpoch);
-        }
-    },
-
     async removeNode(id, payload) {
         const current = get().nodesById[id];
         if (!current) throw new Error("ORGANIZATION_NOT_FOUND");
@@ -309,41 +233,8 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
             set((state) => {
                 const active = { ...state.nodesById };
                 delete active[id];
-                return {
-                    ...withActiveNodes(state, active),
-                    deletedNodesById: {
-                        ...state.deletedNodesById,
-                        [id]: { ...current, status: "DELETED", version: result.version },
-                    },
-                };
+                return withActiveNodes(state, active);
             });
-            completeMutation(set);
-            return result;
-        } catch (error) {
-            failMutation();
-            throw error;
-        } finally {
-            endActiveLoading(set, loadingEpoch);
-        }
-    },
-
-    async restoreNode(node, payload) {
-        const loadingEpoch = beginMutation(set);
-        try {
-            const result = await organizationService.restore(node.id, payload);
-            const restored: OrganizationNode = {
-                ...node,
-                status: "ACTIVE",
-                version: result.version,
-                deletedAt: null,
-                deletedBy: null,
-            };
-            set((state) => ({
-                ...withActiveNodes(state, { ...state.nodesById, [node.id]: restored }),
-                deletedNodesById: Object.fromEntries(
-                    Object.entries(state.deletedNodesById).filter(([id]) => id !== node.id),
-                ),
-            }));
             completeMutation(set);
             return result;
         } catch (error) {
@@ -357,18 +248,13 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
     reset() {
         invalidateReads();
         activeReadSequence += 1;
-        deletedReadSequence += 1;
         activeLoadingEpoch += 1;
-        deletedLoadingEpoch += 1;
         activeLoadingCount = 0;
-        deletedLoadingCount = 0;
         set({
             nodesById: {},
-            deletedNodesById: {},
             childrenByParent: {},
             loadedChildren: {},
             loading: false,
-            deletedLoading: false,
         });
     },
 }));

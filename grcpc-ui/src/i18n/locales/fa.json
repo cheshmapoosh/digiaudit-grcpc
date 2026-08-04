@@ -121,5 +121,10 @@
     }
   },
   "common.active": "فعال",
-  "common.inactive": "غیرفعال"
+  "common.inactive": "غیرفعال",
+  "common.invalidPersianDate": "تاریخ معتبر تقویم فارسی را وارد کنید.",
+  "common.unsavedChanges.title": "تغییرات ذخیره‌نشده",
+  "common.unsavedChanges.message": "اطلاعات کلی یا تغییرات مستندات ذخیره نشده‌اند. خارج می‌شوید و آن‌ها را کنار می‌گذارید؟",
+  "common.unsavedChanges.stay": "ماندن",
+  "common.unsavedChanges.leave": "خروج"
 }

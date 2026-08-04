@@ -14,21 +14,15 @@ export const ROOT_PARENT = "ROOT_PARENT";
 
 interface ProcessState {
     nodesById: Record<string, ProcessNode>;
-    deletedNodesById: Record<string, ProcessNode>;
     childrenByParent: Record<string, ProcessNode[]>;
     loadedChildren: Record<string, boolean>;
     loading: boolean;
-    deletedLoading: boolean;
 
     loadChildren(parentId?: string): Promise<void>;
-    loadDeleted(): Promise<void>;
     createNode(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
     updateNode(node: ProcessNode, payload: ProcessNodeUpdate): Promise<MasterDataRevisionMutationResponse>;
     moveNode(node: ProcessNode, payload: ProcessMoveCommand): Promise<MasterDataRevisionMutationResponse>;
-    activateNode(node: ProcessNode, payload: ProcessLifecycleCommand): Promise<MasterDataRevisionMutationResponse>;
-    inactivateNode(node: ProcessNode, payload: ProcessLifecycleCommand): Promise<MasterDataRevisionMutationResponse>;
     removeNode(node: ProcessNode, payload: ProcessLifecycleCommand): Promise<MasterDataRevisionMutationResponse>;
-    restoreNode(node: ProcessNode, payload: ProcessLifecycleCommand): Promise<MasterDataRevisionMutationResponse>;
     refresh(): Promise<void>;
     reset(): void;
 }
@@ -39,11 +33,8 @@ type ProcessSetState = (
 
 let stateGeneration = 0;
 let activeReadSequence = 0;
-let deletedReadSequence = 0;
 let activeLoadingCount = 0;
 let activeLoadingEpoch = 0;
-let deletedLoadingCount = 0;
-let deletedLoadingEpoch = 0;
 
 function buildIndexes(nodes: ProcessNode[]) {
     const nodesById: Record<string, ProcessNode> = {};
@@ -56,10 +47,6 @@ function buildIndexes(nodes: ProcessNode[]) {
     });
 
     return { nodesById, childrenByParent };
-}
-
-function indexDeleted(nodes: ProcessNode[]): Record<string, ProcessNode> {
-    return Object.fromEntries(sortProcesses(nodes).map((node) => [node.id, node]));
 }
 
 function withActiveNodes(
@@ -88,18 +75,6 @@ function endActiveLoading(set: ProcessSetState, epoch: number): void {
     set({ loading: activeLoadingCount > 0 });
 }
 
-function beginDeletedLoading(set: ProcessSetState): number {
-    deletedLoadingCount += 1;
-    set({ deletedLoading: true });
-    return deletedLoadingEpoch;
-}
-
-function endDeletedLoading(set: ProcessSetState, epoch: number): void {
-    if (epoch !== deletedLoadingEpoch) return;
-    deletedLoadingCount = Math.max(0, deletedLoadingCount - 1);
-    set({ deletedLoading: deletedLoadingCount > 0 });
-}
-
 async function runActiveRead(
     set: ProcessSetState,
     parentId: string,
@@ -117,19 +92,6 @@ async function runActiveRead(
         }));
     } finally {
         if (loadingEpoch !== null) endActiveLoading(set, loadingEpoch);
-    }
-}
-
-async function runDeletedRead(set: ProcessSetState): Promise<void> {
-    const capturedGeneration = stateGeneration;
-    const requestSequence = ++deletedReadSequence;
-    const loadingEpoch = beginDeletedLoading(set);
-    try {
-        const deletedNodesById = indexDeleted(await processService.listDeleted());
-        if (capturedGeneration !== stateGeneration || requestSequence !== deletedReadSequence) return;
-        set({ deletedNodesById });
-    } finally {
-        endDeletedLoading(set, loadingEpoch);
     }
 }
 
@@ -160,11 +122,9 @@ function normalizeOptional(value: string | null | undefined): string | null {
 
 export const useProcessState = create<ProcessState>((set, get) => ({
     nodesById: {},
-    deletedNodesById: {},
     childrenByParent: {},
     loadedChildren: {},
     loading: false,
-    deletedLoading: false,
 
     async refresh() {
         await runActiveRead(set, ROOT_PARENT, true);
@@ -172,10 +132,6 @@ export const useProcessState = create<ProcessState>((set, get) => ({
 
     async loadChildren(parentId = ROOT_PARENT) {
         await runActiveRead(set, parentId, true);
-    },
-
-    async loadDeleted() {
-        await runDeletedRead(set);
     },
 
     async createNode(payload) {
@@ -197,11 +153,9 @@ export const useProcessState = create<ProcessState>((set, get) => ({
                 deletedAt: null,
                 deletedBy: null,
             };
-            set((state) => ({
-                ...withActiveNodes(state, { ...state.nodesById, [confirmed.id]: confirmed }),
-                deletedNodesById: Object.fromEntries(
-                    Object.entries(state.deletedNodesById).filter(([id]) => id !== confirmed.id),
-                ),
+            set((state) => withActiveNodes(state, {
+                ...state.nodesById,
+                [confirmed.id]: confirmed,
             }));
             completeMutation(set);
             return result;
@@ -223,6 +177,7 @@ export const useProcessState = create<ProcessState>((set, get) => ({
                 [node.id]: {
                     ...current,
                     title: payload.title.trim(),
+                    status: payload.status,
                     description: normalizeOptional(payload.description),
                     sortOrder: payload.sortOrder ?? 0,
                     validFrom: normalizeOptional(payload.validFrom),
@@ -263,87 +218,15 @@ export const useProcessState = create<ProcessState>((set, get) => ({
         }
     },
 
-    async activateNode(node, payload) {
-        const current = get().nodesById[node.id] ?? node;
-        const loadingEpoch = beginMutation(set);
-        try {
-            const result = await processService.activate(node, payload);
-            set((state) => withActiveNodes(state, {
-                ...state.nodesById,
-                [node.id]: { ...current, status: "ACTIVE", version: result.version },
-            }));
-            completeMutation(set);
-            return result;
-        } catch (error) {
-            failMutation();
-            throw error;
-        } finally {
-            endActiveLoading(set, loadingEpoch);
-        }
-    },
-
-    async inactivateNode(node, payload) {
-        const current = get().nodesById[node.id] ?? node;
-        const loadingEpoch = beginMutation(set);
-        try {
-            const result = await processService.inactivate(node, payload);
-            set((state) => withActiveNodes(state, {
-                ...state.nodesById,
-                [node.id]: { ...current, status: "INACTIVE", version: result.version },
-            }));
-            completeMutation(set);
-            return result;
-        } catch (error) {
-            failMutation();
-            throw error;
-        } finally {
-            endActiveLoading(set, loadingEpoch);
-        }
-    },
-
     async removeNode(node, payload) {
-        const current = get().nodesById[node.id] ?? node;
         const loadingEpoch = beginMutation(set);
         try {
             const result = await processService.delete(node, payload);
             set((state) => {
                 const active = { ...state.nodesById };
                 delete active[node.id];
-                return {
-                    ...withActiveNodes(state, active),
-                    deletedNodesById: {
-                        ...state.deletedNodesById,
-                        [node.id]: { ...current, status: "DELETED", version: result.version },
-                    },
-                };
+                return withActiveNodes(state, active);
             });
-            completeMutation(set);
-            return result;
-        } catch (error) {
-            failMutation();
-            throw error;
-        } finally {
-            endActiveLoading(set, loadingEpoch);
-        }
-    },
-
-    async restoreNode(node, payload) {
-        const loadingEpoch = beginMutation(set);
-        try {
-            const result = await processService.restore(node, payload);
-            const restored: ProcessNode = {
-                ...node,
-                status: "ACTIVE",
-                version: result.version,
-                deletedAt: null,
-                deletedBy: null,
-            };
-            set((state) => ({
-                ...withActiveNodes(state, { ...state.nodesById, [node.id]: restored }),
-                deletedNodesById: Object.fromEntries(
-                    Object.entries(state.deletedNodesById).filter(([id]) => id !== node.id),
-                ),
-            }));
             completeMutation(set);
             return result;
         } catch (error) {
@@ -357,18 +240,13 @@ export const useProcessState = create<ProcessState>((set, get) => ({
     reset() {
         invalidateReads();
         activeReadSequence += 1;
-        deletedReadSequence += 1;
         activeLoadingEpoch += 1;
-        deletedLoadingEpoch += 1;
         activeLoadingCount = 0;
-        deletedLoadingCount = 0;
         set({
             nodesById: {},
-            deletedNodesById: {},
             childrenByParent: {},
             loadedChildren: {},
             loading: false,
-            deletedLoading: false,
         });
     },
 }));

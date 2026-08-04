@@ -121,5 +121,10 @@
     }
   },
   "common.active": "Active",
-  "common.inactive": "Inactive"
+  "common.inactive": "Inactive",
+  "common.invalidPersianDate": "Enter a valid Persian calendar date.",
+  "common.unsavedChanges.title": "Unsaved changes",
+  "common.unsavedChanges.message": "General Information or Document changes have not been saved. Leave and discard them?",
+  "common.unsavedChanges.stay": "Stay",
+  "common.unsavedChanges.leave": "Leave"
 }

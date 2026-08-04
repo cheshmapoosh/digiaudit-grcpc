@@ -11,12 +11,35 @@ import type { OrganizationRepo } from "./organization.repo";
 
 const BASE_URL = "/api/master-data/organizations";
 
+function toCreateBody(payload: OrganizationNodeCreate) {
+    return {
+        code: payload.code,
+        name: payload.name,
+        organizationType: payload.organizationType,
+        parentOrganizationId: payload.parentOrganizationId ?? null,
+        location: payload.location ?? null,
+        description: payload.description ?? null,
+        validFrom: payload.validFrom ?? null,
+        validTo: payload.validTo ?? null,
+    };
+}
+
+function toUpdateBody(payload: OrganizationNodeUpdate) {
+    return {
+        version: payload.version,
+        name: payload.name,
+        organizationType: payload.organizationType,
+        status: payload.status,
+        location: payload.location ?? null,
+        description: payload.description ?? null,
+        validFrom: payload.validFrom ?? null,
+        validTo: payload.validTo ?? null,
+    };
+}
+
 export class OrganizationApiRepo implements OrganizationRepo {
-    async list(lifecycleStatus?: "DELETED"): Promise<OrganizationNode[]> {
-        const query = lifecycleStatus
-            ? `?lifecycleStatus=${encodeURIComponent(lifecycleStatus)}`
-            : "";
-        return httpClient.get<OrganizationNode[]>(`${BASE_URL}${query}`);
+    async list(): Promise<OrganizationNode[]> {
+        return httpClient.get<OrganizationNode[]>(BASE_URL);
     }
 
     async getById(id: string): Promise<OrganizationNode | null> {
@@ -30,7 +53,7 @@ export class OrganizationApiRepo implements OrganizationRepo {
     async create(
         payload: OrganizationNodeCreate,
     ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.post<MasterDataRevisionMutationResponse>(BASE_URL, payload);
+        return httpClient.post<MasterDataRevisionMutationResponse>(BASE_URL, toCreateBody(payload));
     }
 
     async update(
@@ -39,7 +62,7 @@ export class OrganizationApiRepo implements OrganizationRepo {
     ): Promise<MasterDataRevisionMutationResponse> {
         return httpClient.patch<MasterDataRevisionMutationResponse>(
             `${BASE_URL}/${id}`,
-            payload,
+            toUpdateBody(payload),
         );
     }
 
@@ -49,26 +72,6 @@ export class OrganizationApiRepo implements OrganizationRepo {
     ): Promise<MasterDataRevisionMutationResponse> {
         return httpClient.post<MasterDataRevisionMutationResponse>(
             `${BASE_URL}/${id}/move`,
-            payload,
-        );
-    }
-
-    async activate(
-        id: string,
-        payload: OrganizationLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.post<MasterDataRevisionMutationResponse>(
-            `${BASE_URL}/${id}/activate`,
-            payload,
-        );
-    }
-
-    async inactivate(
-        id: string,
-        payload: OrganizationLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.post<MasterDataRevisionMutationResponse>(
-            `${BASE_URL}/${id}/inactivate`,
             payload,
         );
     }
@@ -83,13 +86,4 @@ export class OrganizationApiRepo implements OrganizationRepo {
         );
     }
 
-    async restore(
-        id: string,
-        payload: OrganizationLifecycleCommand,
-    ): Promise<MasterDataRevisionMutationResponse> {
-        return httpClient.post<MasterDataRevisionMutationResponse>(
-            `${BASE_URL}/${id}/restore`,
-            payload,
-        );
-    }
 }
