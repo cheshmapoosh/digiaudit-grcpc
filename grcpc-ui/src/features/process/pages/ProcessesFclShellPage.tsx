@@ -3,6 +3,7 @@ import {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
     type CSSProperties,
 } from "react";
@@ -90,6 +91,10 @@ function mapError(
             return t("process.errors.invalidHierarchy", {
                 defaultValue: "ساختار انتخاب‌شده برای فرآیند معتبر نیست",
             });
+        case "INVALID_HIERARCHY_MOVE":
+            return t("process.errors.invalidHierarchyMove", {
+                defaultValue: "The destination must differ from the current parent.",
+            });
         case "DEPENDENT_CHILDREN_EXIST":
         case "HAS_CHILDREN":
             return t("process.errors.hasChildren", {
@@ -102,6 +107,10 @@ function mapError(
         case "INVALID_LIFECYCLE_TRANSITION":
             return t("process.errors.invalidLifecycleTransition", {
                 defaultValue: "This lifecycle action is not valid for the current status.",
+            });
+        case "INVALID_LIFECYCLE_FILTER":
+            return t("process.errors.invalidLifecycleFilter", {
+                defaultValue: "The selected lifecycle filter is not supported.",
             });
         case "VERSION_CONFLICT":
             return t("process.errors.versionConflict", {
@@ -246,6 +255,45 @@ export default function ProcessesFclShellPage() {
     const [objectActiveTab, setObjectActiveTab] = useState<ProcessTabKey>("general");
     const [deletedDialogOpen, setDeletedDialogOpen] = useState(false);
     const [savedCreateNode, setSavedCreateNode] = useState<ProcessNode | null>(null);
+    const [hasPendingDocuments, setHasPendingDocuments] = useState(false);
+    const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
+    const pendingLeaveActionRef = useRef<(() => void) | null>(null);
+
+    const requestObjectPageLeave = useCallback((action: () => void) => {
+        if (!hasPendingDocuments) {
+            action();
+            return;
+        }
+        pendingLeaveActionRef.current = action;
+        setLeaveConfirmationOpen(true);
+    }, [hasPendingDocuments]);
+
+    const stayOnObjectPage = useCallback(() => {
+        pendingLeaveActionRef.current = null;
+        setLeaveConfirmationOpen(false);
+    }, []);
+
+    const confirmObjectPageLeave = useCallback(() => {
+        const action = pendingLeaveActionRef.current;
+        pendingLeaveActionRef.current = null;
+        setLeaveConfirmationOpen(false);
+        setHasPendingDocuments(false);
+        action?.();
+    }, []);
+
+    useEffect(() => {
+        if (!hasPendingDocuments) return;
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            event.preventDefault();
+            event.returnValue = "";
+        };
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [hasPendingDocuments]);
+
+    useEffect(() => () => {
+        useProcessState.getState().reset();
+    }, []);
 
     const processItems = useMemo(() => sortProcesses(Object.values(nodesById)), [nodesById]);
     const selectedRouteItem = processId ? nodesById[processId] ?? null : null;
@@ -319,12 +367,19 @@ export default function ProcessesFclShellPage() {
 
     const handleShow = useCallback(
         (id: string) => {
-            setObjectError(null);
-            setSelectedTreeId(id);
-            setTreeExpansionAnchorId(id);
-            navigate(`/processes/${id}`);
+            const show = () => {
+                setObjectError(null);
+                setSelectedTreeId(id);
+                setTreeExpansionAnchorId(id);
+                navigate(`/processes/${id}`);
+            };
+            if (routeMode === "create" || (processId && processId !== id)) {
+                requestObjectPageLeave(show);
+            } else {
+                show();
+            }
         },
-        [navigate],
+        [navigate, processId, requestObjectPageLeave, routeMode],
     );
 
     const handleCreate = useCallback(
@@ -342,18 +397,16 @@ export default function ProcessesFclShellPage() {
                 return;
             }
 
-            setObjectError(null);
-            const params = new URLSearchParams();
-
-            if (parentId) {
-                params.set("parentId", parentId);
-            }
-
-            params.set("nodeType", nodeType);
-            setTreeExpansionAnchorId(parentId);
-            navigate(`/processes/new?${params.toString()}`);
+            requestObjectPageLeave(() => {
+                setObjectError(null);
+                const params = new URLSearchParams();
+                if (parentId) params.set("parentId", parentId);
+                params.set("nodeType", nodeType);
+                setTreeExpansionAnchorId(parentId);
+                navigate(`/processes/new?${params.toString()}`);
+            });
         },
-        [navigate, nodesById, selectedTreeId, t],
+        [navigate, nodesById, requestObjectPageLeave, selectedTreeId, t],
     );
 
     const handleEdit = useCallback(
@@ -364,32 +417,38 @@ export default function ProcessesFclShellPage() {
                 return;
             }
 
-            setObjectError(null);
-            setSelectedTreeId(targetId);
-            setTreeExpansionAnchorId(targetId);
-            navigate(`/processes/${targetId}/edit`);
+            const edit = () => {
+                setObjectError(null);
+                setSelectedTreeId(targetId);
+                setTreeExpansionAnchorId(targetId);
+                navigate(`/processes/${targetId}/edit`);
+            };
+            if (routeMode === "create" || (processId && processId !== targetId)) {
+                requestObjectPageLeave(edit);
+            } else {
+                edit();
+            }
         },
-        [navigate, processId, selectedTreeId],
+        [navigate, processId, requestObjectPageLeave, routeMode, selectedTreeId],
     );
 
     const handleCancel = useCallback(() => {
-        setObjectError(null);
-
-        if (savedCreateNode) {
-            navigate(`/processes/${savedCreateNode.id}`);
-            return;
-        }
-
-        const currentAnchorId =
-            routeMode === "create" ? queryParentId ?? selectedTreeId : processId ?? selectedTreeId;
-
-        if (currentAnchorId) {
-            setSelectedTreeId(currentAnchorId);
-            setTreeExpansionAnchorId(currentAnchorId);
-        }
-
-        navigate("/processes");
-    }, [navigate, processId, queryParentId, routeMode, savedCreateNode, selectedTreeId]);
+        requestObjectPageLeave(() => {
+            setObjectError(null);
+            if (savedCreateNode) {
+                navigate(`/processes/${savedCreateNode.id}`);
+                return;
+            }
+            const currentAnchorId = routeMode === "create"
+                ? queryParentId ?? selectedTreeId
+                : processId ?? selectedTreeId;
+            if (currentAnchorId) {
+                setSelectedTreeId(currentAnchorId);
+                setTreeExpansionAnchorId(currentAnchorId);
+            }
+            navigate("/processes");
+        });
+    }, [navigate, processId, queryParentId, requestObjectPageLeave, routeMode, savedCreateNode, selectedTreeId]);
 
     const requestDelete = useCallback(
         (id: string) => {
@@ -505,10 +564,10 @@ export default function ProcessesFclShellPage() {
     );
 
     const handleMove = useCallback(
-        async (payload: ProcessMoveCommand) => {
+        async (payload: ProcessMoveCommand): Promise<boolean> => {
             const target = selectedRouteItem ?? savedCreateNode;
             if (!target) {
-                return;
+                return false;
             }
 
             try {
@@ -524,9 +583,7 @@ export default function ProcessesFclShellPage() {
 
                 setSelectedTreeId(target.id);
                 setTreeExpansionAnchorId(payload.parentId ?? target.id);
-                if (!savedCreateNode) {
-                    navigate(`/processes/${target.id}`);
-                }
+                return true;
             } catch (error) {
                 setObjectError(
                     mapError(
@@ -537,11 +594,12 @@ export default function ProcessesFclShellPage() {
                         t,
                     ),
                 );
+                return false;
             } finally {
                 setSubmitting(false);
             }
         },
-        [moveNode, navigate, savedCreateNode, selectedRouteItem, t],
+        [moveNode, savedCreateNode, selectedRouteItem, t],
     );
 
     const handleActivate = useCallback(async (node: ProcessNode) => {
@@ -793,6 +851,7 @@ export default function ProcessesFclShellPage() {
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
                             onActiveTabChange={setObjectActiveTab}
+                            onPendingDocumentsChange={setHasPendingDocuments}
                         />
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
@@ -803,6 +862,21 @@ export default function ProcessesFclShellPage() {
                     )}
                 </div>
             </Dialog>
+
+            <DeleteConfirmDialog
+                open={leaveConfirmationOpen}
+                title={t("process.documents.pendingLeave.title", {
+                    defaultValue: "Unfinished document upload",
+                })}
+                message={t("process.documents.pendingLeave.message", {
+                    defaultValue: "A staged document still needs attention. Leaving will lose its local reference.",
+                })}
+                confirmText={t("process.documents.pendingLeave.leave", { defaultValue: "Leave" })}
+                cancelText={t("process.documents.pendingLeave.stay", { defaultValue: "Stay" })}
+                loading={false}
+                onClose={stayOnObjectPage}
+                onConfirm={confirmObjectPageLeave}
+            />
 
             <DeleteConfirmDialog
                 open={Boolean(deleteCandidate)}
@@ -816,13 +890,16 @@ export default function ProcessesFclShellPage() {
                 loading={submitting}
                 onClose={() => setDeleteCandidate(null)}
                 onConfirm={() => {
-                    void handleConfirmDelete();
+                    requestObjectPageLeave(() => {
+                        void handleConfirmDelete();
+                    });
                 }}
             />
 
             <DeletedProcessesDialog
                 open={deletedDialogOpen}
                 items={sortProcesses(Object.values(deletedNodesById))}
+                parentItems={processItems}
                 busy={deletedLoading || submitting}
                 onClose={() => setDeletedDialogOpen(false)}
                 onRestore={(node) => { void handleRestore(node); }}

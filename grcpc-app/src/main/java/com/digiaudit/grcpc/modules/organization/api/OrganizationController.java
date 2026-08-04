@@ -41,7 +41,7 @@ public class OrganizationController {
     @GetMapping
     @PreAuthorize("hasAuthority('ORGANIZATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
     public List<OrganizationResponse> findAll(
-            @RequestParam(required = false) com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus lifecycleStatus
+            @RequestParam(required = false) String lifecycleStatus
     ) {
         return organizationService.findAll(lifecycleStatus);
     }

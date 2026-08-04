@@ -45,7 +45,13 @@
     },
     "documents": {
       "empty": "No document has been registered for this item.",
-      "saveFirst": "Save the process item before finalizing documents."
+      "saveFirst": "Save the process item before finalizing documents.",
+      "pendingLeave": {
+        "title": "Unfinished document upload",
+        "message": "A staged document still needs attention. Leaving will lose its local reference.",
+        "stay": "Stay",
+        "leave": "Leave"
+      }
     },
     "object": {
       "summaryTitle": "Process Details",
@@ -75,7 +81,9 @@
     "deleted": {
       "action": "Deleted Items",
       "title": "Deleted Processes and Subprocesses",
-      "empty": "No deleted item was found."
+      "empty": "No deleted item was found.",
+      "parent": "Parent: {{parent}}",
+      "parentUnavailable": "Parent unavailable"
     },
     "restore": {
       "action": "Restore"
@@ -92,6 +100,8 @@
       "hasChildren": "You cannot delete an item that has children",
       "hasDependencies": "Dependent master data prevents this action",
       "invalidHierarchy": "The selected process structure is not valid",
+      "invalidHierarchyMove": "The destination must differ from the current parent",
+      "invalidLifecycleFilter": "The selected lifecycle filter is not supported",
       "invalidLifecycleTransition": "This lifecycle action is not valid for the current status",
       "versionConflict": "The record was changed by another user. Reload the page.",
       "delete": "Failed to delete process item",

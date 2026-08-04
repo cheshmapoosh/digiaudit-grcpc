@@ -9,7 +9,6 @@ import type {
     ProcessNodeCreate,
     ProcessNodeType,
     ProcessNodeUpdate,
-    ProcessStatus,
 } from "../domain/process.model";
 import type { ProcessRepo } from "./process.repo";
 
@@ -102,7 +101,7 @@ function endpointForNode(node: ProcessNode): string {
 }
 
 export class ProcessApiRepo implements ProcessRepo {
-    async list(lifecycleStatus?: ProcessStatus): Promise<ProcessNode[]> {
+    async list(lifecycleStatus?: "DELETED"): Promise<ProcessNode[]> {
         const query = lifecycleStatus
             ? `?lifecycleStatus=${encodeURIComponent(lifecycleStatus)}`
             : "";

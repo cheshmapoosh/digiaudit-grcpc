@@ -96,10 +96,11 @@ public class ProcessService {
     }
 
     @Transactional(readOnly = true)
-    public List<CentralProcessResponse> listProcesses(MasterDataLifecycleStatus lifecycleStatus) {
-        List<CentralProcessEntity> processes = lifecycleStatus == null
+    public List<CentralProcessResponse> listProcesses(String lifecycleStatus) {
+        MasterDataLifecycleStatus requestedStatus = parseLifecycleFilter(lifecycleStatus);
+        List<CentralProcessEntity> processes = requestedStatus == null
                 ? processRepository.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(DELETED)
-                : processRepository.findByStatusOrderBySortOrderAscTitleAscIdAsc(lifecycleStatus);
+                : processRepository.findByStatusOrderBySortOrderAscTitleAscIdAsc(requestedStatus);
         return processes
                 .stream()
                 .sorted(PROCESS_ORDER)
@@ -113,10 +114,11 @@ public class ProcessService {
     }
 
     @Transactional(readOnly = true)
-    public List<CentralSubprocessResponse> listSubprocesses(MasterDataLifecycleStatus lifecycleStatus) {
-        List<CentralSubprocessEntity> subprocesses = lifecycleStatus == null
+    public List<CentralSubprocessResponse> listSubprocesses(String lifecycleStatus) {
+        MasterDataLifecycleStatus requestedStatus = parseLifecycleFilter(lifecycleStatus);
+        List<CentralSubprocessEntity> subprocesses = requestedStatus == null
                 ? subprocessRepository.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(DELETED)
-                : subprocessRepository.findByStatusOrderBySortOrderAscTitleAscIdAsc(lifecycleStatus);
+                : subprocessRepository.findByStatusOrderBySortOrderAscTitleAscIdAsc(requestedStatus);
         return subprocesses
                 .stream()
                 .sorted(SUBPROCESS_ORDER)
@@ -259,10 +261,12 @@ public class ProcessService {
     ) {
         UUID actorId = actorProvider.currentActorId();
         Instant now = Instant.now(clock);
-        CentralProcessEntity entity = processRepository.lockByNormalizedCode(code).orElse(null);
+        List<CentralProcessEntity> hierarchy = processRepository.lockProcessHierarchyOrderedById();
+        Map<UUID, CentralProcessEntity> byId = indexProcesses(hierarchy);
+        CentralProcessEntity entity = findProcessByNormalizedCode(hierarchy, code);
         if (entity == null) {
             UUID processId = UUID.randomUUID();
-            lockAndValidateProcessParent(processId, parentProcessId);
+            validateProcessParent(processId, parentProcessId, byId);
             CentralProcessEntity created = CentralProcessEntity.create(
                     processId,
                     code,
@@ -283,7 +287,7 @@ public class ProcessService {
         if (entity.getStatus() == MasterDataLifecycleStatus.ACTIVE) {
             throw duplicateProcessCode(code);
         }
-        lockAndValidateProcessParent(entity.getId(), parentProcessId);
+        validateProcessParent(entity.getId(), parentProcessId, byId);
         RevisionOperationType operationType = entity.getStatus() == MasterDataLifecycleStatus.DELETED
                 ? RevisionOperationType.RESTORE
                 : RevisionOperationType.ACTIVATE;
@@ -322,11 +326,17 @@ public class ProcessService {
             long expectedVersion,
             UUID parentProcessId
     ) {
-        CentralProcessEntity entity = lockProcess(processId);
+        Map<UUID, CentralProcessEntity> byId = indexProcesses(
+                processRepository.lockProcessHierarchyOrderedById()
+        );
+        CentralProcessEntity entity = requireProcessFromSnapshot(byId, processId);
         assertVersion(entity, expectedVersion, "Process");
         requireMutableProcess(entity);
+        if (Objects.equals(entity.getParentProcessId(), parentProcessId)) {
+            throw invalidHierarchyMove();
+        }
         JsonNode before = processSnapshot(entity);
-        lockAndValidateProcessParent(processId, parentProcessId);
+        validateProcessParent(processId, parentProcessId, byId);
         entity.move(parentProcessId, actorProvider.currentActorId(), Instant.now(clock));
         CentralProcessEntity saved = processRepository.saveAndFlush(entity);
         return completedProcess(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
@@ -347,14 +357,21 @@ public class ProcessService {
             long expectedVersion,
             RevisionOperationType operationType
     ) {
-        CentralProcessEntity entity = lockProcess(processId);
+        Map<UUID, CentralProcessEntity> hierarchyById = null;
+        CentralProcessEntity entity;
+        if (operationType == RevisionOperationType.DELETE || operationType == RevisionOperationType.RESTORE) {
+            hierarchyById = indexProcesses(processRepository.lockProcessHierarchyOrderedById());
+            entity = requireProcessFromSnapshot(hierarchyById, processId);
+        } else {
+            entity = lockProcess(processId);
+        }
         assertVersion(entity, expectedVersion, "Process");
         validateProcessLifecycleTransition(entity, operationType);
         if (operationType == RevisionOperationType.DELETE) {
-            validateProcessDeleteDependencies(processId);
+            validateProcessDeleteDependencies(processId, hierarchyById);
         }
         if (operationType == RevisionOperationType.RESTORE) {
-            validateProcessRestoreParent(entity);
+            validateProcessRestoreParent(entity, hierarchyById);
             validateValidity(entity.getValidFrom(), entity.getValidTo());
         }
         JsonNode before = processSnapshot(entity);
@@ -383,7 +400,10 @@ public class ProcessService {
     ) {
         UUID actorId = actorProvider.currentActorId();
         Instant now = Instant.now(clock);
-        lockSubprocessOwner(processId);
+        Map<UUID, CentralProcessEntity> processById = indexProcesses(
+                processRepository.lockProcessHierarchyOrderedById()
+        );
+        requireSubprocessOwner(processId, processById);
         CentralSubprocessEntity entity = subprocessRepository.lockByNormalizedCode(code).orElse(null);
         if (entity == null) {
             CentralSubprocessEntity created = CentralSubprocessEntity.create(
@@ -444,11 +464,17 @@ public class ProcessService {
             long expectedVersion,
             UUID processId
     ) {
+        Map<UUID, CentralProcessEntity> processById = indexProcesses(
+                processRepository.lockProcessHierarchyOrderedById()
+        );
+        requireSubprocessOwner(processId, processById);
         CentralSubprocessEntity entity = lockSubprocess(subprocessId);
         assertVersion(entity, expectedVersion, "Subprocess");
         requireMutableSubprocess(entity);
+        if (Objects.equals(entity.getProcessId(), processId)) {
+            throw invalidHierarchyMove();
+        }
         JsonNode before = subprocessSnapshot(entity);
-        lockSubprocessOwner(processId);
         entity.move(processId, actorProvider.currentActorId(), Instant.now(clock));
         CentralSubprocessEntity saved = subprocessRepository.saveAndFlush(entity);
         return completedSubprocess(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
@@ -469,6 +495,10 @@ public class ProcessService {
             long expectedVersion,
             RevisionOperationType operationType
     ) {
+        Map<UUID, CentralProcessEntity> processById = null;
+        if (operationType == RevisionOperationType.RESTORE) {
+            processById = indexProcesses(processRepository.lockProcessHierarchyOrderedById());
+        }
         CentralSubprocessEntity entity = lockSubprocess(subprocessId);
         assertVersion(entity, expectedVersion, "Subprocess");
         validateSubprocessLifecycleTransition(entity, operationType);
@@ -476,7 +506,7 @@ public class ProcessService {
             validateSubprocessDeleteDependencies(subprocessId);
         }
         if (operationType == RevisionOperationType.RESTORE) {
-            lockSubprocessOwner(entity.getProcessId());
+            requireSubprocessOwner(entity.getProcessId(), processById);
             validateValidity(entity.getValidFrom(), entity.getValidTo());
         }
         JsonNode before = subprocessSnapshot(entity);
@@ -541,16 +571,19 @@ public class ProcessService {
         );
     }
 
-    private void lockAndValidateProcessParent(UUID processId, UUID parentProcessId) {
-        List<CentralProcessEntity> locked = processRepository.lockAllNonDeleted(DELETED);
-        Map<UUID, CentralProcessEntity> byId = indexProcesses(locked);
+    private void validateProcessParent(
+            UUID processId,
+            UUID parentProcessId,
+            Map<UUID, CentralProcessEntity> byId
+    ) {
         if (parentProcessId == null) {
             return;
         }
         if (processId.equals(parentProcessId)) {
             throw hierarchySelfParent();
         }
-        if (!byId.containsKey(parentProcessId)) {
+        CentralProcessEntity parent = byId.get(parentProcessId);
+        if (parent == null || parent.getStatus() == DELETED) {
             throw parentProcessNotFound(parentProcessId);
         }
         validateNoProcessCycle(processId, parentProcessId, byId);
@@ -567,37 +600,48 @@ public class ProcessService {
                 throw hierarchyCycle();
             }
             CentralProcessEntity parent = byId.get(current);
-            if (parent == null) {
+            if (parent == null || parent.getStatus() == DELETED) {
                 throw parentProcessNotFound(current);
             }
             current = parent.getParentProcessId();
         }
     }
 
-    private void validateProcessRestoreParent(CentralProcessEntity entity) {
+    private void validateProcessRestoreParent(
+            CentralProcessEntity entity,
+            Map<UUID, CentralProcessEntity> byId
+    ) {
         UUID parentProcessId = entity.getParentProcessId();
         if (parentProcessId == null) {
             return;
         }
-        if (!processRepository.existsByIdAndStatusNot(parentProcessId, DELETED)) {
+        CentralProcessEntity parent = byId.get(parentProcessId);
+        if (parent == null || parent.getStatus() == DELETED) {
             throw parentProcessNotFound(parentProcessId);
         }
     }
 
-    private CentralProcessEntity lockSubprocessOwner(UUID processId) {
+    private CentralProcessEntity requireSubprocessOwner(
+            UUID processId,
+            Map<UUID, CentralProcessEntity> byId
+    ) {
         if (processId == null) {
             throw new NotFoundException("PROCESS_FOR_SUBPROCESS_NOT_FOUND", "error.masterdata.v2.processForSubprocessNotFound", "Process for subprocess is required");
         }
-        CentralProcessEntity process = processRepository.lockById(processId)
-                .orElseThrow(() -> new NotFoundException("PROCESS_FOR_SUBPROCESS_NOT_FOUND", "error.masterdata.v2.processForSubprocessNotFound", "Process for subprocess not found: " + processId, processId));
-        if (process.getStatus() == DELETED) {
+        CentralProcessEntity process = byId.get(processId);
+        if (process == null || process.getStatus() == DELETED) {
             throw new NotFoundException("PROCESS_FOR_SUBPROCESS_NOT_FOUND", "error.masterdata.v2.processForSubprocessNotFound", "Process for subprocess not found: " + processId, processId);
         }
         return process;
     }
 
-    private void validateProcessDeleteDependencies(UUID processId) {
-        if (processRepository.existsByParentProcessIdAndStatusNot(processId, DELETED)
+    private void validateProcessDeleteDependencies(
+            UUID processId,
+            Map<UUID, CentralProcessEntity> byId
+    ) {
+        boolean hasProcessChildren = byId.values().stream().anyMatch(process ->
+                process.getStatus() != DELETED && processId.equals(process.getParentProcessId()));
+        if (hasProcessChildren
                 || subprocessRepository.existsByProcessIdAndStatusNot(processId, DELETED)) {
             throw new ConflictException("DEPENDENT_CHILDREN_EXIST", "error.masterdata.v2.dependentChildrenExist", "Process has child processes or subprocesses: " + processId, processId);
         }
@@ -615,6 +659,17 @@ public class ProcessService {
     private CentralProcessEntity lockProcess(UUID processId) {
         return processRepository.lockById(processId)
                 .orElseThrow(() -> processNotFound(processId));
+    }
+
+    private CentralProcessEntity requireProcessFromSnapshot(
+            Map<UUID, CentralProcessEntity> byId,
+            UUID processId
+    ) {
+        CentralProcessEntity process = byId.get(processId);
+        if (process == null) {
+            throw processNotFound(processId);
+        }
+        return process;
     }
 
     private void requireMutableProcess(CentralProcessEntity entity) {
@@ -766,6 +821,38 @@ public class ProcessService {
 
     private UnprocessableEntityException hierarchyCycle() {
         return new UnprocessableEntityException("HIERARCHY_CYCLE", "error.masterdata.v2.hierarchyCycle", "Process hierarchy cycle detected");
+    }
+
+    private UnprocessableEntityException invalidHierarchyMove() {
+        return new UnprocessableEntityException(
+                "INVALID_HIERARCHY_MOVE",
+                "error.masterdata.v2.invalidHierarchyMove",
+                "Move destination must differ from the current parent"
+        );
+    }
+
+    private MasterDataLifecycleStatus parseLifecycleFilter(String lifecycleStatus) {
+        if (lifecycleStatus == null) {
+            return null;
+        }
+        if (DELETED.name().equals(lifecycleStatus)) {
+            return DELETED;
+        }
+        throw new UnprocessableEntityException(
+                "INVALID_LIFECYCLE_FILTER",
+                "error.masterdata.v2.invalidLifecycleFilter",
+                "Only the deleted lifecycle filter is supported"
+        );
+    }
+
+    private CentralProcessEntity findProcessByNormalizedCode(
+            List<CentralProcessEntity> processes,
+            String code
+    ) {
+        return processes.stream()
+                .filter(process -> process.getCode().equalsIgnoreCase(code))
+                .findFirst()
+                .orElse(null);
     }
 
     private Map<UUID, CentralProcessEntity> indexProcesses(List<CentralProcessEntity> processes) {

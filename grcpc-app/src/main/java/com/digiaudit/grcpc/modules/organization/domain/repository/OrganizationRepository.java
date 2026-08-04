@@ -28,10 +28,6 @@ public interface OrganizationRepository extends JpaRepository<OrganizationEntity
     Optional<OrganizationEntity> lockById(@Param("id") UUID id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select organization from OrganizationEntity organization where upper(organization.code) = upper(:code)")
-    Optional<OrganizationEntity> lockByNormalizedCode(@Param("code") String code);
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select organization from OrganizationEntity organization where organization.status <> :deletedStatus")
-    List<OrganizationEntity> lockAllNonDeleted(@Param("deletedStatus") MasterDataLifecycleStatus deletedStatus);
+    @Query("select organization from OrganizationEntity organization order by organization.id")
+    List<OrganizationEntity> lockOrganizationHierarchyOrderedById();
 }

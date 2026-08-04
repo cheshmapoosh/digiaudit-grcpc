@@ -33,6 +33,18 @@ interface OrganizationState {
     reset(): void;
 }
 
+type OrganizationSetState = (
+    partial: Partial<OrganizationState> | ((state: OrganizationState) => Partial<OrganizationState>),
+) => void;
+
+let stateGeneration = 0;
+let activeReadSequence = 0;
+let deletedReadSequence = 0;
+let activeLoadingCount = 0;
+let activeLoadingEpoch = 0;
+let deletedLoadingCount = 0;
+let deletedLoadingEpoch = 0;
+
 function buildIndexes(nodes: OrganizationNode[]) {
     const nodesById: Record<string, OrganizationNode> = {};
     const childrenByParent: Record<string, OrganizationNode[]> = {};
@@ -50,38 +62,103 @@ function indexDeleted(nodes: OrganizationNode[]): Record<string, OrganizationNod
     return Object.fromEntries(sortOrganizations(nodes).map((node) => [node.id, node]));
 }
 
-type OrganizationSetState = (
-    partial: Partial<OrganizationState> | ((state: OrganizationState) => Partial<OrganizationState>),
-) => void;
-
-async function reloadIndexes() {
-    return buildIndexes(await organizationService.list());
-}
-
-async function refreshAfterMutation(set: OrganizationSetState): Promise<void> {
-    try {
-        const indexes = await reloadIndexes();
-        set((state) => ({
-            ...indexes,
-            loadedChildren: { ...state.loadedChildren, [ROOT_PARENT]: true },
-        }));
-    } catch (error) {
-        console.warn("Organization refresh after mutation failed", error);
-    }
-}
-
 function withActiveNodes(
     state: OrganizationState,
     nodesById: Record<string, OrganizationNode>,
 ): Partial<OrganizationState> {
-    const indexes = buildIndexes(Object.values(nodesById));
     return {
-        ...indexes,
+        ...buildIndexes(Object.values(nodesById)),
         loadedChildren: { ...state.loadedChildren, [ROOT_PARENT]: true },
     };
 }
 
-export const useOrganizationState = create<OrganizationState>((set) => ({
+function invalidateReads(): void {
+    stateGeneration += 1;
+}
+
+function beginActiveLoading(set: OrganizationSetState): number {
+    activeLoadingCount += 1;
+    set({ loading: true });
+    return activeLoadingEpoch;
+}
+
+function endActiveLoading(set: OrganizationSetState, epoch: number): void {
+    if (epoch !== activeLoadingEpoch) return;
+    activeLoadingCount = Math.max(0, activeLoadingCount - 1);
+    set({ loading: activeLoadingCount > 0 });
+}
+
+function beginDeletedLoading(set: OrganizationSetState): number {
+    deletedLoadingCount += 1;
+    set({ deletedLoading: true });
+    return deletedLoadingEpoch;
+}
+
+function endDeletedLoading(set: OrganizationSetState, epoch: number): void {
+    if (epoch !== deletedLoadingEpoch) return;
+    deletedLoadingCount = Math.max(0, deletedLoadingCount - 1);
+    set({ deletedLoading: deletedLoadingCount > 0 });
+}
+
+async function runActiveRead(
+    set: OrganizationSetState,
+    parentId: string,
+    blocking: boolean,
+): Promise<void> {
+    const capturedGeneration = stateGeneration;
+    const requestSequence = ++activeReadSequence;
+    const loadingEpoch = blocking ? beginActiveLoading(set) : null;
+    try {
+        const indexes = buildIndexes(await organizationService.list());
+        if (capturedGeneration !== stateGeneration || requestSequence !== activeReadSequence) return;
+        set((state) => ({
+            ...indexes,
+            loadedChildren: { ...state.loadedChildren, [parentId]: true },
+        }));
+    } finally {
+        if (loadingEpoch !== null) endActiveLoading(set, loadingEpoch);
+    }
+}
+
+async function runDeletedRead(set: OrganizationSetState): Promise<void> {
+    const capturedGeneration = stateGeneration;
+    const requestSequence = ++deletedReadSequence;
+    const loadingEpoch = beginDeletedLoading(set);
+    try {
+        const deletedNodesById = indexDeleted(await organizationService.listDeleted());
+        if (capturedGeneration !== stateGeneration || requestSequence !== deletedReadSequence) return;
+        set({ deletedNodesById });
+    } finally {
+        endDeletedLoading(set, loadingEpoch);
+    }
+}
+
+function refreshAfterMutation(set: OrganizationSetState): void {
+    runActiveRead(set, ROOT_PARENT, false).catch((error: unknown) => {
+        console.warn("Organization refresh after mutation failed", error);
+    });
+}
+
+function beginMutation(set: OrganizationSetState): number {
+    invalidateReads();
+    return beginActiveLoading(set);
+}
+
+function completeMutation(set: OrganizationSetState): void {
+    invalidateReads();
+    refreshAfterMutation(set);
+}
+
+function failMutation(): void {
+    invalidateReads();
+}
+
+function normalizeDate(value: string | null | undefined): string | null {
+    const normalized = value?.trim();
+    return normalized || null;
+}
+
+export const useOrganizationState = create<OrganizationState>((set, get) => ({
     nodesById: {},
     deletedNodesById: {},
     childrenByParent: {},
@@ -90,53 +167,33 @@ export const useOrganizationState = create<OrganizationState>((set) => ({
     deletedLoading: false,
 
     async refresh() {
-        set({ loading: true });
-        try {
-            const indexes = await reloadIndexes();
-            set((state) => ({
-                ...indexes,
-                loadedChildren: { ...state.loadedChildren, [ROOT_PARENT]: true },
-            }));
-        } finally {
-            set({ loading: false });
-        }
+        await runActiveRead(set, ROOT_PARENT, true);
     },
 
     async loadChildren(parentId = ROOT_PARENT) {
-        set({ loading: true });
-        try {
-            const indexes = await reloadIndexes();
-            set((state) => ({
-                ...indexes,
-                loadedChildren: { ...state.loadedChildren, [parentId]: true },
-            }));
-        } finally {
-            set({ loading: false });
-        }
+        await runActiveRead(set, parentId, true);
     },
 
     async loadDeleted() {
-        set({ deletedLoading: true });
-        try {
-            set({ deletedNodesById: indexDeleted(await organizationService.listDeleted()) });
-        } finally {
-            set({ deletedLoading: false });
-        }
+        await runDeletedRead(set);
     },
 
     async createNode(payload) {
-        set({ loading: true });
+        const loadingEpoch = beginMutation(set);
         try {
             const result = await organizationService.create(payload);
+            const code = payload.code.trim().toLocaleUpperCase("en-US");
             const confirmed: OrganizationNode = {
                 id: result.entityId,
-                code: payload.code.trim().toLocaleUpperCase("en-US"),
-                displayLabel: payload.code.trim().toLocaleUpperCase("en-US"),
-                parentOrganizationId: payload.parentOrganizationId ?? null,
+                code,
+                displayLabel: code,
+                parentOrganizationId: payload.parentOrganizationId?.trim() || null,
                 status: "ACTIVE",
-                validFrom: payload.validFrom ?? null,
-                validTo: payload.validTo ?? null,
+                validFrom: normalizeDate(payload.validFrom),
+                validTo: normalizeDate(payload.validTo),
                 version: result.version,
+                deletedAt: null,
+                deletedBy: null,
             };
             set((state) => ({
                 ...withActiveNodes(state, { ...state.nodesById, [confirmed.id]: confirmed }),
@@ -144,144 +201,167 @@ export const useOrganizationState = create<OrganizationState>((set) => ({
                     Object.entries(state.deletedNodesById).filter(([id]) => id !== confirmed.id),
                 ),
             }));
-            void refreshAfterMutation(set);
+            completeMutation(set);
             return result;
+        } catch (error) {
+            failMutation();
+            throw error;
         } finally {
-            set({ loading: false });
+            endActiveLoading(set, loadingEpoch);
         }
     },
 
     async updateNode(id, payload) {
-        set({ loading: true });
+        const current = get().nodesById[id];
+        if (!current) throw new Error("ORGANIZATION_NOT_FOUND");
+        const loadingEpoch = beginMutation(set);
         try {
             const result = await organizationService.update(id, payload);
-            set((state) => {
-                const current = state.nodesById[id];
-                if (!current) return {};
-                return withActiveNodes(state, {
-                    ...state.nodesById,
-                    [id]: {
-                        ...current,
-                        validFrom: payload.validFrom ?? null,
-                        validTo: payload.validTo ?? null,
-                        version: result.version,
-                    },
-                });
-            });
-            void refreshAfterMutation(set);
+            set((state) => withActiveNodes(state, {
+                ...state.nodesById,
+                [id]: {
+                    ...current,
+                    validFrom: normalizeDate(payload.validFrom),
+                    validTo: normalizeDate(payload.validTo),
+                    version: result.version,
+                },
+            }));
+            completeMutation(set);
             return result;
+        } catch (error) {
+            failMutation();
+            throw error;
         } finally {
-            set({ loading: false });
+            endActiveLoading(set, loadingEpoch);
         }
     },
 
     async moveNode(id, payload) {
-        set({ loading: true });
+        const current = get().nodesById[id];
+        if (!current) throw new Error("ORGANIZATION_NOT_FOUND");
+        const loadingEpoch = beginMutation(set);
         try {
             const result = await organizationService.move(id, payload);
-            set((state) => {
-                const current = state.nodesById[id];
-                if (!current) return {};
-                return withActiveNodes(state, {
-                    ...state.nodesById,
-                    [id]: {
-                        ...current,
-                        parentOrganizationId: payload.parentOrganizationId ?? null,
-                        version: result.version,
-                    },
-                });
-            });
-            void refreshAfterMutation(set);
+            set((state) => withActiveNodes(state, {
+                ...state.nodesById,
+                [id]: {
+                    ...current,
+                    parentOrganizationId: payload.parentOrganizationId?.trim() || null,
+                    version: result.version,
+                },
+            }));
+            completeMutation(set);
             return result;
+        } catch (error) {
+            failMutation();
+            throw error;
         } finally {
-            set({ loading: false });
+            endActiveLoading(set, loadingEpoch);
         }
     },
 
     async activateNode(id, payload) {
-        set({ loading: true });
+        const current = get().nodesById[id];
+        if (!current) throw new Error("ORGANIZATION_NOT_FOUND");
+        const loadingEpoch = beginMutation(set);
         try {
             const result = await organizationService.activate(id, payload);
-            set((state) => {
-                const current = state.nodesById[id];
-                return current
-                    ? withActiveNodes(state, {
-                          ...state.nodesById,
-                          [id]: { ...current, status: "ACTIVE", version: result.version },
-                      })
-                    : {};
-            });
-            void refreshAfterMutation(set);
+            set((state) => withActiveNodes(state, {
+                ...state.nodesById,
+                [id]: { ...current, status: "ACTIVE", version: result.version },
+            }));
+            completeMutation(set);
             return result;
+        } catch (error) {
+            failMutation();
+            throw error;
         } finally {
-            set({ loading: false });
+            endActiveLoading(set, loadingEpoch);
         }
     },
 
     async inactivateNode(id, payload) {
-        set({ loading: true });
+        const current = get().nodesById[id];
+        if (!current) throw new Error("ORGANIZATION_NOT_FOUND");
+        const loadingEpoch = beginMutation(set);
         try {
             const result = await organizationService.inactivate(id, payload);
-            set((state) => {
-                const current = state.nodesById[id];
-                return current
-                    ? withActiveNodes(state, {
-                          ...state.nodesById,
-                          [id]: { ...current, status: "INACTIVE", version: result.version },
-                      })
-                    : {};
-            });
-            void refreshAfterMutation(set);
+            set((state) => withActiveNodes(state, {
+                ...state.nodesById,
+                [id]: { ...current, status: "INACTIVE", version: result.version },
+            }));
+            completeMutation(set);
             return result;
+        } catch (error) {
+            failMutation();
+            throw error;
         } finally {
-            set({ loading: false });
+            endActiveLoading(set, loadingEpoch);
         }
     },
 
     async removeNode(id, payload) {
-        set({ loading: true });
+        const current = get().nodesById[id];
+        if (!current) throw new Error("ORGANIZATION_NOT_FOUND");
+        const loadingEpoch = beginMutation(set);
         try {
             const result = await organizationService.delete(id, payload);
             set((state) => {
-                const current = state.nodesById[id];
                 const active = { ...state.nodesById };
                 delete active[id];
                 return {
                     ...withActiveNodes(state, active),
-                    deletedNodesById: current
-                        ? {
-                              ...state.deletedNodesById,
-                              [id]: { ...current, status: "DELETED", version: result.version },
-                          }
-                        : state.deletedNodesById,
+                    deletedNodesById: {
+                        ...state.deletedNodesById,
+                        [id]: { ...current, status: "DELETED", version: result.version },
+                    },
                 };
             });
-            void refreshAfterMutation(set);
+            completeMutation(set);
             return result;
+        } catch (error) {
+            failMutation();
+            throw error;
         } finally {
-            set({ loading: false });
+            endActiveLoading(set, loadingEpoch);
         }
     },
 
     async restoreNode(node, payload) {
-        set({ loading: true });
+        const loadingEpoch = beginMutation(set);
         try {
             const result = await organizationService.restore(node.id, payload);
-            const restored = { ...node, status: "ACTIVE" as const, version: result.version };
+            const restored: OrganizationNode = {
+                ...node,
+                status: "ACTIVE",
+                version: result.version,
+                deletedAt: null,
+                deletedBy: null,
+            };
             set((state) => ({
                 ...withActiveNodes(state, { ...state.nodesById, [node.id]: restored }),
                 deletedNodesById: Object.fromEntries(
                     Object.entries(state.deletedNodesById).filter(([id]) => id !== node.id),
                 ),
             }));
-            void refreshAfterMutation(set);
+            completeMutation(set);
             return result;
+        } catch (error) {
+            failMutation();
+            throw error;
         } finally {
-            set({ loading: false });
+            endActiveLoading(set, loadingEpoch);
         }
     },
 
     reset() {
+        invalidateReads();
+        activeReadSequence += 1;
+        deletedReadSequence += 1;
+        activeLoadingEpoch += 1;
+        deletedLoadingEpoch += 1;
+        activeLoadingCount = 0;
+        deletedLoadingCount = 0;
         set({
             nodesById: {},
             deletedNodesById: {},

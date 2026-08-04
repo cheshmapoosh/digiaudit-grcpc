@@ -28,10 +28,6 @@ public interface CentralProcessRepository extends JpaRepository<CentralProcessEn
     Optional<CentralProcessEntity> lockById(@Param("id") UUID id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select process from CentralProcessEntity process where upper(process.code) = upper(:code)")
-    Optional<CentralProcessEntity> lockByNormalizedCode(@Param("code") String code);
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select process from CentralProcessEntity process where process.status <> :deletedStatus")
-    List<CentralProcessEntity> lockAllNonDeleted(@Param("deletedStatus") MasterDataLifecycleStatus deletedStatus);
+    @Query("select process from CentralProcessEntity process order by process.id")
+    List<CentralProcessEntity> lockProcessHierarchyOrderedById();
 }

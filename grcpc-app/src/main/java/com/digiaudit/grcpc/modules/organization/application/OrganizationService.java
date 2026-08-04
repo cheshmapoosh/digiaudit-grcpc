@@ -78,10 +78,11 @@ public class OrganizationService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrganizationResponse> findAll(MasterDataLifecycleStatus lifecycleStatus) {
-        List<OrganizationEntity> organizations = lifecycleStatus == null
+    public List<OrganizationResponse> findAll(String lifecycleStatus) {
+        MasterDataLifecycleStatus requestedStatus = parseLifecycleFilter(lifecycleStatus);
+        List<OrganizationEntity> organizations = requestedStatus == null
                 ? organizationRepository.findByStatusNotOrderByCodeAscIdAsc(DELETED)
-                : organizationRepository.findByStatusOrderByCodeAscIdAsc(lifecycleStatus);
+                : organizationRepository.findByStatusOrderByCodeAscIdAsc(requestedStatus);
         return organizations
                 .stream()
                 .sorted(ORGANIZATION_ORDER)
@@ -155,11 +156,13 @@ public class OrganizationService {
     ) {
         UUID actorId = actorProvider.currentActorId();
         Instant now = Instant.now(clock);
-        OrganizationEntity entity = organizationRepository.lockByNormalizedCode(code).orElse(null);
+        List<OrganizationEntity> hierarchy = organizationRepository.lockOrganizationHierarchyOrderedById();
+        Map<UUID, OrganizationEntity> byId = indexById(hierarchy);
+        OrganizationEntity entity = findByNormalizedCode(hierarchy, code);
 
         if (entity == null) {
             UUID entityId = UUID.randomUUID();
-            lockAndValidateParent(entityId, request.parentOrganizationId());
+            validateParent(entityId, request.parentOrganizationId(), byId);
             OrganizationEntity created = OrganizationEntity.create(
                     entityId,
                     code,
@@ -178,7 +181,7 @@ public class OrganizationService {
             throw duplicateCode(code);
         }
 
-        lockAndValidateParent(entity.getId(), request.parentOrganizationId());
+        validateParent(entity.getId(), request.parentOrganizationId(), byId);
         RevisionOperationType operationType = entity.getStatus() == MasterDataLifecycleStatus.DELETED
                 ? RevisionOperationType.RESTORE
                 : RevisionOperationType.ACTIVATE;
@@ -215,11 +218,16 @@ public class OrganizationService {
             long expectedVersion,
             UUID parentOrganizationId
     ) {
-        OrganizationEntity entity = lockExisting(organizationId, "ORGANIZATION_NOT_FOUND");
+        List<OrganizationEntity> hierarchy = organizationRepository.lockOrganizationHierarchyOrderedById();
+        Map<UUID, OrganizationEntity> byId = indexById(hierarchy);
+        OrganizationEntity entity = requireFromSnapshot(byId, organizationId);
         assertVersion(entity, expectedVersion);
         requireMutable(entity);
+        if (Objects.equals(entity.getParentOrganizationId(), parentOrganizationId)) {
+            throw invalidHierarchyMove();
+        }
         JsonNode before = snapshot(entity);
-        lockAndValidateParent(organizationId, parentOrganizationId);
+        validateParent(organizationId, parentOrganizationId, byId);
         entity.move(parentOrganizationId, actorProvider.currentActorId(), Instant.now(clock));
         OrganizationEntity saved = organizationRepository.saveAndFlush(entity);
         return completed(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
@@ -244,14 +252,21 @@ public class OrganizationService {
             long expectedVersion,
             RevisionOperationType operationType
     ) {
-        OrganizationEntity entity = lockExisting(organizationId, "ORGANIZATION_NOT_FOUND");
+        Map<UUID, OrganizationEntity> hierarchyById = null;
+        OrganizationEntity entity;
+        if (operationType == RevisionOperationType.DELETE || operationType == RevisionOperationType.RESTORE) {
+            hierarchyById = indexById(organizationRepository.lockOrganizationHierarchyOrderedById());
+            entity = requireFromSnapshot(hierarchyById, organizationId);
+        } else {
+            entity = lockExisting(organizationId, "ORGANIZATION_NOT_FOUND");
+        }
         assertVersion(entity, expectedVersion);
         validateLifecycleTransition(entity, operationType);
         if (operationType == RevisionOperationType.DELETE) {
-            validateDeleteDependencies(entity.getId());
+            validateDeleteDependencies(entity.getId(), hierarchyById);
         }
         if (operationType == RevisionOperationType.RESTORE) {
-            validateRestoreParent(entity);
+            validateRestoreParent(entity, hierarchyById);
             validateValidity(entity.getValidFrom(), entity.getValidTo());
         }
 
@@ -293,9 +308,11 @@ public class OrganizationService {
         );
     }
 
-    private void lockAndValidateParent(UUID organizationId, UUID parentOrganizationId) {
-        List<OrganizationEntity> locked = organizationRepository.lockAllNonDeleted(DELETED);
-        Map<UUID, OrganizationEntity> byId = indexById(locked);
+    private void validateParent(
+            UUID organizationId,
+            UUID parentOrganizationId,
+            Map<UUID, OrganizationEntity> byId
+    ) {
         if (parentOrganizationId == null) {
             return;
         }
@@ -303,18 +320,19 @@ public class OrganizationService {
             throw hierarchySelfParent();
         }
         OrganizationEntity parent = byId.get(parentOrganizationId);
-        if (parent == null) {
+        if (parent == null || parent.getStatus() == DELETED) {
             throw new NotFoundException("PARENT_ORGANIZATION_NOT_FOUND", "error.masterdata.v2.parentOrganizationNotFound", "Parent organization not found: " + parentOrganizationId, parentOrganizationId);
         }
         validateNoCycle(organizationId, parentOrganizationId, byId);
     }
 
-    private void validateRestoreParent(OrganizationEntity entity) {
+    private void validateRestoreParent(OrganizationEntity entity, Map<UUID, OrganizationEntity> byId) {
         UUID parentOrganizationId = entity.getParentOrganizationId();
         if (parentOrganizationId == null) {
             return;
         }
-        if (!organizationRepository.existsByIdAndStatusNot(parentOrganizationId, DELETED)) {
+        OrganizationEntity parent = byId.get(parentOrganizationId);
+        if (parent == null || parent.getStatus() == DELETED) {
             throw new NotFoundException("PARENT_ORGANIZATION_NOT_FOUND", "error.masterdata.v2.parentOrganizationNotFound", "Parent organization not found: " + parentOrganizationId, parentOrganizationId);
         }
     }
@@ -330,15 +348,20 @@ public class OrganizationService {
                 throw hierarchyCycle();
             }
             OrganizationEntity parent = byId.get(current);
-            if (parent == null) {
+            if (parent == null || parent.getStatus() == DELETED) {
                 throw new NotFoundException("PARENT_ORGANIZATION_NOT_FOUND", "error.masterdata.v2.parentOrganizationNotFound", "Parent organization not found: " + current, current);
             }
             current = parent.getParentOrganizationId();
         }
     }
 
-    private void validateDeleteDependencies(UUID organizationId) {
-        if (organizationRepository.existsByParentOrganizationIdAndStatusNot(organizationId, DELETED)) {
+    private void validateDeleteDependencies(
+            UUID organizationId,
+            Map<UUID, OrganizationEntity> byId
+    ) {
+        if (byId.values().stream().anyMatch(organization ->
+                organization.getStatus() != DELETED
+                        && organizationId.equals(organization.getParentOrganizationId()))) {
             throw new ConflictException("DEPENDENT_CHILDREN_EXIST", "error.masterdata.v2.dependentChildrenExist", "Organization has child organizations: " + organizationId, organizationId);
         }
         if (dependencyChecker.organizationHasApprovedDependencies(organizationId)) {
@@ -349,6 +372,22 @@ public class OrganizationService {
     private OrganizationEntity lockExisting(UUID organizationId, String errorCode) {
         OrganizationEntity entity = organizationRepository.lockById(organizationId)
                 .orElseThrow(() -> new NotFoundException(errorCode, "error.masterdata.v2.organizationNotFound", "Organization not found: " + organizationId, organizationId));
+        return entity;
+    }
+
+    private OrganizationEntity requireFromSnapshot(
+            Map<UUID, OrganizationEntity> byId,
+            UUID organizationId
+    ) {
+        OrganizationEntity entity = byId.get(organizationId);
+        if (entity == null) {
+            throw new NotFoundException(
+                    "ORGANIZATION_NOT_FOUND",
+                    "error.masterdata.v2.organizationNotFound",
+                    "Organization not found: " + organizationId,
+                    organizationId
+            );
+        }
         return entity;
     }
 
@@ -425,6 +464,38 @@ public class OrganizationService {
 
     private UnprocessableEntityException hierarchyCycle() {
         return new UnprocessableEntityException("HIERARCHY_CYCLE", "error.masterdata.v2.hierarchyCycle", "Organization hierarchy cycle detected");
+    }
+
+    private UnprocessableEntityException invalidHierarchyMove() {
+        return new UnprocessableEntityException(
+                "INVALID_HIERARCHY_MOVE",
+                "error.masterdata.v2.invalidHierarchyMove",
+                "Organization move destination must differ from its current parent"
+        );
+    }
+
+    private MasterDataLifecycleStatus parseLifecycleFilter(String lifecycleStatus) {
+        if (lifecycleStatus == null) {
+            return null;
+        }
+        if (DELETED.name().equals(lifecycleStatus)) {
+            return DELETED;
+        }
+        throw new UnprocessableEntityException(
+                "INVALID_LIFECYCLE_FILTER",
+                "error.masterdata.v2.invalidLifecycleFilter",
+                "Only the deleted lifecycle filter is supported"
+        );
+    }
+
+    private OrganizationEntity findByNormalizedCode(
+            List<OrganizationEntity> organizations,
+            String code
+    ) {
+        return organizations.stream()
+                .filter(organization -> organization.getCode().equalsIgnoreCase(code))
+                .findFirst()
+                .orElse(null);
     }
 
     private Map<UUID, OrganizationEntity> indexById(List<OrganizationEntity> organizations) {

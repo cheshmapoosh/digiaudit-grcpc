@@ -3,6 +3,7 @@ import {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
     type CSSProperties,
 } from "react";
@@ -81,6 +82,10 @@ function mapError(
             return t("organization.errors.invalidHierarchy", {
                 defaultValue: "ساختار سلسله‌مراتبی سازمان معتبر نیست",
             });
+        case "INVALID_HIERARCHY_MOVE":
+            return t("organization.errors.invalidHierarchyMove", {
+                defaultValue: "The destination must differ from the current parent.",
+            });
         case "DEPENDENT_CHILDREN_EXIST":
         case "HAS_CHILDREN":
             return t("organization.errors.hasChildren", {
@@ -93,6 +98,10 @@ function mapError(
         case "INVALID_LIFECYCLE_TRANSITION":
             return t("organization.errors.invalidLifecycleTransition", {
                 defaultValue: "This lifecycle action is not valid for the current status.",
+            });
+        case "INVALID_LIFECYCLE_FILTER":
+            return t("organization.errors.invalidLifecycleFilter", {
+                defaultValue: "The selected lifecycle filter is not supported.",
             });
         case "VERSION_CONFLICT":
             return t("organization.errors.versionConflict", {
@@ -219,6 +228,45 @@ export default function OrganizationsFclShellPage() {
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
     const [deletedDialogOpen, setDeletedDialogOpen] = useState(false);
     const [savedCreateNode, setSavedCreateNode] = useState<OrganizationNode | null>(null);
+    const [hasPendingDocuments, setHasPendingDocuments] = useState(false);
+    const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
+    const pendingLeaveActionRef = useRef<(() => void) | null>(null);
+
+    const requestObjectPageLeave = useCallback((action: () => void) => {
+        if (!hasPendingDocuments) {
+            action();
+            return;
+        }
+        pendingLeaveActionRef.current = action;
+        setLeaveConfirmationOpen(true);
+    }, [hasPendingDocuments]);
+
+    const stayOnObjectPage = useCallback(() => {
+        pendingLeaveActionRef.current = null;
+        setLeaveConfirmationOpen(false);
+    }, []);
+
+    const confirmObjectPageLeave = useCallback(() => {
+        const action = pendingLeaveActionRef.current;
+        pendingLeaveActionRef.current = null;
+        setLeaveConfirmationOpen(false);
+        setHasPendingDocuments(false);
+        action?.();
+    }, []);
+
+    useEffect(() => {
+        if (!hasPendingDocuments) return;
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            event.preventDefault();
+            event.returnValue = "";
+        };
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [hasPendingDocuments]);
+
+    useEffect(() => () => {
+        useOrganizationState.getState().reset();
+    }, []);
 
     const items = useMemo(() => sortOrganizations(Object.values(nodesById)), [nodesById]);
     const selectedRouteItem = organizationId ? nodesById[organizationId] ?? null : null;
@@ -294,25 +342,32 @@ export default function OrganizationsFclShellPage() {
 
     const handleShow = useCallback(
         (id: string) => {
-            setObjectError(null);
-            setSelectedTreeId(id);
-            setTreeExpansionAnchorId(id);
-            navigate(`/organizations/${id}`);
+            const show = () => {
+                setObjectError(null);
+                setSelectedTreeId(id);
+                setTreeExpansionAnchorId(id);
+                navigate(`/organizations/${id}`);
+            };
+            if (routeMode === "create" || (organizationId && organizationId !== id)) {
+                requestObjectPageLeave(show);
+            } else {
+                show();
+            }
         },
-        [navigate],
+        [navigate, organizationId, requestObjectPageLeave, routeMode],
     );
 
     const handleCreate = useCallback(() => {
-        setObjectError(null);
-
-        if (selectedTreeId) {
-            setTreeExpansionAnchorId(selectedTreeId);
-            navigate(`/organizations/new?parentId=${encodeURIComponent(selectedTreeId)}`);
-            return;
-        }
-
-        navigate("/organizations/new");
-    }, [navigate, selectedTreeId]);
+        requestObjectPageLeave(() => {
+            setObjectError(null);
+            if (selectedTreeId) {
+                setTreeExpansionAnchorId(selectedTreeId);
+                navigate(`/organizations/new?parentId=${encodeURIComponent(selectedTreeId)}`);
+                return;
+            }
+            navigate("/organizations/new");
+        });
+    }, [navigate, requestObjectPageLeave, selectedTreeId]);
 
     const handleEdit = useCallback(
         (id?: string) => {
@@ -322,34 +377,38 @@ export default function OrganizationsFclShellPage() {
                 return;
             }
 
-            setObjectError(null);
-            setSelectedTreeId(targetId);
-            setTreeExpansionAnchorId(targetId);
-            navigate(`/organizations/${targetId}/edit`);
+            const edit = () => {
+                setObjectError(null);
+                setSelectedTreeId(targetId);
+                setTreeExpansionAnchorId(targetId);
+                navigate(`/organizations/${targetId}/edit`);
+            };
+            if (routeMode === "create" || (organizationId && organizationId !== targetId)) {
+                requestObjectPageLeave(edit);
+            } else {
+                edit();
+            }
         },
-        [navigate, organizationId, selectedTreeId],
+        [navigate, organizationId, requestObjectPageLeave, routeMode, selectedTreeId],
     );
 
     const handleCancel = useCallback(() => {
-        setObjectError(null);
-
-        if (savedCreateNode) {
-            navigate(`/organizations/${savedCreateNode.id}`);
-            return;
-        }
-
-        const currentAnchorId =
-            routeMode === "create"
+        requestObjectPageLeave(() => {
+            setObjectError(null);
+            if (savedCreateNode) {
+                navigate(`/organizations/${savedCreateNode.id}`);
+                return;
+            }
+            const currentAnchorId = routeMode === "create"
                 ? queryParentId ?? selectedTreeId
                 : organizationId ?? selectedTreeId;
-
-        if (currentAnchorId) {
-            setSelectedTreeId(currentAnchorId);
-            setTreeExpansionAnchorId(currentAnchorId);
-        }
-
-        navigate("/organizations");
-    }, [navigate, organizationId, queryParentId, routeMode, savedCreateNode, selectedTreeId]);
+            if (currentAnchorId) {
+                setSelectedTreeId(currentAnchorId);
+                setTreeExpansionAnchorId(currentAnchorId);
+            }
+            navigate("/organizations");
+        });
+    }, [navigate, organizationId, queryParentId, requestObjectPageLeave, routeMode, savedCreateNode, selectedTreeId]);
 
     const handleSubmitCreate = useCallback(
         async (payload: OrganizationNodeCreate | OrganizationNodeUpdate) => {
@@ -422,10 +481,10 @@ export default function OrganizationsFclShellPage() {
     );
 
     const handleMove = useCallback(
-        async (payload: Parameters<typeof moveNode>[1]) => {
+        async (payload: Parameters<typeof moveNode>[1]): Promise<boolean> => {
             const target = selectedRouteItem ?? savedCreateNode;
             if (!target) {
-                return;
+                return false;
             }
 
             try {
@@ -440,9 +499,7 @@ export default function OrganizationsFclShellPage() {
 
                 setSelectedTreeId(target.id);
                 setTreeExpansionAnchorId(payload.parentOrganizationId ?? target.id);
-                if (!savedCreateNode) {
-                    navigate(`/organizations/${target.id}`);
-                }
+                return true;
             } catch (error) {
                 setObjectError(
                     mapError(
@@ -453,11 +510,12 @@ export default function OrganizationsFclShellPage() {
                         t,
                     ),
                 );
+                return false;
             } finally {
                 setSubmitting(false);
             }
         },
-        [moveNode, navigate, savedCreateNode, selectedRouteItem, t],
+        [moveNode, savedCreateNode, selectedRouteItem, t],
     );
 
     const handleActivate = useCallback(async (node: OrganizationNode) => {
@@ -769,6 +827,7 @@ export default function OrganizationsFclShellPage() {
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
                             onActiveTabChange={setObjectActiveTab}
+                            onPendingDocumentsChange={setHasPendingDocuments}
                         />
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>
@@ -779,6 +838,21 @@ export default function OrganizationsFclShellPage() {
                     )}
                 </div>
             </Dialog>
+
+            <DeleteConfirmDialog
+                open={leaveConfirmationOpen}
+                title={t("organization.documents.pendingLeave.title", {
+                    defaultValue: "Unfinished document upload",
+                })}
+                message={t("organization.documents.pendingLeave.message", {
+                    defaultValue: "A staged document still needs attention. Leaving will lose its local reference.",
+                })}
+                confirmText={t("organization.documents.pendingLeave.leave", { defaultValue: "Leave" })}
+                cancelText={t("organization.documents.pendingLeave.stay", { defaultValue: "Stay" })}
+                loading={false}
+                onClose={stayOnObjectPage}
+                onConfirm={confirmObjectPageLeave}
+            />
 
             <DeleteConfirmDialog
                 open={Boolean(deleteCandidate)}
@@ -794,7 +868,9 @@ export default function OrganizationsFclShellPage() {
                 loading={submitting}
                 onClose={() => setDeleteCandidate(null)}
                 onConfirm={() => {
-                    void handleConfirmDelete();
+                    requestObjectPageLeave(() => {
+                        void handleConfirmDelete();
+                    });
                 }}
             />
 

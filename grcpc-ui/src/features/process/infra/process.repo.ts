@@ -6,11 +6,10 @@ import type {
     ProcessNodeCreate,
     ProcessNodeUpdate,
     ProcessNodeType,
-    ProcessStatus,
 } from "../domain/process.model";
 
 export interface ProcessRepo {
-    list(lifecycleStatus?: ProcessStatus): Promise<ProcessNode[]>;
+    list(lifecycleStatus?: "DELETED"): Promise<ProcessNode[]>;
     getById(id: string, nodeType?: ProcessNodeType): Promise<ProcessNode | null>;
     create(payload: ProcessNodeCreate): Promise<MasterDataRevisionMutationResponse>;
     update(

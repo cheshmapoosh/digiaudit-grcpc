@@ -69,10 +69,11 @@ export interface ProcessObjectPageProps {
     error?: string | null;
     onErrorClose?: () => void;
     onSubmit: (payload: ProcessNodeCreate | ProcessNodeUpdate) => Promise<void> | void;
-    onMove?: (payload: ProcessMoveCommand) => Promise<void> | void;
+    onMove?: (payload: ProcessMoveCommand) => Promise<boolean>;
     onCancel: () => void;
     onEdit?: () => void;
     onActiveTabChange?: (tab: ProcessTabKey) => void;
+    onPendingDocumentsChange?: (hasPending: boolean) => void;
 }
 
 const ROOT_STYLE: CSSProperties = {
@@ -369,6 +370,7 @@ export default function ProcessObjectPage({
     onCancel,
     onEdit,
     onActiveTabChange,
+    onPendingDocumentsChange,
 }: ProcessObjectPageProps) {
     const { t } = useTranslation();
     const [form, setForm] = useState<ProcessFormState>(() =>
@@ -378,6 +380,7 @@ export default function ProcessObjectPage({
     const [internalActiveTab, setInternalActiveTab] = useState<ProcessTabKey>("general");
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
     const [moveParentId, setMoveParentId] = useState<string | null>(value?.parentId ?? null);
+    const [formSourceId, setFormSourceId] = useState(value?.id || null);
 
     const readOnly = mode === "view";
     const activeTab = controlledActiveTab ?? internalActiveTab;
@@ -393,6 +396,10 @@ export default function ProcessObjectPage({
             (item) => item.nodeType === "PROCESS" && !excluded.has(item.id),
         );
     }, [allItems, value]);
+    const moveCandidateInvalid = !value
+        || (value.nodeType === "SUBPROCESS" && !moveParentId)
+        || (moveParentId !== null && !processParents.some((item) => item.id === moveParentId));
+    const moveCandidateUnchanged = moveParentId === (value?.parentId ?? null);
     const selectedParent = form.parentId
         ? allItems.find((item) => item.id === form.parentId) ?? null
         : null;
@@ -403,6 +410,12 @@ export default function ProcessObjectPage({
         form.title || value?.title || t("process.object.modalTitle", {
             defaultValue: "مرکز فرآیند",
         });
+
+    if (!formSourceId && value?.id) {
+        setFormSourceId(value.id);
+        setForm(toFormState(value, parent, requestedNodeType));
+        setMoveParentId(value.parentId ?? null);
+    }
 
     const handleActiveTabChange = (tab: ProcessTabKey) => {
         if (controlledActiveTab === undefined) {
@@ -498,6 +511,14 @@ export default function ProcessObjectPage({
             validFrom: normalizeOptionalText(form.validFrom),
             validTo: normalizeOptionalText(form.validTo),
         });
+    };
+
+    const handleMoveConfirm = async () => {
+        if (!value || !onMove || moveCandidateInvalid || moveCandidateUnchanged) return;
+        const succeeded = await onMove({ parentId: moveParentId, version: value.version });
+        if (!succeeded) return;
+        setForm((current) => ({ ...current, parentId: moveParentId }));
+        setMoveDialogOpen(false);
     };
 
     const renderGeneralTab = () => (
@@ -609,27 +630,28 @@ export default function ProcessObjectPage({
             targetId={value?.id || null}
             readOnly={readOnly}
             showActions={!readOnly}
+            onPendingUploadsChange={onPendingDocumentsChange}
             saveFirstMessage={t("process.documents.saveFirst", {
                 defaultValue: "ابتدا آیتم فرآیندی را ذخیره کنید، سپس مستندات را نهایی کنید.",
             })}
         />
     );
 
-    const renderTabContent = (tab: ProcessTabKey) => {
-        if (tab === "general") {
-            return renderGeneralTab();
-        }
-
-        if (tab === "documents") {
-            return renderDocumentsTab();
-        }
-
-        return (
-            <DocumentIntegrationDeferredMessage
-                title={resolveTabLabel(tab, t)}
-            />
-        );
-    };
+    const renderTabPanels = () => (
+        <>
+            <div style={{ display: activeTab === "general" ? "block" : "none" }}>
+                {renderGeneralTab()}
+            </div>
+            {tabs.filter((tab) => tab !== "general" && tab !== "documents").map((tab) => (
+                <div key={tab} style={{ display: activeTab === tab ? "block" : "none" }}>
+                    <DocumentIntegrationDeferredMessage title={resolveTabLabel(tab, t)} />
+                </div>
+            ))}
+            <div style={{ display: activeTab === "documents" ? "block" : "none" }}>
+                {renderDocumentsTab()}
+            </div>
+        </>
+    );
 
     const renderFooterActions = () => (
         <div style={FOOTER_STYLE}>
@@ -742,7 +764,7 @@ export default function ProcessObjectPage({
             ) : null}
 
             <div style={BODY_STYLE}>
-                {renderTabContent(tabs.includes(activeTab) ? activeTab : "general")}
+                {renderTabPanels()}
             </div>
 
             {renderFooterActions()}
@@ -750,11 +772,15 @@ export default function ProcessObjectPage({
             <Dialog
                 open={moveDialogOpen}
                 accessibleName={t("process.move.title", { defaultValue: "Move" })}
-                onClose={() => setMoveDialogOpen(false)}
+                onClose={() => {
+                    if (!busy) setMoveDialogOpen(false);
+                }}
             >
                 <ModalDialogHeader
                     title={t("process.move.title", { defaultValue: "Move" })}
-                    onClose={() => setMoveDialogOpen(false)}
+                    onClose={() => {
+                        if (!busy) setMoveDialogOpen(false);
+                    }}
                 />
                 <div style={{ display: "grid", gap: "1rem", minWidth: "28rem" }}>
                     <Select
@@ -782,16 +808,16 @@ export default function ProcessObjectPage({
                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
                         <Button
                             design="Emphasized"
-                            disabled={busy || !value || (value.nodeType === "SUBPROCESS" && !moveParentId)}
-                            onClick={() => {
-                                if (!value || !onMove) return;
-                                setMoveDialogOpen(false);
-                                void onMove({ parentId: moveParentId, version: value.version });
-                            }}
+                            disabled={busy || !onMove || moveCandidateInvalid || moveCandidateUnchanged}
+                            onClick={() => { void handleMoveConfirm(); }}
                         >
                             {t("process.move.confirm", { defaultValue: "Move" })}
                         </Button>
-                        <Button design="Transparent" onClick={() => setMoveDialogOpen(false)}>
+                        <Button
+                            design="Transparent"
+                            disabled={busy}
+                            onClick={() => setMoveDialogOpen(false)}
+                        >
                             {t("common.cancel", { defaultValue: "Cancel" })}
                         </Button>
                     </div>

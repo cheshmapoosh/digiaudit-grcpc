@@ -5,11 +5,10 @@ import type {
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
-    OrganizationStatus,
 } from "@/features/organization";
 
 export interface OrganizationRepo {
-    list(lifecycleStatus?: OrganizationStatus): Promise<OrganizationNode[]>;
+    list(lifecycleStatus?: "DELETED"): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
     create(payload: OrganizationNodeCreate): Promise<MasterDataRevisionMutationResponse>;
     update(

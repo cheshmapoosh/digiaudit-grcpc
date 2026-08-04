@@ -245,6 +245,17 @@ function isExpired(expiresAt?: string): boolean {
     return Boolean(expiresAt && Date.parse(expiresAt) <= Date.now());
 }
 
+function isPendingUpload(item: UploadFlowItem): boolean {
+    if (item.failureState === "EXPIRED" || isExpired(item.expiresAt)) {
+        return false;
+    }
+
+    return item.state === "SELECTED"
+        || item.state === "UPLOADING"
+        || item.state === "UPLOADED"
+        || item.state === "FINALIZING";
+}
+
 function initialTitle(fileName: string): string {
     const withoutExtension = fileName.replace(/\.[^.]+$/, "").trim();
     return withoutExtension || fileName;
@@ -335,7 +346,7 @@ export default function DocumentManager({
     }, [linkedDocumentsByTarget, targetKey]);
 
     const hasPendingUploads = useMemo(
-        () => uploadItems.some((item) => item.state === "UPLOADING" || item.state === "FINALIZING"),
+        () => uploadItems.some(isPendingUpload),
         [uploadItems],
     );
 
@@ -904,7 +915,7 @@ export default function DocumentManager({
     };
 
     const renderUploadStatusText = (item: UploadFlowItem): string => {
-        if (item.failureState === "EXPIRED") {
+        if (item.failureState === "EXPIRED" || isExpired(item.expiresAt)) {
             return t("document.upload.expired", {
                 defaultValue: "Temporary upload expired",
             });

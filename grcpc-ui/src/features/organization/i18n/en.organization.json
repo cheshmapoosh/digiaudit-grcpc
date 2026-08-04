@@ -39,7 +39,13 @@
     },
     "documents": {
       "empty": "No document has been registered for this organization.",
-      "saveFirst": "Save the organization before finalizing documents."
+      "saveFirst": "Save the organization before finalizing documents.",
+      "pendingLeave": {
+        "title": "Unfinished document upload",
+        "message": "A staged document still needs attention. Leaving will lose its local reference.",
+        "stay": "Stay",
+        "leave": "Leave"
+      }
     },
     "object": {
       "summaryTitle": "Organization",
@@ -58,7 +64,9 @@
       "title": "View Organization"
     },
     "move": {
-      "action": "Move"
+      "action": "Move",
+      "candidate": "Selected destination",
+      "confirm": "Move"
     },
     "lifecycle": {
       "activate": "Activate",
@@ -84,6 +92,8 @@
       "hasChildren": "You cannot delete an organization that has children",
       "hasDependencies": "Dependent master data prevents this action",
       "invalidHierarchy": "The organization hierarchy is not valid",
+      "invalidHierarchyMove": "The destination must differ from the current parent",
+      "invalidLifecycleFilter": "The selected lifecycle filter is not supported",
       "invalidLifecycleTransition": "This lifecycle action is not valid for the current status",
       "versionConflict": "The record was changed by another user. Reload the page.",
       "create": "Failed to create organization",

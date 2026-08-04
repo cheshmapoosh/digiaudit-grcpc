@@ -38,15 +38,15 @@ public class CentralProcessController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('CONTROL_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
     public List<CentralProcessResponse> findAll(
-            @RequestParam(required = false) com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus lifecycleStatus
+            @RequestParam(required = false) String lifecycleStatus
     ) {
         return processService.listProcesses(lifecycleStatus);
     }
 
     @GetMapping("/{processId}")
-    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('CONTROL_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
     public CentralProcessResponse findById(@PathVariable UUID processId) {
         return processService.getProcess(processId);
     }

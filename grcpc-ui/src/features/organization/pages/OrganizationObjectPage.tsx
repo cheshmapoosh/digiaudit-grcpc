@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { addCustomCSS } from "@ui5/webcomponents-base/dist/Theming.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -26,6 +26,7 @@ import type {
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
 } from "../domain/organization.model";
+import { buildTree, collectDescendantIds } from "../utils/organization.tree";
 
 export type OrganizationObjectMode = "create" | "edit" | "view";
 
@@ -55,10 +56,11 @@ export interface OrganizationObjectPageProps {
     error?: string | null;
     onErrorClose?: () => void;
     onSubmit: (payload: OrganizationNodeCreate | OrganizationNodeUpdate) => Promise<void> | void;
-    onMove?: (payload: OrganizationMoveCommand) => Promise<void> | void;
+    onMove?: (payload: OrganizationMoveCommand) => Promise<boolean>;
     onCancel: () => void;
     onEdit?: () => void;
     onActiveTabChange?: (tab: OrganizationTabKey) => void;
+    onPendingDocumentsChange?: (hasPending: boolean) => void;
 }
 
 const ROOT_STYLE: CSSProperties = {
@@ -323,16 +325,30 @@ export default function OrganizationObjectPage({
     onCancel,
     onEdit,
     onActiveTabChange,
+    onPendingDocumentsChange,
 }: OrganizationObjectPageProps) {
     const { t } = useTranslation();
     const [form, setForm] = useState<OrganizationFormState>(() => toFormState(value));
     const [validationError, setValidationError] = useState<string | null>(null);
     const [parentDialogOpen, setParentDialogOpen] = useState(false);
     const [parentDialogPurpose, setParentDialogPurpose] = useState<"create" | "move">("create");
+    const [moveParentId, setMoveParentId] = useState<string | null>(value?.parentOrganizationId ?? null);
     const [internalActiveTab, setInternalActiveTab] = useState<OrganizationTabKey>("general");
+    const [formSourceId, setFormSourceId] = useState(value?.id || null);
 
     const readOnly = mode === "view";
     const activeTab = controlledActiveTab ?? internalActiveTab;
+    const descendantIds = useMemo(
+        () => new Set(collectDescendantIds(buildTree(allItems), value?.id)),
+        [allItems, value?.id],
+    );
+    const moveCandidateInvalid = !value
+        || (moveParentId !== null && (
+            moveParentId === value.id
+            || descendantIds.has(moveParentId)
+            || !allItems.some((item) => item.id === moveParentId)
+        ));
+    const moveCandidateUnchanged = moveParentId === (value?.parentOrganizationId ?? null);
     const selectedParent = form.parentOrganizationId
         ? allItems.find((item) => item.id === form.parentOrganizationId) ?? null
         : null;
@@ -343,6 +359,12 @@ export default function OrganizationObjectPage({
         form.code || value?.displayLabel || t("organization.object.modalTitle", {
             defaultValue: "واحد سازمانی",
         });
+
+    if (!formSourceId && value?.id) {
+        setFormSourceId(value.id);
+        setForm(toFormState(value));
+        setMoveParentId(value.parentOrganizationId ?? null);
+    }
 
     const handleActiveTabChange = (tab: OrganizationTabKey) => {
         if (controlledActiveTab === undefined) {
@@ -403,6 +425,17 @@ export default function OrganizationObjectPage({
             validFrom: normalizeOptionalText(form.validFrom),
             validTo: normalizeOptionalText(form.validTo),
         });
+    };
+
+    const handleMoveConfirm = async () => {
+        if (!value || !onMove || moveCandidateInvalid || moveCandidateUnchanged) return;
+        const succeeded = await onMove({
+            parentOrganizationId: moveParentId,
+            version: value.version,
+        });
+        if (!succeeded) return;
+        setForm((current) => ({ ...current, parentOrganizationId: moveParentId }));
+        setParentDialogOpen(false);
     };
 
     const renderGeneralTab = () => (
@@ -478,27 +511,28 @@ export default function OrganizationObjectPage({
             targetId={value?.id || null}
             readOnly={readOnly}
             showActions={!readOnly}
+            onPendingUploadsChange={onPendingDocumentsChange}
             saveFirstMessage={t("organization.documents.saveFirst", {
                 defaultValue: "ابتدا سازمان را ذخیره کنید، سپس مستندات را نهایی کنید.",
             })}
         />
     );
 
-    const renderTabContent = () => {
-        if (activeTab === "general") {
-            return renderGeneralTab();
-        }
-
-        if (activeTab === "documents") {
-            return renderDocumentsTab();
-        }
-
-        return (
-            <DeferredRelationTab
-                title={resolveTabLabel(activeTab, t)}
-            />
-        );
-    };
+    const renderTabPanels = () => (
+        <>
+            <div style={{ display: activeTab === "general" ? "block" : "none" }}>
+                {renderGeneralTab()}
+            </div>
+            {TAB_SEQUENCE.filter((tab) => tab !== "general" && tab !== "documents").map((tab) => (
+                <div key={tab} style={{ display: activeTab === tab ? "block" : "none" }}>
+                    <DeferredRelationTab title={resolveTabLabel(tab, t)} />
+                </div>
+            ))}
+            <div style={{ display: activeTab === "documents" ? "block" : "none" }}>
+                {renderDocumentsTab()}
+            </div>
+        </>
+    );
 
     const renderFooterActions = () => (
         <div style={FOOTER_STYLE}>
@@ -517,6 +551,7 @@ export default function OrganizationObjectPage({
                         style={ACTION_BUTTON_STYLE}
                         onClick={() => {
                             setParentDialogPurpose("move");
+                            setMoveParentId(value?.parentOrganizationId ?? null);
                             setParentDialogOpen(true);
                         }}
                     >
@@ -602,7 +637,7 @@ export default function OrganizationObjectPage({
                 </MessageStrip>
             ) : null}
 
-            <div style={BODY_STYLE}>{renderTabContent()}</div>
+            <div style={BODY_STYLE}>{renderTabPanels()}</div>
 
             {renderFooterActions()}
 
@@ -613,21 +648,21 @@ export default function OrganizationObjectPage({
                 selectedParentId={
                     parentDialogPurpose === "create"
                         ? form.parentOrganizationId
-                        : value?.parentOrganizationId ?? null
+                        : moveParentId
                 }
-                onClose={() => setParentDialogOpen(false)}
+                busy={busy}
+                confirmDisabled={moveCandidateInvalid || moveCandidateUnchanged}
+                onConfirm={parentDialogPurpose === "move" ? () => { void handleMoveConfirm(); } : undefined}
+                onClose={() => {
+                    if (!busy) setParentDialogOpen(false);
+                }}
                 onSelect={(parentId) => {
-                    setParentDialogOpen(false);
                     if (parentDialogPurpose === "create") {
+                        setParentDialogOpen(false);
                         handleChange("parentOrganizationId", parentId);
                         return;
                     }
-                    if (value && onMove) {
-                        void onMove({
-                            parentOrganizationId: parentId,
-                            version: value.version,
-                        });
-                    }
+                    setMoveParentId(parentId);
                 }}
             />
         </div>

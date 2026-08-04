@@ -6,14 +6,13 @@ import type {
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
-    OrganizationStatus,
 } from "@/features/organization";
 import type { OrganizationRepo } from "./organization.repo";
 
 const BASE_URL = "/api/master-data/organizations";
 
 export class OrganizationApiRepo implements OrganizationRepo {
-    async list(lifecycleStatus?: OrganizationStatus): Promise<OrganizationNode[]> {
+    async list(lifecycleStatus?: "DELETED"): Promise<OrganizationNode[]> {
         const query = lifecycleStatus
             ? `?lifecycleStatus=${encodeURIComponent(lifecycleStatus)}`
             : "";

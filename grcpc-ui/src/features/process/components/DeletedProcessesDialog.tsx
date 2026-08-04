@@ -7,6 +7,7 @@ import type { ProcessNode } from "../domain/process.model";
 interface DeletedProcessesDialogProps {
     open: boolean;
     items: ProcessNode[];
+    parentItems: ProcessNode[];
     busy?: boolean;
     onClose: () => void;
     onRestore: (node: ProcessNode) => void;
@@ -15,6 +16,7 @@ interface DeletedProcessesDialogProps {
 export default function DeletedProcessesDialog({
     open,
     items,
+    parentItems,
     busy = false,
     onClose,
     onRestore,
@@ -33,13 +35,31 @@ export default function DeletedProcessesDialog({
                     </MessageStrip>
                 ) : (
                     <List separators="Inner">
-                        {items.map((item) => (
+                        {items.map((item) => {
+                            const parent = item.parentId
+                                ? parentItems.find((candidate) => candidate.id === item.parentId) ?? null
+                                : null;
+                            const parentText = item.parentId
+                                ? parent
+                                    ? `${parent.code} - ${parent.title}`
+                                    : t("process.deleted.parentUnavailable", { defaultValue: "Parent unavailable" })
+                                : t("process.parent.none", { defaultValue: "No parent" });
+                            return (
                             <ListItemCustom key={`${item.nodeType}:${item.id}`}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", width: "100%" }}>
                                     <div style={{ display: "grid", gap: "0.25rem", minWidth: 0 }}>
                                         <strong>{item.title}</strong>
-                                        <Text>{item.code} - {item.nodeType}</Text>
-                                        <Text>{item.parentId ?? "-"}</Text>
+                                        <Text>
+                                            {item.code} - {t(
+                                                item.nodeType === "PROCESS"
+                                                    ? "process.nodeType.process"
+                                                    : "process.nodeType.subProcess",
+                                            )}
+                                        </Text>
+                                        <Text>{t("process.deleted.parent", {
+                                            defaultValue: "Parent: {{parent}}",
+                                            parent: parentText,
+                                        })}</Text>
                                     </div>
                                     <Button
                                         design="Emphasized"
@@ -50,7 +70,8 @@ export default function DeletedProcessesDialog({
                                     </Button>
                                 </div>
                             </ListItemCustom>
-                        ))}
+                            );
+                        })}
                     </List>
                 )}
             </div>

@@ -38,15 +38,15 @@ public class CentralSubprocessController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('CONTROL_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
     public List<CentralSubprocessResponse> findAll(
-            @RequestParam(required = false) com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus lifecycleStatus
+            @RequestParam(required = false) String lifecycleStatus
     ) {
         return processService.listSubprocesses(lifecycleStatus);
     }
 
     @GetMapping("/{subprocessId}")
-    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('CONTROL_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
     public CentralSubprocessResponse findById(@PathVariable UUID subprocessId) {
         return processService.getSubprocess(subprocessId);
     }
