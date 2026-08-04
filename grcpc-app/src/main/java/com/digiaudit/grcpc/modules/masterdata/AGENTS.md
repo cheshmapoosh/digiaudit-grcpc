@@ -122,6 +122,6 @@ Legacy removal belongs to the vertical slice that replaces that Legacy behavior.
 
 Do not preserve a Legacy endpoint, entity, table, permission, or data flow as a compatibility layer when the approved V2 slice replaces it.
 
-Until its owning P4â€“P7 slice is implemented, future-slice Legacy source may remain only as implementation evidence and must stay excluded from the default component and repository scans. `PersistenceManagedTypes` is the exact JPA managed-class allowlist; do not rely on package entity scanning, weaken Hibernate `ddl-auto=validate`, or map a Legacy entity to a V2 table.
+Until its owning P4-P7 slice is implemented, future-slice Legacy source may remain only as implementation evidence and must stay excluded from the default component and repository scans. `PersistenceManagedTypes` is the exact JPA managed-class allowlist; do not rely on package entity scanning, weaken Hibernate `ddl-auto=validate`, or map a Legacy entity to a V2 table.
 
 When an owning V2 slice replaces a quarantined area, implement its approved V2 persistence and API, add only its approved managed classes to `PersistenceManagedTypes`, delete the Legacy source, remove the quarantine entry, and rerun fresh-Oracle Flyway plus Hibernate validation.

@@ -150,17 +150,17 @@ Future-slice Legacy source may remain temporarily as implementation evidence, bu
 
 The central quarantine contains these exact package prefixes:
 
-- `com.digiaudit.grcpc.modules.masterdata.accountgroup.` (P4â€“P5)
-- `com.digiaudit.grcpc.modules.masterdata.control.` (P4â€“P6)
-- `com.digiaudit.grcpc.modules.masterdata.objective.` (P4â€“P6)
-- `com.digiaudit.grcpc.modules.masterdata.policy.` (P4â€“P6)
-- `com.digiaudit.grcpc.modules.masterdata.risk.` (P4â€“P5)
-- `com.digiaudit.grcpc.modules.regulation.` (P4â€“P5)
+- `com.digiaudit.grcpc.modules.masterdata.accountgroup.` (P4-P5)
+- `com.digiaudit.grcpc.modules.masterdata.control.` (P4-P6)
+- `com.digiaudit.grcpc.modules.masterdata.objective.` (P4-P6)
+- `com.digiaudit.grcpc.modules.masterdata.policy.` (P4-P6)
+- `com.digiaudit.grcpc.modules.masterdata.risk.` (P4-P5)
+- `com.digiaudit.grcpc.modules.regulation.` (P4-P5)
 
 Mixed active packages use only these exact Legacy class-name prefixes:
 
 - `DocumentAttachment` (P7)
-- `ObjectiveOrganizationAssignment`, `OrganizationProcessAssignment`, `OrganizationProcessRiskAssignment`, and `OrganizationReferenceAssignment` (P4â€“P6)
+- `ObjectiveOrganizationAssignment`, `OrganizationProcessAssignment`, `OrganizationProcessRiskAssignment`, and `OrganizationReferenceAssignment` (P4-P6)
 - `ProcessAccountGroupAssignment`, `ProcessControlAssignment`, `ProcessObjectiveAssignment`, `ProcessRegulationAssignment`, and `ProcessRiskAssignment` (P5â€“P6)
 
 When an owning V2 slice replaces a quarantined area, it must implement the approved persistence and API, add only the approved managed classes to `PersistenceManagedTypes`, delete the Legacy source, remove the matching quarantine entry, and rerun fresh-Oracle Flyway plus Hibernate validation. Legacy entities cannot be mapped to V2 tables because their columns, lifecycle, and relationship models do not implement the approved typed physical contract; in particular, Legacy `AccountGroupEntity` is incompatible with `central_account_group`.
