@@ -62,6 +62,11 @@ public class DocumentReadService {
                 targetContext.authorizationResourceId(),
                 VIEW_PERMISSION
         );
+        authorizationService.assertCanAccess(
+                targetContext.authorizationResourceType(),
+                targetContext.authorizationResourceId(),
+                DocumentCatalogPermissions.view(targetContext.targetType())
+        );
         return linkRepository.findLinkedDocumentsForTarget(
                         targetContext.targetType(),
                         targetContext.targetId(),
@@ -175,6 +180,10 @@ public class DocumentReadService {
                     targetContext.authorizationResourceType(),
                     targetContext.authorizationResourceId(),
                     permission
+            ) && authorizationService.canAccess(
+                    targetContext.authorizationResourceType(),
+                    targetContext.authorizationResourceId(),
+                    DocumentCatalogPermissions.view(targetContext.targetType())
             )) {
                 return;
             }
@@ -192,6 +201,10 @@ public class DocumentReadService {
                     targetContext.authorizationResourceType(),
                     targetContext.authorizationResourceId(),
                     permission
+            ) && authorizationService.canAccess(
+                    targetContext.authorizationResourceType(),
+                    targetContext.authorizationResourceId(),
+                    DocumentCatalogPermissions.view(targetContext.targetType())
             )) {
                 return true;
             }

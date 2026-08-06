@@ -11,27 +11,15 @@ import java.util.UUID;
 
 @Component
 public class MasterDataStructuralDependencyChecker {
-    private static final List<String> ORGANIZATION_DEPENDENCY_QUERIES = List.of(
-            "select count(1) from local_organization_subprocess_scope where organization_id = ? and status <> 'DELETED'",
-            "select count(1) from local_policy_organization_scope where organization_id = ? and status <> 'DELETED'",
-            "select count(1) from document_link where target_type = 'ORG' and target_id = ? and status <> 'DELETED'"
-    );
-    private static final List<String> CENTRAL_PROCESS_DEPENDENCY_QUERIES = List.of(
-            "select count(1) from document_link where target_type = 'CENTRAL_PROCESS' and target_id = ? and status <> 'DELETED'"
-    );
-    private static final List<String> CENTRAL_SUBPROCESS_DEPENDENCY_QUERIES = List.of(
-            "select count(1) from central_subprocess_control_scope where subprocess_id = ? and status <> 'DELETED'",
-            "select count(1) from central_subprocess_risk_scope where subprocess_id = ? and status <> 'DELETED'",
-            "select count(1) from central_subprocess_control_objective_scope where subprocess_id = ? and status <> 'DELETED'",
-            "select count(1) from central_subprocess_requirement_scope where subprocess_id = ? and status <> 'DELETED'",
-            "select count(1) from central_policy_version_subprocess_scope where subprocess_id = ? and status <> 'DELETED'",
-            "select count(1) from central_subprocess_risk_control_coverage where subprocess_id = ? and status <> 'DELETED'",
-            "select count(1) from central_subprocess_risk_control_objective_coverage where subprocess_id = ? and status <> 'DELETED'",
-            "select count(1) from central_subprocess_control_control_objective_coverage where subprocess_id = ? and status <> 'DELETED'",
-            "select count(1) from central_subprocess_requirement_control_coverage where subprocess_id = ? and status <> 'DELETED'",
-            "select count(1) from local_organization_subprocess_scope where subprocess_id = ? and status <> 'DELETED'",
-            "select count(1) from document_link where target_type = 'CENTRAL_SUBPROCESS' and target_id = ? and status <> 'DELETED'"
-    );
+    /*
+     * Prompt 6 has no approved cross-family structural dependencies. Future Scope,
+     * Coverage, Classification, Policy Scope, and Local Context tables are not part
+     * of the active schema. Historical Document links intentionally do not block
+     * target soft deletion.
+     */
+    private static final List<String> ORGANIZATION_DEPENDENCY_QUERIES = List.of();
+    private static final List<String> CENTRAL_PROCESS_DEPENDENCY_QUERIES = List.of();
+    private static final List<String> CENTRAL_SUBPROCESS_DEPENDENCY_QUERIES = List.of();
 
     private final JdbcTemplate jdbcTemplate;
 

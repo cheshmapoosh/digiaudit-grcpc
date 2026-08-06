@@ -17,13 +17,22 @@ type MasterDataItem = {
 
 const MASTER_DATA_ITEMS: MasterDataItem[] = [
     {
+        key: "controls",
+        titleKey: "masterData.items.controls",
+        defaultTitle: "کنترل‌های مرکزی",
+        icon: "validate",
+        route: "/controls",
+        desktopColumn: 1,
+        desktopRow: 1,
+    },
+    {
         key: "organizations",
         titleKey: "masterData.items.organizations",
         defaultTitle: "سازمان",
         icon: "org-chart",
         route: "/organizations",
         desktopColumn: 2,
-        desktopRow: 1,
+        desktopRow: 2,
     },
     {
         key: "processes",
@@ -39,9 +48,9 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         titleKey: "masterData.items.objectives",
         defaultTitle: "اهداف کنترلی",
         icon: "activity-assigned-to-goal",
-        route: "/objectives",
+        route: "/control-objectives",
         desktopColumn: 1,
-        desktopRow: 1,
+        desktopRow: 3,
     },
     {
         key: "regulations",
@@ -59,7 +68,7 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         icon: "quality-issue",
         route: "/risks",
         desktopColumn: 1,
-        desktopRow: 2,
+        desktopRow: 4,
     },
     {
         key: "accountGroups",
@@ -68,7 +77,7 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         icon: "accounting-document-verification",
         route: "/account-groups",
         desktopColumn: 1,
-        desktopRow: 3,
+        desktopRow: 5,
     },
     {
         key: "policies",

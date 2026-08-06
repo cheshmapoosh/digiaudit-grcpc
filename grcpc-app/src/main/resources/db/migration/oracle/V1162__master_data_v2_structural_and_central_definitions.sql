@@ -99,6 +99,9 @@ create index ix_central_subprocess_process on central_subprocess(process_id);
 
 create table central_control (
     id raw(16) not null,
+    code varchar2(64 byte) not null,
+    title varchar2(255 char) not null,
+    description clob,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -110,7 +113,13 @@ create table central_control (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_control primary key (id),
+    constraint uk_central_control_code unique (code),
+    constraint ck_central_control_code check (code = upper(trim(code))),
     constraint ck_central_control_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
+    constraint ck_central_control_dates check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
+    ),
     constraint ck_central_control_valid_range check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_central_control_deleted check (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
@@ -120,6 +129,9 @@ create table central_control (
 
 create table central_control_objective (
     id raw(16) not null,
+    code varchar2(64 byte) not null,
+    title varchar2(255 char) not null,
+    description clob,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -131,7 +143,13 @@ create table central_control_objective (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_control_objective primary key (id),
+    constraint uk_central_control_objective_code unique (code),
+    constraint ck_central_control_objective_code check (code = upper(trim(code))),
     constraint ck_central_control_objective_st check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
+    constraint ck_central_control_objective_dt check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
+    ),
     constraint ck_central_control_objective_vr check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_central_control_objective_del check (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
@@ -141,7 +159,11 @@ create table central_control_objective (
 
 create table central_risk_category (
     id raw(16) not null,
+    code varchar2(64 byte) not null,
+    title varchar2(255 char) not null,
     parent_category_id raw(16),
+    description clob,
+    sort_order number(10,0) not null,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -153,6 +175,8 @@ create table central_risk_category (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_risk_category primary key (id),
+    constraint uk_central_risk_category_code unique (code),
+    constraint ck_central_risk_category_code check (code = upper(trim(code))),
     constraint fk_central_risk_category_parent foreign key (parent_category_id) references central_risk_category(id),
     constraint ck_central_risk_category_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_risk_category_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
@@ -160,14 +184,23 @@ create table central_risk_category (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
     ),
-    constraint ck_central_risk_category_self check (parent_category_id is null or parent_category_id <> id)
+    constraint ck_central_risk_category_self check (parent_category_id is null or parent_category_id <> id),
+    constraint ck_central_risk_category_sort check (sort_order >= 0),
+    constraint ck_central_risk_category_dt check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
+    )
 );
 
 create index ix_central_risk_category_parent on central_risk_category(parent_category_id);
 
 create table central_risk_template (
     id raw(16) not null,
+    code varchar2(64 byte) not null,
+    title varchar2(255 char) not null,
     risk_category_id raw(16) not null,
+    description clob,
+    sort_order number(10,0) not null,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -179,12 +212,19 @@ create table central_risk_template (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_risk_template primary key (id),
+    constraint uk_central_risk_template_code unique (code),
+    constraint ck_central_risk_template_code check (code = upper(trim(code))),
     constraint fk_central_risk_template_cat foreign key (risk_category_id) references central_risk_category(id),
     constraint ck_central_risk_template_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_risk_template_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_central_risk_template_deleted check (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
+    ),
+    constraint ck_central_risk_template_sort check (sort_order >= 0),
+    constraint ck_central_risk_template_dt check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
     )
 );
 
@@ -192,7 +232,11 @@ create index ix_central_risk_template_cat on central_risk_template(risk_category
 
 create table central_account_group (
     id raw(16) not null,
+    code varchar2(64 byte) not null,
+    title varchar2(255 char) not null,
     parent_account_group_id raw(16),
+    description clob,
+    sort_order number(10,0) not null,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -204,6 +248,8 @@ create table central_account_group (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_account_group primary key (id),
+    constraint uk_central_account_group_code unique (code),
+    constraint ck_central_account_group_code check (code = upper(trim(code))),
     constraint fk_central_account_group_parent foreign key (parent_account_group_id) references central_account_group(id),
     constraint ck_central_account_group_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_account_group_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
@@ -211,14 +257,23 @@ create table central_account_group (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
     ),
-    constraint ck_central_account_group_self check (parent_account_group_id is null or parent_account_group_id <> id)
+    constraint ck_central_account_group_self check (parent_account_group_id is null or parent_account_group_id <> id),
+    constraint ck_central_account_group_sort check (sort_order >= 0),
+    constraint ck_central_account_group_dt check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
+    )
 );
 
 create index ix_central_account_group_parent on central_account_group(parent_account_group_id);
 
 create table central_regulation_group (
     id raw(16) not null,
+    code varchar2(64 byte) not null,
+    title varchar2(255 char) not null,
     parent_group_id raw(16),
+    description clob,
+    sort_order number(10,0) not null,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -230,6 +285,8 @@ create table central_regulation_group (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_regulation_group primary key (id),
+    constraint uk_central_regulation_group_code unique (code),
+    constraint ck_central_reg_group_code check (code = upper(trim(code))),
     constraint fk_central_reg_group_parent foreign key (parent_group_id) references central_regulation_group(id),
     constraint ck_central_reg_group_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_reg_group_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
@@ -237,14 +294,23 @@ create table central_regulation_group (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
     ),
-    constraint ck_central_reg_group_self check (parent_group_id is null or parent_group_id <> id)
+    constraint ck_central_reg_group_self check (parent_group_id is null or parent_group_id <> id),
+    constraint ck_central_reg_group_sort check (sort_order >= 0),
+    constraint ck_central_reg_group_dates check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
+    )
 );
 
 create index ix_central_reg_group_parent on central_regulation_group(parent_group_id);
 
 create table central_regulation (
     id raw(16) not null,
+    code varchar2(64 byte) not null,
+    title varchar2(255 char) not null,
     regulation_group_id raw(16) not null,
+    description clob,
+    sort_order number(10,0) not null,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -256,12 +322,19 @@ create table central_regulation (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_regulation primary key (id),
+    constraint uk_central_regulation_code unique (code),
+    constraint ck_central_regulation_code check (code = upper(trim(code))),
     constraint fk_central_regulation_group foreign key (regulation_group_id) references central_regulation_group(id),
     constraint ck_central_regulation_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_regulation_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_central_regulation_deleted check (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
+    ),
+    constraint ck_central_regulation_sort check (sort_order >= 0),
+    constraint ck_central_regulation_dates check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
     )
 );
 
@@ -269,7 +342,11 @@ create index ix_central_regulation_group on central_regulation(regulation_group_
 
 create table central_regulation_requirement (
     id raw(16) not null,
+    code varchar2(64 byte) not null,
+    title varchar2(255 char) not null,
     regulation_id raw(16) not null,
+    description clob,
+    sort_order number(10,0) not null,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -281,12 +358,19 @@ create table central_regulation_requirement (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_reg_requirement primary key (id),
+    constraint uk_central_reg_requirement_code unique (code),
+    constraint ck_central_reg_requirement_code check (code = upper(trim(code))),
     constraint fk_central_reg_requirement_reg foreign key (regulation_id) references central_regulation(id),
     constraint ck_central_reg_requirement_st check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_reg_requirement_vr check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_central_reg_requirement_del check (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
+    ),
+    constraint ck_central_reg_requirement_sort check (sort_order >= 0),
+    constraint ck_central_reg_requirement_dt check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
     )
 );
 
@@ -294,7 +378,11 @@ create index ix_central_reg_requirement_reg on central_regulation_requirement(re
 
 create table central_policy_group (
     id raw(16) not null,
+    code varchar2(64 byte) not null,
+    title varchar2(255 char) not null,
     parent_group_id raw(16),
+    description clob,
+    sort_order number(10,0) not null,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -306,6 +394,8 @@ create table central_policy_group (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_policy_group primary key (id),
+    constraint uk_central_policy_group_code unique (code),
+    constraint ck_central_policy_group_code check (code = upper(trim(code))),
     constraint fk_central_policy_group_parent foreign key (parent_group_id) references central_policy_group(id),
     constraint ck_central_policy_group_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_policy_group_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
@@ -313,14 +403,23 @@ create table central_policy_group (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
     ),
-    constraint ck_central_policy_group_self check (parent_group_id is null or parent_group_id <> id)
+    constraint ck_central_policy_group_self check (parent_group_id is null or parent_group_id <> id),
+    constraint ck_central_policy_group_sort check (sort_order >= 0),
+    constraint ck_central_policy_group_dates check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
+    )
 );
 
 create index ix_central_policy_group_parent on central_policy_group(parent_group_id);
 
 create table central_policy (
     id raw(16) not null,
+    code varchar2(64 byte) not null,
+    title varchar2(255 char) not null,
     policy_group_id raw(16) not null,
+    description clob,
+    sort_order number(10,0) not null,
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -332,12 +431,19 @@ create table central_policy (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_policy primary key (id),
+    constraint uk_central_policy_code unique (code),
+    constraint ck_central_policy_code check (code = upper(trim(code))),
     constraint fk_central_policy_group foreign key (policy_group_id) references central_policy_group(id),
     constraint ck_central_policy_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_policy_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_central_policy_deleted check (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
+    ),
+    constraint ck_central_policy_sort check (sort_order >= 0),
+    constraint ck_central_policy_dates check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
     )
 );
 
@@ -346,7 +452,11 @@ create index ix_central_policy_group on central_policy(policy_group_id);
 create table central_policy_version (
     id raw(16) not null,
     policy_id raw(16) not null,
+    version_number number(10,0) not null,
+    content clob,
     version_status varchar2(32 byte) not null,
+    published_at timestamp(6) with time zone,
+    published_by raw(16),
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -358,10 +468,20 @@ create table central_policy_version (
     deleted_by raw(16),
     version number(19,0) default 0 not null,
     constraint pk_central_policy_version primary key (id),
+    constraint uk_central_policy_version_no unique (policy_id, version_number),
     constraint fk_central_policy_version_policy foreign key (policy_id) references central_policy(id),
     constraint ck_central_policy_version_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_policy_version_vs check (version_status in ('DRAFT', 'PUBLISHED', 'SUPERSEDED')),
+    constraint ck_central_policy_version_no check (version_number > 0),
+    constraint ck_central_policy_version_pub check (
+        (version_status = 'DRAFT' and published_at is null and published_by is null)
+        or (version_status in ('PUBLISHED', 'SUPERSEDED') and published_at is not null and published_by is not null)
+    ),
     constraint ck_central_policy_version_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
+    constraint ck_central_policy_version_dates check (
+        (valid_from is null or valid_from = trunc(valid_from))
+        and (valid_to is null or valid_to = trunc(valid_to))
+    ),
     constraint ck_central_policy_version_deleted check (
         (status = 'DELETED' and deleted_at is not null and deleted_by is not null)
         or (status <> 'DELETED' and deleted_at is null and deleted_by is null)
@@ -369,3 +489,6 @@ create table central_policy_version (
 );
 
 create index ix_central_policy_version_policy on central_policy_version(policy_id);
+
+create unique index uq_central_policy_version_pub
+    on central_policy_version (case when version_status = 'PUBLISHED' then policy_id end);

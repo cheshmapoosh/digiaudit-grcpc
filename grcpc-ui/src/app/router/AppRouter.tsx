@@ -16,11 +16,7 @@ import {
     masterDataRoutes,
     organizationRoutes,
     processRoutes,
-    regulationRoutes,
-    policyRoutes,
-    riskRoutes,
-    objectiveRoutes,
-    accountGroupRoutes,
+    centralCatalogRoutes,
     usermanagementRoutes,
 } from "@/features";
 
@@ -47,11 +43,7 @@ export const appRouter = createBrowserRouter(
                 {masterDataRoutes}
                 {organizationRoutes}
                 {processRoutes}
-                {regulationRoutes}
-                {policyRoutes}
-                {riskRoutes}
-                {objectiveRoutes}
-                {accountGroupRoutes}
+                {centralCatalogRoutes}
                 {usermanagementRoutes}
 
                 <Route path="*" element={<NotFoundPage />} />

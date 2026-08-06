@@ -9,6 +9,18 @@ import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentL
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentLinkTargetTypeConverter;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentTempUploadEntity;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentVersionEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.CentralControlEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.domain.entity.CentralControlObjectiveEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyVersionEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.entity.CentralRegulationEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.entity.CentralRegulationGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.entity.CentralRegulationRequirementEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.risk.domain.entity.CentralRiskCategoryEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.risk.domain.entity.CentralRiskTemplateEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.shared.domain.entity.CentralDefinitionEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralProcessEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralSubprocessEntity;
 import com.digiaudit.grcpc.modules.masterdata.revision.infrastructure.persistence.JsonNodeClobConverter;
@@ -52,6 +64,18 @@ public class GrcpcPersistenceConfiguration {
                 DocumentLinkTargetTypeConverter.class.getName(),
                 DocumentTempUploadEntity.class.getName(),
                 DocumentVersionEntity.class.getName(),
+                CentralDefinitionEntity.class.getName(),
+                CentralControlEntity.class.getName(),
+                CentralControlObjectiveEntity.class.getName(),
+                CentralRiskCategoryEntity.class.getName(),
+                CentralRiskTemplateEntity.class.getName(),
+                CentralAccountGroupEntity.class.getName(),
+                CentralRegulationGroupEntity.class.getName(),
+                CentralRegulationEntity.class.getName(),
+                CentralRegulationRequirementEntity.class.getName(),
+                CentralPolicyGroupEntity.class.getName(),
+                CentralPolicyEntity.class.getName(),
+                CentralPolicyVersionEntity.class.getName(),
                 CentralProcessEntity.class.getName(),
                 CentralSubprocessEntity.class.getName(),
                 JsonNodeClobConverter.class.getName(),

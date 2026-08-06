@@ -147,6 +147,16 @@ public class DocumentCommandService {
             DocumentLinkTargetType targetType,
             UUID targetId
     ) {
+        return finalizePreparedAggregate(prepared, targetType, targetId, DocumentCatalogPermissions.mutate(targetType));
+    }
+
+    @Transactional
+    public List<DocumentCommandResponse> finalizePreparedAggregate(
+            PreparedAggregateContext prepared,
+            DocumentLinkTargetType targetType,
+            UUID targetId,
+            String targetMutationPermission
+    ) {
         requirePreparedInCurrentTransaction(prepared);
         prepared.consume();
         DocumentAggregateBatchRequest batch = prepared.batch;
@@ -156,7 +166,7 @@ public class DocumentCommandService {
             return List.of();
         }
 
-        DocumentTargetContext targetContext = resolveAndAuthorize(targetType, targetId, UPLOAD_PERMISSION);
+        DocumentTargetContext targetContext = resolveAndAuthorize(targetType, targetId, UPLOAD_PERMISSION, targetMutationPermission);
         List<PreparedExistingMutation> existingMutations = prepareExistingMutations(
                 prepared.plan,
                 targetContext
@@ -741,12 +751,27 @@ public class DocumentCommandService {
     }
 
     private DocumentTargetContext resolveAndAuthorize(DocumentLinkTargetType targetType, UUID targetId, String permission) {
+        return resolveAndAuthorize(targetType, targetId, permission, DocumentCatalogPermissions.mutate(targetType));
+    }
+
+    private DocumentTargetContext resolveAndAuthorize(
+            DocumentLinkTargetType targetType,
+            UUID targetId,
+            String permission,
+            String targetMutationPermission
+    ) {
         DocumentTargetContext targetContext = targetContextResolver.resolvePublic(targetType, targetId);
         authorizationService.assertCanAccess(
                 targetContext.authorizationResourceType(),
                 targetContext.authorizationResourceId(),
                 permission
         );
+        authorizationService.assertCanAccess(
+                targetContext.authorizationResourceType(),
+                targetContext.authorizationResourceId(),
+                targetMutationPermission
+        );
+        targetContextResolver.assertMutable(targetType, targetId);
         return targetContext;
     }
 

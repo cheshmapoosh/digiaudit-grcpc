@@ -11,3 +11,15 @@ values ('ORGANIZATION');
 
 insert into masterdata_hierarchy_guard (hierarchy_key)
 values ('PROCESS');
+
+insert into masterdata_hierarchy_guard (hierarchy_key)
+values ('RISK');
+
+insert into masterdata_hierarchy_guard (hierarchy_key)
+values ('ACCOUNT_GROUP');
+
+insert into masterdata_hierarchy_guard (hierarchy_key)
+values ('REGULATION');
+
+insert into masterdata_hierarchy_guard (hierarchy_key)
+values ('POLICY');

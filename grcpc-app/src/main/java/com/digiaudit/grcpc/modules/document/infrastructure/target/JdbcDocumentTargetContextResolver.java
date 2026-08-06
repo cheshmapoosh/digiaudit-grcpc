@@ -42,47 +42,39 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
             case CENTRAL_POLICY_GROUP -> central(targetType, targetId, "select id from central_policy_group where id = ? and status <> 'DELETED'");
             case CENTRAL_POLICY -> central(targetType, targetId, "select id from central_policy where id = ? and status <> 'DELETED'");
             case CENTRAL_POLICY_VERSION -> central(targetType, targetId, "select id from central_policy_version where id = ? and status <> 'DELETED'");
-            case CENTRAL_SUBPROCESS_CONTROL_SCOPE -> central(targetType, targetId, "select id from central_subprocess_control_scope where id = ? and status <> 'DELETED'");
-            case CENTRAL_SUBPROCESS_RISK_SCOPE -> central(targetType, targetId, "select id from central_subprocess_risk_scope where id = ? and status <> 'DELETED'");
-            case CENTRAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE -> central(targetType, targetId, "select id from central_subprocess_control_objective_scope where id = ? and status <> 'DELETED'");
-            case CENTRAL_SUBPROCESS_REQUIREMENT_SCOPE -> central(targetType, targetId, "select id from central_subprocess_requirement_scope where id = ? and status <> 'DELETED'");
-            case CENTRAL_POLICY_VERSION_SUBPROCESS_SCOPE -> central(targetType, targetId, "select id from central_policy_version_subprocess_scope where id = ? and status <> 'DELETED'");
-            case CENTRAL_POLICY_VERSION_CONTROL_SCOPE -> central(targetType, targetId, "select id from central_policy_version_control_scope where id = ? and status <> 'DELETED'");
-            case CENTRAL_POLICY_VERSION_REQUIREMENT_SCOPE -> central(targetType, targetId, "select id from central_policy_version_requirement_scope where id = ? and status <> 'DELETED'");
-            case CENTRAL_CONTROL_ACCOUNT_GROUP -> central(targetType, targetId, "select id from central_control_account_group where id = ? and status <> 'DELETED'");
-            case CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP -> central(targetType, targetId, "select id from central_control_objective_account_group where id = ? and status <> 'DELETED'");
-            case CENTRAL_SUBPROCESS_RISK_CONTROL_COVERAGE -> central(targetType, targetId, "select id from central_subprocess_risk_control_coverage where id = ? and status <> 'DELETED'");
-            case CENTRAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE -> central(targetType, targetId, "select id from central_subprocess_risk_control_objective_coverage where id = ? and status <> 'DELETED'");
-            case CENTRAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE -> central(targetType, targetId, "select id from central_subprocess_control_control_objective_coverage where id = ? and status <> 'DELETED'");
-            case CENTRAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE -> central(targetType, targetId, "select id from central_subprocess_requirement_control_coverage where id = ? and status <> 'DELETED'");
-            case LOCAL_ORGANIZATION_SUBPROCESS_SCOPE -> local(targetType, targetId,
-                    "select organization_id from local_organization_subprocess_scope where id = ? and status <> 'DELETED'");
-            case LOCAL_SUBPROCESS_CONTROL_SCOPE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_subprocess_control_scope target join local_organization_subprocess_scope ctx on ctx.id = target.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and ctx.status <> 'DELETED'");
-            case LOCAL_SUBPROCESS_RISK_SCOPE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_subprocess_risk_scope target join local_organization_subprocess_scope ctx on ctx.id = target.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and ctx.status <> 'DELETED'");
-            case LOCAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_subprocess_control_objective_scope target join local_organization_subprocess_scope ctx on ctx.id = target.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and ctx.status <> 'DELETED'");
-            case LOCAL_SUBPROCESS_REQUIREMENT_SCOPE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_subprocess_requirement_scope target join local_organization_subprocess_scope ctx on ctx.id = target.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and ctx.status <> 'DELETED'");
-            case LOCAL_SUBPROCESS_RISK_CONTROL_COVERAGE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_subprocess_risk_control_coverage target join local_organization_subprocess_scope ctx on ctx.id = target.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and ctx.status <> 'DELETED'");
-            case LOCAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_subprocess_risk_control_objective_coverage target join local_organization_subprocess_scope ctx on ctx.id = target.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and ctx.status <> 'DELETED'");
-            case LOCAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_subprocess_control_control_objective_coverage target join local_organization_subprocess_scope ctx on ctx.id = target.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and ctx.status <> 'DELETED'");
-            case LOCAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_subprocess_requirement_control_coverage target join local_organization_subprocess_scope ctx on ctx.id = target.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and ctx.status <> 'DELETED'");
-            case LOCAL_POLICY_ORGANIZATION_SCOPE -> local(targetType, targetId,
-                    "select organization_id from local_policy_organization_scope where id = ? and status <> 'DELETED'");
-            case LOCAL_POLICY_SUBPROCESS_SCOPE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_policy_subprocess_scope target join local_organization_subprocess_scope ctx on ctx.id = target.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and ctx.status <> 'DELETED'");
-            case LOCAL_POLICY_CONTROL_SCOPE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_policy_control_scope target join local_subprocess_control_scope control_scope on control_scope.id = target.local_control_scope_id join local_organization_subprocess_scope ctx on ctx.id = control_scope.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and control_scope.status <> 'DELETED' and ctx.status <> 'DELETED'");
-            case LOCAL_POLICY_REQUIREMENT_SCOPE -> local(targetType, targetId,
-                    "select ctx.organization_id from local_policy_requirement_scope target join local_subprocess_requirement_scope requirement_scope on requirement_scope.id = target.local_requirement_scope_id join local_organization_subprocess_scope ctx on ctx.id = requirement_scope.organization_subprocess_scope_id where target.id = ? and target.status <> 'DELETED' and requirement_scope.status <> 'DELETED' and ctx.status <> 'DELETED'");
             case MASTERDATA_REVISION -> throw DocumentFailures.invalid("TARGET_NOT_ALLOWED", "Document link target type is not allowed from browser requests");
         };
+    }
+
+    @Override
+    public void assertMutable(DocumentLinkTargetType targetType, UUID targetId) {
+        String sql = switch (targetType) {
+            case ORGANIZATION -> "select id from organization where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_PROCESS -> "select id from central_process where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_SUBPROCESS -> "select id from central_subprocess where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_CONTROL -> "select id from central_control where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_CONTROL_OBJECTIVE -> "select id from central_control_objective where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_RISK_CATEGORY -> "select id from central_risk_category where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_RISK_TEMPLATE -> "select id from central_risk_template where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_ACCOUNT_GROUP -> "select id from central_account_group where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_REGULATION_GROUP -> "select id from central_regulation_group where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_REGULATION -> "select id from central_regulation where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_REGULATION_REQUIREMENT -> "select id from central_regulation_requirement where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_POLICY_GROUP -> "select id from central_policy_group where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_POLICY -> "select id from central_policy where id = ? and status <> 'DELETED' for update";
+            case CENTRAL_POLICY_VERSION -> "select id from central_policy_version where id = ? and status <> 'DELETED' and version_status = 'DRAFT' for update";
+            case MASTERDATA_REVISION -> throw DocumentFailures.invalid(
+                    "TARGET_NOT_ALLOWED",
+                    "Document link target type is not allowed from browser requests"
+            );
+        };
+        if (queryUuid(sql, targetId).isPresent()) {
+            return;
+        }
+        if (targetType == DocumentLinkTargetType.CENTRAL_POLICY_VERSION) {
+            throw DocumentFailures.invalid("IMMUTABLE_POLICY_VERSION", "Published and superseded policy version documents are immutable");
+        }
+        throw DocumentFailures.notFound("TARGET_NOT_FOUND", "Document link target was not found");
     }
 
     private DocumentTargetContext central(DocumentLinkTargetType targetType, UUID targetId, String sql) {

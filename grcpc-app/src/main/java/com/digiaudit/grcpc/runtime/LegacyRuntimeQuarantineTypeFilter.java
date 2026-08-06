@@ -8,13 +8,11 @@ import java.util.Set;
 
 public final class LegacyRuntimeQuarantineTypeFilter implements TypeFilter {
 
+    // These packages now contain only converter/value classes referenced by untouched
+    // legacy test sources. They are not part of the Central Catalog V2 runtime.
     private static final Set<String> LEGACY_PACKAGE_PREFIXES = Set.of(
             "com.digiaudit.grcpc.modules.masterdata.accountgroup.",
-            "com.digiaudit.grcpc.modules.masterdata.control.",
-            "com.digiaudit.grcpc.modules.masterdata.objective.",
-            "com.digiaudit.grcpc.modules.masterdata.policy.",
-            "com.digiaudit.grcpc.modules.masterdata.risk.",
-            "com.digiaudit.grcpc.modules.regulation."
+            "com.digiaudit.grcpc.modules.masterdata.risk."
     );
 
     private static final Set<String> LEGACY_CLASS_NAME_PREFIXES = Set.of(
