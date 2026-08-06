@@ -215,6 +215,15 @@ export interface DocumentAggregateRequest {
     metadataUpdates: ParentSaveDocumentMetadataDraft[];
 }
 
+export type DocumentAggregateDraftType = "NEW_DOCUMENT" | "NEW_VERSION" | "METADATA_UPDATE";
+
+export interface DocumentAggregateDraftError {
+    code: string;
+    tempUploadId?: string;
+    documentId?: string;
+    draftType: DocumentAggregateDraftType;
+}
+
 export const EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE: ParentSaveDocumentDraftState = {
     dirty: false,
     ready: true,

@@ -28,6 +28,10 @@ import ProcessObjectPage, { type ProcessTabKey } from "./ProcessObjectPage";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import {
+    toDocumentAggregateDraftError,
+    type DocumentAggregateDraftError,
+} from "@/features/document";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -240,6 +244,7 @@ export default function ProcessesFclShellPage() {
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
     const [objectError, setObjectError] = useState<string | null>(null);
+    const [documentAggregateError, setDocumentAggregateError] = useState<DocumentAggregateDraftError | null>(null);
     const [deleteCandidate, setDeleteCandidate] = useState<ProcessNode | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
@@ -355,6 +360,7 @@ export default function ProcessesFclShellPage() {
         (id: string) => {
             const show = () => {
                 setObjectError(null);
+                setDocumentAggregateError(null);
                 setSelectedTreeId(id);
                 setTreeExpansionAnchorId(id);
                 navigate(`/processes/${id}`);
@@ -385,6 +391,7 @@ export default function ProcessesFclShellPage() {
 
             requestObjectPageLeave(() => {
                 setObjectError(null);
+                setDocumentAggregateError(null);
                 const params = new URLSearchParams();
                 if (parentId) params.set("parentId", parentId);
                 params.set("nodeType", nodeType);
@@ -405,6 +412,7 @@ export default function ProcessesFclShellPage() {
 
             const edit = () => {
                 setObjectError(null);
+                setDocumentAggregateError(null);
                 setSelectedTreeId(targetId);
                 setTreeExpansionAnchorId(targetId);
                 navigate(`/processes/${targetId}/edit`);
@@ -421,6 +429,7 @@ export default function ProcessesFclShellPage() {
     const handleCancel = useCallback(() => {
         requestObjectPageLeave(() => {
             setObjectError(null);
+            setDocumentAggregateError(null);
             const currentAnchorId = routeMode === "create"
                 ? queryParentId ?? selectedTreeId
                 : processId ?? selectedTreeId;
@@ -503,6 +512,7 @@ export default function ProcessesFclShellPage() {
                 setSubmitting(true);
                 setPageError(null);
                 setObjectError(null);
+                setDocumentAggregateError(null);
 
                 if (routeMode === "create") {
                     const createPayload = payload as ProcessNodeCreate;
@@ -528,6 +538,7 @@ export default function ProcessesFclShellPage() {
                 }
                 return false;
             } catch (error) {
+                setDocumentAggregateError(toDocumentAggregateDraftError(error));
                 setObjectError(
                     mapError(
                         error,
@@ -732,6 +743,7 @@ export default function ProcessesFclShellPage() {
                             activeTab={objectActiveTab}
                             busy={loading || submitting}
                             error={objectError}
+                            documentAggregateError={documentAggregateError}
                             onErrorClose={() => setObjectError(null)}
                             onSubmit={handleObjectSubmit}
                             onCancel={handleCancel}

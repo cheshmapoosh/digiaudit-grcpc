@@ -24,6 +24,9 @@
       "refreshWarning": "Document mutation status is unchanged, but refreshing the list failed. Reload later.",
       "expired": "Temporary upload expired",
       "accessDenied": "Access denied",
+      "reuploadRequired": "Re-upload required",
+      "versionConflict": "Document refresh required",
+      "duplicateVersion": "Duplicate version draft",
       "staged": "File \"{{fileName}}\" is uploaded temporarily. Review metadata, then save the document.",
       "finalizationStatusUnknown": "The final save status cannot be determined. Reload the page to check the result."
     },
@@ -51,6 +54,7 @@
     },
     "empty": "No document has been added.",
     "saveFirst": "Save the item first, then upload documents.",
+    "parentSaveTemporaryInfo": "Files are uploaded temporarily and finalized when the form is saved.",
     "saveFirst.process": "Save the process item first, then upload documents.",
     "validation": {
       "waitForUpload": "Wait for file uploads to finish.",
@@ -64,6 +68,11 @@
       "updateTitle": "Failed to save document title",
       "download": "Failed to prepare document download",
       "expired": "The temporary upload has expired. Upload the file again.",
+      "reuploadRequired": "The temporary file is no longer available. Remove this row and upload it again.",
+      "ownershipDenied": "This temporary upload belongs to another user. Remove it and upload the file again.",
+      "metadataMismatch": "The temporary file could not be verified. Remove this row and upload it again.",
+      "versionConflict": "The document changed. Refresh or reload the current document information before retrying.",
+      "duplicateVersionDraft": "Only one new version may be staged for this document. Remove the duplicate draft.",
       "storageDisabled": "Document storage is not configured. Enable MinIO.",
       "titleRequired": "Document title is required."
     },

@@ -17,6 +17,10 @@ import type {
 import { DocumentApiRepo } from "../infra/document.api.repo";
 
 const documentRepo = new DocumentApiRepo();
+const targetLoadGenerations = new Map<string, number>();
+const activeTargetLoads = new Map<number, string>();
+let nextTargetLoadToken = 0;
+let resetGeneration = 0;
 
 interface DocumentState {
     linkedDocumentsByTarget: Record<string, DocumentLinkSummary[]>;
@@ -63,6 +67,23 @@ interface DocumentState {
 
 function targetKey(targetType: DocumentLinkTargetType, targetId: string): string {
     return `${targetType}:${targetId}`;
+}
+
+function invalidateTargetLoads(key: string): number {
+    const generation = (targetLoadGenerations.get(key) ?? 0) + 1;
+    targetLoadGenerations.set(key, generation);
+    for (const [token, activeKey] of activeTargetLoads) {
+        if (activeKey === key) {
+            activeTargetLoads.delete(token);
+        }
+    }
+    return generation;
+}
+
+function invalidateAllTargetLoads(): void {
+    resetGeneration += 1;
+    targetLoadGenerations.clear();
+    activeTargetLoads.clear();
 }
 
 function updateTargetRows(
@@ -122,8 +143,9 @@ export const useDocumentState = create<DocumentState>((set) => ({
     loading: false,
 
     applyAggregateResults(targetType, targetId, responses, consumedTempUploadIds) {
+        const key = targetKey(targetType, targetId);
+        invalidateTargetLoads(key);
         set((state) => {
-            const key = targetKey(targetType, targetId);
             const rows = responses.reduce(updateTargetRows, state.linkedDocumentsByTarget[key] ?? []);
             const temporaryUploadsById = consumedTempUploadIds.reduce(
                 removeTemporaryUpload,
@@ -135,23 +157,35 @@ export const useDocumentState = create<DocumentState>((set) => ({
                     [key]: rows,
                 },
                 temporaryUploadsById,
+                loading: activeTargetLoads.size > 0,
             };
         });
     },
 
     async loadForTarget(targetType, targetId) {
+        const key = targetKey(targetType, targetId);
+        const generation = invalidateTargetLoads(key);
+        const capturedResetGeneration = resetGeneration;
+        const token = ++nextTargetLoadToken;
+        activeTargetLoads.set(token, key);
         set({ loading: true });
 
         try {
             const rows = await documentRepo.listByTarget(targetType, targetId);
+            if (capturedResetGeneration !== resetGeneration
+                || targetLoadGenerations.get(key) !== generation
+                || activeTargetLoads.get(token) !== key) {
+                return;
+            }
             set((state) => ({
                 linkedDocumentsByTarget: {
                     ...state.linkedDocumentsByTarget,
-                    [targetKey(targetType, targetId)]: rows,
+                    [key]: rows,
                 },
             }));
         } finally {
-            set({ loading: false });
+            activeTargetLoads.delete(token);
+            set({ loading: activeTargetLoads.size > 0 });
         }
     },
 
@@ -191,11 +225,13 @@ export const useDocumentState = create<DocumentState>((set) => ({
 
     async createDocument(payload) {
         const response = await documentRepo.createDocument(payload);
+        const key = targetKey(payload.targetType, payload.targetId);
+        invalidateTargetLoads(key);
         set((state) => ({
             linkedDocumentsByTarget: {
                 ...state.linkedDocumentsByTarget,
-                [targetKey(payload.targetType, payload.targetId)]: updateTargetRows(
-                    state.linkedDocumentsByTarget[targetKey(payload.targetType, payload.targetId)] ?? [],
+                [key]: updateTargetRows(
+                    state.linkedDocumentsByTarget[key] ?? [],
                     response,
                 ),
             },
@@ -203,17 +239,20 @@ export const useDocumentState = create<DocumentState>((set) => ({
                 state.temporaryUploadsById,
                 payload.tempUploadId,
             ),
+            loading: activeTargetLoads.size > 0,
         }));
         return response;
     },
 
     async addVersion(documentId, payload) {
         const response = await documentRepo.addVersion(documentId, payload);
+        const key = targetKey(payload.targetType, payload.targetId);
+        invalidateTargetLoads(key);
         set((state) => ({
             linkedDocumentsByTarget: {
                 ...state.linkedDocumentsByTarget,
-                [targetKey(payload.targetType, payload.targetId)]: updateTargetRows(
-                    state.linkedDocumentsByTarget[targetKey(payload.targetType, payload.targetId)] ?? [],
+                [key]: updateTargetRows(
+                    state.linkedDocumentsByTarget[key] ?? [],
                     response,
                 ),
             },
@@ -221,18 +260,21 @@ export const useDocumentState = create<DocumentState>((set) => ({
                 state.temporaryUploadsById,
                 payload.tempUploadId,
             ),
+            loading: activeTargetLoads.size > 0,
         }));
         return response;
     },
 
     async updateMetadata(documentId, payload) {
         const response = await documentRepo.updateMetadata(documentId, payload);
+        const key = targetKey(payload.targetType, payload.targetId);
+        invalidateTargetLoads(key);
         set((state) => ({
             linkedDocumentsByTarget: {
                 ...state.linkedDocumentsByTarget,
-                [targetKey(payload.targetType, payload.targetId)]: updateDocumentRows(
+                [key]: updateDocumentRows(
                     updateTargetRows(
-                        state.linkedDocumentsByTarget[targetKey(payload.targetType, payload.targetId)] ?? [],
+                        state.linkedDocumentsByTarget[key] ?? [],
                         response,
                     ),
                     documentId,
@@ -247,6 +289,7 @@ export const useDocumentState = create<DocumentState>((set) => ({
                     },
                 ),
             },
+            loading: activeTargetLoads.size > 0,
         }));
         return response;
     },
@@ -254,11 +297,13 @@ export const useDocumentState = create<DocumentState>((set) => ({
     async documentLifecycle(documentId, action, payload) {
         const response = await documentRepo.documentLifecycle(documentId, action, payload);
         const nextStatus = lifecycleStatusForAction(action);
+        const key = targetKey(payload.targetType, payload.targetId);
+        invalidateTargetLoads(key);
         set((state) => ({
             linkedDocumentsByTarget: {
                 ...state.linkedDocumentsByTarget,
-                [targetKey(payload.targetType, payload.targetId)]: action === "delete"
-                    ? (state.linkedDocumentsByTarget[targetKey(payload.targetType, payload.targetId)] ?? [])
+                [key]: action === "delete"
+                    ? (state.linkedDocumentsByTarget[key] ?? [])
                           .filter((row) => row.documentId !== documentId)
                     : updateDocumentRows(
                           updateTargetRows(
@@ -272,12 +317,14 @@ export const useDocumentState = create<DocumentState>((set) => ({
                           },
                       ),
             },
+            loading: activeTargetLoads.size > 0,
         }));
         return response;
     },
 
     async linkLifecycle(documentLinkId, action, payload) {
         const response = await documentRepo.linkLifecycle(documentLinkId, action, payload);
+        invalidateAllTargetLoads();
         set((state) => {
             const nextByTarget = Object.fromEntries(
                 Object.entries(state.linkedDocumentsByTarget).map(([key, rows]) => [
@@ -288,7 +335,7 @@ export const useDocumentState = create<DocumentState>((set) => ({
                 ]),
             );
 
-            return { linkedDocumentsByTarget: nextByTarget };
+            return { linkedDocumentsByTarget: nextByTarget, loading: false };
         });
         return response;
     },
@@ -298,6 +345,7 @@ export const useDocumentState = create<DocumentState>((set) => ({
     },
 
     reset() {
+        invalidateAllTargetLoads();
         set({
             linkedDocumentsByTarget: {},
             temporaryUploadsById: {},

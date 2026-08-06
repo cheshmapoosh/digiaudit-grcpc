@@ -27,6 +27,10 @@ import OrganizationObjectPage, { type OrganizationTabKey } from "./OrganizationO
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
+import {
+    toDocumentAggregateDraftError,
+    type DocumentAggregateDraftError,
+} from "@/features/document";
 
 type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
@@ -213,6 +217,7 @@ export default function OrganizationsFclShellPage() {
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
     const [objectError, setObjectError] = useState<string | null>(null);
+    const [documentAggregateError, setDocumentAggregateError] = useState<DocumentAggregateDraftError | null>(null);
     const [deleteCandidate, setDeleteCandidate] = useState<OrganizationNode | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [objectActiveTab, setObjectActiveTab] =
@@ -332,6 +337,7 @@ export default function OrganizationsFclShellPage() {
         (id: string) => {
             const show = () => {
                 setObjectError(null);
+                setDocumentAggregateError(null);
                 setSelectedTreeId(id);
                 setTreeExpansionAnchorId(id);
                 navigate(`/organizations/${id}`);
@@ -348,6 +354,7 @@ export default function OrganizationsFclShellPage() {
     const handleCreate = useCallback(() => {
         requestObjectPageLeave(() => {
             setObjectError(null);
+            setDocumentAggregateError(null);
             if (selectedTreeId) {
                 setTreeExpansionAnchorId(selectedTreeId);
                 navigate(`/organizations/new?parentId=${encodeURIComponent(selectedTreeId)}`);
@@ -367,6 +374,7 @@ export default function OrganizationsFclShellPage() {
 
             const edit = () => {
                 setObjectError(null);
+                setDocumentAggregateError(null);
                 setSelectedTreeId(targetId);
                 setTreeExpansionAnchorId(targetId);
                 navigate(`/organizations/${targetId}/edit`);
@@ -383,6 +391,7 @@ export default function OrganizationsFclShellPage() {
     const handleCancel = useCallback(() => {
         requestObjectPageLeave(() => {
             setObjectError(null);
+            setDocumentAggregateError(null);
             const currentAnchorId = routeMode === "create"
                 ? queryParentId ?? selectedTreeId
                 : organizationId ?? selectedTreeId;
@@ -399,6 +408,7 @@ export default function OrganizationsFclShellPage() {
             try {
                 setSubmitting(true);
                 setObjectError(null);
+                setDocumentAggregateError(null);
 
                 const createPayload = payload as OrganizationNodeCreate;
                 const result = await createNode(createPayload);
@@ -409,6 +419,7 @@ export default function OrganizationsFclShellPage() {
                 runWithNavigationBypass(() => navigate(`/organizations/${result.entityId}`, { replace: true }));
                 return true;
             } catch (error) {
+                setDocumentAggregateError(toDocumentAggregateDraftError(error));
                 setObjectError(
                     mapError(
                         error,
@@ -436,6 +447,7 @@ export default function OrganizationsFclShellPage() {
             try {
                 setSubmitting(true);
                 setObjectError(null);
+                setDocumentAggregateError(null);
 
                 const updatePayload = payload as OrganizationNodeUpdate;
                 await updateNode(target.id, updatePayload);
@@ -446,6 +458,7 @@ export default function OrganizationsFclShellPage() {
                 runWithNavigationBypass(() => navigate(`/organizations/${target.id}`, { replace: true }));
                 return true;
             } catch (error) {
+                setDocumentAggregateError(toDocumentAggregateDraftError(error));
                 setObjectError(
                     mapError(
                         error,
@@ -710,6 +723,7 @@ export default function OrganizationsFclShellPage() {
                             activeTab={objectActiveTab}
                             busy={loading || submitting}
                             error={objectError}
+                            documentAggregateError={documentAggregateError}
                             onErrorClose={() => setObjectError(null)}
                             onSubmit={
                                 objectMode === "create"

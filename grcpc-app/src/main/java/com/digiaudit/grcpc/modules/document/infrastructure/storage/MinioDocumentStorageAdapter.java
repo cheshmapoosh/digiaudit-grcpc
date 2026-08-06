@@ -4,12 +4,12 @@ import com.digiaudit.grcpc.modules.document.application.DocumentStorageException
 import com.digiaudit.grcpc.modules.document.application.DocumentStoragePort;
 import com.digiaudit.grcpc.modules.document.application.DocumentChecksumService;
 import com.digiaudit.grcpc.modules.document.config.MinioProperties;
+import com.digiaudit.grcpc.modules.document.config.MinioStorageInitializer;
 import io.minio.BucketExistsArgs;
 import io.minio.CopyObjectArgs;
 import io.minio.CopySource;
 import io.minio.GetObjectArgs;
 import io.minio.GetPresignedObjectUrlArgs;
-import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
@@ -49,10 +49,12 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
     public MinioDocumentStorageAdapter(
             ObjectProvider<MinioClient> minioClientProvider,
             MinioProperties properties,
+            MinioStorageInitializer storageInitializer,
             @Qualifier("documentClock") Clock clock
     ) {
         this.minioClientProvider = Objects.requireNonNull(minioClientProvider, "minioClientProvider is required");
         this.properties = Objects.requireNonNull(properties, "properties is required");
+        Objects.requireNonNull(storageInitializer, "storageInitializer is required");
         this.clock = Objects.requireNonNull(clock, "clock is required");
     }
 
@@ -274,9 +276,10 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
                 .bucket(properties.bucket())
                 .build());
         if (!exists) {
-            client.makeBucket(MakeBucketArgs.builder()
-                    .bucket(properties.bucket())
-                    .build());
+            throw new DocumentStorageException(
+                    "DOCUMENT_STORAGE_UNAVAILABLE",
+                    "Configured document storage bucket is not accessible"
+            );
         }
     }
 

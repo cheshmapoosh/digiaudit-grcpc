@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -124,14 +126,35 @@ public class ApiExceptionHandler {
                 ? ex.getMessage()
                 : messageSource.getMessage(messageCode, ex.getMessageArgs(), ex.getMessage(), locale);
         return ResponseEntity.status(status).body(
-                new ApiErrorResponse(Instant.now(), status.value(), status.getReasonPhrase(), code, userMessage, ex.getDeveloperMessage(), details)
+                new ApiErrorResponse(
+                        Instant.now(),
+                        status.value(),
+                        status.getReasonPhrase(),
+                        code,
+                        userMessage,
+                        ex.getDeveloperMessage(),
+                        details,
+                        uuidContext(ex.getErrorContext(), "tempUploadId"),
+                        uuidContext(ex.getErrorContext(), "documentId"),
+                        stringContext(ex.getErrorContext(), "draftType")
+                )
         );
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String code, String messageCode, String developerMessage, Locale locale, List<String> details) {
         String userMessage = messageSource.getMessage(messageCode, null, developerMessage, locale);
         return ResponseEntity.status(status).body(
-                new ApiErrorResponse(Instant.now(), status.value(), status.getReasonPhrase(), code, userMessage, developerMessage, details)
+                new ApiErrorResponse(Instant.now(), status.value(), status.getReasonPhrase(), code, userMessage, developerMessage, details, null, null, null)
         );
+    }
+
+    private UUID uuidContext(Map<String, Object> context, String key) {
+        Object value = context.get(key);
+        return value instanceof UUID uuid ? uuid : null;
+    }
+
+    private String stringContext(Map<String, Object> context, String key) {
+        Object value = context.get(key);
+        return value instanceof String text ? text : null;
     }
 }

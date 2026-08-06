@@ -11,6 +11,8 @@ export type {
     DocumentMetadataUpdatePayload,
     DocumentTemporaryUpload,
     DocumentAggregateRequest,
+    DocumentAggregateDraftError,
+    DocumentAggregateDraftType,
     ParentSaveDocumentDraftState,
     ParentSaveDocumentMetadataDraft,
     ParentSaveNewDocumentDraft,
@@ -24,3 +26,4 @@ export {
 export { default as DocumentManager } from "./components/DocumentManager";
 export { default as DocumentIntegrationDeferredMessage } from "./components/DocumentIntegrationDeferredMessage";
 export { getDocumentTargetKey, useDocumentState } from "./state/document.state";
+export { toDocumentAggregateDraftError } from "./utils/documentAggregateError";

@@ -49,7 +49,7 @@ services:
         echo 'Waiting for MinIO...';
         sleep 2;
       done;
-      mc mb -p local/grcpc-documents || true;
+      mc mb -p local/grc-documents || true;
       exit 0;
       "
     restart: "no"
@@ -82,12 +82,12 @@ services:
       DB_SCHEMA: GRCPC
       FLYWAY_ENABLED: "true"
 
-      MINIO_ENABLED: "true"
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET: grcpc-documents
+      GRCPC_MINIO_ENABLED: "true"
+      GRCPC_MINIO_ENDPOINT: http://minio:9000
+      GRCPC_MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+      GRCPC_MINIO_ACCESS_KEY: minioadmin
+      GRCPC_MINIO_SECRET_KEY: minioadmin
+      GRCPC_MINIO_BUCKET: grc-documents
 
       APP_LOGGING_PATH: /opt/grcpc/logs
       ROOT_LOG_LEVEL: INFO

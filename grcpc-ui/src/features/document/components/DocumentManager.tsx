@@ -23,6 +23,7 @@ import {
 } from "@ui5/webcomponents-react";
 
 import type {
+    DocumentAggregateDraftError,
     DocumentLinkSummary,
     DocumentLinkTargetType,
     DocumentTemporaryUpload,
@@ -49,6 +50,7 @@ export interface DocumentManagerProps {
     persistenceMode?: "STANDALONE" | "PARENT_SAVE";
     onDraftStateChange?: (state: ParentSaveDocumentDraftState) => void;
     draftResetKey?: string | number;
+    aggregateError?: DocumentAggregateDraftError | null;
 }
 
 type UploadFlowState =
@@ -61,7 +63,10 @@ type UploadFailureState =
     | "UPLOAD_FAILED"
     | "FINALIZATION_FAILED"
     | "EXPIRED"
-    | "ACCESS_DENIED";
+    | "ACCESS_DENIED"
+    | "REUPLOAD_REQUIRED"
+    | "VERSION_CONFLICT"
+    | "DUPLICATE_VERSION";
 
 interface UploadFlowItem {
     id: string;
@@ -319,6 +324,7 @@ export default function DocumentManager({
     persistenceMode = "STANDALONE",
     onDraftStateChange,
     draftResetKey,
+    aggregateError,
 }: DocumentManagerProps) {
     const { t } = useTranslation();
     const mountedRef = useRef(true);
@@ -326,8 +332,8 @@ export default function DocumentManager({
         useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
     const [uploadItems, setUploadItems] = useState<UploadFlowItem[]>([]);
     const [metadataDrafts, setMetadataDrafts] = useState<Record<string, string>>({});
+    const [metadataErrors, setMetadataErrors] = useState<Record<string, string>>({});
     const [savingMetadataIds, setSavingMetadataIds] = useState<Set<string>>(() => new Set());
-    const [versioningDocumentIds, setVersioningDocumentIds] = useState<Set<string>>(() => new Set());
     const [deleteCandidate, setDeleteCandidate] = useState<DocumentLinkSummary | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [actionMessage, setActionMessage] = useState<ActionMessage | null>(null);
@@ -362,6 +368,14 @@ export default function DocumentManager({
         () => uploadItems.some(isPendingUpload),
         [uploadItems],
     );
+    const stagedVersionDocumentIds = useMemo(
+        () => new Set(
+            uploadItems
+                .filter((item) => Boolean(item.existingDocument))
+                .map((item) => item.existingDocument!.documentId),
+        ),
+        [uploadItems],
+    );
     const hasMetadataDrafts = useMemo(
         () => Object.entries(metadataDrafts).some(([documentId, draft]) => {
             const row = rows.find((candidate) => candidate.documentId === documentId);
@@ -371,8 +385,7 @@ export default function DocumentManager({
     );
     const dirty = hasPendingUploads
         || hasMetadataDrafts
-        || savingMetadataIds.size > 0
-        || versioningDocumentIds.size > 0;
+        || savingMetadataIds.size > 0;
 
     const parentSaveDraftState = useMemo<ParentSaveDocumentDraftState>(() => {
         const uploading = uploadItems.some((item) =>
@@ -399,7 +412,9 @@ export default function DocumentManager({
                 title: draftTitle.trim(),
             }];
         });
-        const invalidMetadata = metadataUpdates.some((draft) => !draft.title);
+        const invalidMetadata = metadataUpdates.some(
+            (draft) => !draft.title || Boolean(metadataErrors[draft.documentId]),
+        );
         const newDocuments = uploadItems
             .filter((item) => !item.existingDocument && Boolean(item.tempUploadId))
             .map((item) => ({
@@ -432,7 +447,7 @@ export default function DocumentManager({
             newVersions,
             metadataUpdates,
         };
-    }, [metadataDrafts, rows, uploadItems]);
+    }, [metadataDrafts, metadataErrors, rows, uploadItems]);
     const effectiveDirty = parentSaveMode ? parentSaveDraftState.dirty : dirty;
 
     useEffect(() => {
@@ -463,8 +478,83 @@ export default function DocumentManager({
         resetKeyRef.current = draftResetKey;
         setUploadItems([]);
         setMetadataDrafts({});
+        setMetadataErrors({});
         setActionMessage(null);
     }, [draftResetKey]);
+
+    useEffect(() => {
+        if (!aggregateError) return;
+        let cancelled = false;
+        queueMicrotask(() => {
+            if (cancelled) return;
+            const message = (() => {
+                switch (aggregateError.code) {
+                    case "TEMPORARY_UPLOAD_EXPIRED":
+                        return t("document.errors.expired", {
+                            defaultValue: "The temporary upload has expired. Remove this row and upload the file again.",
+                        });
+                    case "TEMPORARY_UPLOAD_NOT_FOUND":
+                    case "TEMPORARY_OBJECT_MISSING":
+                        return t("document.errors.reuploadRequired", {
+                            defaultValue: "The temporary file is no longer available. Remove this row and upload it again.",
+                        });
+                    case "TEMPORARY_UPLOAD_OWNERSHIP_DENIED":
+                        return t("document.errors.ownershipDenied", {
+                            defaultValue: "This temporary upload belongs to another user. Remove it and upload the file again.",
+                        });
+                    case "TEMPORARY_OBJECT_METADATA_MISMATCH":
+                        return t("document.errors.metadataMismatch", {
+                            defaultValue: "The temporary file could not be verified. Remove this row and upload it again.",
+                        });
+                    case "DOCUMENT_VERSION_CONFLICT":
+                    case "VERSION_CONFLICT":
+                        return t("document.errors.versionConflict", {
+                            defaultValue: "The document changed. Refresh the current document information before retrying.",
+                        });
+                    case "DUPLICATE_DOCUMENT_VERSION_DRAFT":
+                        return t("document.errors.duplicateVersionDraft", {
+                            defaultValue: "Only one new version may be staged for this document. Remove the duplicate draft.",
+                        });
+                    default:
+                        return t("document.errors.finalize", { defaultValue: "Document finalization failed" });
+                }
+            })();
+            const reuploadCodes = new Set([
+                "TEMPORARY_UPLOAD_EXPIRED",
+                "TEMPORARY_UPLOAD_NOT_FOUND",
+                "TEMPORARY_OBJECT_MISSING",
+                "TEMPORARY_UPLOAD_OWNERSHIP_DENIED",
+                "TEMPORARY_OBJECT_METADATA_MISMATCH",
+            ]);
+            const failureState: UploadFailureState = aggregateError.code === "TEMPORARY_UPLOAD_EXPIRED"
+                ? "EXPIRED"
+                : reuploadCodes.has(aggregateError.code)
+                    ? "REUPLOAD_REQUIRED"
+                    : aggregateError.code === "DUPLICATE_DOCUMENT_VERSION_DRAFT"
+                        ? "DUPLICATE_VERSION"
+                        : "VERSION_CONFLICT";
+            setUploadItems((current) => current.map((item) => {
+                const matchesTemp = Boolean(
+                    aggregateError.tempUploadId && item.tempUploadId === aggregateError.tempUploadId,
+                );
+                const matchesDocument = Boolean(
+                    aggregateError.documentId
+                    && item.existingDocument?.documentId === aggregateError.documentId,
+                );
+                return matchesTemp || matchesDocument
+                    ? { ...item, failureState, error: message }
+                    : item;
+            }));
+            if (aggregateError.documentId && aggregateError.draftType === "METADATA_UPDATE") {
+                setMetadataErrors((current) => ({
+                    ...current,
+                    [aggregateError.documentId as string]: message,
+                }));
+            }
+            setActionMessage({ design: "Negative", text: message });
+        });
+        return () => { cancelled = true; };
+    }, [aggregateError, t]);
 
     useEffect(() => () => {
         onPendingUploadsChange?.(false);
@@ -742,14 +832,6 @@ export default function DocumentManager({
                     error: message,
                 });
                 setActionMessage({ design: "Negative", text: message });
-            } finally {
-                if (existingDocument) {
-                    setVersioningDocumentIds((current) => {
-                        const next = new Set(current);
-                        next.delete(existingDocument.documentId);
-                        return next;
-                    });
-                }
             }
         },
         [
@@ -826,7 +908,15 @@ export default function DocumentManager({
             return;
         }
 
-        setVersioningDocumentIds((current) => new Set(current).add(row.documentId));
+        if (stagedVersionDocumentIds.has(row.documentId)) {
+            setActionMessage({
+                design: "Negative",
+                text: t("document.errors.duplicateVersionDraft", {
+                    defaultValue: "Only one new version may be staged for this document.",
+                }),
+            });
+            return;
+        }
         void uploadAndFinalize(files[0], row);
     };
 
@@ -861,6 +951,11 @@ export default function DocumentManager({
                     title: nextTitle,
                 });
                 setMetadataDrafts((current) => {
+                    const next = { ...current };
+                    delete next[row.documentId];
+                    return next;
+                });
+                setMetadataErrors((current) => {
                     const next = { ...current };
                     delete next[row.documentId];
                     return next;
@@ -958,7 +1053,8 @@ export default function DocumentManager({
         }
 
         return (
-            <Input
+            <div style={{ display: "grid", gap: "0.25rem" }}>
+                <Input
                 accessibleName={t("document.fields.title", { defaultValue: "Title" })}
                 value={titleValue}
                 maxlength={255}
@@ -971,7 +1067,11 @@ export default function DocumentManager({
                         [row.documentId]: nextTitle,
                     }));
                 }}
-            />
+                />
+                {metadataErrors[row.documentId]
+                    ? <span style={ERROR_TEXT_STYLE}>{metadataErrors[row.documentId]}</span>
+                    : null}
+            </div>
         );
     };
 
@@ -981,7 +1081,7 @@ export default function DocumentManager({
         }
 
         const savingTitle = savingMetadataIds.has(row.documentId);
-        const versioning = versioningDocumentIds.has(row.documentId);
+        const versioning = stagedVersionDocumentIds.has(row.documentId);
         const saveTitleDisabled =
             busy ||
             savingTitle ||
@@ -1056,6 +1156,18 @@ export default function DocumentManager({
             });
         }
 
+        if (item.failureState === "REUPLOAD_REQUIRED") {
+            return t("document.upload.reuploadRequired", { defaultValue: "Re-upload required" });
+        }
+
+        if (item.failureState === "VERSION_CONFLICT") {
+            return t("document.upload.versionConflict", { defaultValue: "Document refresh required" });
+        }
+
+        if (item.failureState === "DUPLICATE_VERSION") {
+            return t("document.upload.duplicateVersion", { defaultValue: "Duplicate version draft" });
+        }
+
         if (item.failureState === "UPLOAD_FAILED") {
             return t("document.upload.failed", { defaultValue: "Upload failed" });
         }
@@ -1107,8 +1219,7 @@ export default function DocumentManager({
                         item.state === "UPLOADED" &&
                         Boolean(item.tempUploadId) &&
                         !isExpired(item.expiresAt) &&
-                        item.failureState !== "UPLOAD_FAILED" &&
-                        item.failureState !== "EXPIRED";
+                        !item.failureState;
                     const titleMissing = !item.existingDocument && !item.title.trim();
                     const invalidValidityRange = Boolean(
                         item.validFrom && item.validTo && item.validFrom > item.validTo,
@@ -1280,9 +1391,13 @@ export default function DocumentManager({
         : editHint ?? t("document.editHint", {
               defaultValue: "Select a file to add a document.",
           });
-    const saveFirstText = saveFirstMessage ?? t("document.saveFirst", {
-        defaultValue: "Save the item first, then finalize uploaded documents.",
-    });
+    const saveFirstText = parentSaveMode
+        ? t("document.parentSaveTemporaryInfo", {
+              defaultValue: "Files are uploaded temporarily and finalized when the form is saved.",
+          })
+        : saveFirstMessage ?? t("document.saveFirst", {
+              defaultValue: "Save the item first, then finalize uploaded documents.",
+          });
     const canUploadDocuments = showActions && !readOnly && !busy;
     const activeBusy = busy || loading;
     const noDataText = t("document.empty", {

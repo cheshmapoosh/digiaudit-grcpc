@@ -47,7 +47,7 @@ services:
         echo 'Waiting for MinIO...';
         sleep 2;
       done;
-      mc mb -p local/grcpc-documents || true;
+      mc mb -p local/grc-documents || true;
       exit 0;
       "
     restart: "no"

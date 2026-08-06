@@ -6,6 +6,7 @@ import {
     DocumentManager,
     EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE,
     toDocumentAggregateRequest,
+    type DocumentAggregateDraftError,
     type ParentSaveDocumentDraftState,
 } from "@/features/document";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
@@ -44,6 +45,7 @@ export interface OrganizationObjectPageProps {
     activeTab?: OrganizationTabKey;
     busy?: boolean;
     error?: string | null;
+    documentAggregateError?: DocumentAggregateDraftError | null;
     onErrorClose?: () => void;
     onSubmit: (payload: OrganizationNodeCreate | OrganizationNodeUpdate) => Promise<boolean>;
     onCancel: () => void;
@@ -105,7 +107,7 @@ function FormField({ label, required, fullWidth, children }: { label: string; re
 }
 
 export default function OrganizationObjectPage({
-    mode, allItems, value, activeTab: controlledTab, busy = false, error, onErrorClose,
+    mode, allItems, value, activeTab: controlledTab, busy = false, error, documentAggregateError, onErrorClose,
     onSubmit, onCancel, onEdit, onActiveTabChange, onDirtyChange, onDocumentDirtyChange,
 }: OrganizationObjectPageProps) {
     const { t } = useTranslation();
@@ -223,7 +225,7 @@ export default function OrganizationObjectPage({
                     <FormField label={t("organization.fields.description", { defaultValue: "Description" })} fullWidth><TextArea value={form.description} readonly={readOnly} disabled={busy} rows={4} accessibleName={t("organization.fields.description", { defaultValue: "Description" })} onInput={(e) => change("description", readValue(e))} /></FormField>
                 </div>
             </div>
-            <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("organization.tabs.documents", { defaultValue: "Documents" })} targetType="ORG" targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
+            <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("organization.tabs.documents", { defaultValue: "Documents" })} targetType="ORG" targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentAggregateError} onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
         </div>
 
         <div style={FOOTER_STYLE}>

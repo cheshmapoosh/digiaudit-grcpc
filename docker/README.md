@@ -82,18 +82,48 @@ Compose mounts the MinIO volume to that path, for example:
 grcpc_test_minio:/var/lib/minio/data
 ```
 
-## MinIO Endpoints
+## Application MinIO Configuration
 
-`MINIO_ENDPOINT` is the internal endpoint used by the Java application.
-`MINIO_PUBLIC_ENDPOINT` is used when the application generates pre-signed URLs
-for the UI.
+All application-side MinIO settings support environment overrides. `MINIO_ROOT_USER`
+and `MINIO_ROOT_PASSWORD` remain server-container settings; production should inject
+their corresponding application credentials through Secrets rather than editing
+`application.yml`.
 
-In Docker, these are often different:
+| Environment variable | Default | Purpose |
+| --- | --- | --- |
+| `GRCPC_MINIO_ENABLED` | `true` | Enables application document storage and startup lifecycle handling. |
+| `GRCPC_MINIO_ENDPOINT` | `http://localhost:9000` | Internal MinIO API endpoint used by the application. |
+| `GRCPC_MINIO_PUBLIC_ENDPOINT` | `http://localhost:9000` | Browser-reachable endpoint used for pre-signed download URLs. |
+| `GRCPC_MINIO_ACCESS_KEY` | `minioadmin` | Application MinIO access key; override through a Secret in production. |
+| `GRCPC_MINIO_SECRET_KEY` | `minioadmin` | Application MinIO secret key; override through a Secret in production. |
+| `GRCPC_MINIO_BUCKET` | `grc-documents` | Document object bucket, created when missing and verified before lifecycle setup. |
+| `GRCPC_MINIO_PRESIGNED_URL_EXPIRY_MINUTES` | `15` | Lifetime of generated download URLs. |
+| `GRCPC_MINIO_DEFAULT_MAX_UPLOAD_SIZE_MB` | `25` | Default document upload limit. |
+| `GRCPC_MINIO_TEMP_TTL_MINUTES` | `120` | Oracle business-validity period for a temporary upload. |
+| `GRCPC_MINIO_TEMPORARY_PREFIX` | `master-data/document/temp` | Object-key prefix for temporary uploads. |
+| `GRCPC_MINIO_PERMANENT_PREFIX` | `master-data/document/permanent` | Object-key prefix for immutable permanent versions. |
+| `GRCPC_MINIO_LIFECYCLE_MODE` | `APPLY` | Startup lifecycle mode: `DISABLED`, `VALIDATE`, or `APPLY`. |
+| `GRCPC_MINIO_TEMP_EXPIRATION_ENABLED` | `true` | Manages temporary-object physical expiration. |
+| `GRCPC_MINIO_TEMP_EXPIRATION_RULE_ID` | `grcpc-temp-object-expiration` | Fixed application-owned temporary expiration rule ID. |
+| `GRCPC_MINIO_TEMP_EXPIRATION_DAYS` | `2` | Physical expiration age for objects under the temporary prefix. |
+| `GRCPC_MINIO_INCOMPLETE_MULTIPART_ENABLED` | `true` | Manages cleanup of incomplete temporary multipart uploads. |
+| `GRCPC_MINIO_INCOMPLETE_MULTIPART_RULE_ID` | `grcpc-temp-incomplete-multipart-cleanup` | Fixed application-owned multipart cleanup rule ID. |
+| `GRCPC_MINIO_INCOMPLETE_MULTIPART_ABORT_AFTER_DAYS` | `1` | Age at which incomplete temporary multipart uploads are aborted. |
+
+In Docker, the internal and public endpoints are often different:
 
 ```text
-MINIO_ENDPOINT=http://minio:9000
-MINIO_PUBLIC_ENDPOINT=https://files.example.com
+GRCPC_MINIO_ENDPOINT=http://minio:9000
+GRCPC_MINIO_PUBLIC_ENDPOINT=https://files.example.com
 ```
 
-For local environments, `MINIO_PUBLIC_ENDPOINT=http://localhost:9000` is usually
-correct.
+`GRCPC_MINIO_LIFECYCLE_MODE` defaults to `APPLY` for the current single-instance
+deployment. A future multi-instance deployment should normally run application
+instances in `VALIDATE` mode and let one controlled instance or infrastructure
+workflow apply lifecycle changes.
+
+The lifecycle rules remove physical MinIO objects only. They do not delete Oracle
+`document_temp_upload` rows and do not replace the `expires_at` business check.
+Permanent objects have no automatic expiration rule. The default two-day physical
+cleanup window is deliberately longer than the 120-minute application temporary-upload
+TTL, so an unexpired row remains the authority for retry eligibility.
