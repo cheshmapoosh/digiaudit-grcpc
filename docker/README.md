@@ -106,10 +106,6 @@ their corresponding application credentials through Secrets rather than editing
 | `GRCPC_MINIO_TEMP_EXPIRATION_ENABLED` | `true` | Manages temporary-object physical expiration. |
 | `GRCPC_MINIO_TEMP_EXPIRATION_RULE_ID` | `grcpc-temp-object-expiration` | Fixed application-owned temporary expiration rule ID. |
 | `GRCPC_MINIO_TEMP_EXPIRATION_DAYS` | `2` | Physical expiration age for objects under the temporary prefix. |
-| `GRCPC_MINIO_INCOMPLETE_MULTIPART_ENABLED` | `true` | Manages cleanup of incomplete temporary multipart uploads. |
-| `GRCPC_MINIO_INCOMPLETE_MULTIPART_RULE_ID` | `grcpc-temp-incomplete-multipart-cleanup` | Fixed application-owned multipart cleanup rule ID. |
-| `GRCPC_MINIO_INCOMPLETE_MULTIPART_ABORT_AFTER_DAYS` | `1` | Age at which incomplete temporary multipart uploads are aborted. |
-
 In Docker, the internal and public endpoints are often different:
 
 ```text
@@ -117,13 +113,42 @@ GRCPC_MINIO_ENDPOINT=http://minio:9000
 GRCPC_MINIO_PUBLIC_ENDPOINT=https://files.example.com
 ```
 
-`GRCPC_MINIO_LIFECYCLE_MODE` defaults to `APPLY` for the current single-instance
-deployment. A future multi-instance deployment should normally run application
-instances in `VALIDATE` mode and let one controlled instance or infrastructure
-workflow apply lifecycle changes.
+Runtime entrypoints resolve application MinIO values in this order:
 
-The lifecycle rules remove physical MinIO objects only. They do not delete Oracle
-`document_temp_upload` rows and do not replace the `expires_at` business check.
+```text
+explicit GRCPC_MINIO_* value
+-> matching GRCPC_MINIO_*_FILE value (credentials)
+-> compatible legacy MINIO_* value
+-> MinIO root credential (credentials only)
+-> documented application default
+```
+
+`GRCPC_MINIO_ACCESS_KEY_FILE` and `GRCPC_MINIO_SECRET_KEY_FILE` are supported for
+application credentials. `MINIO_ROOT_USER_FILE`, `MINIO_ROOT_PASSWORD_FILE`, and
+`DB_PASSWORD_FILE` are also supported by the packaged entrypoints. Legacy
+`MINIO_ACCESS_KEY_FILE` and `MINIO_SECRET_KEY_FILE` remain compatibility fallbacks.
+Supplying both a direct variable and its matching `_FILE` variable is rejected. Secret
+file contents and credentials are never written to startup logs. Application credentials
+may differ from the MinIO server root credentials; production should provision a scoped
+application identity and set the `GRCPC_MINIO_*` credentials explicitly.
+
+`GRCPC_MINIO_LIFECYCLE_MODE` defaults to `APPLY` for the current single-instance
+deployment. A future multi-instance deployment should normally use one controlled
+`APPLY` instance (or an infrastructure workflow) and run ordinary replicas in
+`VALIDATE` mode.
+
+Only the `grcpc-temp-object-expiration` temporary-object rule is supported. The former
+`AbortIncompleteMultipartUpload` rule was removed because the deployed MinIO server
+rejects its standalone lifecycle XML; startup reconciliation still removes that obsolete
+application-owned rule ID. No application cleanup scheduler replaces it.
+
+The lifecycle rule removes physical MinIO objects only. It does not delete Oracle
+`document_temp_upload` rows and does not replace the `expires_at` business check.
 Permanent objects have no automatic expiration rule. The default two-day physical
 cleanup window is deliberately longer than the 120-minute application temporary-upload
-TTL, so an unexpired row remains the authority for retry eligibility.
+TTL. Configuration is rejected unless physical expiration is strictly greater than the
+business TTL, and an unexpired Oracle row remains the authority for retry eligibility.
+
+The production Compose file pins MinIO to `RELEASE.2025-09-07T16-13-09Z`.
+Runtime lifecycle verification used that exact server release (commit
+`07c3a429bfed433e49018cb0f78a52145d4bedeb`) and MinIO Java SDK `8.5.17`.

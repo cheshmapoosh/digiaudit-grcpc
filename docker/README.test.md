@@ -87,7 +87,7 @@ grcpc-app.bat --reset "D:\path\to\grcpc-app.jar"
 - The application connects to Oracle using the Compose service name `oracle`, not
   `localhost`.
 - The application connects to MinIO using `http://minio:9000` internally.
-- `MINIO_PUBLIC_ENDPOINT` stays `http://localhost:9000` so browser-facing
+- `GRCPC_MINIO_PUBLIC_ENDPOINT` stays `http://localhost:9000` so browser-facing
   presigned URLs work on the Windows host.
 - Flyway is enabled by default and uses the Oracle migrations already packaged
   inside the boot jar.

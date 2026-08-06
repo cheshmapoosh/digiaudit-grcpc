@@ -31,6 +31,8 @@ import com.digiaudit.grcpc.modules.securityacl.application.ResourceAuthorization
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -93,16 +95,40 @@ public class DocumentCommandService {
     }
 
     @Transactional
-    public void preflightTemporaryUploads(DocumentAggregateBatchRequest requestedBatch) {
+    public PreparedAggregateContext prepareAggregate(DocumentAggregateBatchRequest requestedBatch) {
+        requireActiveTransaction("prepare");
         DocumentAggregateBatchRequest batch = requestedBatch == null
                 ? DocumentAggregateBatchRequest.empty()
                 : requestedBatch;
         AggregateDraftPlan plan = planAggregateDrafts(batch);
         UUID actorId = actorId();
         Instant now = Instant.now(clock);
+        Map<UUID, PreparedTemporaryUpload> tempUploads = new LinkedHashMap<>();
         plan.tempUploadContexts().entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> preflightTemporaryUpload(entry.getKey(), actorId, now, entry.getValue()));
+                .forEach(entry -> tempUploads.put(
+                        entry.getKey(),
+                        preflightTemporaryUpload(entry.getKey(), actorId, now, entry.getValue())
+                ));
+        PreparedAggregateContext prepared = new PreparedAggregateContext(
+                batch,
+                plan,
+                Map.copyOf(tempUploads),
+                actorId,
+                now
+        );
+        TransactionSynchronizationManager.bindResource(prepared, Boolean.TRUE);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                try {
+                    TransactionSynchronizationManager.unbindResourceIfPossible(prepared);
+                } finally {
+                    prepared.expire();
+                }
+            }
+        });
+        return prepared;
     }
 
     @Transactional
@@ -111,9 +137,19 @@ public class DocumentCommandService {
             DocumentLinkTargetType targetType,
             UUID targetId
     ) {
-        DocumentAggregateBatchRequest batch = requestedBatch == null
-                ? DocumentAggregateBatchRequest.empty()
-                : requestedBatch;
+        PreparedAggregateContext prepared = prepareAggregate(requestedBatch);
+        return finalizePreparedAggregate(prepared, targetType, targetId);
+    }
+
+    @Transactional
+    public List<DocumentCommandResponse> finalizePreparedAggregate(
+            PreparedAggregateContext prepared,
+            DocumentLinkTargetType targetType,
+            UUID targetId
+    ) {
+        requirePreparedInCurrentTransaction(prepared);
+        prepared.consume();
+        DocumentAggregateBatchRequest batch = prepared.batch;
         if (batch.newDocuments().isEmpty()
                 && batch.newVersions().isEmpty()
                 && batch.metadataUpdates().isEmpty()) {
@@ -121,41 +157,37 @@ public class DocumentCommandService {
         }
 
         DocumentTargetContext targetContext = resolveAndAuthorize(targetType, targetId, UPLOAD_PERMISSION);
-        UUID actorId = actorId();
-        Instant now = Instant.now(clock);
-        AggregateDraftPlan plan = planAggregateDrafts(batch);
-        PreparedAggregate prepared = preflightAggregate(plan, targetContext, actorId, now);
+        List<PreparedExistingMutation> existingMutations = prepareExistingMutations(
+                prepared.plan,
+                targetContext
+        );
 
         List<DocumentCommandResponse> results = new ArrayList<>();
         for (NewDocumentDraftRequest draft : batch.newDocuments()) {
             results.add(finalizeNewDocumentDraft(
                     draft,
-                    prepared.tempUploads().get(draft.tempUploadId()),
+                    prepared.tempUploads.get(draft.tempUploadId()),
                     targetContext,
-                    actorId,
-                    now
+                    prepared.actorId,
+                    prepared.preparedAt
             ));
         }
-        for (PreparedExistingMutation mutation : prepared.existingMutations()) {
-            results.add(finalizeExistingDocumentMutation(mutation, prepared.tempUploads(), targetContext, actorId, now));
+        for (PreparedExistingMutation mutation : existingMutations) {
+            results.add(finalizeExistingDocumentMutation(
+                    mutation,
+                    prepared.tempUploads,
+                    targetContext,
+                    prepared.actorId,
+                    prepared.preparedAt
+            ));
         }
         return List.copyOf(results);
     }
 
-    private PreparedAggregate preflightAggregate(
+    private List<PreparedExistingMutation> prepareExistingMutations(
             AggregateDraftPlan plan,
-            DocumentTargetContext targetContext,
-            UUID actorId,
-            Instant now
+            DocumentTargetContext targetContext
     ) {
-        Map<UUID, DocumentTempUploadEntity> tempUploads = new LinkedHashMap<>();
-        plan.tempUploadContexts().entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> tempUploads.put(
-                        entry.getKey(),
-                        preflightTemporaryUpload(entry.getKey(), actorId, now, entry.getValue())
-                ));
-
         List<PreparedExistingMutation> existingMutations = new ArrayList<>();
         for (ExistingDocumentDraft mutation : plan.existingDrafts().entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
@@ -178,10 +210,10 @@ public class DocumentCommandService {
                 throw withDraftContext(ex, context);
             }
         }
-        return new PreparedAggregate(Map.copyOf(tempUploads), List.copyOf(existingMutations));
+        return List.copyOf(existingMutations);
     }
 
-    private DocumentTempUploadEntity preflightTemporaryUpload(
+    private PreparedTemporaryUpload preflightTemporaryUpload(
             UUID tempUploadId,
             UUID actorId,
             Instant now,
@@ -194,8 +226,8 @@ public class DocumentCommandService {
                             "Temporary upload was not found"
                     ));
             validateTemporaryUpload(tempUpload, actorId, now);
-            verifyTemporaryObject(tempUpload);
-            return tempUpload;
+            DocumentStoragePort.DocumentObjectMetadata metadata = verifyTemporaryObject(tempUpload);
+            return new PreparedTemporaryUpload(tempUpload, metadata, context);
         } catch (BusinessException ex) {
             throw withDraftContext(ex, context);
         }
@@ -321,17 +353,18 @@ public class DocumentCommandService {
 
     private DocumentCommandResponse finalizeNewDocumentDraft(
             NewDocumentDraftRequest draft,
-            DocumentTempUploadEntity tempUpload,
+            PreparedTemporaryUpload preparedUpload,
             DocumentTargetContext targetContext,
             UUID actorId,
             Instant now
     ) {
         DraftContext context = new DraftContext(draft.tempUploadId(), null, "NEW_DOCUMENT");
         try {
+            DocumentTempUploadEntity tempUpload = preparedUpload.entity();
             UUID documentId = UUID.randomUUID();
             UUID documentVersionId = UUID.randomUUID();
             UUID documentLinkId = UUID.randomUUID();
-            PromotedUpload promotedUpload = promotePreparedUpload(tempUpload, documentVersionId);
+            PromotedUpload promotedUpload = promotePreparedUpload(preparedUpload, documentVersionId);
 
             DocumentEntity document = DocumentEntity.create(
                     documentId,
@@ -384,7 +417,7 @@ public class DocumentCommandService {
 
     private DocumentCommandResponse finalizeExistingDocumentMutation(
             PreparedExistingMutation mutation,
-            Map<UUID, DocumentTempUploadEntity> tempUploads,
+            Map<UUID, PreparedTemporaryUpload> tempUploads,
             DocumentTargetContext targetContext,
             UUID actorId,
             Instant now
@@ -411,8 +444,9 @@ public class DocumentCommandService {
                 NewDocumentVersionDraftRequest draft = mutation.newVersion();
                 UUID documentVersionId = UUID.randomUUID();
                 long nextVersionNumber = versionRepository.maxVersionNumberForLockedDocument(document.getId()) + 1L;
-                DocumentTempUploadEntity tempUpload = tempUploads.get(draft.tempUploadId());
-                PromotedUpload promotedUpload = promotePreparedUpload(tempUpload, documentVersionId);
+                PreparedTemporaryUpload preparedUpload = tempUploads.get(draft.tempUploadId());
+                DocumentTempUploadEntity tempUpload = preparedUpload.entity();
+                PromotedUpload promotedUpload = promotePreparedUpload(preparedUpload, documentVersionId);
                 if (mutation.metadataUpdate() == null) {
                     document.touch(actorId, now);
                 }
@@ -457,19 +491,14 @@ public class DocumentCommandService {
         }
     }
 
-    private PromotedUpload promotePreparedUpload(DocumentTempUploadEntity tempUpload, UUID documentVersionId) {
-        DocumentStoragePort.DocumentObjectMetadata expectedMetadata = new DocumentStoragePort.DocumentObjectMetadata(
-                tempUpload.getMimeType(),
-                tempUpload.getFileSize(),
-                tempUpload.getChecksumAlgorithm(),
-                tempUpload.getChecksumValue()
-        );
+    private PromotedUpload promotePreparedUpload(PreparedTemporaryUpload preparedUpload, UUID documentVersionId) {
+        DocumentTempUploadEntity tempUpload = preparedUpload.entity();
         String permanentObjectKey = objectKeyService.permanentKey(tempUpload.getId(), tempUpload.getOriginalFileName());
         try {
             DocumentStoragePort.PermanentObjectPromotionResult promotion = storagePort.promoteTemporaryObject(
                     tempUpload.getStorageObjectKey(),
                     permanentObjectKey,
-                    expectedMetadata
+                    preparedUpload.metadata()
             );
             cleanupRegistry.registerFinalizationCleanup(
                     tempUpload.getStorageObjectKey(),
@@ -726,6 +755,25 @@ public class DocumentCommandService {
                 .orElseThrow(() -> DocumentFailures.forbidden("DOCUMENT_ACTOR_REQUIRED", "Authenticated user is required"));
     }
 
+    private void requireActiveTransaction(String operation) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()
+                || !TransactionSynchronizationManager.isSynchronizationActive()) {
+            throw new IllegalStateException(
+                    "Document aggregate " + operation + " must run inside one active transaction"
+            );
+        }
+    }
+
+    private void requirePreparedInCurrentTransaction(PreparedAggregateContext prepared) {
+        requireActiveTransaction("finalization");
+        if (prepared == null
+                || !Boolean.TRUE.equals(TransactionSynchronizationManager.getResource(prepared))) {
+            throw new IllegalStateException(
+                    "Prepared document aggregate must be consumed in the transaction that created it"
+            );
+        }
+    }
+
     private PromotedUpload lockValidateAndPromote(UUID tempUploadId, UUID actorId, Instant now, UUID documentVersionId) {
         DocumentTempUploadEntity tempUpload = tempUploadRepository.lockById(tempUploadId)
                 .orElseThrow(() -> DocumentFailures.notFound(
@@ -879,12 +927,6 @@ public class DocumentCommandService {
     ) {
     }
 
-    private record PreparedAggregate(
-            Map<UUID, DocumentTempUploadEntity> tempUploads,
-            List<PreparedExistingMutation> existingMutations
-    ) {
-    }
-
     private record PreparedExistingMutation(
             DocumentEntity document,
             LinkedDocumentContext linkedContext,
@@ -937,6 +979,56 @@ public class DocumentCommandService {
     private record PromotedUpload(DocumentTempUploadEntity tempUpload, String permanentObjectKey) {
     }
 
+    private record PreparedTemporaryUpload(
+            DocumentTempUploadEntity entity,
+            DocumentStoragePort.DocumentObjectMetadata metadata,
+            DraftContext context
+    ) {
+    }
+
     private record LinkedDocumentContext(DocumentVersionEntity version, DocumentLinkEntity link) {
+    }
+
+    public static final class PreparedAggregateContext {
+        private DocumentAggregateBatchRequest batch;
+        private AggregateDraftPlan plan;
+        private Map<UUID, PreparedTemporaryUpload> tempUploads;
+        private UUID actorId;
+        private Instant preparedAt;
+        private boolean consumed;
+        private boolean expired;
+
+        private PreparedAggregateContext(
+                DocumentAggregateBatchRequest batch,
+                AggregateDraftPlan plan,
+                Map<UUID, PreparedTemporaryUpload> tempUploads,
+                UUID actorId,
+                Instant preparedAt
+        ) {
+            this.batch = batch;
+            this.plan = plan;
+            this.tempUploads = tempUploads;
+            this.actorId = actorId;
+            this.preparedAt = preparedAt;
+        }
+
+        private void consume() {
+            if (expired) {
+                throw new IllegalStateException("Prepared document aggregate transaction has completed");
+            }
+            if (consumed) {
+                throw new IllegalStateException("Prepared document aggregate has already been consumed");
+            }
+            consumed = true;
+        }
+
+        private void expire() {
+            expired = true;
+            batch = DocumentAggregateBatchRequest.empty();
+            plan = null;
+            tempUploads = Map.of();
+            actorId = null;
+            preparedAt = null;
+        }
     }
 }

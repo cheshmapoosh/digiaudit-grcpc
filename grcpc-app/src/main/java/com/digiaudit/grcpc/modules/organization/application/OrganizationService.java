@@ -130,15 +130,16 @@ public class OrganizationService {
                     RevisionRequest.central("Create organization " + code, "Organization structural create", null),
                     context -> {
                         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
-                        documentCommandService.preflightTemporaryUploads(request.documents());
+                        DocumentCommandService.PreparedAggregateContext preparedDocuments =
+                                documentCommandService.prepareAggregate(request.documents());
                         RevisionOperationResult operation = createInsideRevision(
                                 context,
                                 code,
                                 request.parentOrganizationId(),
                                 generalInformation
                         );
-                        finalizedDocuments.set(documentCommandService.finalizeAggregate(
-                                request.documents(),
+                        finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
+                                preparedDocuments,
                                 DocumentLinkTargetType.ORGANIZATION,
                                 operation.primaryResult().entityId()
                         ));
@@ -169,7 +170,8 @@ public class OrganizationService {
                 ),
                 context -> {
                     mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
-                    documentCommandService.preflightTemporaryUploads(request.documents());
+                    DocumentCommandService.PreparedAggregateContext preparedDocuments =
+                            documentCommandService.prepareAggregate(request.documents());
                     RevisionOperationResult operation = updateInsideRevision(
                             context,
                             organizationId,
@@ -177,8 +179,8 @@ public class OrganizationService {
                             request.parentOrganizationId(),
                             generalInformation
                     );
-                    finalizedDocuments.set(documentCommandService.finalizeAggregate(
-                            request.documents(),
+                    finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
+                            preparedDocuments,
                             DocumentLinkTargetType.ORGANIZATION,
                             organizationId
                     ));

@@ -56,10 +56,6 @@ app:
         enabled: ${GRCPC_MINIO_TEMP_EXPIRATION_ENABLED:true}
         rule-id: ${GRCPC_MINIO_TEMP_EXPIRATION_RULE_ID:grcpc-temp-object-expiration}
         expire-days: ${GRCPC_MINIO_TEMP_EXPIRATION_DAYS:2}
-      incomplete-multipart:
-        enabled: ${GRCPC_MINIO_INCOMPLETE_MULTIPART_ENABLED:true}
-        rule-id: ${GRCPC_MINIO_INCOMPLETE_MULTIPART_RULE_ID:grcpc-temp-incomplete-multipart-cleanup}
-        abort-after-days: ${GRCPC_MINIO_INCOMPLETE_MULTIPART_ABORT_AFTER_DAYS:1}
 
 logging:
   level:

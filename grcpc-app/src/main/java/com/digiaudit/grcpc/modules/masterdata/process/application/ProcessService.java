@@ -164,10 +164,11 @@ public class ProcessService {
                     RevisionRequest.central("Create central process " + code, "Central process structural create", null),
                     context -> {
                         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
-                        documentCommandService.preflightTemporaryUploads(request.documents());
+                        DocumentCommandService.PreparedAggregateContext preparedDocuments =
+                                documentCommandService.prepareAggregate(request.documents());
                         RevisionOperationResult operation = createProcessInsideRevision(context, code, title, request.parentProcessId(), description, sortOrder, request.validFrom(), request.validTo());
-                        finalizedDocuments.set(documentCommandService.finalizeAggregate(
-                                request.documents(),
+                        finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
+                                preparedDocuments,
                                 DocumentLinkTargetType.CENTRAL_PROCESS,
                                 operation.primaryResult().entityId()
                         ));
@@ -248,10 +249,11 @@ public class ProcessService {
                     RevisionRequest.central("Create central subprocess " + code, "Central subprocess structural create", null),
                     context -> {
                         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
-                        documentCommandService.preflightTemporaryUploads(request.documents());
+                        DocumentCommandService.PreparedAggregateContext preparedDocuments =
+                                documentCommandService.prepareAggregate(request.documents());
                         RevisionOperationResult operation = createSubprocessInsideRevision(context, code, title, request.processId(), description, sortOrder, request.validFrom(), request.validTo());
-                        finalizedDocuments.set(documentCommandService.finalizeAggregate(
-                                request.documents(),
+                        finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
+                                preparedDocuments,
                                 DocumentLinkTargetType.CENTRAL_SUBPROCESS,
                                 operation.primaryResult().entityId()
                         ));
@@ -388,7 +390,8 @@ public class ProcessService {
             AtomicReference<List<DocumentCommandResponse>> finalizedDocuments
     ) {
         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
-        documentCommandService.preflightTemporaryUploads(documents);
+        DocumentCommandService.PreparedAggregateContext preparedDocuments =
+                documentCommandService.prepareAggregate(documents);
         Map<UUID, CentralProcessEntity> byId = indexProcesses(processRepository.findAllByOrderByIdAsc());
         CentralProcessEntity entity = requireProcessFromSnapshot(byId, processId);
         assertVersion(entity, expectedVersion, "Process");
@@ -407,8 +410,8 @@ public class ProcessService {
                 Instant.now(clock)
         );
         CentralProcessEntity saved = processRepository.saveAndFlush(entity);
-        finalizedDocuments.set(documentCommandService.finalizeAggregate(
-                documents,
+        finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
+                preparedDocuments,
                 DocumentLinkTargetType.CENTRAL_PROCESS,
                 processId
         ));
@@ -564,7 +567,8 @@ public class ProcessService {
             AtomicReference<List<DocumentCommandResponse>> finalizedDocuments
     ) {
         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
-        documentCommandService.preflightTemporaryUploads(documents);
+        DocumentCommandService.PreparedAggregateContext preparedDocuments =
+                documentCommandService.prepareAggregate(documents);
         CentralSubprocessEntity entity = findSubprocessIncludingDeleted(subprocessId);
         assertVersion(entity, expectedVersion, "Subprocess");
         requireMutableSubprocess(entity);
@@ -583,8 +587,8 @@ public class ProcessService {
                 Instant.now(clock)
         );
         CentralSubprocessEntity saved = subprocessRepository.saveAndFlush(entity);
-        finalizedDocuments.set(documentCommandService.finalizeAggregate(
-                documents,
+        finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
+                preparedDocuments,
                 DocumentLinkTargetType.CENTRAL_SUBPROCESS,
                 subprocessId
         ));
