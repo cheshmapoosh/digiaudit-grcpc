@@ -8,46 +8,90 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class CentralPolicyMapper {
-    public CentralPolicyDtos.Summary summary(CentralPolicyGroupEntity entity) {
-        return summary(entity, entity.getParentGroupId(), entity.getSortOrder());
-    }
+  public CentralPolicyDtos.GroupSummary summary(CentralPolicyGroupEntity entity) {
+    return new CentralPolicyDtos.GroupSummary(
+        entity.getId(),
+        entity.getCode(),
+        entity.getTitle(),
+        entity.getParentGroupId(),
+        entity.getSortOrder(),
+        entity.getStatus(),
+        entity.getValidFrom(),
+        entity.getValidTo(),
+        entity.getVersion());
+  }
 
-    public CentralPolicyDtos.Summary summary(CentralPolicyEntity entity) {
-        return summary(entity, entity.getPolicyGroupId(), entity.getSortOrder());
-    }
+  public CentralPolicyDtos.PolicySummary summary(CentralPolicyEntity entity) {
+    return new CentralPolicyDtos.PolicySummary(
+        entity.getId(),
+        entity.getCode(),
+        entity.getTitle(),
+        entity.getPolicyGroupId(),
+        entity.getSortOrder(),
+        entity.getStatus(),
+        entity.getValidFrom(),
+        entity.getValidTo(),
+        entity.getVersion());
+  }
 
-    public CentralPolicyDtos.Detail detail(CentralPolicyGroupEntity entity) {
-        return detail(entity, entity.getParentGroupId(), entity.getSortOrder());
-    }
+  public CentralPolicyDtos.GroupDetail detail(CentralPolicyGroupEntity entity) {
+    return new CentralPolicyDtos.GroupDetail(
+        entity.getId(),
+        entity.getCode(),
+        entity.getTitle(),
+        entity.getParentGroupId(),
+        entity.getDescription(),
+        entity.getSortOrder(),
+        entity.getStatus(),
+        entity.getValidFrom(),
+        entity.getValidTo(),
+        entity.getVersion(),
+        entity.getCreatedAt(),
+        entity.getCreatedBy(),
+        entity.getUpdatedAt(),
+        entity.getUpdatedBy(),
+        entity.getDeletedAt(),
+        entity.getDeletedBy());
+  }
 
-    public CentralPolicyDtos.Detail detail(CentralPolicyEntity entity) {
-        return detail(entity, entity.getPolicyGroupId(), entity.getSortOrder());
-    }
+  public CentralPolicyDtos.PolicyDetail detail(CentralPolicyEntity entity) {
+    return new CentralPolicyDtos.PolicyDetail(
+        entity.getId(),
+        entity.getCode(),
+        entity.getTitle(),
+        entity.getPolicyGroupId(),
+        entity.getDescription(),
+        entity.getSortOrder(),
+        entity.getStatus(),
+        entity.getValidFrom(),
+        entity.getValidTo(),
+        entity.getVersion(),
+        entity.getCreatedAt(),
+        entity.getCreatedBy(),
+        entity.getUpdatedAt(),
+        entity.getUpdatedBy(),
+        entity.getDeletedAt(),
+        entity.getDeletedBy());
+  }
 
-    public CentralPolicyDtos.VersionDetail detail(CentralPolicyVersionEntity entity) {
-        return new CentralPolicyDtos.VersionDetail(entity.getId(), entity.getPolicyId(), entity.getVersionNumber(),
-                entity.getContent(), entity.getVersionStatus(), entity.getPublishedAt(), entity.getPublishedBy(),
-                entity.getStatus(), entity.getValidFrom(), entity.getValidTo(), entity.getVersion(), entity.getCreatedAt(),
-                entity.getCreatedBy(), entity.getUpdatedAt(), entity.getUpdatedBy(), entity.getDeletedAt(), entity.getDeletedBy());
-    }
-
-    private CentralPolicyDtos.Summary summary(
-            com.digiaudit.grcpc.modules.masterdata.catalog.shared.domain.entity.CentralDefinitionEntity entity,
-            java.util.UUID parentId,
-            int sortOrder
-    ) {
-        return new CentralPolicyDtos.Summary(entity.getId(), entity.getCode(), entity.getTitle(), parentId, sortOrder,
-                entity.getStatus(), entity.getValidFrom(), entity.getValidTo(), entity.getVersion());
-    }
-
-    private CentralPolicyDtos.Detail detail(
-            com.digiaudit.grcpc.modules.masterdata.catalog.shared.domain.entity.CentralDefinitionEntity entity,
-            java.util.UUID parentId,
-            int sortOrder
-    ) {
-        return new CentralPolicyDtos.Detail(entity.getId(), entity.getCode(), entity.getTitle(), parentId,
-                entity.getDescription(), sortOrder, entity.getStatus(), entity.getValidFrom(), entity.getValidTo(),
-                entity.getVersion(), entity.getCreatedAt(), entity.getCreatedBy(), entity.getUpdatedAt(),
-                entity.getUpdatedBy(), entity.getDeletedAt(), entity.getDeletedBy());
-    }
+  public CentralPolicyDtos.VersionDetail detail(CentralPolicyVersionEntity entity) {
+    return new CentralPolicyDtos.VersionDetail(
+        entity.getId(),
+        entity.getPolicyId(),
+        entity.getVersionNumber(),
+        entity.getContent(),
+        entity.getVersionStatus(),
+        entity.getPublishedAt(),
+        entity.getPublishedBy(),
+        entity.getStatus(),
+        entity.getValidFrom(),
+        entity.getValidTo(),
+        entity.getVersion(),
+        entity.getCreatedAt(),
+        entity.getCreatedBy(),
+        entity.getUpdatedAt(),
+        entity.getUpdatedBy(),
+        entity.getDeletedAt(),
+        entity.getDeletedBy());
+  }
 }

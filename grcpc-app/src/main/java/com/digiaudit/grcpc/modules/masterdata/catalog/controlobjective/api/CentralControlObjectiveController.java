@@ -10,6 +10,8 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.shared.api.dto.CatalogLife
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -19,45 +21,81 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/api/master-data/central/control-objectives")
 public class CentralControlObjectiveController {
-    private final CentralControlObjectiveCommandService commands;
-    private final CentralControlObjectiveQueryService queries;
+  private final CentralControlObjectiveCommandService commands;
+  private final CentralControlObjectiveQueryService queries;
 
-    public CentralControlObjectiveController(CentralControlObjectiveCommandService commands, CentralControlObjectiveQueryService queries) {
-        this.commands = commands;
-        this.queries = queries;
-    }
+  public CentralControlObjectiveController(
+      CentralControlObjectiveCommandService commands, CentralControlObjectiveQueryService queries) {
+    this.commands = commands;
+    this.queries = queries;
+  }
 
-    @GetMapping
-    @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public List<CentralControlObjectiveSummaryResponse> list() { return queries.list(); }
-    @GetMapping("/deleted")
-    @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public List<CentralControlObjectiveSummaryResponse> deleted() { return queries.listDeleted(); }
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public CentralControlObjectiveResponse detail(@PathVariable UUID id) { return queries.detail(id); }
-    @PostMapping
-    @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_CREATE') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public MasterDataAggregateMutationResponse create(@Valid @RequestBody CreateCentralControlObjectiveRequest request) { return commands.create(request); }
-    @PatchMapping("/{id}")
-    @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_UPDATE') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public MasterDataAggregateMutationResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateCentralControlObjectiveRequest request) { return commands.update(id, request); }
-    @PostMapping("/{id}/activate")
-    @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public MasterDataRevisionMutationResponse activate(@PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) { return commands.activate(id, request.version()); }
-    @PostMapping("/{id}/inactivate")
-    @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public MasterDataRevisionMutationResponse inactivate(@PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) { return commands.inactivate(id, request.version()); }
-    @PostMapping("/{id}/delete")
-    @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_DELETE') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public MasterDataRevisionMutationResponse delete(@PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) { return commands.delete(id, request.version()); }
-    @PostMapping("/{id}/restore")
-    @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_RESTORE') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public MasterDataRevisionMutationResponse restore(@PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) { return commands.restore(id, request.version()); }
+  @GetMapping
+  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public List<CentralControlObjectiveSummaryResponse> list() {
+    return queries.list();
+  }
+
+  @GetMapping("/deleted")
+  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public List<CentralControlObjectiveSummaryResponse> deleted() {
+    return queries.listDeleted();
+  }
+
+  @GetMapping("/{id}")
+  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public CentralControlObjectiveResponse detail(@PathVariable UUID id) {
+    return queries.detail(id);
+  }
+
+  @PostMapping
+  @PreAuthorize(
+      "hasAuthority('CENTRAL_CONTROL_OBJECTIVE_CREATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataAggregateMutationResponse create(
+      @Valid @RequestBody CreateCentralControlObjectiveRequest request) {
+    return commands.create(request);
+  }
+
+  @PatchMapping("/{id}")
+  @PreAuthorize(
+      "hasAuthority('CENTRAL_CONTROL_OBJECTIVE_UPDATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataAggregateMutationResponse update(
+      @PathVariable UUID id, @Valid @RequestBody UpdateCentralControlObjectiveRequest request) {
+    return commands.update(id, request);
+  }
+
+  @PostMapping("/{id}/activate")
+  @PreAuthorize(
+      "hasAuthority('CENTRAL_CONTROL_OBJECTIVE_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataRevisionMutationResponse activate(
+      @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) {
+    return commands.activate(id, request.version());
+  }
+
+  @PostMapping("/{id}/inactivate")
+  @PreAuthorize(
+      "hasAuthority('CENTRAL_CONTROL_OBJECTIVE_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataRevisionMutationResponse inactivate(
+      @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) {
+    return commands.inactivate(id, request.version());
+  }
+
+  @PostMapping("/{id}/delete")
+  @PreAuthorize(
+      "hasAuthority('CENTRAL_CONTROL_OBJECTIVE_DELETE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataRevisionMutationResponse delete(
+      @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) {
+    return commands.delete(id, request.version());
+  }
+
+  @PostMapping("/{id}/restore")
+  @PreAuthorize(
+      "hasAuthority('CENTRAL_CONTROL_OBJECTIVE_RESTORE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataRevisionMutationResponse restore(
+      @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) {
+    return commands.restore(id, request.version());
+  }
 }

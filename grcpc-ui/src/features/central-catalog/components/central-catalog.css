@@ -1,0 +1,78 @@
+.catalogWorkspace {
+  display: grid;
+  grid-template-columns: minmax(22rem, 38%) minmax(0, 1fr);
+  gap: 1rem;
+  min-height: 32rem;
+}
+.catalogFcl {
+  display: block;
+  min-height: 34rem;
+  height: calc(100vh - 10rem);
+}
+.catalogFclColumn {
+  box-sizing: border-box;
+  height: 100%;
+  min-width: 0;
+  overflow: auto;
+  padding: 0.25rem;
+}
+.catalogColumnStack {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.catalogListReport,
+.catalogObjectPage,
+.catalogHierarchyColumn {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapGroup_ContentBackground);
+}
+.catalogToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.catalogToolbarActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.catalogFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.catalogFormGrid > ui5-label {
+  display: grid;
+  gap: 0.35rem;
+}
+.catalogWideField {
+  grid-column: 1/-1;
+}
+.catalogSelectedRow {
+  background: var(--sapList_SelectionBackgroundColor);
+}
+.catalogHierarchyList,
+.policyVersionList {
+  display: grid;
+  gap: 0.25rem;
+}
+.catalogHierarchyList ui5-button,
+.policyVersionList ui5-button {
+  width: 100%;
+}
+@media (max-width: 70rem) {
+  .catalogFcl {
+    min-height: 32rem;
+  }
+}
+@media (max-width: 50rem) {
+  .catalogWorkspace,
+  .catalogFormGrid {
+    grid-template-columns: 1fr;
+  }
+}

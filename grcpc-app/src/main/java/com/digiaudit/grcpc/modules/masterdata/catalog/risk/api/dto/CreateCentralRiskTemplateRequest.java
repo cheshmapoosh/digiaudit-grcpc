@@ -8,7 +8,11 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public record CreateCentralRiskTemplateRequest(
-        @NotBlank String code, @NotBlank String title, @NotNull UUID riskCategoryId, String description,
-        Integer sortOrder, LocalDate validFrom, LocalDate validTo,
-        @Valid DocumentAggregateBatchRequest documents
-) {}
+    @NotBlank String code,
+    @NotBlank String title,
+    @NotNull UUID riskCategoryId,
+    String description,
+    Integer sortOrder,
+    LocalDate validFrom,
+    LocalDate validTo,
+    @Valid DocumentAggregateBatchRequest documents) {}

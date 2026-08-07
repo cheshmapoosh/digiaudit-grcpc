@@ -1,0 +1,1 @@
+export { centralRiskRoutes } from "./routes";

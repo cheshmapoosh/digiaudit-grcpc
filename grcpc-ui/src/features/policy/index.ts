@@ -1,0 +1,1 @@
+export { centralPolicyRoutes } from "./routes";

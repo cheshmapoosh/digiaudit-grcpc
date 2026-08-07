@@ -1,10 +1,18 @@
-import { Route } from "react-router-dom";
-import CentralCatalogPage from "./pages/CentralCatalogPage";
-export const centralCatalogRoutes = <>
-    <Route path="/controls" element={<CentralCatalogPage family="control" />} />
-    <Route path="/control-objectives" element={<CentralCatalogPage family="control" initialKind="controlObjectives" />} />
-    <Route path="/risks" element={<CentralCatalogPage family="risk" />} />
-    <Route path="/account-groups" element={<CentralCatalogPage family="accountGroup" />} />
-    <Route path="/regulations" element={<CentralCatalogPage family="regulation" />} />
-    <Route path="/policies" element={<CentralCatalogPage family="policy" />} />
-</>;
+import { centralAccountGroupRoutes } from "@/features/account-group";
+import { centralControlObjectiveRoutes } from "@/features/control-objective";
+import { centralControlRoutes } from "@/features/control";
+import { centralPolicyRoutes } from "@/features/policy";
+import { centralRegulationRoutes } from "@/features/regulation";
+import { centralRiskRoutes } from "@/features/risk";
+import "./components/central-catalog.css";
+
+export const centralCatalogRoutes = (
+  <>
+    {centralControlRoutes}
+    {centralControlObjectiveRoutes}
+    {centralRiskRoutes}
+    {centralAccountGroupRoutes}
+    {centralRegulationRoutes}
+    {centralPolicyRoutes}
+  </>
+);

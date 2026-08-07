@@ -79,7 +79,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Flyway creates Document, Version, and Link before dependent document actions.
 - [ ] Flyway creates `document_temp_upload` as the sole technical temporary-upload table.
 - [ ] Flyway creates `masterdata_revision` before `masterdata_revision_content`.
-- [ ] V1167 creates `masterdata_hierarchy_guard` after V1166 and seeds exactly one `ORGANIZATION` row and one `PROCESS` row, with no `SUBPROCESS` row.
+- [ ] V1167 creates `masterdata_hierarchy_guard` after V1166 and seeds exactly `ORGANIZATION`, `PROCESS`, `RISK`, `ACCOUNT_GROUP`, `REGULATION`, and `POLICY`, with no separate Subprocess, Risk Template, Regulation, Requirement, Policy, or Policy Version row.
 - [ ] Flyway adds supplementary checks, unique constraints, composite FKs, and indexes after referenced tables exist.
 - [ ] Flyway creates only read-only Effective, Diagnostic, Roll-up, and Policy query structures.
 - [ ] There is no Legacy `DROP`/`ALTER` migration chain for Master Data V2.
@@ -110,6 +110,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Effective evaluation uses one common evaluation date across all dependencies.
 - [ ] Structural Organization Create/Update/Move/Delete/Restore acquires `ORGANIZATION` before revision allocation or hierarchy reads.
 - [ ] Structural Process and Subprocess Create/Update/Move/Delete/Restore share `PROCESS` and acquire it before revision allocation or hierarchy reads.
+- [ ] Structural Risk Category/Template commands share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group/Regulation/Requirement share `REGULATION`; Policy Group/Policy share `POLICY`.
 - [ ] Post-Guard hierarchy and dependency reads are fresh normal reads; no full-hierarchy `PESSIMISTIC_WRITE` query remains.
 - [ ] Targeted locks remain for Activate/Inactivate and exact Document/temp-upload rows; aggregate Update additionally owns the hierarchy Guard.
 - [ ] Guard lock acquisition/timeout failures return `HIERARCHY_BUSY` with HTTP 409, disclose no persistence details, and are not retried.
@@ -331,7 +332,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] The Backend rejects object/checksum/authorization failures with `INVALID_TEMP_UPLOAD`.
 - [ ] The Backend validates MinIO object presence and checksum before finalization.
 - [ ] Aggregate Save preflights every referenced temporary upload before applying the parent Oracle mutation and rejects duplicate temp IDs.
-- [ ] Aggregate Save rejects conflicting new-version/metadata operations for one Document before any Document mutation.
+- [ ] Aggregate Save accepts one metadata update plus one new-version draft for the same Document when both use the same baseline, and rejects mismatched baselines or multiple new-version drafts before mutation.
 - [ ] The Frontend never supplies final `storageObjectKey`.
 - [ ] There is no direct final file upload path.
 - [ ] Final confirmation transfers original filename, MIME type, file size, checksum algorithm, and checksum value into `document_version`.

@@ -1,3 +1,91 @@
 package com.digiaudit.grcpc.modules.masterdata.catalog.regulation.api;
-import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.api.dto.CentralRegulationDtos;import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.application.*;import com.digiaudit.grcpc.modules.masterdata.catalog.shared.api.dto.CatalogLifecycleCommandRequest;import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;import jakarta.validation.Valid;import org.springframework.security.access.prepost.PreAuthorize;import org.springframework.web.bind.annotation.*;import java.util.*;
-@RestController @RequestMapping("/api/master-data/central/regulation-requirements") public class CentralRegulationRequirementController{private final CentralRegulationRequirementCommandService commands;private final CentralRegulationRequirementQueryService queries;public CentralRegulationRequirementController(CentralRegulationRequirementCommandService c,CentralRegulationRequirementQueryService q){commands=c;queries=q;}@GetMapping @PreAuthorize("hasAuthority('CENTRAL_REGULATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')") public List<CentralRegulationDtos.Summary> list(@RequestParam(required=false)UUID regulationId){return queries.list(regulationId);}@GetMapping("/deleted") @PreAuthorize("hasAuthority('CENTRAL_REGULATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')") public List<CentralRegulationDtos.Summary> deleted(){return queries.deleted();}@GetMapping("/{id}") @PreAuthorize("hasAuthority('CENTRAL_REGULATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')") public CentralRegulationDtos.Detail detail(@PathVariable UUID id){return queries.detail(id);}@PostMapping @PreAuthorize("hasAuthority('CENTRAL_REGULATION_CREATE') or hasAuthority('ROLE_ROOT_ADMIN')") public MasterDataAggregateMutationResponse create(@Valid @RequestBody CentralRegulationDtos.CreateRequirement r){return commands.create(r);}@PatchMapping("/{id}") @PreAuthorize("hasAuthority('CENTRAL_REGULATION_UPDATE') or hasAuthority('ROLE_ROOT_ADMIN')") public MasterDataAggregateMutationResponse update(@PathVariable UUID id,@Valid @RequestBody CentralRegulationDtos.Update r){return commands.update(id,r);}@PostMapping("/{id}/move") @PreAuthorize("hasAuthority('CENTRAL_REGULATION_MOVE') or hasAuthority('ROLE_ROOT_ADMIN')") public MasterDataRevisionMutationResponse move(@PathVariable UUID id,@Valid @RequestBody CentralRegulationDtos.MoveRequirement r){return commands.move(id,r);}@PostMapping("/{id}/activate") @PreAuthorize("hasAuthority('CENTRAL_REGULATION_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')") public MasterDataRevisionMutationResponse activate(@PathVariable UUID id,@Valid @RequestBody CatalogLifecycleCommandRequest r){return commands.activate(id,r.version());}@PostMapping("/{id}/inactivate") @PreAuthorize("hasAuthority('CENTRAL_REGULATION_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')") public MasterDataRevisionMutationResponse inactivate(@PathVariable UUID id,@Valid @RequestBody CatalogLifecycleCommandRequest r){return commands.inactivate(id,r.version());}@PostMapping("/{id}/delete") @PreAuthorize("hasAuthority('CENTRAL_REGULATION_DELETE') or hasAuthority('ROLE_ROOT_ADMIN')") public MasterDataRevisionMutationResponse delete(@PathVariable UUID id,@Valid @RequestBody CatalogLifecycleCommandRequest r){return commands.delete(id,r.version());}@PostMapping("/{id}/restore") @PreAuthorize("hasAuthority('CENTRAL_REGULATION_RESTORE') or hasAuthority('ROLE_ROOT_ADMIN')") public MasterDataRevisionMutationResponse restore(@PathVariable UUID id,@Valid @RequestBody CatalogLifecycleCommandRequest r){return commands.restore(id,r.version());}}
+
+import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.api.dto.CentralRegulationDtos;
+import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.application.*;
+import com.digiaudit.grcpc.modules.masterdata.catalog.shared.api.dto.CatalogLifecycleCommandRequest;
+import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;
+import jakarta.validation.Valid;
+import java.util.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/master-data/central/regulation-requirements")
+public class CentralRegulationRequirementController {
+  private final CentralRegulationRequirementCommandService commands;
+  private final CentralRegulationRequirementQueryService queries;
+
+  public CentralRegulationRequirementController(
+      CentralRegulationRequirementCommandService c, CentralRegulationRequirementQueryService q) {
+    commands = c;
+    queries = q;
+  }
+
+  @GetMapping
+  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public List<CentralRegulationDtos.RequirementSummary> list(
+      @RequestParam(required = false) UUID regulationId) {
+    return queries.list(regulationId);
+  }
+
+  @GetMapping("/deleted")
+  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public List<CentralRegulationDtos.RequirementSummary> deleted() {
+    return queries.deleted();
+  }
+
+  @GetMapping("/{id}")
+  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public CentralRegulationDtos.RequirementDetail detail(@PathVariable UUID id) {
+    return queries.detail(id);
+  }
+
+  @PostMapping
+  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_CREATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataAggregateMutationResponse create(
+      @Valid @RequestBody CentralRegulationDtos.CreateRequirement r) {
+    return commands.create(r);
+  }
+
+  @PatchMapping("/{id}")
+  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_UPDATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataAggregateMutationResponse update(
+      @PathVariable UUID id, @Valid @RequestBody CentralRegulationDtos.UpdateRequirement r) {
+    return commands.update(id, r);
+  }
+
+  @PostMapping("/{id}/move")
+  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_MOVE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataRevisionMutationResponse move(
+      @PathVariable UUID id, @Valid @RequestBody CentralRegulationDtos.MoveRequirement r) {
+    return commands.move(id, r);
+  }
+
+  @PostMapping("/{id}/activate")
+  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataRevisionMutationResponse activate(
+      @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest r) {
+    return commands.activate(id, r.version());
+  }
+
+  @PostMapping("/{id}/inactivate")
+  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataRevisionMutationResponse inactivate(
+      @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest r) {
+    return commands.inactivate(id, r.version());
+  }
+
+  @PostMapping("/{id}/delete")
+  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_DELETE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataRevisionMutationResponse delete(
+      @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest r) {
+    return commands.delete(id, r.version());
+  }
+
+  @PostMapping("/{id}/restore")
+  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_RESTORE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  public MasterDataRevisionMutationResponse restore(
+      @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest r) {
+    return commands.restore(id, r.version());
+  }
+}

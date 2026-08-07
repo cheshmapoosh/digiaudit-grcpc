@@ -53,6 +53,10 @@ The table has one row per approved independent hierarchy, not one row per busine
 | --- | --- | --- |
 | `ORGANIZATION` | `organization` | All structural Organization mutations share this Guard. |
 | `PROCESS` | `central_process`, `central_subprocess` | Process and Subprocess are one structural hierarchy and share one Guard. |
+| `RISK` | `central_risk_category`, `central_risk_template` | Category and Template structural mutations share this Guard. |
+| `ACCOUNT_GROUP` | `central_account_group` | All Account Group structural mutations share this Guard. |
+| `REGULATION` | `central_regulation_group`, `central_regulation`, `central_regulation_requirement` | The complete Regulation family shares this Guard. |
+| `POLICY` | `central_policy_group`, `central_policy` | Policy Group and Policy structural mutations share this Guard; Policy Version allocation/publication additionally lock the owning Policy row. |
 
 Future feature procedure:
 
@@ -84,6 +88,18 @@ VALUES ('ORGANIZATION');
 
 INSERT INTO masterdata_hierarchy_guard (hierarchy_key)
 VALUES ('PROCESS');
+
+INSERT INTO masterdata_hierarchy_guard (hierarchy_key)
+VALUES ('RISK');
+
+INSERT INTO masterdata_hierarchy_guard (hierarchy_key)
+VALUES ('ACCOUNT_GROUP');
+
+INSERT INTO masterdata_hierarchy_guard (hierarchy_key)
+VALUES ('REGULATION');
+
+INSERT INTO masterdata_hierarchy_guard (hierarchy_key)
+VALUES ('POLICY');
 ```
 
 The table does not use UUID, lifecycle, validity, audit, soft-delete, or optimistic-version columns.

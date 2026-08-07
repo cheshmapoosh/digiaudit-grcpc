@@ -1,0 +1,1 @@
+export { centralAccountGroupRoutes } from "./routes";

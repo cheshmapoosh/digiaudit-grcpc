@@ -10,8 +10,11 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface CentralRiskMapper {
-    CentralRiskCategoryResponse toResponse(CentralRiskCategoryEntity entity);
-    CentralRiskCategorySummaryResponse toSummary(CentralRiskCategoryEntity entity);
-    CentralRiskTemplateResponse toResponse(CentralRiskTemplateEntity entity);
-    CentralRiskTemplateSummaryResponse toSummary(CentralRiskTemplateEntity entity);
+  CentralRiskCategoryResponse toResponse(CentralRiskCategoryEntity entity);
+
+  CentralRiskCategorySummaryResponse toSummary(CentralRiskCategoryEntity entity);
+
+  CentralRiskTemplateResponse toResponse(CentralRiskTemplateEntity entity);
+
+  CentralRiskTemplateSummaryResponse toSummary(CentralRiskTemplateEntity entity);
 }

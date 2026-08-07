@@ -457,7 +457,7 @@ The client refreshes the typed Read DTO and lets the user resolve the conflict; 
 
 Create commands use approved business-key uniqueness plus explicit inactive reactivation/deleted restore behavior for safe duplicate handling.
 
-Structural Organization Create, Update, Move, Delete, and Restore acquire the `ORGANIZATION` Guard. Structural Process and Subprocess Create, Update, Move, Delete, and Restore acquire the shared `PROCESS` Guard. Acquisition occurs before revision-number allocation and fresh hierarchy reads. Activate, Inactivate, and reads remain unguarded; Prompt 5.10 aggregate Update is guarded because its accepted shape always owns the structural parent/owner field.
+Structural Organization commands use the `ORGANIZATION` Guard; Process and Subprocess share `PROCESS`; Risk Category and Risk Template share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group, Regulation, and Requirement share `REGULATION`; Policy Group, Policy, and Policy Version share `POLICY`. Acquisition precedes business-key lookup, revision allocation, hierarchy/dependency reads, parent validation, and mutation. Policy Version allocation and publication then lock the owning Policy followed by its Version rows.
 
 Guard acquisition applies the configured JPA lock-timeout hint. Recognized lock acquisition/timeout failures return `HIERARCHY_BUSY` and are not retried automatically. A missing configured Guard row returns `HIERARCHY_GUARD_NOT_CONFIGURED` and fails the operation before source or Revision persistence.
 

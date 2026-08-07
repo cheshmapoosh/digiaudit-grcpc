@@ -22,7 +22,8 @@ The map is a delivery dependency map; it does not add any table, cache, outbox, 
 - A Central reference is validated before an inherited Local Scope or Coverage can be applied.
 - Document Version is created from a confirmed Temporary Upload before a Document Link is created, and successful finalization deletes the temporary row.
 - A Business Revision header exists before Backend-created Revision Content is persisted and applied.
-- Structural Organization commands acquire the `ORGANIZATION` Guard before revision allocation or hierarchy reads; structural Process and Subprocess commands share the `PROCESS` Guard.
+- Structural families acquire their seeded Guard before revision allocation or structural reads: Organization uses `ORGANIZATION`; Process/Subprocess share `PROCESS`; Risk Category/Template share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group/Regulation/Requirement share `REGULATION`; Policy Group/Policy/Version share `POLICY`.
+- Prompt 6 structural families use `RISK`, `ACCOUNT_GROUP`, `REGULATION`, and `POLICY`; each family acquires its Guard before business-key lookup, hierarchy/dependency reads, or Revision allocation.
 - Read models depend on source tables and never become source-table dependencies.
 - Central changes can affect read results and impact analysis; they never create physical Local mutations.
 

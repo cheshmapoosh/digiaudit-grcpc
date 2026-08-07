@@ -37,6 +37,10 @@ Current approved rows:
 | --- | --- |
 | `ORGANIZATION` | Organization parent-child structure |
 | `PROCESS` | Shared Process and Subprocess structure |
+| `RISK` | Shared Risk Category and Risk Template structure |
+| `ACCOUNT_GROUP` | Account Group hierarchy |
+| `REGULATION` | Shared Regulation Group, Regulation, and Requirement structure |
+| `POLICY` | Shared Policy Group and Policy structure |
 
 `central_process` and `central_subprocess` are separate business tables but belong to one structural hierarchy and therefore share the `PROCESS` Guard Row.
 
@@ -59,6 +63,18 @@ VALUES ('ORGANIZATION');
 
 INSERT INTO masterdata_hierarchy_guard (hierarchy_key)
 VALUES ('PROCESS');
+
+INSERT INTO masterdata_hierarchy_guard (hierarchy_key)
+VALUES ('RISK');
+
+INSERT INTO masterdata_hierarchy_guard (hierarchy_key)
+VALUES ('ACCOUNT_GROUP');
+
+INSERT INTO masterdata_hierarchy_guard (hierarchy_key)
+VALUES ('REGULATION');
+
+INSERT INTO masterdata_hierarchy_guard (hierarchy_key)
+VALUES ('POLICY');
 ```
 
 The table is technical and minimal:

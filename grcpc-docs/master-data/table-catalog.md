@@ -1003,11 +1003,11 @@ Document Link Target Type rules:
 
 ### T2. `masterdata_hierarchy_guard`
 
-**Purpose and family.** Internal database concurrency Guard for structural Organization and Process/Subprocess commands. It is technical and is not business Master Data.
+**Purpose and family.** Internal database concurrency Guard for structural Organization, Process/Subprocess, Risk, Account Group, Regulation, and Policy commands. It is technical and is not business Master Data.
 
 **Fields and Oracle types.** `hierarchy_key VARCHAR2(64 BYTE) NOT NULL`; no UUID, version, lifecycle, audit, timestamp, status, description, or user columns.
 
-**Keys and relationships.** PK: `hierarchy_key`. No foreign keys. The seeded key set contains exactly `ORGANIZATION` and `PROCESS`; there is no `SUBPROCESS` key because Process and Subprocess share `PROCESS`.
+**Keys and relationships.** PK: `hierarchy_key`. No foreign keys. The seeded key set contains exactly `ORGANIZATION`, `PROCESS`, `RISK`, `ACCOUNT_GROUP`, `REGULATION`, and `POLICY`. Related family members share one key; there are no separate Subprocess, Risk Template, Regulation, Requirement, Policy, or Policy Version keys.
 
 **Lifecycle, validity, and lock.** The key must equal `UPPER(TRIM(hierarchy_key))`. Structural command transactions acquire the exact row with `PESSIMISTIC_WRITE` and a configured JPA lock-timeout hint before revision allocation, hierarchy reads, validation, or mutation. Runtime code never creates, repairs, renames, or reseeds rows.
 

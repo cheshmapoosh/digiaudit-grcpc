@@ -4,6 +4,10 @@ import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleS
 import java.util.UUID;
 
 public record CentralRiskCategorySummaryResponse(
-        UUID id, String code, String title, UUID parentCategoryId, int sortOrder,
-        MasterDataLifecycleStatus status, long version
-) {}
+    UUID id,
+    String code,
+    String title,
+    UUID parentCategoryId,
+    int sortOrder,
+    MasterDataLifecycleStatus status,
+    long version) {}

@@ -7,6 +7,7 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface CentralControlObjectiveMapper {
-    CentralControlObjectiveResponse toResponse(CentralControlObjectiveEntity entity);
-    CentralControlObjectiveSummaryResponse toSummary(CentralControlObjectiveEntity entity);
+  CentralControlObjectiveResponse toResponse(CentralControlObjectiveEntity entity);
+
+  CentralControlObjectiveSummaryResponse toSummary(CentralControlObjectiveEntity entity);
 }

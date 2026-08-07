@@ -7,6 +7,9 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 public record UpdateCentralRiskCategoryRequest(
-        @NotNull Long version, @NotBlank String title, String description,
-        LocalDate validFrom, LocalDate validTo, @Valid DocumentAggregateBatchRequest documents
-) {}
+    @NotNull Long version,
+    @NotBlank String title,
+    String description,
+    LocalDate validFrom,
+    LocalDate validTo,
+    @Valid DocumentAggregateBatchRequest documents) {}

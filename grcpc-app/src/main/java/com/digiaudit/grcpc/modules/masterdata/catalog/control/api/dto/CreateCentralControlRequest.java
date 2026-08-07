@@ -3,15 +3,12 @@ package com.digiaudit.grcpc.modules.masterdata.catalog.control.api.dto;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-
 import java.time.LocalDate;
 
 public record CreateCentralControlRequest(
-        @NotBlank String code,
-        @NotBlank String title,
-        String description,
-        LocalDate validFrom,
-        LocalDate validTo,
-        @Valid DocumentAggregateBatchRequest documents
-) {
-}
+    @NotBlank String code,
+    @NotBlank String title,
+    String description,
+    LocalDate validFrom,
+    LocalDate validTo,
+    @Valid DocumentAggregateBatchRequest documents) {}

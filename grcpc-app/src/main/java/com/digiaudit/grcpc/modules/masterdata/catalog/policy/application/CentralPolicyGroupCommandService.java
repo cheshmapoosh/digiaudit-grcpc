@@ -1,8 +1,338 @@
 package com.digiaudit.grcpc.modules.masterdata.catalog.policy.application;
-import com.digiaudit.grcpc.common.exception.*;import com.digiaudit.grcpc.modules.document.api.dto.*;import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;import com.digiaudit.grcpc.modules.masterdata.catalog.policy.api.dto.CentralPolicyDtos;import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyGroupEntity;import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.repository.*;import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.*;import com.digiaudit.grcpc.modules.masterdata.revision.application.*;import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;import com.fasterxml.jackson.databind.JsonNode;import org.springframework.beans.factory.annotation.Qualifier;import org.springframework.dao.DataIntegrityViolationException;import org.springframework.stereotype.Service;import java.time.*;import java.util.*;import java.util.concurrent.atomic.AtomicReference;import java.util.function.Function;import java.util.stream.Collectors;
-@Service public class CentralPolicyGroupCommandService{private final CentralPolicyGroupRepository repository;private final CentralPolicyRepository policies;private final MasterDataRevisionCoordinator revisions;private final MasterDataRevisionActorProvider actors;private final RevisionMutationGuard guard;private final DocumentCommandService documents;private final CatalogCommandSupport support;private final CatalogHierarchySupport hierarchySupport;private final Clock clock;public CentralPolicyGroupCommandService(CentralPolicyGroupRepository r,CentralPolicyRepository p,MasterDataRevisionCoordinator rev,MasterDataRevisionActorProvider a,RevisionMutationGuard g,DocumentCommandService d,CatalogCommandSupport s,CatalogHierarchySupport h,@Qualifier("masterDataRevisionClock")Clock c){repository=r;policies=p;revisions=rev;actors=a;guard=g;documents=d;support=s;hierarchySupport=h;clock=c;}
-public MasterDataAggregateMutationResponse create(CentralPolicyDtos.CreateGroup r){String code=support.normalizeCode(r.code()),title=support.normalizeTitle(r.title()),description=support.normalizeDescription(r.description());int sort=support.normalizeSortOrder(r.sortOrder());support.validateValidity(r.validFrom(),r.validTo());AtomicReference<List<DocumentCommandResponse>>docs=new AtomicReference<>(List.of());try{var result=revisions.executeStructural(MasterDataHierarchyKey.POLICY,RevisionRequest.central("Create policy group "+code,"Policy Group structural create",null),c->{requireGuard(c);var prepared=documents.prepareAggregate(r.documents());var tree=tree();var e=repository.findByCode(code).orElse(null);UUID id=e==null?UUID.randomUUID():e.getId();hierarchySupport.requireParent(id,r.parentGroupId(),tree,"Policy Group parent");hierarchySupport.rejectCycle(id,r.parentGroupId(),tree,CentralPolicyGroupEntity::getParentGroupId);RevisionOperationType op;Long expected;JsonNode before;UUID actor=actors.currentActorId();Instant now=Instant.now(clock);if(e==null){e=CentralPolicyGroupEntity.create(id,code,title,r.parentGroupId(),description,sort,r.validFrom(),r.validTo(),actor,now);op=RevisionOperationType.CREATE;expected=null;before=null;}else{if(e.getStatus()==MasterDataLifecycleStatus.ACTIVE)throw support.duplicate(code);if(!Objects.equals(e.getParentGroupId(),r.parentGroupId()))throw invalidParent();expected=e.getVersion();before=snapshot(e);if(e.getStatus()==MasterDataLifecycleStatus.DELETED){e.restoreFromCreate(title,r.parentGroupId(),description,sort,r.validFrom(),r.validTo(),actor,now);op=RevisionOperationType.RESTORE;}else{e.reactivateFromCreate(title,r.parentGroupId(),description,sort,r.validFrom(),r.validTo(),actor,now);op=RevisionOperationType.ACTIVATE;}}var saved=repository.saveAndFlush(e);docs.set(documents.finalizePreparedAggregate(prepared,DocumentLinkTargetType.CENTRAL_POLICY_GROUP,saved.getId(),"CENTRAL_POLICY_CREATE"));return completed(c,saved,op,expected,before);});return support.aggregateResponse(result,docs.get());}catch(DataIntegrityViolationException e){throw support.duplicate(code);}}
-public MasterDataAggregateMutationResponse update(UUID id,CentralPolicyDtos.Update r){long expected=support.requireVersion(r.version());String title=support.normalizeTitle(r.title()),description=support.normalizeDescription(r.description());support.validateValidity(r.validFrom(),r.validTo());AtomicReference<List<DocumentCommandResponse>>docs=new AtomicReference<>(List.of());var result=revisions.execute(RevisionRequest.central("Update policy group "+id,"Policy Group definition update",null),c->{var prepared=documents.prepareAggregate(r.documents());var e=lock(id);support.assertVersion(e,expected);if(e.getStatus()==MasterDataLifecycleStatus.DELETED)throw notFound(id);if(Objects.equals(e.getTitle(),title)&&Objects.equals(e.getDescription(),description)&&Objects.equals(e.getValidFrom(),r.validFrom())&&Objects.equals(e.getValidTo(),r.validTo())&&empty(r.documents()))throw noChange();JsonNode before=snapshot(e);e.update(title,description,r.validFrom(),r.validTo(),actors.currentActorId(),Instant.now(clock));var saved=repository.saveAndFlush(e);docs.set(documents.finalizePreparedAggregate(prepared,DocumentLinkTargetType.CENTRAL_POLICY_GROUP,id,"CENTRAL_POLICY_UPDATE"));return completed(c,saved,RevisionOperationType.UPDATE,expected,before);});return support.aggregateResponse(result,docs.get());}
-public MasterDataRevisionMutationResponse move(UUID id,CentralPolicyDtos.MoveGroup r){long expected=support.requireVersion(r.version());int sort=support.normalizeSortOrder(r.sortOrder());var result=revisions.executeStructural(MasterDataHierarchyKey.POLICY,RevisionRequest.central("Move policy group "+id,"Policy Group hierarchy move",null),c->{requireGuard(c);var tree=tree();var e=tree.get(id);if(e==null)throw notFound(id);support.assertVersion(e,expected);e.requireNotDeleted();hierarchySupport.requireParent(id,r.parentGroupId(),tree,"Policy Group parent");hierarchySupport.rejectCycle(id,r.parentGroupId(),tree,CentralPolicyGroupEntity::getParentGroupId);if(Objects.equals(e.getParentGroupId(),r.parentGroupId())&&e.getSortOrder()==sort)throw noChange();JsonNode before=snapshot(e);e.move(r.parentGroupId(),sort,actors.currentActorId(),Instant.now(clock));return completed(c,repository.saveAndFlush(e),RevisionOperationType.UPDATE,expected,before);});return MasterDataRevisionMutationResponse.from(result.primaryResult());}
-public MasterDataRevisionMutationResponse activate(UUID id,Long v){return lifecycle(id,v,RevisionOperationType.ACTIVATE);}public MasterDataRevisionMutationResponse inactivate(UUID id,Long v){return lifecycle(id,v,RevisionOperationType.INACTIVATE);}public MasterDataRevisionMutationResponse delete(UUID id,Long v){return lifecycle(id,v,RevisionOperationType.DELETE);}public MasterDataRevisionMutationResponse restore(UUID id,Long v){return lifecycle(id,v,RevisionOperationType.RESTORE);}private MasterDataRevisionMutationResponse lifecycle(UUID id,Long version,RevisionOperationType op){long expected=support.requireVersion(version);var result=revisions.executeStructural(MasterDataHierarchyKey.POLICY,RevisionRequest.central(op+" policy group "+id,"Policy Group lifecycle",null),c->{requireGuard(c);var tree=tree();var e=tree.get(id);if(e==null)throw notFound(id);support.assertVersion(e,expected);support.validateLifecycle(e,op);if(op==RevisionOperationType.DELETE&&(repository.existsByParentGroupIdAndStatusNot(id,MasterDataLifecycleStatus.DELETED)||policies.existsByPolicyGroupIdAndStatusNot(id,MasterDataLifecycleStatus.DELETED)))throw new ConflictException("DEPENDENCY_EXISTS","error.masterdata.v2.dependencyExists","Policy Group has nondeleted children",id);if(op==RevisionOperationType.ACTIVATE||op==RevisionOperationType.RESTORE){hierarchySupport.requireParent(id,e.getParentGroupId(),tree,"Policy Group parent");hierarchySupport.rejectCycle(id,e.getParentGroupId(),tree,CentralPolicyGroupEntity::getParentGroupId);}JsonNode before=snapshot(e);UUID actor=actors.currentActorId();Instant now=Instant.now(clock);switch(op){case ACTIVATE->e.activate(actor,now);case INACTIVATE->e.inactivate(actor,now);case DELETE->e.delete(actor,now);case RESTORE->e.restore(actor,now);default->throw new IllegalArgumentException();}return completed(c,repository.saveAndFlush(e),op,expected,before);});return MasterDataRevisionMutationResponse.from(result.primaryResult());}
-private Map<UUID,CentralPolicyGroupEntity>tree(){return repository.findAllByOrderByIdAsc().stream().collect(Collectors.toMap(CentralPolicyGroupEntity::getId,Function.identity()));}private void requireGuard(RevisionExecutionContext c){guard.requireHierarchyGuard(c,MasterDataHierarchyKey.POLICY);}private CentralPolicyGroupEntity lock(UUID id){return repository.lockById(id).orElseThrow(()->notFound(id));}private NotFoundException notFound(UUID id){return new NotFoundException("MASTER_DATA_NOT_FOUND","error.masterdata.v2.notFound","Policy Group not found",id);}private UnprocessableEntityException invalidParent(){return new UnprocessableEntityException("INVALID_PARENT","error.masterdata.v2.invalidParent","Create cannot change the stored parent");}private UnprocessableEntityException noChange(){return new UnprocessableEntityException("NO_CHANGE","error.masterdata.v2.noChange","The command contains no change");}private Map<String,?>typed(CentralPolicyGroupEntity e){Map<String,Object>m=new LinkedHashMap<>();m.put("parentGroupId",e.getParentGroupId());m.put("sortOrder",e.getSortOrder());return m;}private JsonNode snapshot(CentralPolicyGroupEntity e){return support.snapshot(e,typed(e));}private RevisionOperationResult completed(RevisionExecutionContext c,CentralPolicyGroupEntity e,RevisionOperationType o,Long v,JsonNode b){return support.completed(c,e,RevisionEntityType.CENTRAL_POLICY_GROUP,o,v,b,typed(e));}private boolean empty(DocumentAggregateBatchRequest r){return r==null||(r.newDocuments().isEmpty()&&r.newVersions().isEmpty()&&r.metadataUpdates().isEmpty());}}
+
+import com.digiaudit.grcpc.common.exception.*;
+import com.digiaudit.grcpc.modules.document.api.dto.*;
+import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
+import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.api.dto.CentralPolicyDtos;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.repository.*;
+import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.*;
+import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
+import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;
+import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import java.time.*;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+
+@Service
+public class CentralPolicyGroupCommandService {
+  private final CentralPolicyGroupRepository repository;
+  private final CentralPolicyRepository policies;
+  private final MasterDataRevisionCoordinator revisions;
+  private final MasterDataRevisionActorProvider actors;
+  private final RevisionMutationGuard guard;
+  private final DocumentCommandService documents;
+  private final CatalogCommandSupport support;
+  private final CatalogHierarchySupport hierarchySupport;
+  private final Clock clock;
+
+  public CentralPolicyGroupCommandService(
+      CentralPolicyGroupRepository r,
+      CentralPolicyRepository p,
+      MasterDataRevisionCoordinator rev,
+      MasterDataRevisionActorProvider a,
+      RevisionMutationGuard g,
+      DocumentCommandService d,
+      CatalogCommandSupport s,
+      CatalogHierarchySupport h,
+      @Qualifier("masterDataRevisionClock") Clock c) {
+    repository = r;
+    policies = p;
+    revisions = rev;
+    actors = a;
+    guard = g;
+    documents = d;
+    support = s;
+    hierarchySupport = h;
+    clock = c;
+  }
+
+  public MasterDataAggregateMutationResponse create(CentralPolicyDtos.CreateGroup r) {
+    String code = support.normalizeCode(r.code()),
+        title = support.normalizeTitle(r.title()),
+        description = support.normalizeDescription(r.description());
+    int sort = support.normalizeSortOrder(r.sortOrder());
+    support.validateValidity(r.validFrom(), r.validTo());
+    AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
+    try {
+      var result =
+          revisions.executeStructural(
+              MasterDataHierarchyKey.POLICY,
+              RevisionRequest.central(
+                  "Create policy group " + code, "Policy Group structural create", null),
+              c -> {
+                requireGuard(c);
+                var prepared = documents.prepareAggregate(r.documents());
+                var tree = tree();
+                var e = repository.findByCode(code).orElse(null);
+                UUID id = e == null ? UUID.randomUUID() : e.getId();
+                hierarchySupport.requireParent(id, r.parentGroupId(), tree, "Policy Group parent");
+                hierarchySupport.rejectCycle(
+                    id, r.parentGroupId(), tree, CentralPolicyGroupEntity::getParentGroupId);
+                RevisionOperationType op;
+                Long expected;
+                JsonNode before;
+                UUID actor = actors.currentActorId();
+                Instant now = Instant.now(clock);
+                if (e == null) {
+                  e =
+                      CentralPolicyGroupEntity.create(
+                          id,
+                          code,
+                          title,
+                          r.parentGroupId(),
+                          description,
+                          sort,
+                          r.validFrom(),
+                          r.validTo(),
+                          actor,
+                          now);
+                  op = RevisionOperationType.CREATE;
+                  expected = null;
+                  before = null;
+                } else {
+                  if (e.getStatus() == MasterDataLifecycleStatus.ACTIVE)
+                    throw support.duplicate(code);
+                  if (!Objects.equals(e.getParentGroupId(), r.parentGroupId()))
+                    throw invalidParent();
+                  expected = e.getVersion();
+                  before = snapshot(e);
+                  if (e.getStatus() == MasterDataLifecycleStatus.DELETED) {
+                    e.restoreFromCreate(
+                        title,
+                        r.parentGroupId(),
+                        description,
+                        sort,
+                        r.validFrom(),
+                        r.validTo(),
+                        actor,
+                        now);
+                    op = RevisionOperationType.RESTORE;
+                  } else {
+                    e.reactivateFromCreate(
+                        title,
+                        r.parentGroupId(),
+                        description,
+                        sort,
+                        r.validFrom(),
+                        r.validTo(),
+                        actor,
+                        now);
+                    op = RevisionOperationType.ACTIVATE;
+                  }
+                }
+                var saved = repository.saveAndFlush(e);
+                docs.set(
+                    documents.finalizePreparedAggregate(
+                        prepared,
+                        DocumentLinkTargetType.CENTRAL_POLICY_GROUP,
+                        saved.getId(),
+                        "CENTRAL_POLICY_CREATE"));
+                return completed(c, saved, op, expected, before);
+              });
+      return support.aggregateResponse(result, docs.get());
+    } catch (DataIntegrityViolationException e) {
+      throw support.translateBusinessKeyViolation(e, "UK_CENTRAL_POLICY_GROUP_CODE", code);
+    }
+  }
+
+  public MasterDataAggregateMutationResponse update(UUID id, CentralPolicyDtos.UpdateGroup r) {
+    long expected = support.requireVersion(r.version());
+    String title = support.normalizeTitle(r.title()),
+        description = support.normalizeDescription(r.description());
+    support.validateValidity(r.validFrom(), r.validTo());
+    AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
+    var result =
+        revisions.execute(
+            RevisionRequest.central(
+                "Update policy group " + id, "Policy Group definition update", null),
+            c -> {
+              var prepared = documents.prepareAggregate(r.documents());
+              var e = lock(id);
+              support.assertVersion(e, expected);
+              if (e.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
+              if (Objects.equals(e.getTitle(), title)
+                  && Objects.equals(e.getDescription(), description)
+                  && Objects.equals(e.getValidFrom(), r.validFrom())
+                  && Objects.equals(e.getValidTo(), r.validTo())
+                  && empty(r.documents())) throw noChange();
+              JsonNode before = snapshot(e);
+              e.update(
+                  title,
+                  description,
+                  r.validFrom(),
+                  r.validTo(),
+                  actors.currentActorId(),
+                  Instant.now(clock));
+              var saved = repository.saveAndFlush(e);
+              docs.set(
+                  documents.finalizePreparedAggregate(
+                      prepared,
+                      DocumentLinkTargetType.CENTRAL_POLICY_GROUP,
+                      id,
+                      "CENTRAL_POLICY_UPDATE"));
+              return completed(c, saved, RevisionOperationType.UPDATE, expected, before);
+            });
+    return support.aggregateResponse(result, docs.get());
+  }
+
+  public MasterDataRevisionMutationResponse move(UUID id, CentralPolicyDtos.MoveGroup r) {
+    long expected = support.requireVersion(r.version());
+    int sort = support.normalizeSortOrder(r.sortOrder());
+    var result =
+        revisions.executeStructural(
+            MasterDataHierarchyKey.POLICY,
+            RevisionRequest.central("Move policy group " + id, "Policy Group hierarchy move", null),
+            c -> {
+              requireGuard(c);
+              var tree = tree();
+              var e = tree.get(id);
+              if (e == null) throw notFound(id);
+              support.assertVersion(e, expected);
+              e.requireNotDeleted();
+              hierarchySupport.requireParent(id, r.parentGroupId(), tree, "Policy Group parent");
+              hierarchySupport.rejectCycle(
+                  id, r.parentGroupId(), tree, CentralPolicyGroupEntity::getParentGroupId);
+              if (Objects.equals(e.getParentGroupId(), r.parentGroupId())
+                  && e.getSortOrder() == sort) throw invalidHierarchyMove();
+              JsonNode before = snapshot(e);
+              e.move(r.parentGroupId(), sort, actors.currentActorId(), Instant.now(clock));
+              return completed(
+                  c, repository.saveAndFlush(e), RevisionOperationType.UPDATE, expected, before);
+            });
+    return MasterDataRevisionMutationResponse.from(result.primaryResult());
+  }
+
+  public MasterDataRevisionMutationResponse activate(UUID id, Long v) {
+    return lifecycle(id, v, RevisionOperationType.ACTIVATE);
+  }
+
+  public MasterDataRevisionMutationResponse inactivate(UUID id, Long v) {
+    return lifecycle(id, v, RevisionOperationType.INACTIVATE);
+  }
+
+  public MasterDataRevisionMutationResponse delete(UUID id, Long v) {
+    return lifecycle(id, v, RevisionOperationType.DELETE);
+  }
+
+  public MasterDataRevisionMutationResponse restore(UUID id, Long v) {
+    return lifecycle(id, v, RevisionOperationType.RESTORE);
+  }
+
+  private MasterDataRevisionMutationResponse lifecycle(
+      UUID id, Long version, RevisionOperationType op) {
+    long expected = support.requireVersion(version);
+    var result =
+        revisions.executeStructural(
+            MasterDataHierarchyKey.POLICY,
+            RevisionRequest.central(op + " policy group " + id, "Policy Group lifecycle", null),
+            c -> {
+              requireGuard(c);
+              var tree = tree();
+              var e = tree.get(id);
+              if (e == null) throw notFound(id);
+              support.assertVersion(e, expected);
+              support.validateLifecycle(e, op);
+              if (op == RevisionOperationType.DELETE
+                  && (repository.existsByParentGroupIdAndStatusNot(
+                          id, MasterDataLifecycleStatus.DELETED)
+                      || policies.existsByPolicyGroupIdAndStatusNot(
+                          id, MasterDataLifecycleStatus.DELETED)))
+                throw new ConflictException(
+                    "DEPENDENCY_EXISTS",
+                    "error.masterdata.v2.dependencyExists",
+                    "Policy Group has nondeleted children",
+                    id);
+              if (op == RevisionOperationType.ACTIVATE || op == RevisionOperationType.RESTORE) {
+                hierarchySupport.requireParent(
+                    id, e.getParentGroupId(), tree, "Policy Group parent");
+                hierarchySupport.rejectCycle(
+                    id, e.getParentGroupId(), tree, CentralPolicyGroupEntity::getParentGroupId);
+              }
+              JsonNode before = snapshot(e);
+              UUID actor = actors.currentActorId();
+              Instant now = Instant.now(clock);
+              switch (op) {
+                case ACTIVATE -> e.activate(actor, now);
+                case INACTIVATE -> e.inactivate(actor, now);
+                case DELETE -> e.delete(actor, now);
+                case RESTORE -> e.restore(actor, now);
+                default -> throw new IllegalArgumentException();
+              }
+              return completed(c, repository.saveAndFlush(e), op, expected, before);
+            });
+    return MasterDataRevisionMutationResponse.from(result.primaryResult());
+  }
+
+  private Map<UUID, CentralPolicyGroupEntity> tree() {
+    return repository.findAllByOrderByIdAsc().stream()
+        .collect(Collectors.toMap(CentralPolicyGroupEntity::getId, Function.identity()));
+  }
+
+  private void requireGuard(RevisionExecutionContext c) {
+    guard.requireHierarchyGuard(c, MasterDataHierarchyKey.POLICY);
+  }
+
+  private CentralPolicyGroupEntity lock(UUID id) {
+    return repository.lockById(id).orElseThrow(() -> notFound(id));
+  }
+
+  private NotFoundException notFound(UUID id) {
+    return new NotFoundException(
+        "MASTER_DATA_NOT_FOUND", "error.masterdata.v2.notFound", "Policy Group not found", id);
+  }
+
+  private UnprocessableEntityException invalidParent() {
+    return new UnprocessableEntityException(
+        "INVALID_PARENT",
+        "error.masterdata.v2.invalidParent",
+        "Create cannot change the stored parent");
+  }
+
+  private UnprocessableEntityException noChange() {
+    return new UnprocessableEntityException(
+        "NO_CHANGE", "error.masterdata.v2.noChange", "The command contains no change");
+  }
+
+  private UnprocessableEntityException invalidHierarchyMove() {
+    return new UnprocessableEntityException(
+        "INVALID_HIERARCHY_MOVE",
+        "error.masterdata.v2.invalidHierarchyMove",
+        "The move does not change parent or sort order");
+  }
+
+  private Map<String, ?> typed(CentralPolicyGroupEntity e) {
+    Map<String, Object> m = new LinkedHashMap<>();
+    m.put("parentGroupId", e.getParentGroupId());
+    m.put("sortOrder", e.getSortOrder());
+    return m;
+  }
+
+  private JsonNode snapshot(CentralPolicyGroupEntity e) {
+    return support.snapshot(e, typed(e));
+  }
+
+  private RevisionOperationResult completed(
+      RevisionExecutionContext c,
+      CentralPolicyGroupEntity e,
+      RevisionOperationType o,
+      Long v,
+      JsonNode b) {
+    return support.completed(c, e, RevisionEntityType.CENTRAL_POLICY_GROUP, o, v, b, typed(e));
+  }
+
+  private boolean empty(DocumentAggregateBatchRequest r) {
+    return r == null
+        || (r.newDocuments().isEmpty()
+            && r.newVersions().isEmpty()
+            && r.metadataUpdates().isEmpty());
+  }
+}
