@@ -82,13 +82,17 @@ export function DefinitionListReport<T extends DefinitionListRow>({
             className={selectedId === row.id ? "catalogSelectedRow" : undefined}
           >
             <TableCell>
-              <Button
-                design="Transparent"
-                disabled={busy}
-                onClick={() => onSelect(row)}
-              >
-                {row.code}
-              </Button>
+              {deletedMode ? (
+                row.code
+              ) : (
+                <Button
+                  design="Transparent"
+                  disabled={busy}
+                  onClick={() => onSelect(row)}
+                >
+                  {row.code}
+                </Button>
+              )}
             </TableCell>
             <TableCell>{row.title}</TableCell>
             <TableCell>{row.status}</TableCell>

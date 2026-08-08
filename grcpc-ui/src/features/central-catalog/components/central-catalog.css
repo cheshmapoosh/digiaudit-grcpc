@@ -4,10 +4,40 @@
   gap: 1rem;
   min-height: 32rem;
 }
+.catalogListPage {
+  min-height: 34rem;
+  height: calc(100vh - 10rem);
+  padding: 1rem;
+  box-sizing: border-box;
+  overflow: auto;
+  background: var(--sapBackgroundColor);
+}
 .catalogFcl {
   display: block;
   min-height: 34rem;
   height: calc(100vh - 10rem);
+}
+.catalogObjectDialog {
+  width: min(72rem, calc(100vw - 2rem));
+  max-width: min(72rem, calc(100vw - 2rem));
+}
+.catalogObjectDialogContent {
+  width: 100%;
+  max-height: calc(92vh - 8rem);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 0.25rem;
+  direction: inherit;
+}
+.catalogObjectDialogContent .catalogObjectPage {
+  border: 0;
+  padding: 0.5rem;
+}
+.catalogObjectDialogContent .catalogObjectPage > .catalogToolbar {
+  justify-content: flex-end;
+}
+.catalogObjectDialogContent .catalogObjectPage > .catalogToolbar > ui5-title {
+  display: none;
 }
 .catalogFclColumn {
   box-sizing: border-box;
@@ -28,6 +58,29 @@
   padding: 0.75rem;
   border: 1px solid var(--sapGroup_ContentBorderColor);
   background: var(--sapGroup_ContentBackground);
+}
+.catalogHierarchyColumn {
+  height: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+}
+.catalogColumnTitle {
+  font-size: var(--sapFontHeader4Size);
+  font-weight: 700;
+}
+.catalogTreeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+}
+.catalogTreeTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .catalogToolbar {
   display: flex;

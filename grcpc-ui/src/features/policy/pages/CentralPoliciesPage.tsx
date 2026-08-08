@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, MessageStrip } from "@ui5/webcomponents-react";
+import { Button } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
 import { CatalogFlexibleColumnLayout } from "@/features/central-catalog/components/CatalogFlexibleColumnLayout";
+import { CatalogObjectDialog } from "@/features/central-catalog/components/CatalogObjectDialog";
 import { DefinitionObjectPage } from "@/features/central-catalog/components/DefinitionObjectPage";
 import { HierarchyColumn } from "@/features/central-catalog/components/HierarchyColumn";
 import { MoveDialog } from "@/features/central-catalog/components/MoveDialog";
@@ -34,6 +35,7 @@ export default function CentralPoliciesPage() {
     [level, setLevel] = useState<Level>("group"),
     [creating, setCreating] = useState(false),
     [editing, setEditing] = useState(false),
+    [dialogOpen, setDialogOpen] = useState(false),
     [ownerId, setOwnerId] = useState<string | null>(null),
     [moveOpen, setMoveOpen] = useState(false),
     [busy, setBusy] = useState(false),
@@ -107,6 +109,7 @@ export default function CentralPoliciesPage() {
       setEditing(false);
       setObjectDirty(false);
       setVersionDirty(false);
+      setDialogOpen(true);
       await loadPolicies(row.id);
     } catch (cause) {
       if (request === generation.current)
@@ -128,6 +131,7 @@ export default function CentralPoliciesPage() {
         setEditing(false);
         setObjectDirty(false);
         setVersionDirty(false);
+        setDialogOpen(true);
       }
     } catch (cause) {
       if (request === generation.current)
@@ -145,6 +149,7 @@ export default function CentralPoliciesPage() {
     setCreating(true);
     setEditing(true);
     setObjectDirty(false);
+    setDialogOpen(true);
   };
   const save = async (
     draft: DefinitionDraft,
@@ -212,6 +217,7 @@ export default function CentralPoliciesPage() {
         );
         setGroup(null);
         setPolicies([]);
+        setDialogOpen(false);
         await loadGroups();
       } else {
         await centralPolicyApi.policyLifecycle(
@@ -220,6 +226,7 @@ export default function CentralPoliciesPage() {
           target.version,
         );
         setPolicy(null);
+        setDialogOpen(false);
         await loadPolicies(group!.id);
       }
     } catch (cause) {
@@ -276,29 +283,46 @@ export default function CentralPoliciesPage() {
       level === "group"
         ? (group?.parentGroupId ?? null)
         : (policy?.policyGroupId ?? null);
+  const closeDialog = () => {
+    if (!confirmLeave()) return;
+    setCreating(false);
+    setEditing(false);
+    setObjectDirty(false);
+    setVersionDirty(false);
+    setDocumentError(null);
+    setDialogOpen(false);
+  };
   return (
-    <CatalogFlexibleColumnLayout>
-      <HierarchyColumn
-        canCreate={permissions.create}
-        title={t("centralCatalog.policyGroups", {
-          defaultValue: "گروه‌های خط‌مشی",
-        })}
-        rows={groups}
-        selectedId={group?.id ?? null}
-        busy={busy}
-        onSelect={(row) => void selectGroup(row)}
-        onCreate={() => start("group")}
-      />
-      <HierarchyColumn
-        canCreate={permissions.create}
-        title={t("centralCatalog.policies", { defaultValue: "خط‌مشی‌ها" })}
-        rows={policies}
-        selectedId={policy?.id ?? null}
-        busy={busy || !group}
-        onSelect={(row) => void selectPolicy(row)}
-        onCreate={() => start("policy")}
-      />
-      {creating || value ? (
+    <>
+      <CatalogFlexibleColumnLayout>
+        <HierarchyColumn
+          canCreate={permissions.create}
+          title={t("centralCatalog.policyGroups", {
+            defaultValue: "ساختار گروه‌های سیاست",
+          })}
+          rows={groups}
+          selectedId={group?.id ?? null}
+          busy={busy}
+          getParentId={(row) => row.parentGroupId}
+          onSelect={(row) => void selectGroup(row)}
+          onCreate={() => start("group")}
+        />
+        <HierarchyColumn
+          canCreate={permissions.create}
+          title={t("centralCatalog.policies", { defaultValue: "سیاست‌های گروه انتخاب‌شده" })}
+          rows={policies}
+          selectedId={policy?.id ?? null}
+          busy={busy || !group}
+          onSelect={(row) => void selectPolicy(row)}
+          onCreate={() => start("policy")}
+        />
+      </CatalogFlexibleColumnLayout>
+      <CatalogObjectDialog
+        open={dialogOpen}
+        title={options.title}
+        mode={creating ? "create" : editing ? "edit" : "view"}
+        onClose={closeDialog}
+      >
         <DefinitionObjectPage
           permissions={permissions}
           options={options}
@@ -314,6 +338,7 @@ export default function CentralPoliciesPage() {
             setCreating(false);
             setEditing(false);
             setObjectDirty(false);
+            setDialogOpen(Boolean(value));
           }}
           onSave={save}
           onLifecycle={(action) => void lifecycle(action)}
@@ -326,22 +351,16 @@ export default function CentralPoliciesPage() {
               {t("centralCatalog.move", { defaultValue: "جابجایی" })}
             </Button>
           )}
+          {policy && !creating && (
+            <PolicyVersionEditor
+              permissions={permissions}
+              policyId={policy.id}
+              busy={busy}
+              onDirtyChange={setVersionDirty}
+            />
+          )}
         </DefinitionObjectPage>
-      ) : (
-        <MessageStrip design="Information" hideCloseButton>
-          {t("centralCatalog.selectPrompt", {
-            defaultValue: "یک گروه یا خط‌مشی را انتخاب کنید.",
-          })}
-        </MessageStrip>
-      )}
-      {policy && !creating && (
-        <PolicyVersionEditor
-          permissions={permissions}
-          policyId={policy.id}
-          busy={busy}
-          onDirtyChange={setVersionDirty}
-        />
-      )}
+      </CatalogObjectDialog>
       <MoveDialog
         open={moveOpen}
         requiredParent={level === "policy"}
@@ -352,6 +371,6 @@ export default function CentralPoliciesPage() {
         onClose={() => setMoveOpen(false)}
         onMove={(parent, sort) => void move(parent, sort)}
       />
-    </CatalogFlexibleColumnLayout>
+    </>
   );
 }

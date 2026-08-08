@@ -1,7 +1,7 @@
-import { useMemo, type CSSProperties } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Icon, Title } from "@ui5/webcomponents-react";
+import { Icon, List, ListItemStandard, Title } from "@ui5/webcomponents-react";
 
 import "./master-data.css";
 
@@ -9,84 +9,83 @@ type MasterDataItem = {
     key: string;
     titleKey: string;
     defaultTitle: string;
+    descriptionKey: string;
+    defaultDescription: string;
     icon: string;
     route: string;
-    desktopColumn: 1 | 2;
-    desktopRow: number;
+    group: "structure" | "catalog";
 };
 
 const MASTER_DATA_ITEMS: MasterDataItem[] = [
     {
-        key: "controls",
-        titleKey: "masterData.items.controls",
-        defaultTitle: "کنترل‌های مرکزی",
-        icon: "validate",
-        route: "/controls",
-        desktopColumn: 1,
-        desktopRow: 1,
-    },
-    {
         key: "organizations",
         titleKey: "masterData.items.organizations",
         defaultTitle: "سازمان",
+        descriptionKey: "masterData.items.organizations.description",
+        defaultDescription: "تعریف و نگهداری ساختار سلسله‌مراتبی سازمان",
         icon: "org-chart",
         route: "/organizations",
-        desktopColumn: 2,
-        desktopRow: 2,
+        group: "structure",
     },
     {
         key: "processes",
         titleKey: "masterData.items.processes",
         defaultTitle: "فرآیندها و زیر‌فرآیندها",
+        descriptionKey: "masterData.items.processes.description",
+        defaultDescription: "مدیریت ساختار فرآیند و زیر‌فرآیند و زمینهٔ کنترل‌ها",
         icon: "process",
         route: "/processes",
-        desktopColumn: 2,
-        desktopRow: 2,
+        group: "structure",
     },
     {
         key: "objectives",
         titleKey: "masterData.items.objectives",
         defaultTitle: "اهداف کنترلی",
+        descriptionKey: "masterData.items.objectives.description",
+        defaultDescription: "تعریف اهداف کنترلی و مستندات مرتبط",
         icon: "activity-assigned-to-goal",
         route: "/control-objectives",
-        desktopColumn: 1,
-        desktopRow: 3,
+        group: "catalog",
     },
     {
         key: "regulations",
         titleKey: "masterData.items.regulations",
         defaultTitle: "قوانین و مقررات",
+        descriptionKey: "masterData.items.regulations.description",
+        defaultDescription: "ساختار گروه قانون، قانون و الزام قانونی",
         icon: "official-service",
         route: "/regulations",
-        desktopColumn: 2,
-        desktopRow: 3,
+        group: "catalog",
     },
     {
         key: "risks",
         titleKey: "masterData.items.risks",
         defaultTitle: "ریسک‌ها",
+        descriptionKey: "masterData.items.risks.description",
+        defaultDescription: "ساختار طبقات ریسک و الگوهای ریسک",
         icon: "quality-issue",
         route: "/risks",
-        desktopColumn: 1,
-        desktopRow: 4,
+        group: "catalog",
     },
     {
         key: "accountGroups",
         titleKey: "masterData.items.accountGroups",
         defaultTitle: "گروه حساب‌ها",
+        descriptionKey: "masterData.items.accountGroups.description",
+        defaultDescription: "تعریف سلسله‌مراتب گروه‌های حساب",
         icon: "accounting-document-verification",
         route: "/account-groups",
-        desktopColumn: 1,
-        desktopRow: 5,
+        group: "catalog",
     },
     {
         key: "policies",
         titleKey: "masterData.items.policies",
         defaultTitle: "سیاست‌ها",
+        descriptionKey: "masterData.items.policies.description",
+        defaultDescription: "ساختار گروه سیاست، سیاست و نسخه‌های آن",
         icon: "document-text",
         route: "/policies",
-        desktopColumn: 2,
-        desktopRow: 4,
+        group: "catalog",
     },
 ];
 
@@ -99,40 +98,69 @@ export default function MasterDataFeaturePage() {
             MASTER_DATA_ITEMS.map((item) => ({
                 ...item,
                 title: t(item.titleKey, { defaultValue: item.defaultTitle }),
+                description: t(item.descriptionKey, {
+                    defaultValue: item.defaultDescription,
+                }),
             })),
         [t],
+    );
+
+    const groups = useMemo(
+        () => [
+            {
+                key: "structure" as const,
+                title: t("masterData.groups.structure", {
+                    defaultValue: "ساختارهای سازمانی و فرآیندی",
+                }),
+                items: items.filter((item) => item.group === "structure"),
+            },
+            {
+                key: "catalog" as const,
+                title: t("masterData.groups.catalog", {
+                    defaultValue: "کاتالوگ‌های تخصصی",
+                }),
+                items: items.filter((item) => item.group === "catalog"),
+            },
+        ],
+        [items, t],
     );
 
     return (
         <section className="masterDataPage" aria-labelledby="master-data-page-title">
             <header className="masterDataHeader">
-                <Title id="master-data-page-title" level="H4" size="H4">
-                    {t("masterData.title", {
-                        defaultValue: "اطلاعات پایه",
-                    })}
-                </Title>
+                <div>
+                    <Title id="master-data-page-title" level="H3" size="H3">
+                        {t("masterData.title", { defaultValue: "اطلاعات پایه" })}
+                    </Title>
+                    <p className="masterDataSubtitle">
+                        {t("masterData.subtitle", {
+                            defaultValue: "ساختارها و کاتالوگ‌های مرجع سامانه را مدیریت کنید.",
+                        })}
+                    </p>
+                </div>
             </header>
 
-            <div className="masterDataGrid" role="list">
-                {items.map((item) => (
-                    <button
-                        key={item.key}
-                        type="button"
-                        className="masterDataTile"
-                        role="listitem"
-                        style={
-                            {
-                                "--master-data-column": item.desktopColumn,
-                                "--master-data-row": item.desktopRow,
-                            } as CSSProperties
-                        }
-                        onClick={() => navigate(item.route)}
-                    >
-                        <span className="masterDataTileLabel">{item.title}</span>
-                        <span className="masterDataTileIconShell" aria-hidden="true">
-                            <Icon name={item.icon} className="masterDataTileIcon" />
-                        </span>
-                    </button>
+            <div className="masterDataSections">
+                {groups.map((group) => (
+                    <section key={group.key} className="masterDataSection">
+                        <Title level="H4" size="H4">{group.title}</Title>
+                        <List className="masterDataList" separators="Inner">
+                            {group.items.map((item) => (
+                                <ListItemStandard
+                                    key={item.key}
+                                    type="Active"
+                                    description={item.description}
+                                    additionalText={t("masterData.open", {
+                                        defaultValue: "ورود",
+                                    })}
+                                    onClick={() => navigate(item.route)}
+                                >
+                                    <Icon name={item.icon} slot="image" />
+                                    {item.title}
+                                </ListItemStandard>
+                            ))}
+                        </List>
+                    </section>
                 ))}
             </div>
         </section>

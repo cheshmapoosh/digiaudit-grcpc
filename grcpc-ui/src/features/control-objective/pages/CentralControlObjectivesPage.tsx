@@ -3,6 +3,7 @@ import { MessageStrip } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
 import { DefinitionListReport } from "@/features/central-catalog/components/DefinitionListReport";
 import { DefinitionObjectPage } from "@/features/central-catalog/components/DefinitionObjectPage";
+import { CatalogObjectDialog } from "@/features/central-catalog/components/CatalogObjectDialog";
 import type { DefinitionDraft } from "@/features/central-catalog/components/catalogPresentation.model";
 import { useCatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
@@ -26,6 +27,7 @@ export default function CentralControlObjectivesPage() {
     useState<CentralControlObjectiveDetail | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [deletedMode, setDeletedMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -82,6 +84,7 @@ export default function CentralControlObjectivesPage() {
         setCreating(false);
         setEditing(false);
         setDirty(false);
+        setDialogOpen(true);
       }
     } catch (cause) {
       if (request === generation.current)
@@ -140,6 +143,7 @@ export default function CentralControlObjectivesPage() {
         target.version,
       );
       setSelected(null);
+      setDialogOpen(false);
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -163,40 +167,61 @@ export default function CentralControlObjectivesPage() {
       setBusy(false);
     }
   };
+  const dialogTitle = t("centralCatalog.controlObjective", {
+    defaultValue: "هدف کنترلی",
+  });
+  const closeDialog = () => {
+    if (!confirmLeave()) return;
+    setDialogOpen(false);
+    setCreating(false);
+    setEditing(false);
+    setDirty(false);
+    setDocumentError(null);
+  };
   return (
-    <div className="catalogWorkspace">
-      <DefinitionListReport
-        permissions={permissions}
-        title={t("centralCatalog.controlObjectives", {
-          defaultValue: "اهداف کنترلی مرکزی",
-        })}
-        rows={rows}
-        selectedId={selected?.id ?? null}
-        busy={busy}
-        deletedMode={deletedMode}
-        onCreate={() => {
-          if (!confirmLeave()) return;
-          setSelected(null);
-          setCreating(true);
-          setEditing(true);
-          setDirty(false);
-        }}
-        onSelect={(row) => void select(row)}
-        onToggleDeleted={() => {
-          if (!confirmLeave()) return;
-          generation.current += 1;
-          setDeletedMode((value) => !value);
-          setSelected(null);
-        }}
-        onRestore={(row) => void restore(row)}
-      />
-      {creating || selected ? (
+    <>
+      <div className="catalogListPage">
+        <DefinitionListReport
+          permissions={permissions}
+          title={t("centralCatalog.controlObjectives", {
+            defaultValue: "اهداف کنترلی",
+          })}
+          rows={rows}
+          selectedId={selected?.id ?? null}
+          busy={busy}
+          deletedMode={deletedMode}
+          onCreate={() => {
+            if (!confirmLeave()) return;
+            setSelected(null);
+            setCreating(true);
+            setEditing(true);
+            setDirty(false);
+            setDialogOpen(true);
+          }}
+          onSelect={(row) => void select(row)}
+          onToggleDeleted={() => {
+            if (!confirmLeave()) return;
+            generation.current += 1;
+            setDeletedMode((value) => !value);
+            setSelected(null);
+            setDialogOpen(false);
+          }}
+          onRestore={(row) => void restore(row)}
+        />
+        {error && !creating && !selected ? (
+          <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip>
+        ) : null}
+      </div>
+      <CatalogObjectDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        mode={creating ? "create" : editing ? "edit" : "view"}
+        onClose={closeDialog}
+      >
         <DefinitionObjectPage
           permissions={permissions}
           options={{
-            title: t("centralCatalog.controlObjective", {
-              defaultValue: "هدف کنترلی مرکزی",
-            }),
+            title: dialogTitle,
             documentTarget: "CENTRAL_CONTROL_OBJECTIVE_DEF",
           }}
           value={selected}
@@ -211,17 +236,12 @@ export default function CentralControlObjectivesPage() {
             setCreating(false);
             setEditing(false);
             setDirty(false);
+            setDialogOpen(Boolean(selected));
           }}
           onSave={save}
           onLifecycle={(action) => void lifecycle(action)}
         />
-      ) : (
-        <MessageStrip design="Information" hideCloseButton>
-          {t("centralCatalog.selectPrompt", {
-            defaultValue: "یک هدف کنترلی را انتخاب کنید یا بسازید.",
-          })}
-        </MessageStrip>
-      )}
-    </div>
+      </CatalogObjectDialog>
+    </>
   );
 }

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, MessageStrip } from "@ui5/webcomponents-react";
+import { Button } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
 import { CatalogFlexibleColumnLayout } from "@/features/central-catalog/components/CatalogFlexibleColumnLayout";
+import { CatalogObjectDialog } from "@/features/central-catalog/components/CatalogObjectDialog";
+import { DefinitionListReport } from "@/features/central-catalog/components/DefinitionListReport";
 import { DefinitionObjectPage } from "@/features/central-catalog/components/DefinitionObjectPage";
 import { HierarchyColumn } from "@/features/central-catalog/components/HierarchyColumn";
 import { MoveDialog } from "@/features/central-catalog/components/MoveDialog";
@@ -30,6 +32,7 @@ export default function CentralAccountGroupsPage() {
   );
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [deletedMode, setDeletedMode] = useState(false);
   const [createParentId, setCreateParentId] = useState<string | null>(null);
   const [moveOpen, setMoveOpen] = useState(false);
@@ -87,6 +90,7 @@ export default function CentralAccountGroupsPage() {
         setCreating(false);
         setEditing(false);
         setDirty(false);
+        setDialogOpen(true);
       }
     } catch (cause) {
       if (request === generation.current)
@@ -143,6 +147,7 @@ export default function CentralAccountGroupsPage() {
     try {
       await centralAccountGroupApi.lifecycle(target.id, action, target.version);
       setSelected(null);
+      setDialogOpen(false);
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -183,33 +188,78 @@ export default function CentralAccountGroupsPage() {
       setBusy(false);
     }
   };
+  const dialogTitle = t("centralCatalog.accountGroup", {
+    defaultValue: "گروه حساب",
+  });
+  const closeDialog = () => {
+    if (!confirmLeave()) return;
+    setDialogOpen(false);
+    setCreating(false);
+    setEditing(false);
+    setDirty(false);
+    setDocumentError(null);
+  };
   return (
-    <CatalogFlexibleColumnLayout>
-      <HierarchyColumn
-        canCreate={permissions.create}
-        title={t("centralCatalog.accountGroups", {
-          defaultValue: "گروه‌های حساب",
-        })}
-        rows={rows}
-        selectedId={selected?.id ?? null}
-        busy={busy}
-        onSelect={(row) => void select(row)}
-        onCreate={() => {
-          if (!confirmLeave()) return;
-          setCreateParentId(selected?.id ?? null);
-          setSelected(null);
-          setCreating(true);
-          setEditing(true);
-          setDirty(false);
-        }}
-      />
-      {creating || selected ? (
+    <>
+      <CatalogFlexibleColumnLayout>
+        {deletedMode ? (
+          <DefinitionListReport
+            permissions={permissions}
+            title={t("centralCatalog.deletedAccountGroups", {
+              defaultValue: "گروه حساب‌های حذف‌شده",
+            })}
+            rows={rows}
+            selectedId={null}
+            busy={busy}
+            deletedMode
+            onCreate={() => undefined}
+            onSelect={() => undefined}
+            onToggleDeleted={() => {
+              generation.current += 1;
+              setDeletedMode(false);
+            }}
+            onRestore={(row) => void restore(row)}
+          />
+        ) : (
+          <HierarchyColumn
+            canCreate={permissions.create}
+            title={t("centralCatalog.accountGroups", {
+              defaultValue: "ساختار گروه حساب‌ها",
+            })}
+            rows={rows}
+            selectedId={selected?.id ?? null}
+            busy={busy}
+            getParentId={(row) => row.parentAccountGroupId}
+            onToggleDeleted={() => {
+              if (!confirmLeave()) return;
+              generation.current += 1;
+              setDeletedMode(true);
+              setSelected(null);
+              setDialogOpen(false);
+            }}
+            onSelect={(row) => void select(row)}
+            onCreate={() => {
+              if (!confirmLeave()) return;
+              setCreateParentId(selected?.id ?? null);
+              setSelected(null);
+              setCreating(true);
+              setEditing(true);
+              setDirty(false);
+              setDialogOpen(true);
+            }}
+          />
+        )}
+      </CatalogFlexibleColumnLayout>
+      <CatalogObjectDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        mode={creating ? "create" : editing ? "edit" : "view"}
+        onClose={closeDialog}
+      >
         <DefinitionObjectPage
           permissions={permissions}
           options={{
-            title: t("centralCatalog.accountGroup", {
-              defaultValue: "گروه حساب",
-            }),
+            title: dialogTitle,
             documentTarget: "CENTRAL_ACCOUNT_GROUP",
           }}
           value={selected}
@@ -224,6 +274,7 @@ export default function CentralAccountGroupsPage() {
             setCreating(false);
             setEditing(false);
             setDirty(false);
+            setDialogOpen(Boolean(selected));
           }}
           onSave={save}
           onLifecycle={(action) => void lifecycle(action)}
@@ -236,34 +287,8 @@ export default function CentralAccountGroupsPage() {
               {t("centralCatalog.move", { defaultValue: "جابجایی" })}
             </Button>
           )}
-          {deletedMode && selected && (
-            <Button
-              hidden={!permissions.restore}
-              onClick={() => void restore(selected)}
-            >
-              {t("common.restore", { defaultValue: "بازیابی" })}
-            </Button>
-          )}
         </DefinitionObjectPage>
-      ) : (
-        <MessageStrip design="Information" hideCloseButton>
-          {t("centralCatalog.selectPrompt", {
-            defaultValue: "یک گروه حساب را انتخاب کنید.",
-          })}
-        </MessageStrip>
-      )}
-      <Button
-        disabled={busy || dirty}
-        onClick={() => {
-          generation.current += 1;
-          setDeletedMode((value) => !value);
-          setSelected(null);
-        }}
-      >
-        {deletedMode
-          ? t("common.back", { defaultValue: "بازگشت" })
-          : t("centralCatalog.deleted", { defaultValue: "حذف‌شده‌ها" })}
-      </Button>
+      </CatalogObjectDialog>
       <MoveDialog
         open={moveOpen}
         requiredParent={false}
@@ -276,6 +301,6 @@ export default function CentralAccountGroupsPage() {
         onClose={() => setMoveOpen(false)}
         onMove={(parent, sort) => void move(parent, sort)}
       />
-    </CatalogFlexibleColumnLayout>
+    </>
   );
 }

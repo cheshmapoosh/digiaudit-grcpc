@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, MessageStrip } from "@ui5/webcomponents-react";
+import { Button } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
 import { CatalogFlexibleColumnLayout } from "@/features/central-catalog/components/CatalogFlexibleColumnLayout";
+import { CatalogObjectDialog } from "@/features/central-catalog/components/CatalogObjectDialog";
 import { DefinitionObjectPage } from "@/features/central-catalog/components/DefinitionObjectPage";
 import { HierarchyColumn } from "@/features/central-catalog/components/HierarchyColumn";
 import { MoveDialog } from "@/features/central-catalog/components/MoveDialog";
@@ -40,6 +41,7 @@ export default function CentralRiskPage() {
   const [kind, setKind] = useState<SelectedKind>("category");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [createParentId, setCreateParentId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -114,6 +116,7 @@ export default function CentralRiskPage() {
       setEditing(false);
       setTemplate(null);
       setDirty(false);
+      setDialogOpen(true);
       await loadTemplates(row.id);
     } catch (cause) {
       if (request === generation.current)
@@ -134,6 +137,7 @@ export default function CentralRiskPage() {
         setCreating(false);
         setEditing(false);
         setDirty(false);
+        setDialogOpen(true);
       }
     } catch (cause) {
       if (request === generation.current)
@@ -151,6 +155,7 @@ export default function CentralRiskPage() {
     setCreating(true);
     setEditing(true);
     setDirty(false);
+    setDialogOpen(true);
   };
   const startTemplate = () => {
     if (!category || !confirmLeave()) return;
@@ -159,6 +164,7 @@ export default function CentralRiskPage() {
     setCreating(true);
     setEditing(true);
     setDirty(false);
+    setDialogOpen(true);
   };
   const save = async (
     draft: DefinitionDraft,
@@ -230,6 +236,7 @@ export default function CentralRiskPage() {
         );
         setCategory(null);
         setTemplates([]);
+        setDialogOpen(false);
         await loadCategories();
       } else {
         await centralRiskApi.templateLifecycle(
@@ -238,6 +245,7 @@ export default function CentralRiskPage() {
           target.version,
         );
         setTemplate(null);
+        setDialogOpen(false);
         await loadTemplates(category!.id);
       }
     } catch (cause) {
@@ -293,31 +301,47 @@ export default function CentralRiskPage() {
           }),
           documentTarget: "CENTRAL_RISK_TEMPLATE" as const,
         };
+  const closeDialog = () => {
+    if (!confirmLeave()) return;
+    setCreating(false);
+    setEditing(false);
+    setDirty(false);
+    setDocumentError(null);
+    setDialogOpen(false);
+  };
   return (
-    <CatalogFlexibleColumnLayout>
-      <HierarchyColumn
-        canCreate={permissions.create}
-        title={t("centralCatalog.riskCategories", {
-          defaultValue: "دسته‌های ریسک",
-        })}
-        rows={categories}
-        selectedId={category?.id ?? null}
-        busy={busy}
-        onSelect={(row) => void selectCategory(row)}
-        onCreate={startCategory}
-      />
-      <HierarchyColumn
-        canCreate={permissions.create}
-        title={t("centralCatalog.riskTemplates", {
-          defaultValue: "الگوهای ریسک",
-        })}
-        rows={templates}
-        selectedId={template?.id ?? null}
-        busy={busy || !category}
-        onSelect={(row) => void selectTemplate(row)}
-        onCreate={startTemplate}
-      />
-      {creating || value ? (
+    <>
+      <CatalogFlexibleColumnLayout>
+        <HierarchyColumn
+          canCreate={permissions.create}
+          title={t("centralCatalog.riskCategories", {
+            defaultValue: "ساختار طبقات ریسک",
+          })}
+          rows={categories}
+          selectedId={category?.id ?? null}
+          busy={busy}
+          getParentId={(row) => row.parentCategoryId}
+          onSelect={(row) => void selectCategory(row)}
+          onCreate={startCategory}
+        />
+        <HierarchyColumn
+          canCreate={permissions.create}
+          title={t("centralCatalog.riskTemplates", {
+            defaultValue: "الگوهای ریسک طبقهٔ انتخاب‌شده",
+          })}
+          rows={templates}
+          selectedId={template?.id ?? null}
+          busy={busy || !category}
+          onSelect={(row) => void selectTemplate(row)}
+          onCreate={startTemplate}
+        />
+      </CatalogFlexibleColumnLayout>
+      <CatalogObjectDialog
+        open={dialogOpen}
+        title={options.title}
+        mode={creating ? "create" : editing ? "edit" : "view"}
+        onClose={closeDialog}
+      >
         <DefinitionObjectPage
           permissions={permissions}
           options={options}
@@ -333,6 +357,7 @@ export default function CentralRiskPage() {
             setCreating(false);
             setEditing(false);
             setDirty(false);
+            setDialogOpen(Boolean(value));
           }}
           onSave={save}
           onLifecycle={(action) => void lifecycle(action)}
@@ -347,13 +372,7 @@ export default function CentralRiskPage() {
             </Button>
           )}
         </DefinitionObjectPage>
-      ) : (
-        <MessageStrip design="Information" hideCloseButton>
-          {t("centralCatalog.selectPrompt", {
-            defaultValue: "یک دسته یا الگوی ریسک را انتخاب کنید.",
-          })}
-        </MessageStrip>
-      )}
+      </CatalogObjectDialog>
       <MoveDialog
         open={moveOpen}
         requiredParent={kind === "template"}
@@ -374,6 +393,6 @@ export default function CentralRiskPage() {
         onClose={() => setMoveOpen(false)}
         onMove={(parentId, sortOrder) => void move(parentId, sortOrder)}
       />
-    </CatalogFlexibleColumnLayout>
+    </>
   );
 }

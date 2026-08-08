@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, MessageStrip } from "@ui5/webcomponents-react";
+import { Button } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
 import { CatalogFlexibleColumnLayout } from "@/features/central-catalog/components/CatalogFlexibleColumnLayout";
+import { CatalogObjectDialog } from "@/features/central-catalog/components/CatalogObjectDialog";
 import { DefinitionObjectPage } from "@/features/central-catalog/components/DefinitionObjectPage";
 import { HierarchyColumn } from "@/features/central-catalog/components/HierarchyColumn";
 import { MoveDialog } from "@/features/central-catalog/components/MoveDialog";
@@ -42,6 +43,7 @@ export default function CentralRegulationsPage() {
   const [level, setLevel] = useState<Level>("group"),
     [creating, setCreating] = useState(false),
     [editing, setEditing] = useState(false),
+    [dialogOpen, setDialogOpen] = useState(false),
     [ownerId, setOwnerId] = useState<string | null>(null),
     [moveOpen, setMoveOpen] = useState(false),
     [busy, setBusy] = useState(false),
@@ -138,6 +140,7 @@ export default function CentralRegulationsPage() {
       setCreating(false);
       setEditing(false);
       setDirty(false);
+      setDialogOpen(true);
       await loadRegulations(row.id);
     } catch (cause) {
       if (request === generation.current)
@@ -159,6 +162,7 @@ export default function CentralRegulationsPage() {
       setCreating(false);
       setEditing(false);
       setDirty(false);
+      setDialogOpen(true);
       await loadRequirements(row.id);
     } catch (cause) {
       if (request === generation.current)
@@ -181,6 +185,7 @@ export default function CentralRegulationsPage() {
         setCreating(false);
         setEditing(false);
         setDirty(false);
+        setDialogOpen(true);
       }
     } catch (cause) {
       if (request === generation.current)
@@ -210,6 +215,7 @@ export default function CentralRegulationsPage() {
     setCreating(true);
     setEditing(true);
     setDirty(false);
+    setDialogOpen(true);
   };
   const save = async (
     draft: DefinitionDraft,
@@ -296,6 +302,7 @@ export default function CentralRegulationsPage() {
           target.version,
         );
         setGroup(null);
+        setDialogOpen(false);
         await loadGroups();
       } else if (level === "regulation") {
         await centralRegulationApi.regulationLifecycle(
@@ -304,6 +311,7 @@ export default function CentralRegulationsPage() {
           target.version,
         );
         setRegulation(null);
+        setDialogOpen(false);
         await loadRegulations(group!.id);
       } else {
         await centralRegulationApi.requirementLifecycle(
@@ -312,6 +320,7 @@ export default function CentralRegulationsPage() {
           target.version,
         );
         setRequirement(null);
+        setDialogOpen(false);
         await loadRequirements(regulation!.id);
       }
     } catch (cause) {
@@ -405,40 +414,56 @@ export default function CentralRegulationsPage() {
       : level === "regulation"
         ? (regulation?.regulationGroupId ?? null)
         : (requirement?.regulationId ?? null);
+  const closeDialog = () => {
+    if (!confirmLeave()) return;
+    setCreating(false);
+    setEditing(false);
+    setDirty(false);
+    setDocumentError(null);
+    setDialogOpen(false);
+  };
   return (
-    <CatalogFlexibleColumnLayout>
-      <HierarchyColumn
-        canCreate={permissions.create}
-        title={t("centralCatalog.regulationGroups", {
-          defaultValue: "گروه‌های مقررات",
-        })}
-        rows={groups}
-        selectedId={group?.id ?? null}
-        busy={busy}
-        onSelect={(row) => void selectGroup(row)}
-        onCreate={() => start("group")}
-      />
-      <HierarchyColumn
-        canCreate={permissions.create}
-        title={t("centralCatalog.regulations", { defaultValue: "مقررات" })}
-        rows={regulations}
-        selectedId={regulation?.id ?? null}
-        busy={busy || !group}
-        onSelect={(row) => void selectRegulation(row)}
-        onCreate={() => start("regulation")}
-      />
-      <HierarchyColumn
-        canCreate={permissions.create}
-        title={t("centralCatalog.regulationRequirements", {
-          defaultValue: "الزامات",
-        })}
-        rows={requirements}
-        selectedId={requirement?.id ?? null}
-        busy={busy || !regulation}
-        onSelect={(row) => void selectRequirement(row)}
-        onCreate={() => start("requirement")}
-      />
-      {creating || value ? (
+    <>
+      <CatalogFlexibleColumnLayout>
+        <HierarchyColumn
+          canCreate={permissions.create}
+          title={t("centralCatalog.regulationGroups", {
+            defaultValue: "ساختار گروه‌های قانون",
+          })}
+          rows={groups}
+          selectedId={group?.id ?? null}
+          busy={busy}
+          getParentId={(row) => row.parentGroupId}
+          onSelect={(row) => void selectGroup(row)}
+          onCreate={() => start("group")}
+        />
+        <HierarchyColumn
+          canCreate={permissions.create}
+          title={t("centralCatalog.regulations", { defaultValue: "قوانین گروه انتخاب‌شده" })}
+          rows={regulations}
+          selectedId={regulation?.id ?? null}
+          busy={busy || !group}
+          onSelect={(row) => void selectRegulation(row)}
+          onCreate={() => start("regulation")}
+        />
+        <HierarchyColumn
+          canCreate={permissions.create}
+          title={t("centralCatalog.regulationRequirements", {
+            defaultValue: "الزامات قانون انتخاب‌شده",
+          })}
+          rows={requirements}
+          selectedId={requirement?.id ?? null}
+          busy={busy || !regulation}
+          onSelect={(row) => void selectRequirement(row)}
+          onCreate={() => start("requirement")}
+        />
+      </CatalogFlexibleColumnLayout>
+      <CatalogObjectDialog
+        open={dialogOpen}
+        title={options.title}
+        mode={creating ? "create" : editing ? "edit" : "view"}
+        onClose={closeDialog}
+      >
         <DefinitionObjectPage
           permissions={permissions}
           options={options}
@@ -454,6 +479,7 @@ export default function CentralRegulationsPage() {
             setCreating(false);
             setEditing(false);
             setDirty(false);
+            setDialogOpen(Boolean(value));
           }}
           onSave={save}
           onLifecycle={(action) => void lifecycle(action)}
@@ -467,13 +493,7 @@ export default function CentralRegulationsPage() {
             </Button>
           )}
         </DefinitionObjectPage>
-      ) : (
-        <MessageStrip design="Information" hideCloseButton>
-          {t("centralCatalog.selectPrompt", {
-            defaultValue: "یکی از سطوح مقررات را انتخاب کنید.",
-          })}
-        </MessageStrip>
-      )}
+      </CatalogObjectDialog>
       <MoveDialog
         open={moveOpen}
         requiredParent={level !== "group"}
@@ -484,6 +504,6 @@ export default function CentralRegulationsPage() {
         onClose={() => setMoveOpen(false)}
         onMove={(parent, sort) => void move(parent, sort)}
       />
-    </CatalogFlexibleColumnLayout>
+    </>
   );
 }

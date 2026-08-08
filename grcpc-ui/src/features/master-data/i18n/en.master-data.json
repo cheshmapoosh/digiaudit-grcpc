@@ -1,0 +1,21 @@
+{
+  "masterData.title": "Master Data",
+  "masterData.subtitle": "Manage the application's reference structures and catalogs.",
+  "masterData.groups.structure": "Organization and Process Structures",
+  "masterData.groups.catalog": "Specialized Catalogs",
+  "masterData.open": "Open",
+  "masterData.items.organizations": "Organization",
+  "masterData.items.organizations.description": "Define and maintain the organization hierarchy",
+  "masterData.items.processes": "Processes and Subprocesses",
+  "masterData.items.processes.description": "Manage the process hierarchy and control context",
+  "masterData.items.objectives": "Control Objectives",
+  "masterData.items.objectives.description": "Define control objectives and related documents",
+  "masterData.items.regulations": "Laws and Regulations",
+  "masterData.items.regulations.description": "Manage law groups, laws, and legal requirements",
+  "masterData.items.risks": "Risks",
+  "masterData.items.risks.description": "Manage risk categories and risk templates",
+  "masterData.items.accountGroups": "Account Groups",
+  "masterData.items.accountGroups.description": "Define the account-group hierarchy",
+  "masterData.items.policies": "Policies",
+  "masterData.items.policies.description": "Manage policy groups, policies, and versions"
+}

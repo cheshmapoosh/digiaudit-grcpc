@@ -92,6 +92,10 @@ export function DefinitionObjectPage<T extends DefinitionDetailFields>({
     validTo: EMPTY_DATE_DRAFT,
   });
   const dateInvalid = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
+  const requiredInvalid = !draft.code.trim() || !draft.title.trim();
+  const dateRangeInvalid = Boolean(
+    draft.validFrom && draft.validTo && draft.validFrom > draft.validTo,
+  );
   const dirty =
     JSON.stringify(draft) !== JSON.stringify(baseline) ||
     documents.dirty ||
@@ -117,6 +121,8 @@ export function DefinitionObjectPage<T extends DefinitionDetailFields>({
   const canSave =
     dirty &&
     !dateInvalid &&
+    !requiredInvalid &&
+    !dateRangeInvalid &&
     documents.ready &&
     !documents.invalid &&
     !documents.uploading;
@@ -173,6 +179,20 @@ export function DefinitionObjectPage<T extends DefinitionDetailFields>({
           {error}
         </MessageStrip>
       )}
+      {editing && requiredInvalid ? (
+        <MessageStrip design="Critical" hideCloseButton>
+          {t("centralCatalog.required", {
+            defaultValue: "کد و عنوان الزامی هستند.",
+          })}
+        </MessageStrip>
+      ) : null}
+      {editing && dateRangeInvalid ? (
+        <MessageStrip design="Critical" hideCloseButton>
+          {t("centralCatalog.dateRange", {
+            defaultValue: "بازهٔ اعتبار نامعتبر است.",
+          })}
+        </MessageStrip>
+      ) : null}
       <div className="catalogFormGrid">
         <Label>
           {t("common.code", { defaultValue: "کد" })}

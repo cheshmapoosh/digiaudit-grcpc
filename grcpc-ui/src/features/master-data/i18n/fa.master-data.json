@@ -1,0 +1,21 @@
+{
+  "masterData.title": "اطلاعات پایه",
+  "masterData.subtitle": "ساختارها و کاتالوگ‌های مرجع سامانه را مدیریت کنید.",
+  "masterData.groups.structure": "ساختارهای سازمانی و فرآیندی",
+  "masterData.groups.catalog": "کاتالوگ‌های تخصصی",
+  "masterData.open": "ورود",
+  "masterData.items.organizations": "سازمان",
+  "masterData.items.organizations.description": "تعریف و نگهداری ساختار سلسله‌مراتبی سازمان",
+  "masterData.items.processes": "فرآیندها و زیر‌فرآیندها",
+  "masterData.items.processes.description": "مدیریت ساختار فرآیند و زیر‌فرآیند و زمینهٔ کنترل‌ها",
+  "masterData.items.objectives": "اهداف کنترلی",
+  "masterData.items.objectives.description": "تعریف اهداف کنترلی و مستندات مرتبط",
+  "masterData.items.regulations": "قوانین و مقررات",
+  "masterData.items.regulations.description": "ساختار گروه قانون، قانون و الزام قانونی",
+  "masterData.items.risks": "ریسک‌ها",
+  "masterData.items.risks.description": "ساختار طبقات ریسک و الگوهای ریسک",
+  "masterData.items.accountGroups": "گروه حساب‌ها",
+  "masterData.items.accountGroups.description": "تعریف سلسله‌مراتب گروه‌های حساب",
+  "masterData.items.policies": "سیاست‌ها",
+  "masterData.items.policies.description": "ساختار گروه سیاست، سیاست و نسخه‌های آن"
+}
