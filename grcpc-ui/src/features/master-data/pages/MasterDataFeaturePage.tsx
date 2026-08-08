@@ -38,6 +38,16 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         group: "structure",
     },
     {
+        key: "controls",
+        titleKey: "masterData.items.controls",
+        defaultTitle: "کنترل‌ها",
+        descriptionKey: "masterData.items.controls.description",
+        defaultDescription: "تعریف و نگهداری کاتالوگ کنترل‌ها و مستندات مرتبط",
+        icon: "validate",
+        route: "/controls",
+        group: "catalog",
+    },
+    {
         key: "objectives",
         titleKey: "masterData.items.objectives",
         defaultTitle: "اهداف کنترلی",

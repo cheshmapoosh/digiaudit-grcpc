@@ -8,6 +8,8 @@
   "masterData.items.organizations.description": "تعریف و نگهداری ساختار سلسله‌مراتبی سازمان",
   "masterData.items.processes": "فرآیندها و زیر‌فرآیندها",
   "masterData.items.processes.description": "مدیریت ساختار فرآیند و زیر‌فرآیند و زمینهٔ کنترل‌ها",
+  "masterData.items.controls": "کنترل‌ها",
+  "masterData.items.controls.description": "تعریف و نگهداری کاتالوگ کنترل‌ها و مستندات مرتبط",
   "masterData.items.objectives": "اهداف کنترلی",
   "masterData.items.objectives.description": "تعریف اهداف کنترلی و مستندات مرتبط",
   "masterData.items.regulations": "قوانین و مقررات",

@@ -27,6 +27,7 @@ import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleS
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -69,6 +70,7 @@ public class CentralControlCommandService {
     String description = support.normalizeDescription(request.description());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> documents = new AtomicReference<>(List.of());
+
     try {
       RevisionExecutionResult result =
           revisionCoordinator.execute(
@@ -83,6 +85,7 @@ public class CentralControlCommandService {
                 JsonNode before;
                 UUID actorId = actorProvider.currentActorId();
                 Instant now = Instant.now(clock);
+
                 if (entity == null) {
                   entity =
                       CentralControlEntity.create(
@@ -90,6 +93,10 @@ public class CentralControlCommandService {
                           code,
                           title,
                           description,
+                          request.controlClass(),
+                          request.importance(),
+                          request.automationType(),
+                          request.controlPurpose(),
                           request.validFrom(),
                           request.validTo(),
                           actorId,
@@ -101,18 +108,37 @@ public class CentralControlCommandService {
                   if (entity.getStatus() == MasterDataLifecycleStatus.ACTIVE) {
                     throw support.duplicate(code);
                   }
-                  before = support.snapshot(entity);
+                  before = snapshot(entity);
                   expectedVersion = entity.getVersion();
                   if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) {
                     entity.restoreFromCreate(
-                        title, description, request.validFrom(), request.validTo(), actorId, now);
+                        title,
+                        description,
+                        request.controlClass(),
+                        request.importance(),
+                        request.automationType(),
+                        request.controlPurpose(),
+                        request.validFrom(),
+                        request.validTo(),
+                        actorId,
+                        now);
                     operationType = RevisionOperationType.RESTORE;
                   } else {
                     entity.reactivateFromCreate(
-                        title, description, request.validFrom(), request.validTo(), actorId, now);
+                        title,
+                        description,
+                        request.controlClass(),
+                        request.importance(),
+                        request.automationType(),
+                        request.controlPurpose(),
+                        request.validFrom(),
+                        request.validTo(),
+                        actorId,
+                        now);
                     operationType = RevisionOperationType.ACTIVATE;
                   }
                 }
+
                 CentralControlEntity saved = repository.saveAndFlush(entity);
                 documents.set(
                     documentCommandService.finalizePreparedAggregate(
@@ -132,8 +158,10 @@ public class CentralControlCommandService {
     long expectedVersion = support.requireVersion(request.version());
     String title = support.normalizeTitle(request.title());
     String description = support.normalizeDescription(request.description());
+    MasterDataLifecycleStatus requestedStatus = requireEditableStatus(request.status());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> documents = new AtomicReference<>(List.of());
+
     RevisionExecutionResult result =
         revisionCoordinator.execute(
             RevisionRequest.central(
@@ -146,19 +174,33 @@ public class CentralControlCommandService {
               if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) {
                 throw notFound(id);
               }
-              if (sameDefinition(entity, title, description, request)
+              if (sameDefinition(entity, title, description, requestedStatus, request)
                   && isEmpty(request.documents())) {
                 throw new UnprocessableEntityException(
                     "NO_CHANGE", "error.masterdata.v2.noChange", "The command contains no change");
               }
-              JsonNode before = support.snapshot(entity);
+
+              JsonNode before = snapshot(entity);
+              UUID actorId = actorProvider.currentActorId();
+              Instant now = Instant.now(clock);
               entity.update(
                   title,
                   description,
+                  request.controlClass(),
+                  request.importance(),
+                  request.automationType(),
+                  request.controlPurpose(),
                   request.validFrom(),
                   request.validTo(),
-                  actorProvider.currentActorId(),
-                  Instant.now(clock));
+                  actorId,
+                  now);
+              if (entity.getStatus() != requestedStatus) {
+                if (requestedStatus == MasterDataLifecycleStatus.ACTIVE) {
+                  entity.activate(actorId, now);
+                } else {
+                  entity.inactivate(actorId, now);
+                }
+              }
               CentralControlEntity saved = repository.saveAndFlush(entity);
               documents.set(
                   documentCommandService.finalizePreparedAggregate(
@@ -209,7 +251,7 @@ public class CentralControlCommandService {
                     "Control has approved structural dependencies",
                     id);
               }
-              JsonNode before = support.snapshot(entity);
+              JsonNode before = snapshot(entity);
               UUID actorId = actorProvider.currentActorId();
               Instant now = Instant.now(clock);
               switch (operationType) {
@@ -238,7 +280,20 @@ public class CentralControlCommandService {
         operationType,
         expectedVersion,
         before,
-        Map.of());
+        typedFields(entity));
+  }
+
+  private JsonNode snapshot(CentralControlEntity entity) {
+    return support.snapshot(entity, typedFields(entity));
+  }
+
+  private Map<String, Object> typedFields(CentralControlEntity entity) {
+    Map<String, Object> fields = new LinkedHashMap<>();
+    fields.put("controlClass", entity.getControlClass());
+    fields.put("importance", entity.getImportance());
+    fields.put("automationType", entity.getAutomationType());
+    fields.put("controlPurpose", entity.getControlPurpose());
+    return fields;
   }
 
   private CentralControlEntity lock(UUID id) {
@@ -250,13 +305,29 @@ public class CentralControlCommandService {
         "MASTER_DATA_NOT_FOUND", "error.masterdata.v2.notFound", "Control not found", id);
   }
 
+  private MasterDataLifecycleStatus requireEditableStatus(MasterDataLifecycleStatus status) {
+    if (status == null || status == MasterDataLifecycleStatus.DELETED) {
+      throw new UnprocessableEntityException(
+          "INVALID_LIFECYCLE_TRANSITION",
+          "error.masterdata.v2.invalidLifecycleTransition",
+          "Control edit status must be ACTIVE or INACTIVE");
+    }
+    return status;
+  }
+
   private boolean sameDefinition(
       CentralControlEntity entity,
       String title,
       String description,
+      MasterDataLifecycleStatus requestedStatus,
       UpdateCentralControlRequest request) {
     return Objects.equals(entity.getTitle(), title)
         && Objects.equals(entity.getDescription(), description)
+        && Objects.equals(entity.getControlClass(), request.controlClass())
+        && Objects.equals(entity.getImportance(), request.importance())
+        && Objects.equals(entity.getAutomationType(), request.automationType())
+        && Objects.equals(entity.getControlPurpose(), request.controlPurpose())
+        && entity.getStatus() == requestedStatus
         && Objects.equals(entity.getValidFrom(), request.validFrom())
         && Objects.equals(entity.getValidTo(), request.validTo());
   }

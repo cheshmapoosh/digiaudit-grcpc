@@ -1,4 +1,5 @@
 import { centralAccountGroupRoutes } from "@/features/account-group";
+import { centralControlRoutes } from "@/features/control";
 import { centralControlObjectiveRoutes } from "@/features/control-objective";
 import { centralPolicyRoutes } from "@/features/policy";
 import { centralRegulationRoutes } from "@/features/regulation";
@@ -7,6 +8,7 @@ import "./components/central-catalog.css";
 
 export const centralCatalogRoutes = (
   <>
+    {centralControlRoutes}
     {centralControlObjectiveRoutes}
     {centralRiskRoutes}
     {centralAccountGroupRoutes}

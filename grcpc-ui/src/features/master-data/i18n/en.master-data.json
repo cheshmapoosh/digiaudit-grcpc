@@ -8,6 +8,8 @@
   "masterData.items.organizations.description": "Define and maintain the organization hierarchy",
   "masterData.items.processes": "Processes and Subprocesses",
   "masterData.items.processes.description": "Manage the process hierarchy and control context",
+  "masterData.items.controls": "Controls",
+  "masterData.items.controls.description": "Define and maintain the control catalog and related documents",
   "masterData.items.objectives": "Control Objectives",
   "masterData.items.objectives.description": "Define control objectives and related documents",
   "masterData.items.regulations": "Laws and Regulations",

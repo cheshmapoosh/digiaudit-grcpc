@@ -1,0 +1,90 @@
+{
+  "control": {
+    "list": {
+      "title": "Controls",
+      "search": "Search by control name"
+    },
+    "summary": {
+      "title": "Control details",
+      "selectPrompt": "Select a control to view its details."
+    },
+    "object": {
+      "title": "Control",
+      "notFound": "The selected control was not found."
+    },
+    "create": { "title": "Create Control" },
+    "view": { "title": "View Control" },
+    "edit": { "title": "Edit Control" },
+    "delete": {
+      "title": "Delete Control",
+      "confirm": "Are you sure you want to delete control “{{title}}”?"
+    },
+    "tabs": {
+      "general": "General Information",
+      "regulations": "Regulations",
+      "requirements": "Requirements",
+      "risks": "Risk",
+      "accountGroups": "Account Group",
+      "documents": "Documents"
+    },
+    "fields": {
+      "code": "Identifier",
+      "name": "Name",
+      "description": "Description",
+      "controlClass": "Control Class",
+      "importance": "Importance",
+      "automationType": "Control Automation",
+      "controlPurpose": "Purpose",
+      "status": "Status",
+      "validFrom": "Valid From",
+      "validTo": "Valid To",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "controlClass": {
+      "ACTIVITY_LEVEL": "Activity Level",
+      "ENTITY_LEVEL": "Entity Level"
+    },
+    "importance": {
+      "PRIMARY": "Primary",
+      "SECONDARY": "Secondary"
+    },
+    "automationType": {
+      "MANUAL": "Manual",
+      "SYSTEM": "System",
+      "SEMI_AUTOMATED": "Semi-automated"
+    },
+    "controlPurpose": {
+      "PREVENTIVE": "Preventive",
+      "DETECTIVE": "Detective"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "DELETED": "Deleted"
+    },
+    "actions": {
+      "view": "View",
+      "submit": "Save"
+    },
+    "validation": {
+      "codeRequired": "Control identifier is required.",
+      "nameRequired": "Control name is required.",
+      "invalidDate": "The entered date is invalid.",
+      "invalidValidityRange": "The validity range is invalid.",
+      "documentsNotReady": "Temporary document drafts are not ready to be finalized."
+    },
+    "errors": {
+      "loadList": "Failed to load controls.",
+      "loadDetail": "Failed to load control details.",
+      "create": "Failed to create control.",
+      "update": "Failed to update control.",
+      "delete": "Failed to delete control.",
+      "duplicateCode": "The control identifier already exists.",
+      "notFound": "The selected control was not found.",
+      "versionConflict": "The control was changed by another user. Reload the data and try again.",
+      "invalidStatus": "A control can only be Active or Inactive while editing.",
+      "dependencies": "This control cannot be deleted because dependencies exist."
+    }
+  }
+}

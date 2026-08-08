@@ -102,6 +102,10 @@ create table central_control (
     code varchar2(64 byte) not null,
     title varchar2(255 char) not null,
     description clob,
+    control_class varchar2(32 byte),
+    importance varchar2(32 byte),
+    automation_type varchar2(32 byte),
+    control_purpose varchar2(32 byte),
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,
@@ -115,6 +119,10 @@ create table central_control (
     constraint pk_central_control primary key (id),
     constraint uk_central_control_code unique (code),
     constraint ck_central_control_code check (code = upper(trim(code))),
+    constraint ck_central_control_class check (control_class is null or control_class in ('ACTIVITY_LEVEL', 'ENTITY_LEVEL')),
+    constraint ck_central_control_importance check (importance is null or importance in ('PRIMARY', 'SECONDARY')),
+    constraint ck_central_control_automation check (automation_type is null or automation_type in ('MANUAL', 'SYSTEM', 'SEMI_AUTOMATED')),
+    constraint ck_central_control_purpose check (control_purpose is null or control_purpose in ('PREVENTIVE', 'DETECTIVE')),
     constraint ck_central_control_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_control_dates check (
         (valid_from is null or valid_from = trunc(valid_from))

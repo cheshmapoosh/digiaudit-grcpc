@@ -7,6 +7,8 @@ import faDocument from "../features/document/i18n/fa.document.json";
 import enDocument from "../features/document/i18n/en.document.json";
 import faOrganization from "../features/organization/i18n/fa.organization.json";
 import enOrganization from "../features/organization/i18n/en.organization.json";
+import faControl from "../features/control/i18n/fa.control.json";
+import enControl from "../features/control/i18n/en.control.json";
 import faCentralCatalog from "../features/central-catalog/i18n/fa.central-catalog.json";
 import enCentralCatalog from "../features/central-catalog/i18n/en.central-catalog.json";
 import faMasterData from "../features/master-data/i18n/fa.master-data.json";
@@ -15,8 +17,8 @@ import fa from "./locales/fa.json";
 import en from "./locales/en.json";
 
 export const resources = {
-    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faCentralCatalog, ...faMasterData } },
-    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enCentralCatalog, ...enMasterData } }
+    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faCentralCatalog, ...faMasterData } },
+    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enCentralCatalog, ...enMasterData } }
 } as const;
 
 export function initI18n(lang: "fa" | "en") {
