@@ -40,11 +40,13 @@ Detached mode:
 Reset all test data and start attached:
   ./grcpc-app.test.sh --reset
   ./grcpc-app.test.sh grcpc-app.jar --reset
-      Removes the Oracle named volume, MinIO data, app logs, and any
-      legacy ./data/oracle bind-mount data before starting again.
+      Shows a destructive-reset warning and requires y/yes confirmation.
+      If confirmed, removes the Oracle named volume, MinIO data, app logs,
+      and any legacy ./data/oracle bind-mount data before starting again.
 
 Reset and start detached:
   ./grcpc-app.test.sh --reset --detach
+      Uses the same confirmation before deleting any persistent data.
 
 Use another jar:
   ./grcpc-app.test.sh grcpc-app-1.1.0.jar
@@ -58,7 +60,7 @@ Management:
   ./grcpc-app.test.sh --help
 
 --down preserves persistent data, including the Oracle named volume.
---reset destroys persistent test data and creates a fresh database.
+--reset destroys persistent test data only after explicit confirmation.
 
 URLs:
   App URL:       http://localhost:8080
@@ -203,10 +205,33 @@ is_environment_running() {
     [[ -n "$(compose ps --status running -q 2>/dev/null | head -n 1)" ]]
 }
 
+confirm_reset() {
+    local answer=""
+
+    printf '\n\033[33m%s\033[0m\n' "WARNING: RESET WILL PERMANENTLY DELETE ALL TEST DATA."
+    printf '\033[33m%s\033[0m\n' "  - Oracle database named volume"
+    printf '\033[33m%s\033[0m\n' "  - MinIO object data"
+    printf '\033[33m%s\033[0m\n' "  - Application logs"
+    printf '\033[33m%s\033[0m\n' "  - Legacy data/oracle directory, if present"
+    printf '\033[33m%s\033[0m\n\n' "This operation cannot be undone."
+
+    read -r -p "Continue with RESET? [y/N]: " answer || answer=""
+    case "${answer,,}" in
+        y|yes)
+            return 0
+            ;;
+        *)
+            echo
+            echo "Reset cancelled. No persistent data was changed."
+            return 2
+            ;;
+    esac
+}
+
 reset_data() {
     echo
-    echo "Reset requested. Stopping containers and deleting all persistent test data..."
-    compose down -v --remove-orphans || true
+    echo "Reset confirmed. Stopping containers and deleting all persistent test data..."
+    compose down -v --remove-orphans || return $?
     rm -rf -- data/oracle data/minio data/app
     prepare_dirs
 }
@@ -322,6 +347,7 @@ main() {
     esac
 
     if [[ "$RESET_DATA" == "true" ]]; then
+        confirm_reset || return $?
         reset_data || return $?
     else
         prepare_dirs || return $?
