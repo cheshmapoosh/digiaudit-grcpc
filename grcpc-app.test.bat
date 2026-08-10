@@ -158,6 +158,8 @@ if /I "%MODE%"=="logs" (
 if /I not "%MODE%"=="up" exit /b 1
 
 if /I "%RESET_DATA%"=="true" (
+    call :confirm_reset
+    if errorlevel 1 exit /b !ERRORLEVEL!
     call :reset_data
     if errorlevel 1 exit /b !ERRORLEVEL!
 ) else (
@@ -194,10 +196,28 @@ if /I "%DETACH%"=="true" (
 call :start_attached
 exit /b %ERRORLEVEL%
 
+:confirm_reset
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "Write-Host ''; Write-Host 'WARNING: RESET WILL PERMANENTLY DELETE ALL TEST DATA.' -ForegroundColor Yellow; Write-Host '  - Oracle database named volume' -ForegroundColor Yellow; Write-Host '  - MinIO object data' -ForegroundColor Yellow; Write-Host '  - Application logs' -ForegroundColor Yellow; Write-Host '  - Legacy data/oracle directory, if present' -ForegroundColor Yellow; Write-Host 'This operation cannot be undone.' -ForegroundColor Yellow; Write-Host ''"
+if errorlevel 1 (
+    echo.
+    echo WARNING: RESET WILL PERMANENTLY DELETE ALL TEST DATA.
+    echo This operation cannot be undone.
+    echo.
+)
+set "RESET_CONFIRM="
+set /P "RESET_CONFIRM=Continue with RESET? [y/N]: "
+if /I "%RESET_CONFIRM%"=="Y" exit /b 0
+if /I "%RESET_CONFIRM%"=="YES" exit /b 0
+echo.
+echo Reset cancelled. No persistent data was changed.
+exit /b 2
+
 :reset_data
 echo.
-echo Reset requested. Stopping containers and deleting all persistent test data...
+echo Reset confirmed. Stopping containers and deleting all persistent test data...
 docker compose -f "%COMPOSE_FILE%" -p "%PROJECT_NAME%" down -v --remove-orphans
+if errorlevel 1 exit /b %ERRORLEVEL%
 rem Also remove legacy bind-mount Oracle data from older packages.
 if exist "data\oracle" rmdir /S /Q "data\oracle"
 if exist "data\minio" rmdir /S /Q "data\minio"
@@ -384,13 +404,15 @@ echo   grcpc-app.test.bat --detach
 echo       Start in background.
 echo.
 echo   grcpc-app.test.bat --reset
-echo       Remove Oracle named volume, MinIO data and logs, then start attached.
+echo       Show a destructive-reset warning and require y/yes confirmation.
+echo       If confirmed, remove Oracle named volume, MinIO data and logs,
+echo       then start attached with a fresh Oracle database.
 echo.
 echo   grcpc-app.test.bat --reset --detach
-echo       Reset all test data, then start detached.
+echo       Same confirmation, then reset all test data and start detached.
 echo.
 echo   grcpc-app.test.bat grcpc-app-1.1.0.jar --reset
-echo       Reset and use another jar.
+echo       Same confirmation, then reset and use another jar.
 echo.
 echo   grcpc-app.test.bat --status
 echo   grcpc-app.test.bat --logs
@@ -398,6 +420,6 @@ echo   grcpc-app.test.bat --down
 echo   grcpc-app.test.bat --help
 echo.
 echo --down preserves persistent data.
-echo --reset destroys persistent test data and creates a fresh Oracle database.
+echo --reset destroys persistent test data only after explicit confirmation.
 echo.
 exit /b 0
