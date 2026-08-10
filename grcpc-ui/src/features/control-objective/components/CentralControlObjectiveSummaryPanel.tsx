@@ -57,7 +57,7 @@ export default function CentralControlObjectiveSummaryPanel({
           {t("common.edit", { defaultValue: "ویرایش" })}
         </Button>
         <Button design="Transparent" disabled={busy} onClick={onCancel}>
-          {t("common.cancel", { defaultValue: "انصراف" })}
+          {t("common.close", { defaultValue: "بستن" })}
         </Button>
       </div>
     </div>

@@ -192,7 +192,7 @@ export default function OrganizationSummaryPanel({
                             style={actionButtonStyle}
                             onClick={onCancel}
                         >
-                            {t("common.cancel", { defaultValue: "انصراف" })}
+                            {t("common.close", { defaultValue: "بستن" })}
                         </Button>
                     </>
                 }
