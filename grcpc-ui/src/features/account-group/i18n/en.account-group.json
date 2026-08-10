@@ -1,0 +1,86 @@
+{
+  "accountGroup": {
+    "list": {
+      "title": "Account Group Structure",
+      "search": "Search by code or name",
+      "empty": "No account group has been registered."
+    },
+    "object": {
+      "title": "Account Group"
+    },
+    "create": {
+      "title": "Create Account Group"
+    },
+    "view": {
+      "title": "View Account Group"
+    },
+    "edit": {
+      "title": "Edit Account Group"
+    },
+    "tabs": {
+      "general": "General Information",
+      "risks": "Risks",
+      "documents": "Documents"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Name",
+      "parent": "Parent",
+      "importance": "Importance",
+      "reasonableAssurance": "Reasonable Assurance",
+      "status": "Status",
+      "validFrom": "Valid From",
+      "validTo": "Valid To",
+      "validity": "Validity",
+      "description": "Description",
+      "createdAt": "Created At"
+    },
+    "importance": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "CRITICAL": "Critical"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "DELETED": "Deleted"
+    },
+    "parent": {
+      "none": "No parent",
+      "select": "Select",
+      "dialogTitle": "Select Account Group Parent",
+      "search": "Search account groups"
+    },
+    "summary": {
+      "title": "Summary"
+    },
+    "actions": {
+      "submit": "Save"
+    },
+    "validation": {
+      "codeRequired": "Code is required.",
+      "nameRequired": "Name is required.",
+      "importanceRequired": "Importance is required.",
+      "invalidDate": "The entered date is invalid.",
+      "invalidValidityRange": "Valid To cannot be before Valid From.",
+      "documentsNotReady": "Document changes are not ready to save."
+    },
+    "delete": {
+      "title": "Delete Account Group",
+      "confirm": "Are you sure you want to delete “{{title}}”?"
+    },
+    "errors": {
+      "loadList": "Failed to load the account group structure.",
+      "loadDetail": "Failed to load account group details.",
+      "create": "Failed to create the account group.",
+      "update": "Failed to update the account group.",
+      "delete": "Failed to delete the account group.",
+      "duplicateCode": "This code is already in use.",
+      "notFound": "The requested account group was not found.",
+      "versionConflict": "The record was changed by another user. Reload and try again.",
+      "invalidParent": "The selected parent hierarchy is invalid.",
+      "dependencies": "The account group has approved dependencies and cannot be deleted."
+    }
+  }
+}

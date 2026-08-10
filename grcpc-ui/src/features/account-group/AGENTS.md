@@ -4,15 +4,20 @@
 Applies to `src/features/account-group`.
 
 ## Feature purpose
-Account groups are tree-based master data and can include assertions, objectives, account ranges, and risks.
+Account groups are hierarchical Master Data V2 definitions backed by `CentralAccountGroup`.
 
 ## Rules
-- Follow the feature pattern: `domain`, `infra`, `service`, `state`, `components`, `pages`, `utils`, `i18n`.
-- API base path is `/api/account-groups`; keep it aligned with backend DTOs.
-- Keep tree expansion/selection stable when creating, editing, deleting, or viewing nodes.
-- Use UI5 components and the existing FCL/list-report/object-page style.
-- Put all labels/messages in `i18n/fa.account-group.json` and `i18n/en.account-group.json`.
-- Keep value-list editing for assertions/objectives/account ranges/risks typed through `accountGroup.model.ts` and `accountGroup.schema.ts`.
+- Follow the feature pattern used by Organization, Control, Control Objective, and Risk.
+- Use the typed API base path `/api/master-data/central/account-groups` and keep commands aligned with backend DTOs.
+- Use SAP UI5 components first; the primary hierarchy must use the UI5 `Tree` / `TreeItemCustom` pattern.
+- Keep tree expansion and selection stable when creating, editing, deleting, moving, or viewing nodes.
+- General Information contains code, title, parent, status, importance, reasonable assurance, validity dates, and description.
+- `Documents` is active through `CENTRAL_ACCOUNT_GROUP` with Parent-Save behavior.
+- `Risks` is visible but disabled until the approved relationship scope is implemented.
+- Do not restore legacy assertions, objectives, account ranges, or risk relationship persistence in this feature.
+- Parent changes must reject self-parent and descendants and use the existing structural move API.
+- Lifecycle editing is limited to ACTIVE / INACTIVE; DELETED is command-only.
+- Put feature labels/messages in `i18n/fa.account-group.json` and `i18n/en.account-group.json`.
 
 ## Verification
-- Run `npm run lint` and `npm run build` from `grcpc-ui`.
+- Run `npm run lint` and `npm run build` from `grcpc-ui` when verification is requested/available.

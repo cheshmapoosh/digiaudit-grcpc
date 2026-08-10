@@ -69,6 +69,7 @@ public class CentralAccountGroupCommandService {
         title = support.normalizeTitle(request.title()),
         description = support.normalizeDescription(request.description());
     int sortOrder = support.normalizeSortOrder(request.sortOrder());
+    boolean reasonableAssurance = Boolean.TRUE.equals(request.reasonableAssurance());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     try {
@@ -102,6 +103,8 @@ public class CentralAccountGroupCommandService {
                           code,
                           title,
                           request.parentAccountGroupId(),
+                          request.importance(),
+                          reasonableAssurance,
                           description,
                           sortOrder,
                           request.validFrom(),
@@ -123,6 +126,8 @@ public class CentralAccountGroupCommandService {
                     entity.restoreFromCreate(
                         title,
                         request.parentAccountGroupId(),
+                        request.importance(),
+                        reasonableAssurance,
                         description,
                         sortOrder,
                         request.validFrom(),
@@ -134,6 +139,8 @@ public class CentralAccountGroupCommandService {
                     entity.reactivateFromCreate(
                         title,
                         request.parentAccountGroupId(),
+                        request.importance(),
+                        reasonableAssurance,
                         description,
                         sortOrder,
                         request.validFrom(),
@@ -163,6 +170,7 @@ public class CentralAccountGroupCommandService {
     long expected = support.requireVersion(request.version());
     String title = support.normalizeTitle(request.title()),
         description = support.normalizeDescription(request.description());
+    boolean reasonableAssurance = Boolean.TRUE.equals(request.reasonableAssurance());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     RevisionExecutionResult result =
@@ -176,6 +184,8 @@ public class CentralAccountGroupCommandService {
               if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
               if (Objects.equals(entity.getTitle(), title)
                   && Objects.equals(entity.getDescription(), description)
+                  && entity.getImportance() == request.importance()
+                  && entity.isReasonableAssurance() == reasonableAssurance
                   && Objects.equals(entity.getValidFrom(), request.validFrom())
                   && Objects.equals(entity.getValidTo(), request.validTo())
                   && empty(request.documents())) throw noChange();
@@ -183,6 +193,8 @@ public class CentralAccountGroupCommandService {
               entity.update(
                   title,
                   description,
+                  request.importance(),
+                  reasonableAssurance,
                   request.validFrom(),
                   request.validTo(),
                   actors.currentActorId(),
@@ -354,6 +366,8 @@ public class CentralAccountGroupCommandService {
   private Map<String, ?> typed(CentralAccountGroupEntity e) {
     Map<String, Object> m = new LinkedHashMap<>();
     m.put("parentAccountGroupId", e.getParentAccountGroupId());
+    m.put("importance", e.getImportance());
+    m.put("reasonableAssurance", e.isReasonableAssurance());
     m.put("sortOrder", e.getSortOrder());
     return m;
   }

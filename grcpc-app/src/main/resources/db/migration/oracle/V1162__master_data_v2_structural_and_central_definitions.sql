@@ -246,6 +246,8 @@ create table central_account_group (
     code varchar2(64 byte) not null,
     title varchar2(255 char) not null,
     parent_account_group_id raw(16),
+    importance varchar2(32 byte) not null,
+    reasonable_assurance number(1,0) not null,
     description clob,
     sort_order number(10,0) not null,
     status varchar2(32 byte) not null,
@@ -262,6 +264,8 @@ create table central_account_group (
     constraint uk_central_account_group_code unique (code),
     constraint ck_central_account_group_code check (code = upper(trim(code))),
     constraint fk_central_account_group_parent foreign key (parent_account_group_id) references central_account_group(id),
+    constraint ck_central_account_group_imp check (importance in ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
+    constraint ck_central_account_group_ra check (reasonable_assurance in (0, 1)),
     constraint ck_central_account_group_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_account_group_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_central_account_group_deleted check (

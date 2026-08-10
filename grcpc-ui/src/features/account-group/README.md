@@ -1,45 +1,27 @@
 # Account Group Feature
 
-Copy this folder to:
+Master Data V2 Account Group catalog UI.
+
+## Route
 
 ```text
-src/features/account-group
+/account-groups
 ```
 
-## Router
-
-In `AppRouter.tsx`, import and render the routes beside the existing feature routes:
-
-```tsx
-import { accountGroupRoutes } from "@/features/account-group";
-
-// inside <Routes>
-{accountGroupRoutes}
-```
-
-## Menu
-
-In `MainLayout.tsx`, add a side navigation item that navigates to `/account-groups`.
-
-Suggested UI5 icon:
+## API
 
 ```text
-accounting-document-verification
+/api/master-data/central/account-groups
 ```
 
-Suggested i18n key:
+## UX contract
 
-```text
-accountGroup.menu.title
-```
-
-## Data source
-
-The feature always uses the backend API. Local storage seed data and source
-overrides are not supported.
-
-Expected API base path:
-
-```text
-/api/account-groups
-```
+- Hierarchical page built with SAP UI5 `Tree` / `TreeItemCustom` and the same FCL interaction pattern used by the Risk feature.
+- Main actions: Create, View, Delete.
+- Create under the selected Account Group; with no selection create a root Account Group.
+- View/Edit use a modal Object Page.
+- General Information: code, title, parent, status, importance, reasonable assurance, validity range, description.
+- Documents tab is active using `CENTRAL_ACCOUNT_GROUP` Parent-Save document handling.
+- Risks tab is visible but disabled in this catalog-only scope.
+- Parent and status are editable with the approved Move and Lifecycle commands.
+- Legacy assertions, account ranges, objectives, and embedded risk data are not part of Master Data V2 Account Group runtime scope.

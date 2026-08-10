@@ -1,8 +1,11 @@
 package com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity;
 
+import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.enums.CentralAccountGroupImportance;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.domain.entity.CentralDefinitionEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -17,6 +20,13 @@ public class CentralAccountGroupEntity extends CentralDefinitionEntity {
   @Column(name = "parent_account_group_id", columnDefinition = "RAW(16)")
   private UUID parentAccountGroupId;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "importance", nullable = false, length = 32)
+  private CentralAccountGroupImportance importance;
+
+  @Column(name = "reasonable_assurance", nullable = false)
+  private boolean reasonableAssurance;
+
   @Column(name = "sort_order", nullable = false)
   private int sortOrder;
 
@@ -27,6 +37,8 @@ public class CentralAccountGroupEntity extends CentralDefinitionEntity {
       String code,
       String title,
       UUID parentAccountGroupId,
+      CentralAccountGroupImportance importance,
+      boolean reasonableAssurance,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -35,6 +47,8 @@ public class CentralAccountGroupEntity extends CentralDefinitionEntity {
       Instant now) {
     super(id, code, title, description, validFrom, validTo, actorId, now);
     this.parentAccountGroupId = parentAccountGroupId;
+    this.importance = importance;
+    this.reasonableAssurance = reasonableAssurance;
     this.sortOrder = sortOrder;
   }
 
@@ -43,6 +57,8 @@ public class CentralAccountGroupEntity extends CentralDefinitionEntity {
       String code,
       String title,
       UUID parentAccountGroupId,
+      CentralAccountGroupImportance importance,
+      boolean reasonableAssurance,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -54,6 +70,8 @@ public class CentralAccountGroupEntity extends CentralDefinitionEntity {
         code,
         title,
         parentAccountGroupId,
+        importance,
+        reasonableAssurance,
         description,
         sortOrder,
         validFrom,
@@ -65,11 +83,15 @@ public class CentralAccountGroupEntity extends CentralDefinitionEntity {
   public void update(
       String title,
       String description,
+      CentralAccountGroupImportance importance,
+      boolean reasonableAssurance,
       LocalDate validFrom,
       LocalDate validTo,
       UUID actorId,
       Instant now) {
     updateDefinition(title, description, validFrom, validTo, actorId, now);
+    this.importance = importance;
+    this.reasonableAssurance = reasonableAssurance;
   }
 
   public void move(UUID parentAccountGroupId, int sortOrder, UUID actorId, Instant now) {
@@ -82,6 +104,8 @@ public class CentralAccountGroupEntity extends CentralDefinitionEntity {
   public void restoreFromCreate(
       String title,
       UUID parentAccountGroupId,
+      CentralAccountGroupImportance importance,
+      boolean reasonableAssurance,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -89,6 +113,8 @@ public class CentralAccountGroupEntity extends CentralDefinitionEntity {
       UUID actorId,
       Instant now) {
     this.parentAccountGroupId = parentAccountGroupId;
+    this.importance = importance;
+    this.reasonableAssurance = reasonableAssurance;
     this.sortOrder = sortOrder;
     restoreDefinition(title, description, validFrom, validTo, actorId, now);
   }
@@ -96,6 +122,8 @@ public class CentralAccountGroupEntity extends CentralDefinitionEntity {
   public void reactivateFromCreate(
       String title,
       UUID parentAccountGroupId,
+      CentralAccountGroupImportance importance,
+      boolean reasonableAssurance,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -103,12 +131,22 @@ public class CentralAccountGroupEntity extends CentralDefinitionEntity {
       UUID actorId,
       Instant now) {
     this.parentAccountGroupId = parentAccountGroupId;
+    this.importance = importance;
+    this.reasonableAssurance = reasonableAssurance;
     this.sortOrder = sortOrder;
     reactivateDefinition(title, description, validFrom, validTo, actorId, now);
   }
 
   public UUID getParentAccountGroupId() {
     return parentAccountGroupId;
+  }
+
+  public CentralAccountGroupImportance getImportance() {
+    return importance;
+  }
+
+  public boolean isReasonableAssurance() {
+    return reasonableAssurance;
   }
 
   public int getSortOrder() {

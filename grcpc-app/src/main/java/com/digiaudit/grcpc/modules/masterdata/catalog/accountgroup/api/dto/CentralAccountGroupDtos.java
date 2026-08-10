@@ -1,6 +1,7 @@
 package com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.api.dto;
 
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
+import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.enums.CentralAccountGroupImportance;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -17,6 +18,8 @@ public final class CentralAccountGroupDtos {
       @NotBlank String code,
       @NotBlank String title,
       UUID parentAccountGroupId,
+      @NotNull CentralAccountGroupImportance importance,
+      @NotNull Boolean reasonableAssurance,
       String description,
       Integer sortOrder,
       LocalDate validFrom,
@@ -25,6 +28,8 @@ public final class CentralAccountGroupDtos {
 
   public record Update(
       @NotBlank String title,
+      @NotNull CentralAccountGroupImportance importance,
+      @NotNull Boolean reasonableAssurance,
       String description,
       LocalDate validFrom,
       LocalDate validTo,
@@ -38,6 +43,8 @@ public final class CentralAccountGroupDtos {
       String code,
       String title,
       UUID parentAccountGroupId,
+      CentralAccountGroupImportance importance,
+      boolean reasonableAssurance,
       int sortOrder,
       MasterDataLifecycleStatus status,
       LocalDate validFrom,
@@ -49,6 +56,8 @@ public final class CentralAccountGroupDtos {
       String code,
       String title,
       UUID parentAccountGroupId,
+      CentralAccountGroupImportance importance,
+      boolean reasonableAssurance,
       String description,
       int sortOrder,
       MasterDataLifecycleStatus status,
