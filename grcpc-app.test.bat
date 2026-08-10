@@ -9,6 +9,7 @@ set "APP_JAR=grcpc-app.jar"
 set "SELECTED_JAR_FILE=.grcpc-selected-jar.txt"
 set "MODE=up"
 set "RESET_DATA=false"
+set "DETACH=false"
 set "JAR_SOURCE="
 set "JAR_SOURCE_NAME="
 
@@ -17,23 +18,23 @@ cd /d "%~dp0"
 call :parse_args %*
 if errorlevel 1 exit /b %ERRORLEVEL%
 
-rem Normalize reset without an explicit jar to the packaged runtime jar.
-rem This makes these commands equivalent:
+rem For every normal start/reset, omitting the jar means using grcpc-app.jar.
+rem These pairs are intentionally equivalent:
+rem   grcpc-app.test.bat
+rem   grcpc-app.test.bat grcpc-app.jar
+rem
 rem   grcpc-app.test.bat --reset
-rem   grcpc-app.test.bat --reset grcpc-app.jar
-if /I "%RESET_DATA%"=="true" if not defined JAR_SOURCE (
+rem   grcpc-app.test.bat grcpc-app.jar --reset
+rem
+rem   grcpc-app.test.bat --detach
+rem   grcpc-app.test.bat grcpc-app.jar --detach
+if /I "%MODE%"=="up" if not defined JAR_SOURCE (
     set "JAR_SOURCE=%APP_JAR%"
     set "JAR_SOURCE_NAME=%APP_JAR%"
 )
 
 call :main
-set "EXIT_CODE=%ERRORLEVEL%"
-
-echo.
-echo Finished with exit code: %EXIT_CODE%
-echo.
-pause
-exit /b %EXIT_CODE%
+exit /b %ERRORLEVEL%
 
 
 :parse_args
@@ -114,6 +115,18 @@ if /I "%~1"=="reset" (
     goto :parse_loop
 )
 
+if /I "%~1"=="--detach" (
+    set "DETACH=true"
+    shift
+    goto :parse_loop
+)
+
+if /I "%~1"=="detach" (
+    set "DETACH=true"
+    shift
+    goto :parse_loop
+)
+
 if defined JAR_SOURCE (
     echo ERROR: Only one jar file can be selected.
     echo First jar:  %JAR_SOURCE%
@@ -140,6 +153,20 @@ exit /b 1
 if /I "%MODE%"=="help" (
     call :usage
     exit /b 0
+)
+
+if /I not "%MODE%"=="up" if /I "%DETACH%"=="true" (
+    echo ERROR: --detach is only valid when starting the environment.
+    echo.
+    call :usage
+    exit /b 1
+)
+
+if /I not "%MODE%"=="up" if /I "%RESET_DATA%"=="true" (
+    echo ERROR: --reset is only valid when starting the environment.
+    echo.
+    call :usage
+    exit /b 1
 )
 
 if not exist "%COMPOSE_FILE%" (
@@ -191,9 +218,7 @@ if /I "%RESET_DATA%"=="true" (
         echo.
         call :print_jar_info
         echo.
-        echo You must stop it before starting again, especially before changing the jar.
-        echo Run this command first:
-        echo.
+        echo Stop it first with:
         echo   grcpc-app.test.bat --down
         echo.
         echo Current status:
@@ -206,9 +231,16 @@ call :prepare_jar
 if errorlevel 1 exit /b %ERRORLEVEL%
 
 echo.
-echo Starting GRCPC test environment...
+echo ============================================================
+echo Starting GRCPC test environment
+ echo ============================================================
 echo.
 call :print_jar_info
+if /I "%DETACH%"=="true" (
+    echo Run mode:          DETACHED
+) else (
+    echo Run mode:          ATTACHED
+)
 echo.
 echo App URL:       http://localhost:8080
 echo Oracle:        localhost:1521 / FREEPDB1 / GRCPC
@@ -221,22 +253,48 @@ echo   %CD%\data\minio
 echo   %CD%\data\app\logs
 echo.
 
+if /I "%DETACH%"=="true" (
+    call :start_detached
+    exit /b %ERRORLEVEL%
+)
+
+call :start_attached
+exit /b %ERRORLEVEL%
+
+
+:start_attached
+echo Starting in ATTACHED mode.
+echo Docker Compose logs will remain visible in this window.
+echo Press Ctrl+C to stop the environment.
+echo.
+
+docker compose -f "%COMPOSE_FILE%" -p "%PROJECT_NAME%" up --remove-orphans
+set "COMPOSE_EXIT_CODE=%ERRORLEVEL%"
+
+echo.
+echo Attached session ended. Ensuring GRCPC services are stopped...
+docker compose -f "%COMPOSE_FILE%" -p "%PROJECT_NAME%" down --remove-orphans >nul 2>&1
+
+echo GRCPC test environment is stopped.
+exit /b %COMPOSE_EXIT_CODE%
+
+
+:start_detached
+echo Starting in DETACHED mode...
 docker compose -f "%COMPOSE_FILE%" -p "%PROJECT_NAME%" up -d --remove-orphans
 if errorlevel 1 exit /b %ERRORLEVEL%
 
 call :wait_for_app_port
 
 echo.
-echo GRCPC test environment is running.
+echo GRCPC test environment is running in DETACHED mode.
 echo.
 echo Useful commands:
 echo   grcpc-app.test.bat --status
 echo   grcpc-app.test.bat --logs
 echo   grcpc-app.test.bat --down
-echo   grcpc-app.test.bat --reset
 echo   grcpc-app.test.bat --help
 echo.
-
 exit /b 0
 
 
@@ -246,8 +304,8 @@ echo ============================================================
 echo GRCPC Test Environment Runner
 echo ============================================================
 echo.
-echo This script starts the complete GRCPC test environment:
-echo.
+echo Default behavior is ATTACHED mode.
+echo It starts:
 echo   1. Oracle Database
 echo   2. MinIO Object Storage
 echo   3. GRCPC Spring Boot Application
@@ -260,93 +318,75 @@ echo   grcpc-app.test.bat
 echo   compose.test.yml
 echo   grcpc-app.jar
 echo.
-echo You can also pass another jar file name as a RELATIVE path.
-echo The selected jar will be copied to .\grcpc-app.jar before start.
+echo If no jar argument is supplied, .\grcpc-app.jar is selected automatically.
+echo Another relative jar can also be supplied; it is copied to .\grcpc-app.jar.
 echo.
 echo ------------------------------------------------------------
-echo Usage
+echo Attached mode - default
 echo ------------------------------------------------------------
 echo.
 echo   grcpc-app.test.bat
-echo       Start using .\grcpc-app.jar.
+echo   grcpc-app.test.bat grcpc-app.jar
+echo       These commands are equivalent.
+echo       Start in attached mode and show Compose logs in this window.
+echo       Press Ctrl+C to stop the environment.
 echo.
-echo   grcpc-app.test.bat grcpc-app-0.0.2.jar
-echo       Copy .\grcpc-app-0.0.2.jar to .\grcpc-app.jar, then start.
+echo   grcpc-app.test.bat grcpc-app-1.1.0.jar
+echo       Copy the selected jar to .\grcpc-app.jar and start attached.
 echo.
-echo   grcpc-app.test.bat jars\grcpc-app-0.0.2.jar
-echo       Use a jar from a relative subfolder.
+echo ------------------------------------------------------------
+echo Detached mode
+ echo ------------------------------------------------------------
 echo.
-echo   grcpc-app.test.bat --status
-echo       Show service status and executable jar name.
+echo   grcpc-app.test.bat --detach
+echo   grcpc-app.test.bat grcpc-app.jar --detach
+echo       These commands are equivalent.
+echo       Start in background and return to the command prompt.
 echo.
-echo   grcpc-app.test.bat --ps
-echo       Alias for --status.
+echo   grcpc-app.test.bat grcpc-app-1.1.0.jar --detach
+echo       Copy the selected jar and start in background.
 echo.
-echo   grcpc-app.test.bat --logs
-echo       Show and follow logs for Oracle, MinIO, and app.
-echo.
-echo   grcpc-app.test.bat --down
-echo       Stop and remove containers. Local data will NOT be deleted.
+echo ------------------------------------------------------------
+echo Reset database and local data
+ echo ------------------------------------------------------------
 echo.
 echo   grcpc-app.test.bat --reset
-echo       Reset all local test data and start using .\grcpc-app.jar.
-echo       Equivalent to: grcpc-app.test.bat --reset grcpc-app.jar
-echo       This removes Oracle data, MinIO data, and app logs.
+echo   grcpc-app.test.bat grcpc-app.jar --reset
+echo       These commands are equivalent.
+echo       Delete Oracle data, MinIO data, and app logs, then start attached.
 echo.
-echo   grcpc-app.test.bat --reset grcpc-app-0.0.2.jar
-echo       Reset all local test data, copy the selected jar to .\grcpc-app.jar, then start.
+echo   grcpc-app.test.bat --reset --detach
+echo   grcpc-app.test.bat grcpc-app.jar --reset --detach
+echo       Reset all local data and start detached.
+echo.
+echo   grcpc-app.test.bat grcpc-app-1.1.0.jar --reset
+echo       Reset all local data, select the given jar, then start attached.
+echo.
+echo ------------------------------------------------------------
+echo Management commands
+ echo ------------------------------------------------------------
+echo.
+echo   grcpc-app.test.bat --status
+echo   grcpc-app.test.bat --ps
+echo       Show service status and selected executable jar name.
+echo.
+echo   grcpc-app.test.bat --logs
+echo       Follow logs of a detached environment.
+echo.
+echo   grcpc-app.test.bat --down
+echo       Stop and remove containers. Local persistent data is preserved.
 echo.
 echo   grcpc-app.test.bat --help
 echo       Show this help message.
 echo.
 echo ------------------------------------------------------------
-echo Important rule
-echo ------------------------------------------------------------
-echo.
-echo If the environment is already running, this script will NOT start it again.
-echo First stop it with:
-echo.
-echo   grcpc-app.test.bat --down
-echo.
-echo Then start again, optionally with a new relative jar file name:
-echo.
-echo   grcpc-app.test.bat grcpc-app-0.0.2.jar
-echo.
-echo ------------------------------------------------------------
-echo Local persistent data folders
-echo ------------------------------------------------------------
-echo.
-echo   data\oracle\oradata
-echo   data\minio
-echo   data\app\logs
-echo.
-echo ------------------------------------------------------------
 echo URLs
-echo ------------------------------------------------------------
+ echo ------------------------------------------------------------
 echo.
 echo   App URL:       http://localhost:8080
 echo   Oracle:        localhost:1521 / FREEPDB1 / GRCPC
 echo   MinIO API:     http://localhost:9000
 echo   MinIO Console: http://localhost:9001
-echo.
-echo ------------------------------------------------------------
-echo Recommended workflow for a new jar
-echo ------------------------------------------------------------
-echo.
-echo   grcpc-app.test.bat --down
-echo   grcpc-app.test.bat grcpc-app-0.0.2.jar
-echo.
-echo To reset the database and use the packaged runtime jar:
-echo.
-echo   grcpc-app.test.bat --reset
-echo.
-echo The command above is exactly the same reset selection as:
-echo.
-echo   grcpc-app.test.bat --reset grcpc-app.jar
-echo.
-echo To reset the database and switch to another jar in one command:
-echo.
-echo   grcpc-app.test.bat --reset grcpc-app-0.0.2.jar
 echo.
 exit /b 0
 
@@ -366,6 +406,12 @@ if defined JAR_SOURCE (
     if /I not "%JAR_SOURCE:~-4%"==".jar" (
         echo ERROR: The selected file is not a .jar file:
         echo %JAR_SOURCE%
+        exit /b 1
+    )
+
+    if not exist "%JAR_SOURCE%" (
+        echo ERROR: Jar file not found:
+        echo %CD%\%JAR_SOURCE%
         exit /b 1
     )
 
@@ -398,7 +444,7 @@ if not exist "%APP_JAR%" (
     echo %APP_JAR%
     echo.
     echo Or pass a relative jar file name:
-    echo grcpc-app.test.bat grcpc-app-0.0.2.jar
+    echo grcpc-app.test.bat grcpc-app-1.1.0.jar
     exit /b 1
 )
 
@@ -508,8 +554,10 @@ if not errorlevel 1 (
 ) else (
     echo Environment status: NOT RUNNING
     echo.
-    echo To start it, run:
+    echo To start attached, run:
     echo   grcpc-app.test.bat
+    echo To start detached, run:
+    echo   grcpc-app.test.bat --detach
 )
 echo.
 echo Docker Compose services:
