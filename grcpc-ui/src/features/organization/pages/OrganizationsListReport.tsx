@@ -118,6 +118,7 @@ export default function OrganizationsListReport({
 
             <div
                 style={{
+                    gridRow: "4",
                     minHeight: 0,
                     overflowY: "auto",
                     overflowX: "hidden",

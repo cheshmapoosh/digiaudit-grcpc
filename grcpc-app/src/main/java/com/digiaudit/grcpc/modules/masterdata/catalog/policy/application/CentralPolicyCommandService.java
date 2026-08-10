@@ -11,6 +11,7 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.Catalog
 import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;
+import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.*;
@@ -30,6 +31,7 @@ public class CentralPolicyCommandService {
   private final RevisionMutationGuard guard;
   private final DocumentCommandService documents;
   private final CatalogCommandSupport support;
+  private final MasterDataStructuralDependencyChecker dependencyChecker;
   private final Clock clock;
 
   public CentralPolicyCommandService(
@@ -41,6 +43,7 @@ public class CentralPolicyCommandService {
       RevisionMutationGuard gu,
       DocumentCommandService d,
       CatalogCommandSupport s,
+      MasterDataStructuralDependencyChecker dc,
       @Qualifier("masterDataRevisionClock") Clock c) {
     repository = r;
     groups = g;
@@ -50,12 +53,16 @@ public class CentralPolicyCommandService {
     guard = gu;
     documents = d;
     support = s;
+    dependencyChecker = dc;
     clock = c;
   }
 
   public MasterDataAggregateMutationResponse create(CentralPolicyDtos.CreatePolicy r) {
     String code = support.normalizeCode(r.code()),
         title = support.normalizeTitle(r.title()),
+        responsibleOrganization = normalizeShortText(r.responsibleOrganization(), "responsibleOrganization"),
+        communicationTiming = normalizeShortText(r.communicationTiming(), "communicationTiming"),
+        objective = normalizeLongText(r.objective()),
         description = support.normalizeDescription(r.description());
     int sort = support.normalizeSortOrder(r.sortOrder());
     support.validateValidity(r.validFrom(), r.validTo());
@@ -82,6 +89,12 @@ public class CentralPolicyCommandService {
                           code,
                           title,
                           r.policyGroupId(),
+                          r.policyType(),
+                          responsibleOrganization,
+                          r.communicationMethod(),
+                          communicationTiming,
+                          r.nextReviewDate(),
+                          objective,
                           description,
                           sort,
                           r.validFrom(),
@@ -101,6 +114,12 @@ public class CentralPolicyCommandService {
                     e.restoreFromCreate(
                         title,
                         r.policyGroupId(),
+                        r.policyType(),
+                        responsibleOrganization,
+                        r.communicationMethod(),
+                        communicationTiming,
+                        r.nextReviewDate(),
+                        objective,
                         description,
                         sort,
                         r.validFrom(),
@@ -112,6 +131,12 @@ public class CentralPolicyCommandService {
                     e.reactivateFromCreate(
                         title,
                         r.policyGroupId(),
+                        r.policyType(),
+                        responsibleOrganization,
+                        r.communicationMethod(),
+                        communicationTiming,
+                        r.nextReviewDate(),
+                        objective,
                         description,
                         sort,
                         r.validFrom(),
@@ -122,6 +147,7 @@ public class CentralPolicyCommandService {
                   }
                 }
                 var saved = repository.saveAndFlush(e);
+                ensurePublishedBaselineVersion(saved, actor, now);
                 docs.set(
                     documents.finalizePreparedAggregate(
                         prepared,
@@ -139,6 +165,9 @@ public class CentralPolicyCommandService {
   public MasterDataAggregateMutationResponse update(UUID id, CentralPolicyDtos.UpdatePolicy r) {
     long expected = support.requireVersion(r.version());
     String title = support.normalizeTitle(r.title()),
+        responsibleOrganization = normalizeShortText(r.responsibleOrganization(), "responsibleOrganization"),
+        communicationTiming = normalizeShortText(r.communicationTiming(), "communicationTiming"),
+        objective = normalizeLongText(r.objective()),
         description = support.normalizeDescription(r.description());
     support.validateValidity(r.validFrom(), r.validTo());
     AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
@@ -151,6 +180,12 @@ public class CentralPolicyCommandService {
               support.assertVersion(e, expected);
               if (e.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
               if (Objects.equals(e.getTitle(), title)
+                  && e.getPolicyType() == r.policyType()
+                  && Objects.equals(e.getResponsibleOrganization(), responsibleOrganization)
+                  && e.getCommunicationMethod() == r.communicationMethod()
+                  && Objects.equals(e.getCommunicationTiming(), communicationTiming)
+                  && Objects.equals(e.getNextReviewDate(), r.nextReviewDate())
+                  && Objects.equals(e.getObjective(), objective)
                   && Objects.equals(e.getDescription(), description)
                   && Objects.equals(e.getValidFrom(), r.validFrom())
                   && Objects.equals(e.getValidTo(), r.validTo())
@@ -158,6 +193,12 @@ public class CentralPolicyCommandService {
               JsonNode before = snapshot(e);
               e.update(
                   title,
+                  r.policyType(),
+                  responsibleOrganization,
+                  r.communicationMethod(),
+                  communicationTiming,
+                  r.nextReviewDate(),
+                  objective,
                   description,
                   r.validFrom(),
                   r.validTo(),
@@ -228,11 +269,15 @@ public class CentralPolicyCommandService {
               support.validateLifecycle(e, op);
               if (op == RevisionOperationType.DELETE
                   && versions.lockAllByPolicyId(id).stream()
-                      .anyMatch(v -> v.getStatus() != MasterDataLifecycleStatus.DELETED))
+                      .filter(v -> v.getStatus() != MasterDataLifecycleStatus.DELETED)
+                      .anyMatch(
+                          v ->
+                              dependencyChecker.centralPolicyVersionHasApprovedDependencies(
+                                  v.getId())))
                 throw new ConflictException(
                     "DEPENDENCY_EXISTS",
                     "error.masterdata.v2.dependencyExists",
-                    "Policy has nondeleted versions",
+                    "Policy Version has approved scope dependencies",
                     id);
               if (op == RevisionOperationType.ACTIVATE || op == RevisionOperationType.RESTORE)
                 requireGroup(e.getPolicyGroupId());
@@ -249,6 +294,25 @@ public class CentralPolicyCommandService {
               return completed(c, repository.saveAndFlush(e), op, expected, before);
             });
     return MasterDataRevisionMutationResponse.from(result.primaryResult());
+  }
+
+  private void ensurePublishedBaselineVersion(
+      CentralPolicyEntity policy, UUID actorId, Instant now) {
+    List<CentralPolicyVersionEntity> existing = versions.lockAllByPolicyId(policy.getId());
+    boolean hasLiveVersion =
+        existing.stream().anyMatch(v -> v.getStatus() != MasterDataLifecycleStatus.DELETED);
+    if (hasLiveVersion) return;
+    int versionNumber =
+        existing.stream().mapToInt(CentralPolicyVersionEntity::getVersionNumber).max().orElse(0) + 1;
+    versions.saveAndFlush(
+        CentralPolicyVersionEntity.createPublishedBaseline(
+            UUID.randomUUID(),
+            policy.getId(),
+            versionNumber,
+            policy.getValidFrom(),
+            policy.getValidTo(),
+            actorId,
+            now));
   }
 
   private void requireGroup(UUID id) {
@@ -299,8 +363,33 @@ public class CentralPolicyCommandService {
         "The move does not change parent or sort order");
   }
 
+  private String normalizeShortText(String value, String fieldName) {
+    if (value == null || value.isBlank()) return null;
+    String normalized = value.trim();
+    if (normalized.length() > 255) {
+      throw new UnprocessableEntityException(
+          "INVALID_POLICY_METADATA",
+          "error.masterdata.v2.invalidPolicyMetadata",
+          fieldName + " exceeds 255 characters");
+    }
+    return normalized;
+  }
+
+  private String normalizeLongText(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
+  }
+
   private Map<String, ?> typed(CentralPolicyEntity e) {
-    return Map.of("policyGroupId", e.getPolicyGroupId(), "sortOrder", e.getSortOrder());
+    Map<String, Object> fields = new LinkedHashMap<>();
+    fields.put("policyGroupId", e.getPolicyGroupId());
+    fields.put("policyType", e.getPolicyType());
+    fields.put("responsibleOrganization", e.getResponsibleOrganization());
+    fields.put("communicationMethod", e.getCommunicationMethod());
+    fields.put("communicationTiming", e.getCommunicationTiming());
+    fields.put("nextReviewDate", e.getNextReviewDate());
+    fields.put("objective", e.getObjective());
+    fields.put("sortOrder", e.getSortOrder());
+    return fields;
   }
 
   private JsonNode snapshot(CentralPolicyEntity e) {

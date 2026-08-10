@@ -163,11 +163,11 @@ export default function CentralRegulationTree({
   const handleItemClick = useCallback(
     (event: TreeEvent) => {
       const id = event.detail?.item?.dataset?.nodeId;
-      if (!id) return;
+      if (!id || id === selectedId) return;
       const node = findNode(tree, id);
       if (node) onSelect?.(node);
     },
-    [onSelect, tree],
+    [onSelect, selectedId, tree],
   );
 
   const handleItemToggle = useCallback(

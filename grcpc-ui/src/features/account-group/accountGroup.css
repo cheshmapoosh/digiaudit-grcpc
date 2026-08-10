@@ -20,6 +20,10 @@
   min-height: 0;
 }
 
+.accountGroupTreeFrame {
+  grid-row: 4;
+}
+
 .accountGroupTreeFrame,
 .accountGroupParentTreeFrame {
   min-height: 0;

@@ -205,6 +205,12 @@ export default function OrganizationObjectPage({
 
         <DetailTabContainer onTabSelect={(event) => { const key = (event.detail.tab.getAttribute("data-tab-key") as OrganizationTabKey | null); if (key) { if (!controlledTab) setInternalTab(key); onActiveTabChange?.(key); } }}>
             <Tab text={t("organization.tabs.general", { defaultValue: "General Information" })} selected={activeTab === "general"} data-tab-key="general" />
+            <Tab text={t("organization.tabs.subprocesses", { defaultValue: "Subprocesses" })} disabled />
+            <Tab text={t("organization.tabs.risks", { defaultValue: "Risks" })} disabled />
+            <Tab text={t("organization.tabs.controls", { defaultValue: "Controls" })} disabled />
+            <Tab text={t("organization.tabs.regulations", { defaultValue: "Regulations" })} disabled />
+            <Tab text={t("organization.tabs.objectives", { defaultValue: "Objectives" })} disabled />
+            <Tab text={t("organization.tabs.policies", { defaultValue: "Policy" })} disabled />
             <Tab text={t("organization.tabs.documents", { defaultValue: "Documents" })} selected={activeTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
 

@@ -37,6 +37,11 @@
     },
     "tabs": {
       "general": "اطلاعات کلی",
+      "controls": "کنترل‌ها",
+      "regulations": "قوانین",
+      "objectives": "اهداف",
+      "accountGroups": "گروه حساب‌ها",
+      "risks": "ریسک‌ها",
       "documents": "مستندات"
     },
     "tree": {

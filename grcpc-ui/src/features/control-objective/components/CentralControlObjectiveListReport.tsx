@@ -109,7 +109,7 @@ export default function CentralControlObjectiveListReport({
           onSelectionChange={(event) => {
             const selectedItem = event.detail.selectedItems[0];
             const id = selectedItem?.dataset.controlObjectiveId;
-            if (id) onSelect(id);
+            if (id && id !== selectedId) onSelect(id);
           }}
         >
           {visibleItems.map((item, index) => (

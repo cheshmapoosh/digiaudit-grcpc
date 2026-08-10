@@ -31,6 +31,12 @@
     },
     "tabs": {
       "general": "General Information",
+      "subprocesses": "Subprocesses",
+      "risks": "Risks",
+      "controls": "Controls",
+      "regulations": "Regulations",
+      "objectives": "Objectives",
+      "policies": "Policy",
       "documents": "Documents"
     },
     "types": {

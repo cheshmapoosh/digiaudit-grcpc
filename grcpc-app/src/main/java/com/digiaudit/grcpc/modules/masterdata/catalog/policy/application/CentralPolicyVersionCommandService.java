@@ -200,6 +200,7 @@ public class CentralPolicyVersionCommandService {
               CentralPolicyVersionEntity target = requireLockedVersion(lockedVersions, id);
               assertVersion(target, expectedVersion);
               requireActiveDraft(target);
+              requirePublicationOrder(target, lockedVersions);
               if (target.getContent() == null || target.getContent().isBlank()) {
                 throw new UnprocessableEntityException(
                     "INVALID_POLICY_PUBLICATION",
@@ -293,6 +294,25 @@ public class CentralPolicyVersionCommandService {
             .max()
             .orElse(0)
         + 1;
+  }
+
+  private void requirePublicationOrder(
+      CentralPolicyVersionEntity target, List<CentralPolicyVersionEntity> lockedVersions) {
+    boolean newerOfficialVersionExists =
+        lockedVersions.stream()
+            .filter(version -> !version.getId().equals(target.getId()))
+            .filter(
+                version ->
+                    version.getVersionStatus() == PolicyVersionStatus.PUBLISHED
+                        || version.getVersionStatus() == PolicyVersionStatus.SUPERSEDED)
+            .anyMatch(version -> version.getVersionNumber() > target.getVersionNumber());
+    if (newerOfficialVersionExists) {
+      throw new UnprocessableEntityException(
+          "OUTDATED_POLICY_VERSION",
+          "error.masterdata.v2.outdatedPolicyVersion",
+          "An older policy version cannot replace newer publication history",
+          target.getId());
+    }
   }
 
   private void requirePolicyGuard(RevisionExecutionContext context) {

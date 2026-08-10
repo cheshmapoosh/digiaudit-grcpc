@@ -16,13 +16,16 @@ import type {
   UpdateCentralPolicyGroupCommand,
   UpdateCentralPolicyVersionCommand,
 } from "../domain/centralPolicy.model";
+
 const GROUPS = "/api/master-data/central/policy-groups",
   POLICIES = "/api/master-data/central/policies",
   VERSIONS = "/api/master-data/central/policy-versions";
+
 const lifecycle = (base: string, id: string, action: string, version: number) =>
   httpClient.post<CentralPolicyRevisionResponse>(`${base}/${id}/${action}`, {
     version,
   });
+
 export const centralPolicyApi = {
   listGroups: () => httpClient.get<CentralPolicyGroupSummary[]>(GROUPS),
   group: (id: string) =>
@@ -32,18 +35,15 @@ export const centralPolicyApi = {
   updateGroup: (id: string, body: UpdateCentralPolicyGroupCommand) =>
     httpClient.patch<CentralPolicyMutationResponse>(`${GROUPS}/${id}`, body),
   moveGroup: (id: string, body: MoveCentralPolicyGroupCommand) =>
-    httpClient.post<CentralPolicyRevisionResponse>(
-      `${GROUPS}/${id}/move`,
-      body,
-    ),
+    httpClient.post<CentralPolicyRevisionResponse>(`${GROUPS}/${id}/move`, body),
   groupLifecycle: (
     id: string,
     action: "activate" | "inactivate" | "delete" | "restore",
     version: number,
   ) => lifecycle(GROUPS, id, action, version),
-  listPolicies: (groupId: string) =>
+  listPolicies: (groupId?: string) =>
     httpClient.get<CentralPolicySummary[]>(
-      `${POLICIES}?groupId=${encodeURIComponent(groupId)}`,
+      groupId ? `${POLICIES}?groupId=${encodeURIComponent(groupId)}` : POLICIES,
     ),
   policy: (id: string) =>
     httpClient.get<CentralPolicyDetail>(`${POLICIES}/${id}`),
@@ -52,10 +52,7 @@ export const centralPolicyApi = {
   updatePolicy: (id: string, body: UpdateCentralPolicyCommand) =>
     httpClient.patch<CentralPolicyMutationResponse>(`${POLICIES}/${id}`, body),
   movePolicy: (id: string, body: MoveCentralPolicyCommand) =>
-    httpClient.post<CentralPolicyRevisionResponse>(
-      `${POLICIES}/${id}/move`,
-      body,
-    ),
+    httpClient.post<CentralPolicyRevisionResponse>(`${POLICIES}/${id}/move`, body),
   policyLifecycle: (
     id: string,
     action: "activate" | "inactivate" | "delete" | "restore",

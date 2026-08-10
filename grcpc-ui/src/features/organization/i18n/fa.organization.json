@@ -31,6 +31,12 @@
     },
     "tabs": {
       "general": "اطلاعات کلی",
+      "subprocesses": "زیر فرآیند",
+      "risks": "ریسک‌ها",
+      "controls": "کنترل‌ها",
+      "regulations": "قوانین",
+      "objectives": "اهداف",
+      "policies": "سیاست",
       "documents": "مستندات"
     },
     "types": {

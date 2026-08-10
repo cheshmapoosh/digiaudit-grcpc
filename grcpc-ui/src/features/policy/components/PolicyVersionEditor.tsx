@@ -1,64 +1,55 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Button,
-  Label,
-  MessageStrip,
-  TextArea,
-  Title,
-} from "@ui5/webcomponents-react";
+import { Button, Label, MessageStrip, TextArea, Title } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
+
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
-  DocumentManager,
   EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE,
-  toDocumentAggregateDraftError,
   toDocumentAggregateRequest,
-  type DocumentAggregateDraftError,
-  type ParentSaveDocumentDraftState,
 } from "@/features/document";
 import {
   PersianDatePicker,
   type PersianDateDraftState,
 } from "@/shared/components/PersianDatePicker";
-import type { CentralPolicyVersionDetail } from "../domain/centralPolicy.model";
+import type { CentralPolicyVersionDetail, PolicyVersionStatus } from "../domain/centralPolicy.model";
 import { centralPolicyApi } from "../infra/centralPolicy.api";
-const EMPTY_DATE: PersianDateDraftState = {
-  draftValue: "",
-  valid: true,
-  dirty: false,
-};
+
+const EMPTY_DATE: PersianDateDraftState = { draftValue: "", valid: true, dirty: false };
+
+function versionStatusLabel(status: PolicyVersionStatus, t: ReturnType<typeof useTranslation>["t"]) {
+  if (status === "DRAFT") return t("policy.versionStatus.draft", { defaultValue: "پیش‌نویس" });
+  if (status === "PUBLISHED") return t("policy.versionStatus.published", { defaultValue: "منتشرشده" });
+  return t("policy.versionStatus.superseded", { defaultValue: "منسوخ‌شده" });
+}
+
 export function PolicyVersionEditor({
   policyId,
   busy: parentBusy,
+  readOnly,
   onDirtyChange,
+  onSelectedVersionChange,
   permissions,
 }: {
   policyId: string;
   busy: boolean;
+  readOnly: boolean;
   onDirtyChange: (dirty: boolean) => void;
+  onSelectedVersionChange?: (version: CentralPolicyVersionDetail | null) => void;
   permissions: CatalogActionPermissions;
 }) {
-  const { t } = useTranslation(),
-    generation = useRef(0);
-  const [versions, setVersions] = useState<CentralPolicyVersionDetail[]>([]),
-    [selected, setSelected] = useState<CentralPolicyVersionDetail | null>(null),
-    [creating, setCreating] = useState(false),
-    [editing, setEditing] = useState(false),
-    [deletedMode, setDeletedMode] = useState(false),
-    [content, setContent] = useState(""),
-    [validFrom, setValidFrom] = useState(""),
-    [validTo, setValidTo] = useState(""),
-    [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(
-      EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE,
-    ),
-    [dateDrafts, setDateDrafts] = useState({
-      validFrom: EMPTY_DATE,
-      validTo: EMPTY_DATE,
-    }),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState<string | null>(null),
-    [documentError, setDocumentError] =
-      useState<DocumentAggregateDraftError | null>(null);
+  const { t } = useTranslation();
+  const generation = useRef(0);
+  const [versions, setVersions] = useState<CentralPolicyVersionDetail[]>([]);
+  const [selected, setSelected] = useState<CentralPolicyVersionDetail | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [content, setContent] = useState("");
+  const [validFrom, setValidFrom] = useState("");
+  const [validTo, setValidTo] = useState("");
+  const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE, validTo: EMPTY_DATE });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const baseline = useMemo(
     () => ({
       content: selected?.content ?? "",
@@ -71,81 +62,77 @@ export function PolicyVersionEditor({
     content !== baseline.content ||
     validFrom !== baseline.validFrom ||
     validTo !== baseline.validTo ||
-    documents.dirty ||
-    documents.uploading ||
     dateDrafts.validFrom.dirty ||
     dateDrafts.validTo.dirty;
+
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
+  useEffect(() => onSelectedVersionChange?.(selected), [onSelectedVersionChange, selected]);
+
+  const applySelection = useCallback((next: CentralPolicyVersionDetail | null) => {
+    setSelected(next);
+    setContent(next?.content ?? "");
+    setValidFrom(next?.validFrom ?? "");
+    setValidTo(next?.validTo ?? "");
+    setCreating(false);
+    setEditing(false);
+    setDateDrafts({ validFrom: EMPTY_DATE, validTo: EMPTY_DATE });
+  }, []);
+
   const load = useCallback(
     async (keepId?: string) => {
       const request = ++generation.current;
       setBusy(true);
       try {
-        const rows = await centralPolicyApi.listVersions(policyId, deletedMode);
+        const rows = await centralPolicyApi.listVersions(policyId);
         if (request !== generation.current) return;
         setVersions(rows);
-        const next = rows.find((row) => row.id === keepId) ?? rows[0] ?? null;
-        setSelected(next);
-        setContent(next?.content ?? "");
-        setValidFrom(next?.validFrom ?? "");
-        setValidTo(next?.validTo ?? "");
-        setCreating(false);
-        setEditing(false);
-        setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
-        setDateDrafts({ validFrom: EMPTY_DATE, validTo: EMPTY_DATE });
+        applySelection(rows.find((row) => row.id === keepId) ?? rows[0] ?? null);
+        setError(null);
       } catch (cause) {
-        if (request === generation.current)
+        if (request === generation.current) {
           setError(cause instanceof Error ? cause.message : String(cause));
+        }
       } finally {
         if (request === generation.current) setBusy(false);
       }
     },
-    [deletedMode, policyId],
+    [applySelection, policyId],
   );
+
   useEffect(() => {
     void load();
     return () => {
       generation.current += 1;
     };
   }, [load]);
+
   const confirmLeave = () =>
     !dirty ||
     window.confirm(
-      t("centralCatalog.discard", {
-        defaultValue: "تغییرات ذخیره‌نشده نادیده گرفته شود؟",
-      }),
+      t("centralCatalog.discard", { defaultValue: "تغییرات ذخیره‌نشده نادیده گرفته شود؟" }),
     );
+
   const select = (version: CentralPolicyVersionDetail) => {
     if (!confirmLeave()) return;
     generation.current += 1;
-    setSelected(version);
-    setContent(version.content ?? "");
-    setValidFrom(version.validFrom ?? "");
-    setValidTo(version.validTo ?? "");
-    setCreating(false);
-    setEditing(false);
-    setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
-    setDateDrafts({ validFrom: EMPTY_DATE, validTo: EMPTY_DATE });
+    applySelection(version);
   };
+
   const save = async () => {
-    if (
-      !documents.ready ||
-      documents.invalid ||
-      documents.uploading ||
-      !dateDrafts.validFrom.valid ||
-      !dateDrafts.validTo.valid
-    )
+    if (readOnly || !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid) return;
+    if (validFrom && validTo && validFrom > validTo) {
+      setError(t("policy.validation.invalidValidityRange", { defaultValue: "بازه اعتبار نامعتبر است." }));
       return;
+    }
     setBusy(true);
     setError(null);
-    setDocumentError(null);
     generation.current += 1;
     try {
       const common = {
         content: content.trim() || null,
         validFrom: validFrom || null,
         validTo: validTo || null,
-        documents: toDocumentAggregateRequest(documents),
+        documents: toDocumentAggregateRequest(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE),
       };
       const result = creating
         ? await centralPolicyApi.createVersion(policyId, common)
@@ -155,14 +142,14 @@ export function PolicyVersionEditor({
           });
       await load(result.entityId);
     } catch (cause) {
-      setDocumentError(toDocumentAggregateDraftError(cause));
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setBusy(false);
     }
   };
+
   const publish = async () => {
-    if (!selected || !confirmLeave()) return;
+    if (readOnly || !selected || !confirmLeave()) return;
     setBusy(true);
     generation.current += 1;
     try {
@@ -174,68 +161,36 @@ export function PolicyVersionEditor({
       setBusy(false);
     }
   };
-  const lifecycle = async (action: "delete" | "restore") => {
-    if (!selected || !confirmLeave()) return;
-    setBusy(true);
-    generation.current += 1;
-    try {
-      await centralPolicyApi.versionLifecycle(
-        selected.id,
-        action,
-        selected.version,
-      );
-      await load();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setBusy(false);
-    }
-  };
-  const immutable =
-    deletedMode || (!creating && selected?.versionStatus !== "DRAFT");
+
+  const immutable = !creating && selected?.versionStatus !== "DRAFT";
   const blocked = busy || parentBusy;
-  const canEditDraft = creating ? permissions.create : permissions.update;
+  const canEditDraft = !readOnly && (creating ? permissions.create : permissions.update);
+
   return (
     <section className="policyVersionEditor">
-      <header className="catalogToolbar">
-        <Title level="H4">
-          {t("centralCatalog.policyVersions", {
-            defaultValue: "نسخه‌های خط‌مشی",
-          })}
-        </Title>
-        <span className="catalogToolbarActions">
-          <Button
-            design="Emphasized"
-            hidden={!permissions.create}
-            disabled={blocked || deletedMode}
-            onClick={() => {
-              if (!confirmLeave()) return;
-              setCreating(true);
-              setEditing(true);
-              setSelected(null);
-              setContent("");
-              setValidFrom("");
-              setValidTo("");
-              setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
-            }}
-          >
-            {t("centralCatalog.newDraft", { defaultValue: "پیش‌نویس جدید" })}
-          </Button>
-          <Button
-            disabled={blocked || dirty}
-            onClick={() => setDeletedMode((value) => !value)}
-          >
-            {deletedMode
-              ? t("common.back", { defaultValue: "بازگشت" })
-              : t("centralCatalog.deleted", { defaultValue: "حذف‌شده‌ها" })}
-          </Button>
-        </span>
+      <header className="policyVersionHeader">
+        <Title level="H4">{t("policy.tabs.versions", { defaultValue: "نسخه‌ها" })}</Title>
+        <Button
+          design="Emphasized"
+          hidden={readOnly || !permissions.create}
+          disabled={blocked || readOnly}
+          onClick={() => {
+            if (readOnly || !confirmLeave()) return;
+            setCreating(true);
+            setEditing(true);
+            setSelected(null);
+            setContent("");
+            setValidFrom("");
+            setValidTo("");
+            setDateDrafts({ validFrom: EMPTY_DATE, validTo: EMPTY_DATE });
+          }}
+        >
+          {t("policy.version.new", { defaultValue: "ایجاد نسخه جدید" })}
+        </Button>
       </header>
-      {error && (
-        <MessageStrip design="Negative" hideCloseButton>
-          {error}
-        </MessageStrip>
-      )}
+
+      {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}</MessageStrip> : null}
+
       <div className="policyVersionList">
         {versions.map((version) => (
           <Button
@@ -244,126 +199,89 @@ export function PolicyVersionEditor({
             disabled={blocked}
             onClick={() => select(version)}
           >
-            v{version.versionNumber} — {version.versionStatus}
+            {t("policy.version.label", {
+              defaultValue: "نسخه {{number}} — {{status}}",
+              number: version.versionNumber,
+              status: versionStatusLabel(version.versionStatus, t),
+            })}
           </Button>
         ))}
       </div>
-      {(creating || selected) && (
-        <div className="catalogObjectPage">
-          <div className="catalogToolbarActions">
-            {!immutable && !editing && permissions.update && (
-              <Button onClick={() => setEditing(true)}>
-                {t("common.edit", { defaultValue: "ویرایش" })}
-              </Button>
-            )}
-            {editing && !immutable && canEditDraft && (
-              <Button
-                design="Emphasized"
-                disabled={blocked || !dirty}
-                onClick={() => void save()}
-              >
-                {t("common.save", { defaultValue: "ذخیره" })}
-              </Button>
-            )}
-            {selected && !immutable && !editing && permissions.publish && (
-              <Button
-                design="Emphasized"
-                disabled={blocked || !selected.content?.trim()}
-                onClick={() => void publish()}
-              >
-                {t("centralCatalog.publish", { defaultValue: "انتشار" })}
-              </Button>
-            )}
-            {selected && !immutable && !editing && permissions.delete && (
-              <Button
-                design="Negative"
-                disabled={blocked}
-                onClick={() => void lifecycle("delete")}
-              >
-                {t("common.delete", { defaultValue: "حذف" })}
-              </Button>
-            )}
-            {selected && deletedMode && permissions.restore && (
-              <Button
-                disabled={blocked}
-                onClick={() => void lifecycle("restore")}
-              >
-                {t("common.restore", { defaultValue: "بازیابی" })}
-              </Button>
-            )}
-          </div>
+
+      {(creating || selected) ? (
+        <div className="policyVersionBody">
+          {!readOnly ? (
+            <div className="policyVersionActions">
+              {!immutable && !editing && permissions.update ? (
+                <Button onClick={() => setEditing(true)}>{t("common.edit", { defaultValue: "ویرایش" })}</Button>
+              ) : null}
+              {editing && !immutable && canEditDraft ? (
+                <Button design="Emphasized" disabled={blocked || (!creating && !dirty)} onClick={() => void save()}>
+                  {t("common.save", { defaultValue: "ذخیره" })}
+                </Button>
+              ) : null}
+              {selected && selected.versionStatus === "DRAFT" && !editing && permissions.publish ? (
+                <Button design="Emphasized" disabled={blocked || !selected.content?.trim()} onClick={() => void publish()}>
+                  {t("policy.version.publish", { defaultValue: "انتشار" })}
+                </Button>
+              ) : null}
+              {creating ? (
+                <Button design="Transparent" disabled={blocked} onClick={() => applySelection(versions[0] ?? null)}>
+                  {t("common.cancel", { defaultValue: "انصراف" })}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {selected ? (
+            <div className="policyVersionMeta">
+              <strong>
+                {t("policy.fields.versionNumber", { defaultValue: "شماره نسخه" })}: {selected.versionNumber}
+              </strong>
+              <span>{versionStatusLabel(selected.versionStatus, t)}</span>
+            </div>
+          ) : null}
+
           <TextArea
             rows={10}
             value={content}
-            readonly={!editing || immutable}
+            readonly={readOnly || !editing || immutable}
             disabled={blocked}
+            placeholder={t("policy.fields.versionContent", { defaultValue: "محتوای نسخه سیاست" })}
             onInput={(event) => setContent(event.target.value)}
           />
-          <div className="catalogFormGrid">
+
+          <div className="policyVersionDates">
             <Label>
-              {t("centralCatalog.validFrom", { defaultValue: "اعتبار از" })}
+              {t("policy.fields.validFrom", { defaultValue: "تاریخ اعتبار از" })}
               <PersianDatePicker
                 value={validFrom}
-                readonly={!editing || immutable}
+                readonly={readOnly || !editing || immutable}
                 disabled={blocked}
-                accessibleName={t("centralCatalog.validFrom", {
-                  defaultValue: "اعتبار از",
-                })}
-                invalidValueMessage={t("common.invalidPersianDate", {
-                  defaultValue: "تاریخ نامعتبر است",
-                })}
+                accessibleName={t("policy.fields.validFrom", { defaultValue: "تاریخ اعتبار از" })}
+                invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "تاریخ نامعتبر است" })}
                 onChange={setValidFrom}
-                onDraftStateChange={(next) =>
-                  setDateDrafts((current) => ({ ...current, validFrom: next }))
-                }
+                onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))}
               />
             </Label>
             <Label>
-              {t("centralCatalog.validTo", { defaultValue: "اعتبار تا" })}
+              {t("policy.fields.validTo", { defaultValue: "تاریخ اعتبار تا" })}
               <PersianDatePicker
                 value={validTo}
-                readonly={!editing || immutable}
+                readonly={readOnly || !editing || immutable}
                 disabled={blocked}
-                accessibleName={t("centralCatalog.validTo", {
-                  defaultValue: "اعتبار تا",
-                })}
-                invalidValueMessage={t("common.invalidPersianDate", {
-                  defaultValue: "تاریخ نامعتبر است",
-                })}
+                accessibleName={t("policy.fields.validTo", { defaultValue: "تاریخ اعتبار تا" })}
+                invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "تاریخ نامعتبر است" })}
                 onChange={setValidTo}
-                onDraftStateChange={(next) =>
-                  setDateDrafts((current) => ({ ...current, validTo: next }))
-                }
+                onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))}
               />
             </Label>
           </div>
-          <DocumentManager
-            targetType="CENTRAL_POLICY_VERSION"
-            targetId={selected?.id ?? null}
-            readOnly={
-              !editing ||
-              immutable ||
-              !canEditDraft ||
-              !permissions.documentUpload
-            }
-            showActions={
-              editing &&
-              !immutable &&
-              canEditDraft &&
-              permissions.documentUpload
-            }
-            busy={blocked}
-            persistenceMode="PARENT_SAVE"
-            aggregateError={documentError}
-            onDraftStateChange={(draft) => {
-              setDocuments(draft);
-              setDocumentError(null);
-            }}
-            title={t("centralCatalog.versionDocuments", {
-              defaultValue: "اسناد نسخه",
-            })}
-          />
         </div>
+      ) : (
+        <MessageStrip design="Information" hideCloseButton>
+          {t("policy.version.empty", { defaultValue: "هنوز نسخه‌ای برای این سیاست ثبت نشده است." })}
+        </MessageStrip>
       )}
     </section>
   );

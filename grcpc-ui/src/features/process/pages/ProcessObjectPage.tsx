@@ -178,6 +178,15 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
 
                 <DetailTabContainer onTabSelect={(event) => { const key = event.detail.tab.getAttribute("data-tab-key") as ProcessTabKey | null; if (key) { if (!controlledTab) setInternalTab(key); onActiveTabChange?.(key); } }}>
                     <Tab text={t("process.tabs.general", { defaultValue: "General Information" })} selected={activeTab === "general"} data-tab-key="general" />
+                    {form.nodeType === "SUBPROCESS" ? (
+                        <>
+                            <Tab text={t("process.tabs.controls", { defaultValue: "Controls" })} disabled />
+                            <Tab text={t("process.tabs.regulations", { defaultValue: "Regulations" })} disabled />
+                            <Tab text={t("process.tabs.objectives", { defaultValue: "Objectives" })} disabled />
+                            <Tab text={t("process.tabs.accountGroups", { defaultValue: "Account Groups" })} disabled />
+                            <Tab text={t("process.tabs.risks", { defaultValue: "Risks" })} disabled />
+                        </>
+                    ) : null}
                     <Tab text={t("process.tabs.documents", { defaultValue: "Documents" })} selected={activeTab === "documents"} data-tab-key="documents" />
                 </DetailTabContainer>
 

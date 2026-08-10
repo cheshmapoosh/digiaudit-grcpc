@@ -1,0 +1,102 @@
+{
+  "policy": {
+    "list": {
+      "title": "Policy Structure",
+      "search": "Search policy structure...",
+      "empty": "No policy group or policy has been registered."
+    },
+    "nodeType": {
+      "group": "Policy Group",
+      "policy": "Policy"
+    },
+    "fields": {
+      "identifier": "Identifier",
+      "name": "Name",
+      "type": "Type",
+      "policyType": "Policy Type",
+      "responsibleOrganization": "Responsible Organization",
+      "communicationMethods": "Communication Methods",
+      "communicationTiming": "Communication Timing",
+      "nextReviewDate": "Next Review Date",
+      "objective": "Objective",
+      "parent": "Parent",
+      "status": "Status",
+      "validFrom": "Valid From",
+      "validTo": "Valid To",
+      "validity": "Validity",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "description": "Description",
+      "versionNumber": "Version Number",
+      "versionContent": "Policy Version Content"
+    },
+    "policyType": {
+      "policy": "Policy",
+      "procedure": "Procedure",
+      "announcement": "Announcement",
+      "workInstruction": "Work Instruction"
+    },
+    "communicationMethod": {
+      "announcement": "Announcement",
+      "questionnaire": "Questionnaire",
+      "survey": "Survey"
+    },
+    "parent": {
+      "none": "No Parent",
+      "dialogTitle": "Select Parent",
+      "search": "Search by identifier or name"
+    },
+    "tabs": {
+      "general": "General Information",
+      "versions": "Versions",
+      "scope": "Policy Scope",
+      "controls": "Controls",
+      "requirements": "Requirements",
+      "documents": "Documents"
+    },
+    "dialog": {
+      "create": "Create {{type}}",
+      "view": "View {{type}}",
+      "edit": "Edit {{type}}"
+    },
+    "delete": {
+      "title": "Delete Policy Item",
+      "confirm": "Are you sure you want to delete “{{title}}”?"
+    },
+    "versionStatus": {
+      "draft": "Draft",
+      "published": "Published",
+      "superseded": "Superseded"
+    },
+    "version": {
+      "new": "Create New Version",
+      "label": "Version {{number}} — {{status}}",
+      "publish": "Publish",
+      "empty": "No version has been registered for this policy yet."
+    },
+    "documents": {
+      "versionHint": "Documents belong to the selected policy version.",
+      "selectVersion": "Create or select a version on the Versions tab first.",
+      "savePolicyFirst": "Save the policy first, then create or select a version before adding documents."
+    },
+    "validation": {
+      "codeRequired": "Identifier is required.",
+      "titleRequired": "Name is required.",
+      "groupRequired": "Policy group is required.",
+      "invalidValidityRange": "Valid To must not be earlier than Valid From.",
+      "outdatedVersion": "A version older than the official publication history cannot be published."
+    },
+    "errors": {
+      "loadList": "Failed to load the policy structure.",
+      "loadDetail": "Failed to load policy details.",
+      "create": "Failed to create the policy item.",
+      "update": "Failed to update the policy item.",
+      "delete": "Failed to delete the policy item.",
+      "duplicateCode": "The identifier already exists.",
+      "notFound": "The requested item or its parent was not found.",
+      "versionConflict": "The data was changed concurrently. Refresh and try again.",
+      "invalidParent": "The selected parent is invalid.",
+      "dependencies": "The item cannot be deleted because active children or dependencies exist."
+    }
+  }
+}

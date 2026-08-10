@@ -1,7 +1,7 @@
 .regulationFcl { width: 100%; height: calc(100vh - 7rem); min-height: 38rem; }
 .regulationFclColumn { height: 100%; min-height: 0; padding: 1rem; box-sizing: border-box; background: var(--sapBackgroundColor); }
 .regulationListReport { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); gap: 1rem; height: 100%; min-height: 0; }
-.regulationTreeFrame { min-height: 0; overflow: auto; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapList_Background); padding: 0.5rem; box-sizing: border-box; }
+.regulationTreeFrame { grid-row: 4; min-height: 0; overflow: auto; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapList_Background); padding: 0.5rem; box-sizing: border-box; }
 .regulationTreeItemContent { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.75rem; box-sizing: border-box; }
 .regulationTreeTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--sapTextColor); }
 .regulationTreeTitleSelected { font-weight: 700; }

@@ -17,6 +17,7 @@ Applies to `src/features/organization`.
 - General Information uses `code`, `name`, `organizationType`, `parentOrganizationId`, `status`, `location`, `validFrom`, `validTo`, and `description`; `displayLabel` is the Organization name.
 - Create displays server-owned `ACTIVE` without sending status. Edit sends only `ACTIVE` or `INACTIVE` with General Information; `DELETED` is never selectable.
 - Code is Create-only. Parent is selectable on both Create and Edit and is submitted by the same Save command. Exclude the current Organization and its descendants. Inactive nodes remain visible, selectable, editable, searchable, and structurally eligible.
-- Only General Information and Documents tabs are visible. The List Report toolbar exposes only Create, View, and Delete.
+- Modal tab order is General Information, Subprocess, Risks, Controls, Regulations, Objectives, Policy, Documents. General Information and Documents are active; the intermediate relationship tabs are visible but disabled until their typed V2 flows are implemented.
+- The List Report toolbar exposes only Create, View, and Delete.
 - Keep the FCL tree/list/object-page flow, parent value help, selection, expanded state, RTL, and i18n behavior.
 - Use the shared Document component in `PARENT_SAVE` mode with target type `ORG`; it emits serializable drafts and never performs a separate finalize command from this ObjectPage.

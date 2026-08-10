@@ -37,6 +37,11 @@
     },
     "tabs": {
       "general": "General Information",
+      "controls": "Controls",
+      "regulations": "Regulations",
+      "objectives": "Objectives",
+      "accountGroups": "Account Groups",
+      "risks": "Risks",
       "documents": "Documents"
     },
     "tree": {

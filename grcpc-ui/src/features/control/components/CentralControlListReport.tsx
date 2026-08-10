@@ -108,7 +108,9 @@ export default function CentralControlListReport({
               key={item.id}
               type="Active"
               selected={item.id === selectedId}
-              onClick={() => onSelect(item.id)}
+              onClick={() => {
+                if (item.id !== selectedId) onSelect(item.id);
+              }}
             >
               <div
                 dir="rtl"

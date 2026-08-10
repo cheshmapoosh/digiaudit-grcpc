@@ -123,6 +123,23 @@ public class CentralPolicyVersionEntity {
         id, policyId, versionNumber, content, validFrom, validTo, actorId, now);
   }
 
+  public static CentralPolicyVersionEntity createPublishedBaseline(
+      UUID id,
+      UUID policyId,
+      int versionNumber,
+      LocalDate validFrom,
+      LocalDate validTo,
+      UUID actorId,
+      Instant now) {
+    CentralPolicyVersionEntity baseline =
+        new CentralPolicyVersionEntity(
+            id, policyId, versionNumber, null, validFrom, validTo, actorId, now);
+    baseline.versionStatus = PolicyVersionStatus.PUBLISHED;
+    baseline.publishedAt = now;
+    baseline.publishedBy = actorId;
+    return baseline;
+  }
+
   public void updateDraft(
       String content, LocalDate validFrom, LocalDate validTo, UUID actorId, Instant now) {
     requireDraft();

@@ -1,0 +1,102 @@
+{
+  "policy": {
+    "list": {
+      "title": "ساختار سیاست",
+      "search": "جستجو در ساختار سیاست...",
+      "empty": "هیچ گروه سیاست یا سیاستی ثبت نشده است."
+    },
+    "nodeType": {
+      "group": "گروه سیاست",
+      "policy": "سیاست"
+    },
+    "fields": {
+      "identifier": "شناسه",
+      "name": "نام",
+      "type": "نوع",
+      "policyType": "نوع سیاست",
+      "responsibleOrganization": "سازمان مسئول",
+      "communicationMethods": "روش‌های اطلاع‌رسانی",
+      "communicationTiming": "زمان اطلاع‌رسانی",
+      "nextReviewDate": "تاریخ بازنگری بعدی",
+      "objective": "هدف",
+      "parent": "والد",
+      "status": "وضعیت",
+      "validFrom": "تاریخ اعتبار از",
+      "validTo": "تاریخ اعتبار تا",
+      "validity": "بازه اعتبار",
+      "createdAt": "تاریخ ایجاد",
+      "updatedAt": "تاریخ بروزرسانی",
+      "description": "شرح",
+      "versionNumber": "شماره نسخه",
+      "versionContent": "محتوای نسخه سیاست"
+    },
+    "policyType": {
+      "policy": "سیاست",
+      "procedure": "دستورالعمل",
+      "announcement": "اطلاعیه",
+      "workInstruction": "روش اجرایی"
+    },
+    "communicationMethod": {
+      "announcement": "اطلاعیه",
+      "questionnaire": "پرسشنامه",
+      "survey": "نظرسنجی"
+    },
+    "parent": {
+      "none": "بدون والد",
+      "dialogTitle": "انتخاب والد",
+      "search": "جستجو بر اساس شناسه یا نام"
+    },
+    "tabs": {
+      "general": "اطلاعات کلی",
+      "versions": "نسخه‌ها",
+      "scope": "دامنه سیاست",
+      "controls": "کنترل‌ها",
+      "requirements": "الزامات",
+      "documents": "مستندات"
+    },
+    "dialog": {
+      "create": "ایجاد {{type}}",
+      "view": "نمایش {{type}}",
+      "edit": "ویرایش {{type}}"
+    },
+    "delete": {
+      "title": "حذف آیتم سیاست",
+      "confirm": "آیا از حذف «{{title}}» مطمئن هستید؟"
+    },
+    "versionStatus": {
+      "draft": "پیش‌نویس",
+      "published": "منتشرشده",
+      "superseded": "منسوخ‌شده"
+    },
+    "version": {
+      "new": "ایجاد نسخه جدید",
+      "label": "نسخه {{number}} — {{status}}",
+      "publish": "انتشار",
+      "empty": "هنوز نسخه‌ای برای این سیاست ثبت نشده است."
+    },
+    "documents": {
+      "versionHint": "مستندات متعلق به نسخه انتخاب‌شده سیاست هستند.",
+      "selectVersion": "ابتدا در تب نسخه‌ها یک نسخه را ایجاد یا انتخاب کنید.",
+      "savePolicyFirst": "برای ثبت مستندات، ابتدا سیاست را ذخیره کنید و سپس یک نسخه ایجاد یا انتخاب کنید."
+    },
+    "validation": {
+      "codeRequired": "شناسه الزامی است.",
+      "titleRequired": "نام الزامی است.",
+      "groupRequired": "گروه سیاست الزامی است.",
+      "invalidValidityRange": "تاریخ اعتبار تا نباید قبل از تاریخ اعتبار از باشد.",
+      "outdatedVersion": "نسخه‌ای قدیمی‌تر از تاریخچه رسمی قابل انتشار نیست."
+    },
+    "errors": {
+      "loadList": "خطا در بارگذاری ساختار سیاست.",
+      "loadDetail": "خطا در بارگذاری جزئیات سیاست.",
+      "create": "ایجاد آیتم سیاست انجام نشد.",
+      "update": "بروزرسانی آیتم سیاست انجام نشد.",
+      "delete": "حذف آیتم سیاست انجام نشد.",
+      "duplicateCode": "شناسه تکراری است.",
+      "notFound": "آیتم موردنظر یا والد آن یافت نشد.",
+      "versionConflict": "اطلاعات همزمان تغییر کرده است. صفحه را بازآوری و دوباره تلاش کنید.",
+      "invalidParent": "والد انتخاب‌شده معتبر نیست.",
+      "dependencies": "به دلیل وجود زیرمجموعه یا وابستگی فعال، حذف مجاز نیست."
+    }
+  }
+}

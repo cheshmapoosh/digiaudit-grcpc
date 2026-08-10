@@ -8,7 +8,6 @@ import type {
 export type CentralRegulationNodeType = "GROUP" | "REGULATION" | "REQUIREMENT";
 
 interface DefinitionAuditFields {
-  description: string | null;
   createdAt: string;
   createdBy: string | null;
   updatedAt: string;
@@ -24,7 +23,9 @@ export interface CentralRegulationGroupSummary extends DefinitionDetailFields {
 
 export interface CentralRegulationGroupDetail
   extends CentralRegulationGroupSummary,
-    DefinitionAuditFields {}
+    DefinitionAuditFields {
+  description: string | null;
+}
 
 export interface CentralRegulationSummary extends DefinitionDetailFields {
   regulationGroupId: string;
@@ -33,7 +34,9 @@ export interface CentralRegulationSummary extends DefinitionDetailFields {
 
 export interface CentralRegulationDetail
   extends CentralRegulationSummary,
-    DefinitionAuditFields {}
+    DefinitionAuditFields {
+  description: string | null;
+}
 
 export interface CentralRegulationRequirementSummary
   extends DefinitionDetailFields {
@@ -43,7 +46,9 @@ export interface CentralRegulationRequirementSummary
 
 export interface CentralRegulationRequirementDetail
   extends CentralRegulationRequirementSummary,
-    DefinitionAuditFields {}
+    DefinitionAuditFields {
+  description: string | null;
+}
 
 export type CentralRegulationAnySummary =
   | CentralRegulationGroupSummary

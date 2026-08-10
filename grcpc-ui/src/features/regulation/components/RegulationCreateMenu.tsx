@@ -7,6 +7,7 @@ import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 import type { CentralRegulationNodeType } from "../domain/centralRegulation.model";
 
 const REGULATION_CREATE_MENU_BUTTON_CLASS = "regulation-create-menu-button";
+const ALL_REGULATION_CREATE_TYPES: CentralRegulationNodeType[] = ["GROUP", "REGULATION", "REQUIREMENT"];
 
 addCustomCSS(
   "ui5-button",
@@ -73,7 +74,8 @@ export default function RegulationCreateMenu({
     }),
     [t],
   );
-  const blocked = disabled || nodeTypes.length === 0;
+  const enabledTypes = useMemo(() => new Set(nodeTypes), [nodeTypes]);
+  const blocked = disabled || enabledTypes.size === 0;
   const menu = (
     <Menu
       open={open}
@@ -83,13 +85,18 @@ export default function RegulationCreateMenu({
       onClose={() => setOpen(false)}
       onItemClick={(event) => {
         const type = readNodeType(event);
-        if (!type) return;
+        if (!type || !enabledTypes.has(type)) return;
         setOpen(false);
         onCreate(type);
       }}
     >
-      {nodeTypes.map((type) => (
-        <MenuItem key={type} id={itemIdByType[type]} text={labels[type]} />
+      {ALL_REGULATION_CREATE_TYPES.map((type) => (
+        <MenuItem
+          key={type}
+          id={itemIdByType[type]}
+          text={labels[type]}
+          disabled={!enabledTypes.has(type)}
+        />
       ))}
     </Menu>
   );

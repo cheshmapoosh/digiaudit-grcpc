@@ -83,8 +83,8 @@ export default function ProcessCreateMenu({
         }),
         [t],
     );
-
-    const visibleNodeTypes = nodeTypes.length > 0 ? nodeTypes : DEFAULT_CREATE_NODE_TYPES;
+    const enabledNodeTypes = useMemo(() => new Set(nodeTypes), [nodeTypes]);
+    const blocked = disabled || enabledNodeTypes.size === 0;
 
     const menu = (
         <Menu
@@ -96,7 +96,7 @@ export default function ProcessCreateMenu({
             onItemClick={(event) => {
                 const nodeType = readClickedNodeType(event);
 
-                if (!nodeType) {
+                if (!nodeType || !enabledNodeTypes.has(nodeType)) {
                     return;
                 }
 
@@ -104,11 +104,12 @@ export default function ProcessCreateMenu({
                 onCreate(nodeType);
             }}
         >
-            {visibleNodeTypes.map((nodeType) => (
+            {DEFAULT_CREATE_NODE_TYPES.map((nodeType) => (
                 <MenuItem
                     key={nodeType}
                     id={createMenuItemIdByNodeType[nodeType]}
                     text={labels[nodeType]}
+                    disabled={!enabledNodeTypes.has(nodeType)}
                 />
             ))}
         </Menu>
@@ -119,7 +120,7 @@ export default function ProcessCreateMenu({
             <Button
                 className={PROCESS_CREATE_MENU_BUTTON_CLASS}
                 design="Emphasized"
-                disabled={disabled}
+                disabled={blocked}
                 style={style}
                 endIcon="slim-arrow-down"
                 accessibilityAttributes={{
@@ -127,7 +128,7 @@ export default function ProcessCreateMenu({
                     expanded: open ? "true" : "false",
                 }}
                 onClick={(event) => {
-                    if (disabled) {
+                    if (blocked) {
                         return;
                     }
 

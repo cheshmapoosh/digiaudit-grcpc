@@ -68,6 +68,8 @@ export default function ProcessesListReport({
         [],
     );
 
+    const enabledCreateOptions: ProcessNodeType[] = selectedId ? createOptions : ["PROCESS"];
+
     return (
         <div
             style={{
@@ -89,7 +91,7 @@ export default function ProcessesListReport({
                         <ProcessCreateMenu
                             disabled={busy}
                             style={actionButtonStyle}
-                            nodeTypes={createOptions}
+                            nodeTypes={enabledCreateOptions}
                             onCreate={onCreate}
                         />
 
@@ -131,6 +133,7 @@ export default function ProcessesListReport({
 
             <div
                 style={{
+                    gridRow: "4",
                     minHeight: 0,
                     overflowY: "auto",
                     overflowX: "auto",

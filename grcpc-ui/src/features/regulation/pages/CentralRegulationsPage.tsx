@@ -273,7 +273,7 @@ export default function CentralRegulationsPage() {
     if (!selectedNode) return ["GROUP"];
     if (selectedNode.type === "GROUP") return ["GROUP", "REGULATION"];
     if (selectedNode.type === "REGULATION") return ["REQUIREMENT"];
-    return [];
+    return selectedNode.parentId ? ["REQUIREMENT"] : [];
   }, [selectedNode]);
 
   const startCreate = useCallback(
@@ -286,8 +286,14 @@ export default function CentralRegulationsPage() {
           if (selectedNode?.type !== "GROUP") return;
           parentId = selectedNode.id;
         } else {
-          if (selectedNode?.type !== "REGULATION") return;
-          parentId = selectedNode.id;
+          if (selectedNode?.type === "REGULATION") {
+            parentId = selectedNode.id;
+          } else if (selectedNode?.type === "REQUIREMENT") {
+            parentId = selectedNode.parentId;
+          } else {
+            return;
+          }
+          if (!parentId) return;
         }
         setModalType(type);
         setModalParentId(parentId);

@@ -1,8 +1,13 @@
 package com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity;
 
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.CentralPolicyType;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.PolicyCommunicationMethod;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.domain.entity.CentralDefinitionEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -17,6 +22,27 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
   @Column(name = "policy_group_id", nullable = false, columnDefinition = "RAW(16)")
   private UUID policyGroupId;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "policy_type", nullable = false, length = 32)
+  private CentralPolicyType policyType;
+
+  @Column(name = "responsible_organization", length = 255)
+  private String responsibleOrganization;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "communication_method", length = 32)
+  private PolicyCommunicationMethod communicationMethod;
+
+  @Column(name = "communication_timing", length = 255)
+  private String communicationTiming;
+
+  @Column(name = "next_review_date")
+  private LocalDate nextReviewDate;
+
+  @Lob
+  @Column(name = "objective", columnDefinition = "CLOB")
+  private String objective;
+
   @Column(name = "sort_order", nullable = false)
   private int sortOrder;
 
@@ -27,6 +53,12 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       String code,
       String title,
       UUID policyGroupId,
+      CentralPolicyType policyType,
+      String responsibleOrganization,
+      PolicyCommunicationMethod communicationMethod,
+      String communicationTiming,
+      LocalDate nextReviewDate,
+      String objective,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -35,6 +67,12 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       Instant now) {
     super(id, code, title, description, validFrom, validTo, actorId, now);
     this.policyGroupId = policyGroupId;
+    this.policyType = policyType;
+    this.responsibleOrganization = responsibleOrganization;
+    this.communicationMethod = communicationMethod;
+    this.communicationTiming = communicationTiming;
+    this.nextReviewDate = nextReviewDate;
+    this.objective = objective;
     this.sortOrder = sortOrder;
   }
 
@@ -43,6 +81,12 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       String code,
       String title,
       UUID policyGroupId,
+      CentralPolicyType policyType,
+      String responsibleOrganization,
+      PolicyCommunicationMethod communicationMethod,
+      String communicationTiming,
+      LocalDate nextReviewDate,
+      String objective,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -50,17 +94,44 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       UUID actorId,
       Instant now) {
     return new CentralPolicyEntity(
-        id, code, title, policyGroupId, description, sortOrder, validFrom, validTo, actorId, now);
+        id,
+        code,
+        title,
+        policyGroupId,
+        policyType,
+        responsibleOrganization,
+        communicationMethod,
+        communicationTiming,
+        nextReviewDate,
+        objective,
+        description,
+        sortOrder,
+        validFrom,
+        validTo,
+        actorId,
+        now);
   }
 
   public void update(
       String title,
+      CentralPolicyType policyType,
+      String responsibleOrganization,
+      PolicyCommunicationMethod communicationMethod,
+      String communicationTiming,
+      LocalDate nextReviewDate,
+      String objective,
       String description,
       LocalDate validFrom,
       LocalDate validTo,
       UUID actorId,
       Instant now) {
     updateDefinition(title, description, validFrom, validTo, actorId, now);
+    this.policyType = policyType;
+    this.responsibleOrganization = responsibleOrganization;
+    this.communicationMethod = communicationMethod;
+    this.communicationTiming = communicationTiming;
+    this.nextReviewDate = nextReviewDate;
+    this.objective = objective;
   }
 
   public void move(UUID policyGroupId, int sortOrder, UUID actorId, Instant now) {
@@ -73,6 +144,12 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
   public void restoreFromCreate(
       String title,
       UUID policyGroupId,
+      CentralPolicyType policyType,
+      String responsibleOrganization,
+      PolicyCommunicationMethod communicationMethod,
+      String communicationTiming,
+      LocalDate nextReviewDate,
+      String objective,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -80,6 +157,12 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       UUID actorId,
       Instant now) {
     this.policyGroupId = policyGroupId;
+    this.policyType = policyType;
+    this.responsibleOrganization = responsibleOrganization;
+    this.communicationMethod = communicationMethod;
+    this.communicationTiming = communicationTiming;
+    this.nextReviewDate = nextReviewDate;
+    this.objective = objective;
     this.sortOrder = sortOrder;
     restoreDefinition(title, description, validFrom, validTo, actorId, now);
   }
@@ -87,6 +170,12 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
   public void reactivateFromCreate(
       String title,
       UUID policyGroupId,
+      CentralPolicyType policyType,
+      String responsibleOrganization,
+      PolicyCommunicationMethod communicationMethod,
+      String communicationTiming,
+      LocalDate nextReviewDate,
+      String objective,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -94,12 +183,42 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       UUID actorId,
       Instant now) {
     this.policyGroupId = policyGroupId;
+    this.policyType = policyType;
+    this.responsibleOrganization = responsibleOrganization;
+    this.communicationMethod = communicationMethod;
+    this.communicationTiming = communicationTiming;
+    this.nextReviewDate = nextReviewDate;
+    this.objective = objective;
     this.sortOrder = sortOrder;
     reactivateDefinition(title, description, validFrom, validTo, actorId, now);
   }
 
   public UUID getPolicyGroupId() {
     return policyGroupId;
+  }
+
+  public CentralPolicyType getPolicyType() {
+    return policyType;
+  }
+
+  public String getResponsibleOrganization() {
+    return responsibleOrganization;
+  }
+
+  public PolicyCommunicationMethod getCommunicationMethod() {
+    return communicationMethod;
+  }
+
+  public String getCommunicationTiming() {
+    return communicationTiming;
+  }
+
+  public LocalDate getNextReviewDate() {
+    return nextReviewDate;
+  }
+
+  public String getObjective() {
+    return objective;
   }
 
   public int getSortOrder() {

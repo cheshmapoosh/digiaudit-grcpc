@@ -1,0 +1,249 @@
+.policyFcl {
+  height: calc(100vh - 7rem);
+  min-height: 32rem;
+  width: 100%;
+}
+
+.policyFclColumn,
+.policyListReport,
+.policySummaryPanel,
+.policyObjectPage {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.policyFclColumn {
+  height: 100%;
+  padding: 0.75rem;
+  overflow: auto;
+  background: var(--sapBackgroundColor);
+}
+
+.policyListReport {
+  display: grid;
+  gap: 0.75rem;
+  height: 100%;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+
+.policyTreeFrame {
+  grid-row: 4;
+  position: relative;
+  min-height: 20rem;
+  overflow: auto;
+  border: 1px solid var(--sapList_BorderColor);
+  background: var(--sapList_Background);
+}
+
+.policyTreeItemContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.policyTreeTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.policyTreeTitleSelected {
+  font-weight: 700;
+}
+
+.policyTreeType {
+  flex: 0 0 auto;
+  color: var(--sapContent_LabelColor);
+  font-size: 0.8125rem;
+}
+
+.policySummaryPanel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  min-height: 100%;
+}
+
+.policySummaryGrid {
+  display: grid;
+  gap: 0.875rem;
+  align-content: start;
+  padding: 1rem;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapGroup_ContentBackground);
+}
+
+.policySummaryRow {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.policyObjectHeaderGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.policyHeaderItem {
+  display: grid;
+  grid-template-columns: minmax(7rem, 38%) minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.policySummaryActions,
+.policyObjectFooter,
+.policyVersionActions,
+.policyVersionHeader {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.policySummaryActions,
+.policyObjectFooter {
+  justify-content: center;
+}
+
+.policyObjectDialog::part(content) {
+  padding: 0;
+}
+
+.policyDialogContent {
+  width: min(92vw, 90rem);
+  min-width: min(70vw, 58rem);
+  max-height: 82vh;
+  overflow: auto;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.policyObjectPage {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.policyObjectHeader {
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapGroup_ContentBackground);
+}
+
+.policyObjectHeaderTitle {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapList_HeaderBackground);
+}
+
+.policyObjectHeaderGrid {
+  padding: 0.75rem 1rem;
+}
+
+.policyObjectBody {
+  min-height: 24rem;
+  padding: 1rem;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapBackgroundColor);
+}
+
+.policyFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.policyFormField {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.policyFormFieldFull {
+  grid-column: 1 / -1;
+}
+
+.policyDateRange {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.policyParentField {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.policyParentField > ui5-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.policyParentDialogContent,
+.policyVersionEditor,
+.policyVersionBody {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.policyParentDialogContent {
+  width: min(44rem, 80vw);
+  max-height: 65vh;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.policyParentDialogFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.policyVersionHeader {
+  justify-content: space-between;
+}
+
+.policyVersionList {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.policyVersionMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.policyVersionDates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .policyObjectHeaderGrid,
+  .policyFormGrid,
+  .policyDateRange,
+  .policyVersionDates {
+    grid-template-columns: 1fr;
+  }
+
+  .policySummaryRow {
+    grid-template-columns: 1fr;
+  }
+
+  .policyDialogContent {
+    min-width: 0;
+    width: 94vw;
+  }
+}

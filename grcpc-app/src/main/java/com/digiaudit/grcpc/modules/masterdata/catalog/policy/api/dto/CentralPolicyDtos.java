@@ -1,6 +1,8 @@
 package com.digiaudit.grcpc.modules.masterdata.catalog.policy.api.dto;
 
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.CentralPolicyType;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.PolicyCommunicationMethod;
 import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.PolicyVersionStatus;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import jakarta.validation.Valid;
@@ -28,6 +30,12 @@ public final class CentralPolicyDtos {
       @NotBlank String code,
       @NotBlank String title,
       @NotNull UUID policyGroupId,
+      @NotNull CentralPolicyType policyType,
+      String responsibleOrganization,
+      PolicyCommunicationMethod communicationMethod,
+      String communicationTiming,
+      LocalDate nextReviewDate,
+      String objective,
       String description,
       Integer sortOrder,
       LocalDate validFrom,
@@ -44,6 +52,12 @@ public final class CentralPolicyDtos {
 
   public record UpdatePolicy(
       @NotBlank String title,
+      @NotNull CentralPolicyType policyType,
+      String responsibleOrganization,
+      PolicyCommunicationMethod communicationMethod,
+      String communicationTiming,
+      LocalDate nextReviewDate,
+      String objective,
       String description,
       LocalDate validFrom,
       LocalDate validTo,
@@ -70,6 +84,7 @@ public final class CentralPolicyDtos {
       String code,
       String title,
       UUID policyGroupId,
+      CentralPolicyType policyType,
       int sortOrder,
       MasterDataLifecycleStatus status,
       LocalDate validFrom,
@@ -99,6 +114,12 @@ public final class CentralPolicyDtos {
       String code,
       String title,
       UUID policyGroupId,
+      CentralPolicyType policyType,
+      String responsibleOrganization,
+      PolicyCommunicationMethod communicationMethod,
+      String communicationTiming,
+      LocalDate nextReviewDate,
+      String objective,
       String description,
       int sortOrder,
       MasterDataLifecycleStatus status,

@@ -159,11 +159,11 @@ export default function CentralRiskTree({
   const handleItemClick = useCallback(
     (event: TreeEvent) => {
       const key = event.detail?.item?.dataset?.nodeKey;
-      if (!key) return;
+      if (!key || key === selectedKey) return;
       const node = findNode(tree, key);
       if (node) onSelect?.(node);
     },
-    [onSelect, tree],
+    [onSelect, selectedKey, tree],
   );
 
   const handleItemToggle = useCallback(
