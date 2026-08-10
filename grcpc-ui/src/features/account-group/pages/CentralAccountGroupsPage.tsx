@@ -1,4 +1,4 @@
-import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createElement, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BusyIndicator, Dialog, MessageStrip } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
