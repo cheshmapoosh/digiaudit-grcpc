@@ -17,6 +17,15 @@ cd /d "%~dp0"
 call :parse_args %*
 if errorlevel 1 exit /b %ERRORLEVEL%
 
+rem Normalize reset without an explicit jar to the packaged runtime jar.
+rem This makes these commands equivalent:
+rem   grcpc-app.test.bat --reset
+rem   grcpc-app.test.bat --reset grcpc-app.jar
+if /I "%RESET_DATA%"=="true" if not defined JAR_SOURCE (
+    set "JAR_SOURCE=%APP_JAR%"
+    set "JAR_SOURCE_NAME=%APP_JAR%"
+)
+
 call :main
 set "EXIT_CODE=%ERRORLEVEL%"
 
@@ -280,8 +289,12 @@ echo   grcpc-app.test.bat --down
 echo       Stop and remove containers. Local data will NOT be deleted.
 echo.
 echo   grcpc-app.test.bat --reset
-echo       Stop containers, delete local test data, then start again.
+echo       Reset all local test data and start using .\grcpc-app.jar.
+echo       Equivalent to: grcpc-app.test.bat --reset grcpc-app.jar
 echo       This removes Oracle data, MinIO data, and app logs.
+echo.
+echo   grcpc-app.test.bat --reset grcpc-app-0.0.2.jar
+echo       Reset all local test data, copy the selected jar to .\grcpc-app.jar, then start.
 echo.
 echo   grcpc-app.test.bat --help
 echo       Show this help message.
@@ -323,10 +336,17 @@ echo.
 echo   grcpc-app.test.bat --down
 echo   grcpc-app.test.bat grcpc-app-0.0.2.jar
 echo.
-echo If database migration or old data causes problems:
+echo To reset the database and use the packaged runtime jar:
 echo.
 echo   grcpc-app.test.bat --reset
-echo   grcpc-app.test.bat grcpc-app-0.0.2.jar
+echo.
+echo The command above is exactly the same reset selection as:
+echo.
+echo   grcpc-app.test.bat --reset grcpc-app.jar
+echo.
+echo To reset the database and switch to another jar in one command:
+echo.
+echo   grcpc-app.test.bat --reset grcpc-app-0.0.2.jar
 echo.
 exit /b 0
 
