@@ -12,9 +12,7 @@ services:
     ports:
       - "1521:1521"
     volumes:
-      - type: bind
-        source: ./data/oracle/oradata
-        target: /opt/oracle/oradata
+      - oracle-data:/opt/oracle/oradata
     healthcheck:
       test: ["CMD-SHELL", "healthcheck.sh"]
       interval: 10s
@@ -105,3 +103,6 @@ services:
     ports:
       - "8080:8080"
     command: ["sh", "-c", "exec java $${JAVA_OPTS:-} -jar /opt/grcpc/grcpc-app.jar"]
+
+volumes:
+  oracle-data:
