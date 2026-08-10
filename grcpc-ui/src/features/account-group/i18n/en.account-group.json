@@ -33,7 +33,8 @@
       "validTo": "Valid To",
       "validity": "Validity",
       "description": "Description",
-      "createdAt": "Created At"
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
     },
     "importance": {
       "LOW": "Low",

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Label, MessageStrip, Title } from "@ui5/webcomponents-react";
+import { Bar, Button, Label, MessageStrip, ObjectStatus, Title } from "@ui5/webcomponents-react";
 
 import type { OrganizationNode } from "../domain/organization.model";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -40,12 +40,6 @@ export default function OrganizationSummaryPanel({
     onCancel,
 }: OrganizationSummaryPanelProps) {
     const { t } = useTranslation();
-    const summaryTitle = value?.displayLabel?.trim()
-        ? t("organization.object.summaryTitleWithName", {
-              defaultValue: "واحد سازمانی {{name}}",
-              name: value.displayLabel,
-          })
-        : t("organization.object.summaryTitle", { defaultValue: "واحد سازمانی" });
 
     const actionButtonStyle = useMemo(
         () => ({
@@ -89,7 +83,11 @@ export default function OrganizationSummaryPanel({
             },
             {
                 label: t("organization.fields.status", { defaultValue: "وضعیت" }),
-                value: resolveStatusLabel(value.status, t),
+                value: (
+                    <ObjectStatus state={value.status === "ACTIVE" ? "Positive" : "Negative"}>
+                        {resolveStatusLabel(value.status, t)}
+                    </ObjectStatus>
+                ),
             },
             {
                 label: t("organization.fields.validFrom", { defaultValue: "از تاریخ" }),
@@ -123,7 +121,7 @@ export default function OrganizationSummaryPanel({
                 gap: "1rem",
             }}
         >
-            <Bar startContent={<Title level="H4">{summaryTitle}</Title>} />
+            <Bar startContent={<Title level="H4">{value?.name ?? ""}</Title>} />
 
             <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
                 {error ? (

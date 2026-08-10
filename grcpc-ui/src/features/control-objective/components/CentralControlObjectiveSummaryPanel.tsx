@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Label, Text, Title } from "@ui5/webcomponents-react";
+import { Bar, Button, Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type { CentralControlObjectiveDetail } from "../domain/centralControlObjective.model";
@@ -21,13 +21,18 @@ export default function CentralControlObjectiveSummaryPanel({
   onCancel,
 }: Props) {
   const { t } = useTranslation();
-  const rows = useMemo(
+  const rows = useMemo<Array<[string, ReactNode]>>(
     () => [
       [t("controlObjective.fields.name"), value.title],
       [t("controlObjective.fields.code"), value.code],
       [t("controlObjective.fields.objectiveClass"), value.objectiveClass ?? "-"],
       [t("controlObjective.fields.description"), value.description ?? "-"],
-      [t("controlObjective.fields.status"), t(`controlObjective.status.${value.status}`)],
+      [
+        t("controlObjective.fields.status"),
+        <ObjectStatus key="status" state={value.status === "ACTIVE" ? "Positive" : "Negative"}>
+          {t(`controlObjective.status.${value.status}`)}
+        </ObjectStatus>,
+      ],
       [t("controlObjective.fields.validFrom"), formatPersianDate(value.validFrom)],
       [t("controlObjective.fields.validTo"), formatPersianDate(value.validTo)],
       [t("controlObjective.fields.createdAt"), formatPersianDateTime(value.createdAt)],
@@ -43,7 +48,7 @@ export default function CentralControlObjectiveSummaryPanel({
         {rows.map(([label, displayValue]) => (
           <div className="controlObjectiveSummaryRow" key={label}>
             <Label showColon>{label}</Label>
-            <Text>{displayValue}</Text>
+            {typeof displayValue === "string" ? <Text>{displayValue}</Text> : displayValue}
           </div>
         ))}
       </div>

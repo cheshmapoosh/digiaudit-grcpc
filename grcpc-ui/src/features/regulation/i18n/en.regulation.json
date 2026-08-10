@@ -1,0 +1,78 @@
+{
+  "regulation": {
+    "list": {
+      "title": "Law Structure",
+      "search": "Search law structure...",
+      "empty": "No law group, law, or requirement has been created."
+    },
+    "nodeType": {
+      "group": "Law Group",
+      "regulation": "Law",
+      "requirement": "Requirement"
+    },
+    "summary": {
+      "title": "Information"
+    },
+    "fields": {
+      "code": "Identifier",
+      "name": "Name",
+      "type": "Type",
+      "parent": "Parent",
+      "status": "Status",
+      "validFrom": "Valid From",
+      "validTo": "Valid To",
+      "validity": "Validity",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "description": "Description"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "DELETED": "Deleted"
+    },
+    "parent": {
+      "none": "No Parent",
+      "select": "Select",
+      "dialogTitle": "Select Parent",
+      "search": "Search by identifier or name"
+    },
+    "tabs": {
+      "general": "General Information",
+      "documents": "Documents"
+    },
+    "actions": {
+      "move": "Move"
+    },
+    "dialog": {
+      "create": "Create {{type}}",
+      "view": "View {{type}}",
+      "edit": "Edit {{type}}"
+    },
+    "delete": {
+      "title": "Delete from Law Structure",
+      "confirm": "Are you sure you want to delete “{{title}}”?"
+    },
+    "validation": {
+      "codeRequired": "Identifier is required.",
+      "nameRequired": "Name is required.",
+      "parentRequired": "A parent is required for this record type.",
+      "invalidDate": "Enter a valid date.",
+      "invalidValidityRange": "Valid To must not be before Valid From.",
+      "documentsNotReady": "Document changes are not ready to save yet."
+    },
+    "errors": {
+      "loadList": "Failed to load the law structure.",
+      "loadDetail": "Failed to load record details.",
+      "create": "The record could not be created.",
+      "update": "The record could not be updated.",
+      "move": "The record could not be moved.",
+      "delete": "The record could not be deleted.",
+      "duplicateCode": "The identifier already exists.",
+      "notFound": "The record or its parent was not found.",
+      "versionConflict": "The record has changed. Refresh and try again.",
+      "invalidParent": "The selected parent is not valid for this record.",
+      "dependencies": "This record has non-deleted children or active dependencies and cannot be deleted."
+    }
+  }
+}

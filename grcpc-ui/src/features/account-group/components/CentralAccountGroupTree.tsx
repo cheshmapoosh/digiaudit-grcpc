@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, ObjectStatus, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 
 import type { CentralAccountGroupSummary } from "../domain/centralAccountGroup.model";
 import {
@@ -64,7 +64,6 @@ function AccountGroupTreeItem({
   selectedId?: string | null;
   expandedIds: Set<string>;
 }) {
-  const { t } = useTranslation();
   const selected = node.id === selectedId;
   return (
     <TreeItemCustom
@@ -76,12 +75,6 @@ function AccountGroupTreeItem({
           <span className={selected ? "accountGroupTreeItemTitle accountGroupTreeItemTitleSelected" : "accountGroupTreeItemTitle"}>
             {node.title}
           </span>
-          <ObjectStatus
-            state={node.status === "INACTIVE" ? "Critical" : "None"}
-            stateAnnouncementText={t(`accountGroup.status.${node.status}`)}
-          >
-            {t(`accountGroup.status.${node.status}`)}
-          </ObjectStatus>
         </div>
       }
     >

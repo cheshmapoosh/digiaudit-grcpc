@@ -3,7 +3,6 @@ import {
   Bar,
   Button,
   MessageStrip,
-  ObjectStatus,
   Tree,
   TreeItemCustom,
 } from "@ui5/webcomponents-react";
@@ -76,9 +75,6 @@ function HierarchyTreeItem<T extends DefinitionListRow>({
           <span className="catalogTreeTitle">
             <bdi>{node.row.code}</bdi> — {node.row.title}
           </span>
-          {node.row.status === "INACTIVE" ? (
-            <ObjectStatus state="Critical">{node.row.status}</ObjectStatus>
-          ) : null}
         </div>
       }
     >

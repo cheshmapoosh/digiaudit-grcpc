@@ -40,7 +40,8 @@
       "status": "وضعیت",
       "validFrom": "تاریخ اعتبار از",
       "validTo": "تاریخ اعتبار تا",
-      "createdAt": "تاریخ ایجاد"
+      "createdAt": "تاریخ ایجاد",
+      "updatedAt": "تاریخ بروزرسانی"
     },
     "parent": {
       "select": "انتخاب",

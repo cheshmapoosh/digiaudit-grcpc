@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Label, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
+import { Bar, Button, Label, MessageStrip, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type { CentralControlDetail } from "../domain/centralControl.model";
@@ -22,7 +22,7 @@ export default function CentralControlSummaryPanel({
 }: CentralControlSummaryPanelProps) {
   const { t } = useTranslation();
 
-  const rows = useMemo(() => {
+  const rows = useMemo<Array<[string, ReactNode]>>(() => {
     if (!value) return [];
     return [
       [t("control.fields.name"), value.title],
@@ -32,12 +32,17 @@ export default function CentralControlSummaryPanel({
       [t("control.fields.automationType"), value.automationType ? t(`control.automationType.${value.automationType}`) : "-"],
       [t("control.fields.controlPurpose"), value.controlPurpose ? t(`control.controlPurpose.${value.controlPurpose}`) : "-"],
       [t("control.fields.description"), value.description || "-"],
-      [t("control.fields.status"), t(`control.status.${value.status}`)],
+      [
+        t("control.fields.status"),
+        <ObjectStatus key="status" state={value.status === "ACTIVE" ? "Positive" : "Negative"}>
+          {t(`control.status.${value.status}`)}
+        </ObjectStatus>,
+      ],
       [t("control.fields.validFrom"), formatPersianDate(value.validFrom)],
       [t("control.fields.validTo"), formatPersianDate(value.validTo)],
       [t("control.fields.createdAt"), formatPersianDateTime(value.createdAt)],
       [t("control.fields.updatedAt"), formatPersianDateTime(value.updatedAt)],
-    ] as const;
+    ];
   }, [t, value]);
 
   return (
@@ -49,7 +54,7 @@ export default function CentralControlSummaryPanel({
           {rows.map(([label, displayValue]) => (
             <div className="controlSummaryRow" key={label}>
               <Label showColon>{label}</Label>
-              <Text>{displayValue}</Text>
+              {typeof displayValue === "string" ? <Text>{displayValue}</Text> : displayValue}
             </div>
           ))}
         </div>

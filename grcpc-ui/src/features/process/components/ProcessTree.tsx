@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, ObjectStatus, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 
 import type { ProcessNode, ProcessNodeType } from "../domain/process.model";
 import {
@@ -125,7 +125,7 @@ function ProcessTreeItem({
                         minWidth: 0,
                         width: "100%",
                         columnGap: "1rem",
-                        color: node.status === "INACTIVE" ? "var(--sapCriticalTextColor)" : "var(--sapTextColor)",
+                        color: "var(--sapTextColor)",
                         fontWeight: isSelected ? 700 : 400,
                     }}
                 >
@@ -139,7 +139,6 @@ function ProcessTreeItem({
                         }}
                     >
                         {displayName}
-                        {node.status === "INACTIVE" ? <ObjectStatus state="Critical" stateAnnouncementText={t("process.tree.inactive", { defaultValue: "Inactive" })}>{t("common.inactive", { defaultValue: "Inactive" })}</ObjectStatus> : null}
                     </span>
 
                     <span

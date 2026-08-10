@@ -14,7 +14,10 @@
       "inactive": "غیرفعال"
     },
     "parent": {
-      "none": "بدون والد"
+      "none": "بدون والد",
+      "select": "انتخاب",
+      "dialogTitle": "انتخاب فرآیند والد",
+      "search": "جستجو بر اساس شناسه یا نام"
     },
     "fields": {
       "name": "نام",
@@ -28,8 +31,8 @@
       "owningProcess": "فرآیند مالک",
       "nodeType": "نوع آیتم",
       "sortOrder": "ترتیب نمایش",
-      "validFrom": "از تاریخ",
-      "validTo": "تا تاریخ",
+      "validFrom": "تاریخ اعتبار از",
+      "validTo": "تاریخ اعتبار تا",
       "validity": "اعتبار"
     },
     "tabs": {

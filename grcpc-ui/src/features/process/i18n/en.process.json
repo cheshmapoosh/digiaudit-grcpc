@@ -14,7 +14,10 @@
       "inactive": "Inactive"
     },
     "parent": {
-      "none": "No parent"
+      "none": "No parent",
+      "select": "Select",
+      "dialogTitle": "Select Parent Process",
+      "search": "Search by identifier or name"
     },
     "fields": {
       "name": "Name",

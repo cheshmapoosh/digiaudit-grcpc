@@ -24,7 +24,7 @@ interface Props {
   onMove: (parentId: string | null, sortOrder: number) => void;
 }
 
-export function MoveDialog({
+function MoveDialogContent({
   open,
   requiredParent,
   currentParentId,
@@ -92,4 +92,9 @@ export function MoveDialog({
       </Label>
     </Dialog>
   );
+}
+
+export function MoveDialog(props: Props) {
+  const stateKey = `${props.open}:${props.currentParentId ?? "ROOT"}:${props.currentSortOrder}`;
+  return <MoveDialogContent key={stateKey} {...props} />;
 }

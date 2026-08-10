@@ -27,7 +27,7 @@
     },
     "fields": {
       "code": "شناسه",
-      "name": "هدف کنترلی",
+      "name": "نام",
       "description": "شرح",
       "objectiveClass": "طبقه هدف",
       "status": "وضعیت",

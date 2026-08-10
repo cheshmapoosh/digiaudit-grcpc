@@ -40,7 +40,8 @@
       "status": "Status",
       "validFrom": "Valid From",
       "validTo": "Valid To",
-      "createdAt": "Created At"
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
     },
     "parent": {
       "select": "Select",

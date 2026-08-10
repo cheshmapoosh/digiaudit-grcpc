@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, ObjectStatus, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 
 import type {
   CentralRiskCategorySummary,
@@ -80,12 +80,9 @@ function RiskTreeItem({ node, selectedKey, expandedKeys }: ItemProps) {
           <span className={selected ? "riskTreeItemTitle riskTreeItemTitleSelected" : "riskTreeItemTitle"}>
             {node.title}
           </span>
-          <ObjectStatus
-            state={node.status === "INACTIVE" ? "Critical" : "None"}
-            stateAnnouncementText={t(`risk.status.${node.status}`)}
-          >
+          <span className="riskTreeItemType">
             {t(`risk.nodeType.${node.kind}`)}
-          </ObjectStatus>
+          </span>
         </div>
       }
     >

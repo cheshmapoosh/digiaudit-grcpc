@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
+import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type { CentralAccountGroupDetail } from "../domain/centralAccountGroup.model";
 
 interface Props {
@@ -33,7 +34,7 @@ export default function CentralAccountGroupSummaryPanel({
   const { t } = useTranslation();
   return (
     <div className="accountGroupSummaryPanel">
-      <Title level="H4">{t("accountGroup.summary.title")}</Title>
+      <Title level="H4">{value.title}</Title>
       <div className="accountGroupSummaryGrid">
         <Row label={t("accountGroup.fields.code")} value={<Text>{value.code}</Text>} />
         <Row label={t("accountGroup.fields.name")} value={<Text>{value.title}</Text>} />
@@ -42,7 +43,23 @@ export default function CentralAccountGroupSummaryPanel({
         <Row label={t("accountGroup.fields.reasonableAssurance")} value={<Text>{value.reasonableAssurance ? t("common.yes", { defaultValue: "بله" }) : t("common.no", { defaultValue: "خیر" })}</Text>} />
         <Row
           label={t("accountGroup.fields.status")}
-          value={<ObjectStatus state={value.status === "INACTIVE" ? "Critical" : "Positive"}>{t(`accountGroup.status.${value.status}`)}</ObjectStatus>}
+          value={<ObjectStatus state={value.status === "ACTIVE" ? "Positive" : "Negative"}>{t(`accountGroup.status.${value.status}`)}</ObjectStatus>}
+        />
+        <Row
+          label={t("accountGroup.fields.validFrom")}
+          value={<Text>{formatPersianDate(value.validFrom)}</Text>}
+        />
+        <Row
+          label={t("accountGroup.fields.validTo")}
+          value={<Text>{formatPersianDate(value.validTo)}</Text>}
+        />
+        <Row
+          label={t("accountGroup.fields.createdAt")}
+          value={<Text>{formatPersianDateTime(value.createdAt)}</Text>}
+        />
+        <Row
+          label={t("accountGroup.fields.updatedAt")}
+          value={<Text>{formatPersianDateTime(value.updatedAt)}</Text>}
         />
       </div>
       <div className="accountGroupSummaryActions">

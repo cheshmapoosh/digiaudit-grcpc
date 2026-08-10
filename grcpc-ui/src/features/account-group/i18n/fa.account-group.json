@@ -33,7 +33,8 @@
       "validTo": "تاریخ اعتبار تا",
       "validity": "بازه اعتبار",
       "description": "شرح",
-      "createdAt": "تاریخ ایجاد"
+      "createdAt": "تاریخ ایجاد",
+      "updatedAt": "تاریخ بروزرسانی"
     },
     "importance": {
       "LOW": "کم",

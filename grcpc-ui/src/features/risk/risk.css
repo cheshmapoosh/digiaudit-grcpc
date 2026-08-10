@@ -57,6 +57,12 @@
   font-weight: 700;
 }
 
+.riskTreeItemType {
+  color: var(--sapContent_LabelColor);
+  font-size: var(--sapFontSmallSize);
+  white-space: nowrap;
+}
+
 .riskSummaryPanel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;

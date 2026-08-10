@@ -1,7 +1,8 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Bar, Button, Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
-import { formatPersianDate } from "@/shared/utils/date.utils";
+import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type {
   CentralRiskCategoryDetail,
   CentralRiskNodeKind,
@@ -31,7 +32,7 @@ export default function CentralRiskSummaryPanel({
 }: Props) {
   const { t } = useTranslation();
   const template = kind === "template" ? (value as CentralRiskTemplateDetail) : null;
-  const rows: Array<[string, string]> = [
+  const rows: Array<[string, ReactNode]> = [
     [t("risk.fields.code"), value.code],
     [t("risk.fields.name"), value.title],
     [t("risk.fields.nodeType"), t(`risk.nodeType.${kind}`)],
@@ -40,27 +41,28 @@ export default function CentralRiskSummaryPanel({
       parentLabel || "-",
     ],
     ...(template
-      ? ([[t("risk.fields.riskType"), t(`risk.riskType.${template.riskType}`)]] as Array<[string, string]>)
+      ? ([[t("risk.fields.riskType"), t(`risk.riskType.${template.riskType}`)]] as Array<[string, ReactNode]>)
       : []),
+    [
+      t("risk.fields.status"),
+      <ObjectStatus key="status" state={value.status === "ACTIVE" ? "Positive" : "Negative"}>
+        {t(`risk.status.${value.status}`)}
+      </ObjectStatus>,
+    ],
     [t("risk.fields.validFrom"), formatPersianDate(value.validFrom)],
     [t("risk.fields.validTo"), formatPersianDate(value.validTo)],
+    [t("risk.fields.createdAt"), formatPersianDateTime(value.createdAt)],
+    [t("risk.fields.updatedAt"), formatPersianDateTime(value.updatedAt)],
   ];
 
   return (
     <div className="riskSummaryPanel">
-      <Bar
-        startContent={<Title level="H4">{t("risk.summary.title")}</Title>}
-        endContent={
-          <ObjectStatus state={value.status === "INACTIVE" ? "Critical" : "Positive"}>
-            {t(`risk.status.${value.status}`)}
-          </ObjectStatus>
-        }
-      />
+      <Bar startContent={<Title level="H4">{value.title}</Title>} />
       <div className="riskSummaryGrid">
         {rows.map(([label, displayValue]) => (
           <div className="riskSummaryRow" key={label}>
             <Label showColon>{label}</Label>
-            <Text>{displayValue || "-"}</Text>
+            {typeof displayValue === "string" ? <Text>{displayValue || "-"}</Text> : displayValue}
           </div>
         ))}
         <div className="riskSummaryRow">
