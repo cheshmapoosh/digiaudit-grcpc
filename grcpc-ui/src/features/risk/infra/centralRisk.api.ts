@@ -13,8 +13,10 @@ import type {
   UpdateCentralRiskCategoryCommand,
   UpdateCentralRiskTemplateCommand,
 } from "../domain/centralRisk.model";
+
 const CATEGORIES = "/api/master-data/central/risk-categories";
 const TEMPLATES = "/api/master-data/central/risk-templates";
+
 export const centralRiskApi = {
   listCategories: (deleted = false) =>
     httpClient.get<CentralRiskCategorySummary[]>(
@@ -27,23 +29,24 @@ export const centralRiskApi = {
   updateCategory: (id: string, body: UpdateCentralRiskCategoryCommand) =>
     httpClient.patch<CentralRiskMutationResponse>(`${CATEGORIES}/${id}`, body),
   moveCategory: (id: string, body: MoveCentralRiskCategoryCommand) =>
-    httpClient.post<CentralRiskRevisionResponse>(
-      `${CATEGORIES}/${id}/move`,
-      body,
-    ),
+    httpClient.post<CentralRiskRevisionResponse>(`${CATEGORIES}/${id}/move`, body),
   categoryLifecycle: (
     id: string,
     action: "activate" | "inactivate" | "delete" | "restore",
     version: number,
   ) =>
-    httpClient.post<CentralRiskRevisionResponse>(
-      `${CATEGORIES}/${id}/${action}`,
-      { version },
-    ),
-  listTemplates: (categoryId: string, deleted = false) =>
-    httpClient.get<CentralRiskTemplateSummary[]>(
-      `${TEMPLATES}${deleted ? "/deleted" : `?categoryId=${encodeURIComponent(categoryId)}`}`,
-    ),
+    httpClient.post<CentralRiskRevisionResponse>(`${CATEGORIES}/${id}/${action}`, {
+      version,
+    }),
+
+  listTemplates: (categoryId?: string, deleted = false) => {
+    const suffix = deleted
+      ? "/deleted"
+      : categoryId
+        ? `?categoryId=${encodeURIComponent(categoryId)}`
+        : "";
+    return httpClient.get<CentralRiskTemplateSummary[]>(`${TEMPLATES}${suffix}`);
+  },
   template: (id: string) =>
     httpClient.get<CentralRiskTemplateDetail>(`${TEMPLATES}/${id}`),
   createTemplate: (body: CreateCentralRiskTemplateCommand) =>
@@ -51,17 +54,13 @@ export const centralRiskApi = {
   updateTemplate: (id: string, body: UpdateCentralRiskTemplateCommand) =>
     httpClient.patch<CentralRiskMutationResponse>(`${TEMPLATES}/${id}`, body),
   moveTemplate: (id: string, body: MoveCentralRiskTemplateCommand) =>
-    httpClient.post<CentralRiskRevisionResponse>(
-      `${TEMPLATES}/${id}/move`,
-      body,
-    ),
+    httpClient.post<CentralRiskRevisionResponse>(`${TEMPLATES}/${id}/move`, body),
   templateLifecycle: (
     id: string,
     action: "activate" | "inactivate" | "delete" | "restore",
     version: number,
   ) =>
-    httpClient.post<CentralRiskRevisionResponse>(
-      `${TEMPLATES}/${id}/${action}`,
-      { version },
-    ),
+    httpClient.post<CentralRiskRevisionResponse>(`${TEMPLATES}/${id}/${action}`, {
+      version,
+    }),
 };

@@ -1,0 +1,210 @@
+.riskFcl {
+  width: 100%;
+  height: calc(100vh - 7rem);
+  min-height: 38rem;
+}
+
+.riskFclColumn {
+  height: 100%;
+  min-height: 0;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: var(--sapBackgroundColor);
+}
+
+.riskListReport {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 1rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.riskField,
+.riskHeaderItem {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.riskTreeFrame {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapList_Background);
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+.riskTreeItemContent {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  box-sizing: border-box;
+}
+
+.riskTreeItemTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sapTextColor);
+}
+
+.riskTreeItemTitleSelected {
+  font-weight: 700;
+}
+
+.riskSummaryPanel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  min-height: 100%;
+}
+
+.riskSummaryGrid {
+  display: grid;
+  gap: 0.875rem;
+  align-content: start;
+  padding: 1rem;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapGroup_ContentBackground);
+}
+
+.riskSummaryRow {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.riskSummaryActions,
+.riskObjectFooter {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding-block-start: 0.5rem;
+}
+
+.riskObjectDialog {
+  width: 90vw;
+  max-width: 90vw;
+}
+
+.riskDialogContent {
+  width: 86vw;
+  max-width: 86vw;
+  min-width: 44rem;
+  padding: 0.75rem;
+  box-sizing: border-box;
+}
+
+.riskObjectPage {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  background: var(--sapBackgroundColor);
+}
+
+.riskObjectHeader {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapGroup_ContentBackground);
+}
+
+.riskHeaderGrid,
+.riskFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 1.25rem;
+}
+
+.riskFieldWide,
+.riskDateRange {
+  grid-column: 1 / -1;
+}
+
+.riskDateRange {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 1.25rem;
+}
+
+.riskParentField {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.riskParentField > ui5-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.riskObjectBody {
+  min-height: 22rem;
+  padding: 1rem;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapGroup_ContentBackground);
+}
+
+.riskTabPanel {
+  min-height: 20rem;
+}
+
+.riskTabPanelHidden {
+  display: none;
+}
+
+.riskParentDialogContent {
+  display: grid;
+  gap: 1rem;
+  min-width: 36rem;
+  max-width: 68vw;
+  padding: 0.75rem;
+  box-sizing: border-box;
+}
+
+.riskParentTreeFrame {
+  min-height: 22rem;
+  max-height: 55vh;
+  overflow: auto;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapList_Background);
+  padding: 0.5rem;
+}
+
+.riskParentDialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .riskDialogContent {
+    min-width: 0;
+    width: 84vw;
+  }
+
+  .riskHeaderGrid,
+  .riskFormGrid,
+  .riskDateRange,
+  .riskSummaryRow {
+    grid-template-columns: 1fr;
+  }
+
+  .riskTreeItemContent {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+
+  .riskParentDialogContent {
+    min-width: 0;
+    width: 82vw;
+    max-width: 82vw;
+  }
+}

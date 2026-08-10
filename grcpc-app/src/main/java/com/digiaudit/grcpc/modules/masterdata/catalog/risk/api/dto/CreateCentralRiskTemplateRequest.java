@@ -1,6 +1,7 @@
 package com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.dto;
 
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
+import com.digiaudit.grcpc.modules.masterdata.catalog.risk.domain.enums.CentralRiskType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,6 +12,7 @@ public record CreateCentralRiskTemplateRequest(
     @NotBlank String code,
     @NotBlank String title,
     @NotNull UUID riskCategoryId,
+    @NotNull CentralRiskType riskType,
     String description,
     Integer sortOrder,
     LocalDate validFrom,

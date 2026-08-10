@@ -11,6 +11,8 @@ import faControl from "../features/control/i18n/fa.control.json";
 import enControl from "../features/control/i18n/en.control.json";
 import faControlObjective from "../features/control-objective/i18n/fa.control-objective.json";
 import enControlObjective from "../features/control-objective/i18n/en.control-objective.json";
+import faRisk from "../features/risk/i18n/fa.risk.json";
+import enRisk from "../features/risk/i18n/en.risk.json";
 import faCentralCatalog from "../features/central-catalog/i18n/fa.central-catalog.json";
 import enCentralCatalog from "../features/central-catalog/i18n/en.central-catalog.json";
 import faMasterData from "../features/master-data/i18n/fa.master-data.json";
@@ -19,8 +21,8 @@ import fa from "./locales/fa.json";
 import en from "./locales/en.json";
 
 export const resources = {
-    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faControlObjective, ...faCentralCatalog, ...faMasterData } },
-    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enControlObjective, ...enCentralCatalog, ...enMasterData } }
+    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faControlObjective, ...faRisk, ...faCentralCatalog, ...faMasterData } },
+    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enControlObjective, ...enRisk, ...enCentralCatalog, ...enMasterData } }
 } as const;
 
 export function initI18n(lang: "fa" | "en") {

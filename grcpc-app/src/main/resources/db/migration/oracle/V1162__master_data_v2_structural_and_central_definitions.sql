@@ -208,6 +208,7 @@ create table central_risk_template (
     code varchar2(64 byte) not null,
     title varchar2(255 char) not null,
     risk_category_id raw(16) not null,
+    risk_type varchar2(32 byte) not null,
     description clob,
     sort_order number(10,0) not null,
     status varchar2(32 byte) not null,
@@ -224,6 +225,7 @@ create table central_risk_template (
     constraint uk_central_risk_template_code unique (code),
     constraint ck_central_risk_template_code check (code = upper(trim(code))),
     constraint fk_central_risk_template_cat foreign key (risk_category_id) references central_risk_category(id),
+    constraint ck_central_risk_template_type check (risk_type in ('COMPANY', 'OPERATION')),
     constraint ck_central_risk_template_status check (status in ('ACTIVE', 'INACTIVE', 'DELETED')),
     constraint ck_central_risk_template_valid check (valid_to is null or valid_from is null or valid_from <= valid_to),
     constraint ck_central_risk_template_deleted check (

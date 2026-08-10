@@ -1,397 +1,603 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@ui5/webcomponents-react";
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CatalogFlexibleColumnLayout } from "@/features/central-catalog/components/CatalogFlexibleColumnLayout";
-import { CatalogObjectDialog } from "@/features/central-catalog/components/CatalogObjectDialog";
-import { DefinitionObjectPage } from "@/features/central-catalog/components/DefinitionObjectPage";
-import { HierarchyColumn } from "@/features/central-catalog/components/HierarchyColumn";
-import { MoveDialog } from "@/features/central-catalog/components/MoveDialog";
-import type { DefinitionDraft } from "@/features/central-catalog/components/catalogPresentation.model";
+import { BusyIndicator, Dialog, MessageStrip } from "@ui5/webcomponents-react";
+import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
+
 import { useCatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
   toDocumentAggregateDraftError,
-  toDocumentAggregateRequest,
   type DocumentAggregateDraftError,
-  type ParentSaveDocumentDraftState,
+  type DocumentAggregateRequest,
 } from "@/features/document";
+import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
+import CentralRiskListReport from "../components/CentralRiskListReport";
+import CentralRiskSummaryPanel from "../components/CentralRiskSummaryPanel";
 import type {
   CentralRiskCategoryDetail,
   CentralRiskCategorySummary,
+  CentralRiskCreateKind,
+  CentralRiskNodeKind,
   CentralRiskTemplateDetail,
   CentralRiskTemplateSummary,
+  CreateCentralRiskCategoryCommand,
+  CreateCentralRiskTemplateCommand,
+  EditCentralRiskCategoryCommand,
+  EditCentralRiskTemplateCommand,
+  UpdateCentralRiskCategoryCommand,
+  UpdateCentralRiskTemplateCommand,
 } from "../domain/centralRisk.model";
 import { centralRiskApi } from "../infra/centralRisk.api";
+import { riskNodeKey, type CentralRiskTreeNode } from "../utils/centralRisk.tree";
+import CentralRiskObjectPage, { type CentralRiskObjectMode, type CentralRiskTabKey } from "./CentralRiskObjectPage";
+import "../risk.css";
 
-type SelectedKind = "category" | "template";
+type RiskDetail = CentralRiskCategoryDetail | CentralRiskTemplateDetail;
+type RiskCommand =
+  | CreateCentralRiskCategoryCommand
+  | EditCentralRiskCategoryCommand
+  | CreateCentralRiskTemplateCommand
+  | EditCentralRiskTemplateCommand;
+type UiDir = "rtl" | "ltr";
+type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
+
+function resolveUiDir(): UiDir {
+  if (typeof document === "undefined") return "rtl";
+  const htmlDir = document.documentElement.getAttribute("dir");
+  if (htmlDir === "rtl" || htmlDir === "ltr") return htmlDir;
+  const bodyDir = document.body?.getAttribute("dir") ?? document.body?.dir;
+  return bodyDir === "ltr" ? "ltr" : "rtl";
+}
+
+function useResolvedUiDir(): UiDir {
+  const [dir, setDir] = useState<UiDir>(() => resolveUiDir());
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const sync = () => setDir(resolveUiDir());
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["dir"] });
+    if (document.body) observer.observe(document.body, { attributes: true, attributeFilter: ["dir"] });
+    return () => observer.disconnect();
+  }, []);
+  return dir;
+}
+
+function isOwnDialogCloseEvent(event: unknown): boolean {
+  const closeEvent = event as { target?: EventTarget | null; currentTarget?: EventTarget | null };
+  return Boolean(closeEvent.target && closeEvent.currentTarget && closeEvent.target === closeEvent.currentTarget);
+}
+
+function hasDocumentChanges(documents: DocumentAggregateRequest): boolean {
+  return documents.newDocuments.length > 0
+    || documents.newVersions.length > 0
+    || documents.metadataUpdates.length > 0;
+}
+
+function categoryDefinitionChanged(
+  current: CentralRiskCategoryDetail,
+  edit: EditCentralRiskCategoryCommand,
+): boolean {
+  return current.title !== edit.title
+    || (current.description ?? null) !== edit.description
+    || (current.validFrom ?? null) !== edit.validFrom
+    || (current.validTo ?? null) !== edit.validTo
+    || hasDocumentChanges(edit.documents);
+}
+
+function templateDefinitionChanged(
+  current: CentralRiskTemplateDetail,
+  edit: EditCentralRiskTemplateCommand,
+): boolean {
+  return current.title !== edit.title
+    || current.riskType !== edit.riskType
+    || (current.description ?? null) !== edit.description
+    || (current.validFrom ?? null) !== edit.validFrom
+    || (current.validTo ?? null) !== edit.validTo
+    || hasDocumentChanges(edit.documents);
+}
+
 export default function CentralRiskPage() {
   const { t } = useTranslation();
+  const appDir = useResolvedUiDir();
   const permissions = useCatalogActionPermissions("CENTRAL_RISK");
-  const generation = useRef(0);
-  const [categories, setCategories] = useState<CentralRiskCategorySummary[]>(
-    [],
-  );
+  const [categories, setCategories] = useState<CentralRiskCategorySummary[]>([]);
   const [templates, setTemplates] = useState<CentralRiskTemplateSummary[]>([]);
-  const [category, setCategory] = useState<CentralRiskCategoryDetail | null>(
-    null,
-  );
-  const [template, setTemplate] = useState<CentralRiskTemplateDetail | null>(
-    null,
-  );
-  const [kind, setKind] = useState<SelectedKind>("category");
-  const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [createParentId, setCreateParentId] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<CentralRiskTreeNode | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<RiskDetail | null>(null);
+  const [searchText, setSearchText] = useState("");
+  const [expansionAnchorKey, setExpansionAnchorKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
+  const [objectError, setObjectError] = useState<string | null>(null);
+  const [documentError, setDocumentError] = useState<DocumentAggregateDraftError | null>(null);
   const [dirty, setDirty] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [documentError, setDocumentError] =
-    useState<DocumentAggregateDraftError | null>(null);
-  const [moveOpen, setMoveOpen] = useState(false);
-  useUnsavedChangesGuard(dirty);
-  const confirmLeave = () =>
-    !dirty ||
-    window.confirm(
-      t("centralCatalog.discard", {
-        defaultValue: "تغییرات ذخیره‌نشده نادیده گرفته شود؟",
-      }),
-    );
-  const loadCategories = useCallback(async (keepId?: string) => {
-    const request = ++generation.current;
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalKind, setModalKind] = useState<CentralRiskNodeKind>("category");
+  const [modalMode, setModalMode] = useState<CentralRiskObjectMode>("view");
+  const [modalValue, setModalValue] = useState<RiskDetail | null>(null);
+  const [createParentCategoryId, setCreateParentCategoryId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<CentralRiskTabKey>("general");
+  const [deleteCandidate, setDeleteCandidate] = useState<CentralRiskTreeNode | null>(null);
+  const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
+  const listGeneration = useRef(0);
+  const detailGeneration = useRef(0);
+  const pendingLeaveActionRef = useRef<(() => void) | null>(null);
+  const { blocker } = useUnsavedChangesGuard(dirty);
+
+  const mapError = useCallback((error: unknown, fallbackKey: string) => {
+    const candidate = error as { code?: string; message?: string } | null;
+    const code = candidate?.code ?? candidate?.message;
+    switch (code) {
+      case "DUPLICATE_BUSINESS_KEY":
+        return t("risk.errors.duplicateCode");
+      case "MASTER_DATA_NOT_FOUND":
+      case "NOT_FOUND":
+        return t("risk.errors.notFound");
+      case "VERSION_CONFLICT":
+        return t("risk.errors.versionConflict");
+      case "INVALID_PARENT":
+      case "INVALID_HIERARCHY_MOVE":
+      case "HIERARCHY_SELF_PARENT":
+      case "HIERARCHY_CYCLE":
+      case "PARENT_NOT_FOUND":
+        return t("risk.errors.invalidParent");
+      case "DEPENDENCY_EXISTS":
+        return t("risk.errors.dependencies");
+      default:
+        return t(fallbackKey);
+    }
+  }, [t]);
+
+  const requestLeave = useCallback((action: () => void) => {
+    if (!dirty) {
+      action();
+      return;
+    }
+    pendingLeaveActionRef.current = action;
+    setLeaveConfirmationOpen(true);
+  }, [dirty]);
+
+  const stay = useCallback(() => {
+    if (blocker.state === "blocked") blocker.reset();
+    pendingLeaveActionRef.current = null;
+    setLeaveConfirmationOpen(false);
+  }, [blocker]);
+
+  const confirmLeave = useCallback(() => {
+    const action = pendingLeaveActionRef.current;
+    pendingLeaveActionRef.current = null;
+    setLeaveConfirmationOpen(false);
+    setDirty(false);
+    if (blocker.state === "blocked") blocker.proceed();
+    else action?.();
+  }, [blocker]);
+
+  const loadLists = useCallback(async () => {
+    const request = ++listGeneration.current;
     setBusy(true);
     try {
-      const rows = await centralRiskApi.listCategories();
-      if (request !== generation.current) return;
-      setCategories(rows);
-      const id = keepId;
-      if (id && rows.some((row) => row.id === id)) {
-        const detail = await centralRiskApi.category(id);
-        if (request === generation.current) setCategory(detail);
-      }
-    } catch (cause) {
-      if (request === generation.current)
-        setError(cause instanceof Error ? cause.message : String(cause));
+      const [categoryRows, templateRows] = await Promise.all([
+        centralRiskApi.listCategories(),
+        centralRiskApi.listTemplates(),
+      ]);
+      if (request !== listGeneration.current) return;
+      setCategories(categoryRows);
+      setTemplates(templateRows);
+      setPageError(null);
+    } catch (error) {
+      if (request === listGeneration.current) setPageError(mapError(error, "risk.errors.loadList"));
     } finally {
-      if (request === generation.current) setBusy(false);
+      if (request === listGeneration.current) setBusy(false);
     }
-  }, []);
-  const loadTemplates = useCallback(
-    async (categoryId: string, keepId?: string) => {
-      const request = ++generation.current;
-      setBusy(true);
-      try {
-        const rows = await centralRiskApi.listTemplates(categoryId);
-        if (request !== generation.current) return;
-        setTemplates(rows);
-        if (keepId && rows.some((row) => row.id === keepId)) {
-          const detail = await centralRiskApi.template(keepId);
-          if (request === generation.current) setTemplate(detail);
-        } else setTemplate(null);
-      } catch (cause) {
-        if (request === generation.current)
-          setError(cause instanceof Error ? cause.message : String(cause));
-      } finally {
-        if (request === generation.current) setBusy(false);
-      }
-    },
-    [],
-  );
+  }, [mapError]);
+
+  const loadDetail = useCallback(async (kind: CentralRiskNodeKind, id: string) => {
+    const request = ++detailGeneration.current;
+    setBusy(true);
+    try {
+      const detail = kind === "category"
+        ? await centralRiskApi.category(id)
+        : await centralRiskApi.template(id);
+      if (request !== detailGeneration.current) return null;
+      setPageError(null);
+      return detail as RiskDetail;
+    } catch (error) {
+      if (request === detailGeneration.current) setPageError(mapError(error, "risk.errors.loadDetail"));
+      return null;
+    } finally {
+      if (request === detailGeneration.current) setBusy(false);
+    }
+  }, [mapError]);
+
   useEffect(() => {
-    void loadCategories();
+    void loadLists();
     return () => {
-      generation.current += 1;
+      listGeneration.current += 1;
+      detailGeneration.current += 1;
     };
-  }, [loadCategories]);
-  const selectCategory = async (row: CentralRiskCategorySummary) => {
-    if (!confirmLeave()) return;
-    const request = ++generation.current;
-    setBusy(true);
-    try {
-      const detail = await centralRiskApi.category(row.id);
-      if (request !== generation.current) return;
-      setCategory(detail);
-      setKind("category");
-      setCreating(false);
-      setEditing(false);
-      setTemplate(null);
+  }, [loadLists]);
+
+  const categoryLabel = useCallback((id: string | null | undefined) => {
+    if (!id) return "";
+    const category = categories.find((item) => item.id === id);
+    return category ? `${category.code} — ${category.title}` : id;
+  }, [categories]);
+
+  const contextCategoryId = useMemo(() => {
+    if (!selectedNode) return null;
+    return selectedNode.kind === "category" ? selectedNode.id : selectedNode.parentCategoryId;
+  }, [selectedNode]);
+
+  const selectNode = useCallback((node: CentralRiskTreeNode) => {
+    requestLeave(() => {
+      setSelectedNode(node);
+      setExpansionAnchorKey(node.key);
+      setObjectError(null);
+      setDocumentError(null);
+      void (async () => {
+        const detail = await loadDetail(node.kind, node.id);
+        if (detail) setSelectedDetail(detail);
+      })();
+    });
+  }, [loadDetail, requestLeave]);
+
+  const startCreate = useCallback((kind: CentralRiskCreateKind) => {
+    requestLeave(() => {
+      const parentCategoryId = selectedNode
+        ? selectedNode.kind === "category"
+          ? selectedNode.id
+          : selectedNode.parentCategoryId
+        : null;
+      if (kind === "template" && !parentCategoryId) return;
+      setModalKind(kind);
+      setModalMode("create");
+      setModalValue(null);
+      setCreateParentCategoryId(parentCategoryId);
+      setActiveTab("general");
+      setObjectError(null);
+      setDocumentError(null);
+      setModalOpen(true);
+    });
+  }, [requestLeave, selectedNode]);
+
+  const showSelected = useCallback(() => {
+    if (!selectedNode || !selectedDetail) return;
+    requestLeave(() => {
+      setModalKind(selectedNode.kind);
+      setModalMode("view");
+      setModalValue(selectedDetail);
+      setCreateParentCategoryId(
+        selectedNode.kind === "category"
+          ? (selectedDetail as CentralRiskCategoryDetail).parentCategoryId
+          : (selectedDetail as CentralRiskTemplateDetail).riskCategoryId,
+      );
+      setActiveTab("general");
+      setObjectError(null);
+      setDocumentError(null);
+      setModalOpen(true);
+    });
+  }, [requestLeave, selectedDetail, selectedNode]);
+
+  const editSelected = useCallback(() => {
+    if (!selectedNode || !selectedDetail) return;
+    setModalKind(selectedNode.kind);
+    setModalMode("edit");
+    setModalValue(selectedDetail);
+    setCreateParentCategoryId(
+      selectedNode.kind === "category"
+        ? (selectedDetail as CentralRiskCategoryDetail).parentCategoryId
+        : (selectedDetail as CentralRiskTemplateDetail).riskCategoryId,
+    );
+    setObjectError(null);
+    setDocumentError(null);
+    setModalOpen(true);
+  }, [selectedDetail, selectedNode]);
+
+  const closeObject = useCallback(() => {
+    requestLeave(() => {
       setDirty(false);
-      setDialogOpen(true);
-      await loadTemplates(row.id);
-    } catch (cause) {
-      if (request === generation.current)
-        setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      if (request === generation.current) setBusy(false);
-    }
-  };
-  const selectTemplate = async (row: CentralRiskTemplateSummary) => {
-    if (!confirmLeave()) return;
-    const request = ++generation.current;
+      setModalOpen(false);
+      setModalValue(null);
+      setObjectError(null);
+      setDocumentError(null);
+      setActiveTab("general");
+    });
+  }, [requestLeave]);
+
+  const submit = useCallback(async (payload: RiskCommand) => {
     setBusy(true);
-    try {
-      const detail = await centralRiskApi.template(row.id);
-      if (request === generation.current) {
-        setTemplate(detail);
-        setKind("template");
-        setCreating(false);
-        setEditing(false);
-        setDirty(false);
-        setDialogOpen(true);
-      }
-    } catch (cause) {
-      if (request === generation.current)
-        setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      if (request === generation.current) setBusy(false);
-    }
-  };
-  const startCategory = () => {
-    if (!confirmLeave()) return;
-    setCreateParentId(category?.id ?? null);
-    setKind("category");
-    setCategory(null);
-    setTemplate(null);
-    setCreating(true);
-    setEditing(true);
-    setDirty(false);
-    setDialogOpen(true);
-  };
-  const startTemplate = () => {
-    if (!category || !confirmLeave()) return;
-    setKind("template");
-    setTemplate(null);
-    setCreating(true);
-    setEditing(true);
-    setDirty(false);
-    setDialogOpen(true);
-  };
-  const save = async (
-    draft: DefinitionDraft,
-    documents: ParentSaveDocumentDraftState,
-  ) => {
-    setBusy(true);
-    setError(null);
+    setObjectError(null);
     setDocumentError(null);
-    generation.current += 1;
     try {
-      const common = {
-        title: draft.title.trim(),
-        description: draft.description.trim() || null,
-        validFrom: draft.validFrom || null,
-        validTo: draft.validTo || null,
-        documents: toDocumentAggregateRequest(documents),
-      };
-      if (kind === "category") {
-        const result = creating
-          ? await centralRiskApi.createCategory({
-              ...common,
-              code: draft.code.trim().toUpperCase(),
-              parentCategoryId: createParentId,
-              sortOrder: 0,
-            })
-          : await centralRiskApi.updateCategory(category!.id, {
-              ...common,
-              version: category!.version,
-            });
-        setCreating(false);
-        setEditing(false);
-        setDirty(false);
-        await loadCategories(result.entityId);
-      } else {
-        const result = creating
-          ? await centralRiskApi.createTemplate({
-              ...common,
-              code: draft.code.trim().toUpperCase(),
-              riskCategoryId: category!.id,
-              sortOrder: 0,
-            })
-          : await centralRiskApi.updateTemplate(template!.id, {
-              ...common,
-              version: template!.version,
-            });
-        setCreating(false);
-        setEditing(false);
-        setDirty(false);
-        await loadTemplates(category!.id, result.entityId);
-      }
-    } catch (cause) {
-      setDocumentError(toDocumentAggregateDraftError(cause));
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setBusy(false);
-    }
-  };
-  const lifecycle = async (action: "activate" | "inactivate" | "delete") => {
-    const target = kind === "category" ? category : template;
-    if (!target) return;
-    setBusy(true);
-    generation.current += 1;
-    try {
-      if (kind === "category") {
-        await centralRiskApi.categoryLifecycle(
-          target.id,
-          action,
-          target.version,
-        );
-        setCategory(null);
-        setTemplates([]);
-        setDialogOpen(false);
-        await loadCategories();
-      } else {
-        await centralRiskApi.templateLifecycle(
-          target.id,
-          action,
-          target.version,
-        );
-        setTemplate(null);
-        setDialogOpen(false);
-        await loadTemplates(category!.id);
-      }
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setBusy(false);
-    }
-  };
-  const move = async (parentId: string | null, sortOrder: number) => {
-    const target = kind === "category" ? category : template;
-    if (!target) return;
-    setBusy(true);
-    generation.current += 1;
-    try {
-      if (kind === "category") {
-        await centralRiskApi.moveCategory(target.id, {
-          version: target.version,
-          parentCategoryId: parentId,
-          sortOrder,
-        });
-        await loadCategories(target.id);
-      } else {
-        await centralRiskApi.moveTemplate(target.id, {
-          version: target.version,
-          riskCategoryId: parentId!,
-          sortOrder,
-        });
-        if (parentId) {
-          const nextCategory = await centralRiskApi.category(parentId);
-          setCategory(nextCategory);
-          await loadTemplates(parentId, target.id);
+      let entityId: string;
+
+      if (modalMode === "create") {
+        const result = modalKind === "category"
+          ? await centralRiskApi.createCategory(payload as CreateCentralRiskCategoryCommand)
+          : await centralRiskApi.createTemplate(payload as CreateCentralRiskTemplateCommand);
+        entityId = result.entityId;
+      } else if (modalKind === "category") {
+        const current = modalValue as CentralRiskCategoryDetail;
+        const edit = payload as EditCentralRiskCategoryCommand;
+        let version = current.version;
+
+        if (categoryDefinitionChanged(current, edit)) {
+          const definition: UpdateCentralRiskCategoryCommand = {
+            version,
+            title: edit.title,
+            description: edit.description,
+            validFrom: edit.validFrom,
+            validTo: edit.validTo,
+            documents: edit.documents,
+          };
+          const result = await centralRiskApi.updateCategory(current.id, definition);
+          version = result.version;
         }
+
+        if (current.parentCategoryId !== edit.parentCategoryId) {
+          const result = await centralRiskApi.moveCategory(current.id, {
+            version,
+            parentCategoryId: edit.parentCategoryId,
+            sortOrder: edit.sortOrder,
+          });
+          version = result.version;
+        }
+
+        if (current.status !== edit.status) {
+          const result = await centralRiskApi.categoryLifecycle(
+            current.id,
+            edit.status === "ACTIVE" ? "activate" : "inactivate",
+            version,
+          );
+          version = result.version;
+        }
+        entityId = current.id;
+      } else {
+        const current = modalValue as CentralRiskTemplateDetail;
+        const edit = payload as EditCentralRiskTemplateCommand;
+        let version = current.version;
+
+        if (templateDefinitionChanged(current, edit)) {
+          const definition: UpdateCentralRiskTemplateCommand = {
+            version,
+            title: edit.title,
+            riskType: edit.riskType,
+            description: edit.description,
+            validFrom: edit.validFrom,
+            validTo: edit.validTo,
+            documents: edit.documents,
+          };
+          const result = await centralRiskApi.updateTemplate(current.id, definition);
+          version = result.version;
+        }
+
+        if (current.riskCategoryId !== edit.riskCategoryId) {
+          const result = await centralRiskApi.moveTemplate(current.id, {
+            version,
+            riskCategoryId: edit.riskCategoryId,
+            sortOrder: edit.sortOrder,
+          });
+          version = result.version;
+        }
+
+        if (current.status !== edit.status) {
+          const result = await centralRiskApi.templateLifecycle(
+            current.id,
+            edit.status === "ACTIVE" ? "activate" : "inactivate",
+            version,
+          );
+          version = result.version;
+        }
+        entityId = current.id;
       }
-      setMoveOpen(false);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+
+      setDirty(false);
+      await loadLists();
+      const detail = modalKind === "category"
+        ? await centralRiskApi.category(entityId)
+        : await centralRiskApi.template(entityId);
+      const node: CentralRiskTreeNode = modalKind === "category"
+        ? {
+            key: riskNodeKey("category", detail.id),
+            id: detail.id,
+            kind: "category",
+            code: detail.code,
+            title: detail.title,
+            status: detail.status,
+            sortOrder: detail.sortOrder,
+            parentCategoryId: (detail as CentralRiskCategoryDetail).parentCategoryId,
+            children: [],
+          }
+        : {
+            key: riskNodeKey("template", detail.id),
+            id: detail.id,
+            kind: "template",
+            code: detail.code,
+            title: detail.title,
+            status: detail.status,
+            sortOrder: detail.sortOrder,
+            parentCategoryId: (detail as CentralRiskTemplateDetail).riskCategoryId,
+            children: [],
+          };
+      setSelectedNode(node);
+      setSelectedDetail(detail as RiskDetail);
+      setExpansionAnchorKey(
+        node.kind === "template" && node.parentCategoryId
+          ? riskNodeKey("category", node.parentCategoryId)
+          : node.parentCategoryId
+            ? riskNodeKey("category", node.parentCategoryId)
+            : node.key,
+      );
+      setModalValue(detail as RiskDetail);
+      setModalMode("view");
+      return true;
+    } catch (error) {
+      setDocumentError(toDocumentAggregateDraftError(error));
+      setObjectError(mapError(error, modalMode === "create" ? "risk.errors.create" : "risk.errors.update"));
+      return false;
     } finally {
       setBusy(false);
     }
-  };
-  const value = kind === "category" ? category : template;
-  const options =
-    kind === "category"
-      ? {
-          title: t("centralCatalog.riskCategory", {
-            defaultValue: "دسته ریسک",
-          }),
-          documentTarget: "CENTRAL_RISK_CATEGORY" as const,
-        }
-      : {
-          title: t("centralCatalog.riskTemplate", {
-            defaultValue: "الگوی ریسک",
-          }),
-          documentTarget: "CENTRAL_RISK_TEMPLATE" as const,
-        };
-  const closeDialog = () => {
-    if (!confirmLeave()) return;
-    setCreating(false);
-    setEditing(false);
-    setDirty(false);
-    setDocumentError(null);
-    setDialogOpen(false);
-  };
+  }, [loadLists, mapError, modalKind, modalMode, modalValue]);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteCandidate || !selectedDetail) return;
+    setBusy(true);
+    try {
+      if (deleteCandidate.kind === "category") {
+        await centralRiskApi.categoryLifecycle(deleteCandidate.id, "delete", selectedDetail.version);
+      } else {
+        await centralRiskApi.templateLifecycle(deleteCandidate.id, "delete", selectedDetail.version);
+      }
+      setDeleteCandidate(null);
+      setSelectedNode(null);
+      setSelectedDetail(null);
+      setExpansionAnchorKey(null);
+      await loadLists();
+    } catch (error) {
+      setDeleteCandidate(null);
+      setPageError(mapError(error, "risk.errors.delete"));
+    } finally {
+      setBusy(false);
+    }
+  }, [deleteCandidate, loadLists, mapError, selectedDetail]);
+
+  const clearSelection = useCallback(() => {
+    requestLeave(() => {
+      setSelectedNode(null);
+      setSelectedDetail(null);
+      setExpansionAnchorKey(null);
+    });
+  }, [requestLeave]);
+
+  const selectedParentLabel = selectedNode && selectedDetail
+    ? selectedNode.kind === "category"
+      ? categoryLabel((selectedDetail as CentralRiskCategoryDetail).parentCategoryId)
+      : categoryLabel((selectedDetail as CentralRiskTemplateDetail).riskCategoryId)
+    : "";
+  const modalParentId = modalMode === "create"
+    ? createParentCategoryId
+    : modalKind === "category"
+      ? (modalValue as CentralRiskCategoryDetail | null)?.parentCategoryId ?? null
+      : (modalValue as CentralRiskTemplateDetail | null)?.riskCategoryId ?? null;
+  const fclLayout: FclLayout = selectedDetail ? "TwoColumnsStartExpanded" : "OneColumn";
+  const dialogTitle = t(`risk.${modalKind}.${modalMode}.title`);
+  const canEditSelected = permissions.update || permissions.move || permissions.lifecycle;
+
+  const startColumn = createElement(
+    "div",
+    { slot: "startColumn", dir: appDir, className: "riskFclColumn" },
+    <CentralRiskListReport
+      categories={categories}
+      templates={templates}
+      selectedKey={selectedNode?.key ?? null}
+      expansionAnchorKey={expansionAnchorKey}
+      searchText={searchText}
+      contextCategoryId={contextCategoryId}
+      busy={busy}
+      error={!modalOpen ? pageError : null}
+      canCreate={permissions.create}
+      canDelete={permissions.delete}
+      onErrorClose={() => setPageError(null)}
+      onSearchTextChange={setSearchText}
+      onCreate={startCreate}
+      onShow={showSelected}
+      onDelete={() => selectedNode && setDeleteCandidate(selectedNode)}
+      onSelect={selectNode}
+    />,
+  );
+
+  const midColumn = selectedNode && selectedDetail
+    ? createElement(
+        "div",
+        { slot: "midColumn", dir: appDir, className: "riskFclColumn" },
+        <CentralRiskSummaryPanel
+          kind={selectedNode.kind}
+          value={selectedDetail}
+          parentLabel={selectedParentLabel}
+          busy={busy}
+          canEdit={canEditSelected}
+          onEdit={editSelected}
+          onCancel={clearSelection}
+        />,
+      )
+    : null;
+
+  const handleDialogClose = useCallback((event: unknown) => {
+    if (isOwnDialogCloseEvent(event)) closeObject();
+  }, [closeObject]);
+
   return (
     <>
-      <CatalogFlexibleColumnLayout>
-        <HierarchyColumn
-          canCreate={permissions.create}
-          title={t("centralCatalog.riskCategories", {
-            defaultValue: "ساختار طبقات ریسک",
-          })}
-          rows={categories}
-          selectedId={category?.id ?? null}
-          busy={busy}
-          getParentId={(row) => row.parentCategoryId}
-          onSelect={(row) => void selectCategory(row)}
-          onCreate={startCategory}
-        />
-        <HierarchyColumn
-          canCreate={permissions.create}
-          title={t("centralCatalog.riskTemplates", {
-            defaultValue: "الگوهای ریسک طبقهٔ انتخاب‌شده",
-          })}
-          rows={templates}
-          selectedId={template?.id ?? null}
-          busy={busy || !category}
-          onSelect={(row) => void selectTemplate(row)}
-          onCreate={startTemplate}
-        />
-      </CatalogFlexibleColumnLayout>
-      <CatalogObjectDialog
-        open={dialogOpen}
-        title={options.title}
-        mode={creating ? "create" : editing ? "edit" : "view"}
-        onClose={closeDialog}
+      {createElement(
+        "ui5-flexible-column-layout",
+        {
+          layout: fclLayout,
+          dir: appDir,
+          "disable-resizing": true,
+          className: "riskFcl",
+        },
+        startColumn,
+        midColumn,
+      )}
+
+      <Dialog
+        open={modalOpen}
+        accessibleName={dialogTitle}
+        className="riskObjectDialog"
+        onClose={handleDialogClose}
       >
-        <DefinitionObjectPage
-          permissions={permissions}
-          options={options}
-          value={value}
-          creating={creating}
-          editing={editing}
-          busy={busy}
-          error={error}
-          documentError={documentError}
-          onDirtyChange={setDirty}
-          onEdit={() => setEditing(true)}
-          onCancel={() => {
-            setCreating(false);
-            setEditing(false);
-            setDirty(false);
-            setDialogOpen(Boolean(value));
-          }}
-          onSave={save}
-          onLifecycle={(action) => void lifecycle(action)}
-        >
-          {value && !editing && (
-            <Button
-              hidden={!permissions.move}
-              disabled={busy}
-              onClick={() => setMoveOpen(true)}
-            >
-              {t("centralCatalog.move", { defaultValue: "جابجایی" })}
-            </Button>
+        <ModalDialogHeader title={dialogTitle} onClose={closeObject} />
+        <div className="riskDialogContent" dir={appDir}>
+          {modalMode === "create" || modalValue ? (
+            <CentralRiskObjectPage
+              key={`${modalKind}:${modalMode === "create" ? "create" : modalValue?.id}:${modalMode}`}
+              kind={modalKind}
+              mode={modalMode}
+              value={modalMode === "create" ? null : modalValue}
+              categories={categories}
+              initialParentCategoryId={modalParentId}
+              activeTab={activeTab}
+              busy={busy}
+              permissions={permissions}
+              error={objectError}
+              documentError={documentError}
+              onErrorClose={() => setObjectError(null)}
+              onSubmit={submit}
+              onCancel={closeObject}
+              onEdit={() => setModalMode("edit")}
+              onActiveTabChange={setActiveTab}
+              onDirtyChange={setDirty}
+            />
+          ) : busy ? (
+            <BusyIndicator active delay={0} />
+          ) : (
+            <MessageStrip design="Information" hideCloseButton>{t("risk.errors.notFound")}</MessageStrip>
           )}
-        </DefinitionObjectPage>
-      </CatalogObjectDialog>
-      <MoveDialog
-        open={moveOpen}
-        requiredParent={kind === "template"}
-        currentParentId={
-          kind === "category"
-            ? (category?.parentCategoryId ?? null)
-            : (template?.riskCategoryId ?? null)
-        }
-        currentSortOrder={
-          kind === "category"
-            ? (category?.sortOrder ?? 0)
-            : (template?.sortOrder ?? 0)
-        }
-        destinations={categories
-          .filter((row) => row.id !== value?.id)
-          .map((row) => ({ id: row.id, label: `${row.code} — ${row.title}` }))}
-        busy={busy}
-        onClose={() => setMoveOpen(false)}
-        onMove={(parentId, sortOrder) => void move(parentId, sortOrder)}
+        </div>
+      </Dialog>
+
+      <DeleteConfirmDialog
+        open={leaveConfirmationOpen || blocker.state === "blocked"}
+        title={t("common.unsavedChanges.title", { defaultValue: "تغییرات ذخیره‌نشده" })}
+        message={t("common.unsavedChanges.message", { defaultValue: "تغییرات ذخیره‌نشده نادیده گرفته شود؟" })}
+        confirmText={t("common.unsavedChanges.leave", { defaultValue: "خروج" })}
+        cancelText={t("common.unsavedChanges.stay", { defaultValue: "ماندن" })}
+        loading={false}
+        onClose={stay}
+        onConfirm={confirmLeave}
+      />
+
+      <DeleteConfirmDialog
+        open={Boolean(deleteCandidate)}
+        title={t("risk.delete.title")}
+        message={t("risk.delete.confirm", { title: deleteCandidate?.title ?? "" })}
+        confirmText={t("common.delete", { defaultValue: "حذف" })}
+        cancelText={t("common.cancel", { defaultValue: "انصراف" })}
+        loading={busy}
+        onClose={() => setDeleteCandidate(null)}
+        onConfirm={() => void confirmDelete()}
       />
     </>
   );

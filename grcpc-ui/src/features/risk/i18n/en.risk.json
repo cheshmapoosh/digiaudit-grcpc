@@ -1,0 +1,92 @@
+{
+  "risk": {
+    "list": {
+      "title": "Risks",
+      "search": "Search by code or name",
+      "empty": "No risk category or risk template has been registered."
+    },
+    "nodeType": {
+      "category": "Risk Category",
+      "template": "Risk Template"
+    },
+    "object": {
+      "category": "Risk Category",
+      "template": "Risk Template"
+    },
+    "category": {
+      "create": { "title": "Create Risk Category" },
+      "view": { "title": "View Risk Category" },
+      "edit": { "title": "Edit Risk Category" }
+    },
+    "template": {
+      "create": { "title": "Create Risk Template" },
+      "view": { "title": "View Risk Template" },
+      "edit": { "title": "Edit Risk Template" }
+    },
+    "tabs": {
+      "general": "General Information",
+      "risk": "Risk",
+      "controlCenter": "Control Center",
+      "documents": "Documents"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Name",
+      "description": "Description",
+      "nodeType": "Type",
+      "parentCategory": "Parent Category",
+      "riskCategory": "Risk Category",
+      "riskType": "Risk Type",
+      "status": "Status",
+      "validFrom": "Valid From",
+      "validTo": "Valid To",
+      "createdAt": "Created At"
+    },
+    "parent": {
+      "select": "Select",
+      "none": "No parent",
+      "dialogTitle": "Select Parent Risk Category",
+      "search": "Search risk categories"
+    },
+    "riskType": {
+      "COMPANY": "Company",
+      "OPERATION": "Operation"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "DELETED": "Deleted"
+    },
+    "summary": {
+      "title": "Summary"
+    },
+    "actions": {
+      "submit": "Save"
+    },
+    "validation": {
+      "codeRequired": "Code is required.",
+      "nameRequired": "Name is required.",
+      "categoryRequired": "A Risk Category is required for a Risk Template.",
+      "riskTypeRequired": "Risk Type is required.",
+      "invalidDate": "The entered date is invalid.",
+      "invalidValidityRange": "Valid To cannot be before Valid From.",
+      "documentsNotReady": "Document changes are not ready to save."
+    },
+    "delete": {
+      "title": "Delete Risk",
+      "confirm": "Are you sure you want to delete “{{title}}”?"
+    },
+    "errors": {
+      "loadList": "Failed to load the risk structure.",
+      "loadDetail": "Failed to load risk details.",
+      "create": "Failed to create the risk record.",
+      "update": "Failed to update the risk record.",
+      "delete": "Failed to delete the risk record.",
+      "duplicateCode": "This code is already in use.",
+      "notFound": "The requested record was not found.",
+      "versionConflict": "The record was changed by another user. Reload and try again.",
+      "invalidParent": "The selected parent structure is invalid.",
+      "dependencies": "The record has approved dependencies and cannot be deleted."
+    }
+  }
+}

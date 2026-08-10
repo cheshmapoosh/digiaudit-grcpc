@@ -110,6 +110,7 @@ public class CentralRiskTemplateCommandService {
                           code,
                           title,
                           request.riskCategoryId(),
+                          request.riskType(),
                           description,
                           sortOrder,
                           request.validFrom(),
@@ -130,6 +131,7 @@ public class CentralRiskTemplateCommandService {
                     entity.restoreFromCreate(
                         title,
                         request.riskCategoryId(),
+                        request.riskType(),
                         description,
                         sortOrder,
                         request.validFrom(),
@@ -141,6 +143,7 @@ public class CentralRiskTemplateCommandService {
                     entity.reactivateFromCreate(
                         title,
                         request.riskCategoryId(),
+                        request.riskType(),
                         description,
                         sortOrder,
                         request.validFrom(),
@@ -187,6 +190,7 @@ public class CentralRiskTemplateCommandService {
               entity.update(
                   title,
                   description,
+                  request.riskType(),
                   request.validFrom(),
                   request.validTo(),
                   actors.currentActorId(),
@@ -334,7 +338,10 @@ public class CentralRiskTemplateCommandService {
   }
 
   private Map<String, ?> typed(CentralRiskTemplateEntity e) {
-    return Map.of("riskCategoryId", e.getRiskCategoryId(), "sortOrder", e.getSortOrder());
+    return Map.of(
+        "riskCategoryId", e.getRiskCategoryId(),
+        "riskType", e.getRiskType(),
+        "sortOrder", e.getSortOrder());
   }
 
   private JsonNode snapshot(CentralRiskTemplateEntity e) {
@@ -354,6 +361,7 @@ public class CentralRiskTemplateCommandService {
       CentralRiskTemplateEntity e, String t, String d, UpdateCentralRiskTemplateRequest r) {
     return Objects.equals(e.getTitle(), t)
         && Objects.equals(e.getDescription(), d)
+        && Objects.equals(e.getRiskType(), r.riskType())
         && Objects.equals(e.getValidFrom(), r.validFrom())
         && Objects.equals(e.getValidTo(), r.validTo());
   }
