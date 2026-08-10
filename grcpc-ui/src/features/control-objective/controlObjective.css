@@ -1,0 +1,138 @@
+.controlObjectiveFcl {
+  width: 100%;
+  height: calc(100vh - 7rem);
+  min-height: 38rem;
+}
+
+.controlObjectiveFclColumn {
+  height: 100%;
+  min-height: 0;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: var(--sapBackgroundColor);
+}
+
+.controlObjectiveListReport {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 1rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.controlObjectiveListBody {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapList_Background);
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+.controlObjectiveSummaryPanel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  min-height: 100%;
+}
+
+.controlObjectiveSummaryGrid {
+  display: grid;
+  gap: 0.875rem;
+  align-content: start;
+  padding: 1rem;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapGroup_ContentBackground);
+}
+
+.controlObjectiveSummaryRow {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.controlObjectiveObjectDialog {
+  width: 90vw;
+  max-width: 90vw;
+}
+
+.controlObjectiveDialogContent {
+  width: 86vw;
+  max-width: 86vw;
+  min-width: 44rem;
+  padding: 0.75rem;
+  box-sizing: border-box;
+}
+
+.controlObjectiveObjectPage {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  background: var(--sapBackgroundColor);
+}
+
+.controlObjectiveObjectHeader {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapGroup_ContentBackground);
+}
+
+.controlObjectiveHeaderGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1.25rem;
+}
+
+.controlObjectiveHeaderItem,
+.controlObjectiveField {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.controlObjectiveObjectBody {
+  min-height: 22rem;
+  padding: 1rem;
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  background: var(--sapGroup_ContentBackground);
+}
+
+.controlObjectiveTabPanel {
+  min-height: 20rem;
+}
+
+.controlObjectiveTabPanelHidden {
+  display: none;
+}
+
+.controlObjectiveFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 1.25rem;
+}
+
+.controlObjectiveFieldWide {
+  grid-column: 1 / -1;
+}
+
+.controlObjectiveObjectFooter {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding-block-start: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .controlObjectiveDialogContent {
+    min-width: 0;
+    width: 84vw;
+  }
+
+  .controlObjectiveHeaderGrid,
+  .controlObjectiveFormGrid,
+  .controlObjectiveSummaryRow {
+    grid-template-columns: 1fr;
+  }
+}

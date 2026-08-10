@@ -140,6 +140,7 @@ create table central_control_objective (
     code varchar2(64 byte) not null,
     title varchar2(255 char) not null,
     description clob,
+    objective_class varchar2(255 char),
     status varchar2(32 byte) not null,
     valid_from date,
     valid_to date,

@@ -8,6 +8,7 @@ public record CentralControlObjectiveSummaryResponse(
     UUID id,
     String code,
     String title,
+    String objectiveClass,
     MasterDataLifecycleStatus status,
     LocalDate validFrom,
     LocalDate validTo,

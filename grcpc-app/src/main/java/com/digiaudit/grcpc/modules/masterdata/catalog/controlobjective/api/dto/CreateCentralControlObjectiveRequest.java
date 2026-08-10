@@ -9,6 +9,7 @@ public record CreateCentralControlObjectiveRequest(
     @NotBlank String code,
     @NotBlank String title,
     String description,
+    String objectiveClass,
     LocalDate validFrom,
     LocalDate validTo,
     @Valid DocumentAggregateBatchRequest documents) {}

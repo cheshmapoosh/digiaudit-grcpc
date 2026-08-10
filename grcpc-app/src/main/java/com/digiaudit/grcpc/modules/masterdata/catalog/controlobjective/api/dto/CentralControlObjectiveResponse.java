@@ -10,6 +10,7 @@ public record CentralControlObjectiveResponse(
     String code,
     String title,
     String description,
+    String objectiveClass,
     MasterDataLifecycleStatus status,
     LocalDate validFrom,
     LocalDate validTo,

@@ -1,0 +1,63 @@
+name: Temporary Verify Control Objective
+
+on:
+  push:
+    branches:
+      - feature/master-data-v2-control-objective-ui
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch Day-Zero Control Objective schema
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('grcpc-app/src/main/resources/db/migration/oracle/V1162__master_data_v2_structural_and_central_definitions.sql')
+          source = path.read_text(encoding='utf-8')
+          if 'objective_class varchar2(255 char)' in source:
+              print('objective_class already present')
+          else:
+              pattern = r'(create table central_control_objective \(.*?\n    description clob,\n)(    status varchar2\(32 byte\) not null,)'
+              source, count = re.subn(
+                  pattern,
+                  r'\1    objective_class varchar2(255 char),\n\2',
+                  source,
+                  count=1,
+                  flags=re.S,
+              )
+              if count != 1:
+                  raise SystemExit('central_control_objective Day-Zero block was not patched exactly once')
+              path.write_text(source, encoding='utf-8')
+          PY
+
+      - name: Verify frontend
+        run: |
+          cd grcpc-ui
+          npm ci
+          npm run lint
+          npm run build
+
+      - name: Verify backend
+        run: |
+          cd grcpc-app
+          mvn -Dskip.ui=true -DskipTests package
+
+      - name: Publish verified implementation
+        run: |
+          git config user.name "cheshmapoosh"
+          git config user.email "cheshmapoosh@gmail.com"
+          git rm .github/workflows/tmp-control-objective-day-zero.yml
+          git add grcpc-app/src/main/resources/db/migration/oracle/V1162__master_data_v2_structural_and_central_definitions.sql
+          git commit -m "fix(master-data): align Control Objective Day-Zero schema"
+          git push origin HEAD:feature/master-data-v2-control-objective-ui

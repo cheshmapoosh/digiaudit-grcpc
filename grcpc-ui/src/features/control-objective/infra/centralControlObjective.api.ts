@@ -7,28 +7,16 @@ import type {
   CreateCentralControlObjectiveCommand,
   UpdateCentralControlObjectiveCommand,
 } from "../domain/centralControlObjective.model";
+
 const BASE = "/api/master-data/central/control-objectives";
+
 export const centralControlObjectiveApi = {
-  list: (deleted = false) =>
-    httpClient.get<CentralControlObjectiveSummary[]>(
-      `${BASE}${deleted ? "/deleted" : ""}`,
-    ),
-  detail: (id: string) =>
-    httpClient.get<CentralControlObjectiveDetail>(`${BASE}/${id}`),
+  list: () => httpClient.get<CentralControlObjectiveSummary[]>(BASE),
+  detail: (id: string) => httpClient.get<CentralControlObjectiveDetail>(`${BASE}/${id}`),
   create: (body: CreateCentralControlObjectiveCommand) =>
     httpClient.post<CentralControlObjectiveMutationResponse>(BASE, body),
   update: (id: string, body: UpdateCentralControlObjectiveCommand) =>
-    httpClient.patch<CentralControlObjectiveMutationResponse>(
-      `${BASE}/${id}`,
-      body,
-    ),
-  lifecycle: (
-    id: string,
-    action: "activate" | "inactivate" | "delete" | "restore",
-    version: number,
-  ) =>
-    httpClient.post<CentralControlObjectiveRevisionResponse>(
-      `${BASE}/${id}/${action}`,
-      { version },
-    ),
+    httpClient.patch<CentralControlObjectiveMutationResponse>(`${BASE}/${id}`, body),
+  delete: (id: string, version: number) =>
+    httpClient.post<CentralControlObjectiveRevisionResponse>(`${BASE}/${id}/delete`, { version }),
 };

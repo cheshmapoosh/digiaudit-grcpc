@@ -1,0 +1,69 @@
+{
+  "controlObjective": {
+    "list": {
+      "title": "Control Objectives",
+      "search": "Search by control objective name"
+    },
+    "summary": {
+      "title": "Control Objective details",
+      "selectPrompt": "Select a control objective to view its details."
+    },
+    "object": {
+      "title": "Control Objective",
+      "notFound": "The selected control objective was not found."
+    },
+    "create": { "title": "Create Control Objective" },
+    "view": { "title": "View Control Objective" },
+    "edit": { "title": "Edit Control Objective" },
+    "delete": {
+      "title": "Delete Control Objective",
+      "confirm": "Are you sure you want to delete control objective “{{title}}”?"
+    },
+    "tabs": {
+      "general": "General Information",
+      "subprocesses": "Subprocess",
+      "risks": "Risks",
+      "documents": "Documents"
+    },
+    "fields": {
+      "code": "Identifier",
+      "name": "Control Objective",
+      "description": "Description",
+      "objectiveClass": "Objective Class",
+      "status": "Status",
+      "validFrom": "Valid From",
+      "validTo": "Valid To",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "DELETED": "Deleted"
+    },
+    "actions": {
+      "view": "View",
+      "submit": "Save"
+    },
+    "validation": {
+      "codeRequired": "Control Objective identifier is required.",
+      "nameRequired": "Control Objective is required.",
+      "objectiveClassTooLong": "Objective Class cannot exceed 255 characters.",
+      "invalidDate": "The entered date is invalid.",
+      "invalidValidityRange": "The validity range is invalid.",
+      "documentsNotReady": "Temporary document drafts are not ready to be finalized."
+    },
+    "errors": {
+      "loadList": "Failed to load control objectives.",
+      "loadDetail": "Failed to load control objective details.",
+      "create": "Failed to create control objective.",
+      "update": "Failed to update control objective.",
+      "delete": "Failed to delete control objective.",
+      "duplicateCode": "The Control Objective identifier already exists.",
+      "notFound": "The selected control objective was not found.",
+      "versionConflict": "The Control Objective was changed by another user. Reload the data and try again.",
+      "invalidStatus": "The requested Control Objective status change is invalid.",
+      "dependencies": "This Control Objective cannot be deleted because dependencies exist."
+    }
+  }
+}
