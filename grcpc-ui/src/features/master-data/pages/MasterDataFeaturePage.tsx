@@ -151,10 +151,7 @@ export default function MasterDataFeaturePage() {
                     <Icon name="database" />
                 </div>
                 <div className="masterDataHeroText">
-                    <span className="masterDataEyebrow">
-                        {t("masterData.eyebrow", { defaultValue: "Master Data" })}
-                    </span>
-                    <Title id="master-data-page-title" level="H2" size="H2">
+                     <Title id="master-data-page-title" level="H2" size="H2">
                         {t("masterData.title", { defaultValue: "اطلاعات پایه" })}
                     </Title>
                     <p className="masterDataSubtitle">
