@@ -12,7 +12,6 @@ import {
     FileUploader,
     Input,
     MessageStrip,
-    ProgressIndicator,
     Table,
     TableCell,
     TableHeaderCell,
@@ -20,6 +19,8 @@ import {
     TableRow,
     Text,
     Title,
+    UploadCollection,
+    UploadCollectionItem,
 } from "@ui5/webcomponents-react";
 
 import type {
@@ -135,15 +136,14 @@ const TITLE_INPUT_STYLE: CSSProperties = {
 const UPLOAD_PROGRESS_AREA_STYLE: CSSProperties = {
     display: "grid",
     gap: "0.5rem",
+    width: "100%",
 };
 
 const UPLOAD_ITEM_STYLE: CSSProperties = {
     display: "grid",
     gap: "0.5rem",
-    padding: "0.75rem",
-    border: "1px solid var(--sapList_BorderColor)",
-    borderRadius: "0.375rem",
-    background: "var(--sapList_Background)",
+    width: "100%",
+    minWidth: 0,
 };
 
 const UPLOAD_ITEM_HEADER_STYLE: CSSProperties = {
@@ -152,17 +152,6 @@ const UPLOAD_ITEM_HEADER_STYLE: CSSProperties = {
     alignItems: "center",
     gap: "0.75rem",
     flexWrap: "wrap",
-};
-
-const UPLOAD_ITEM_TITLE_STYLE: CSSProperties = {
-    display: "grid",
-    gap: "0.15rem",
-    minWidth: 0,
-};
-
-const UPLOAD_ITEM_NAME_STYLE: CSSProperties = {
-    fontWeight: 600,
-    overflowWrap: "anywhere",
 };
 
 const STAGED_METADATA_STYLE: CSSProperties = {
@@ -1209,11 +1198,16 @@ export default function DocumentManager({
         }
 
         return (
-            <div style={UPLOAD_PROGRESS_AREA_STYLE}>
+            <UploadCollection
+                accessibleName={t("document.title", { defaultValue: "Documents" })}
+                hideDragOverlay
+                noDataText={t("document.empty", { defaultValue: "No files found" })}
+                selectionMode="None"
+                style={UPLOAD_PROGRESS_AREA_STYLE}
+            >
                 {uploadItems.map((item) => {
                     const progress = normalizeVisibleProgress(item.progress);
-                    const progressValue =
-                        item.failureState ? 100 : progress;
+                    const progressValue = item.failureState ? 100 : progress;
                     const statusText = renderUploadStatusText(item);
                     const staged =
                         item.state === "UPLOADED" &&
@@ -1239,149 +1233,140 @@ export default function DocumentManager({
                     const finalizeText = item.failureState === "FINALIZATION_FAILED"
                         ? t("document.upload.retryFinalize", { defaultValue: "Retry" })
                         : t("document.actions.finalize", { defaultValue: "Save Document" });
+                    const uploadState = item.failureState
+                        ? "Error"
+                        : item.state === "UPLOADING" || item.state === "FINALIZING"
+                            ? "Uploading"
+                            : "Ready";
 
                     return (
-                        <div key={item.id} style={UPLOAD_ITEM_STYLE}>
-                            <div style={UPLOAD_ITEM_HEADER_STYLE}>
-                                <div style={UPLOAD_ITEM_TITLE_STYLE}>
-                                    <span style={UPLOAD_ITEM_NAME_STYLE}>
-                                        {item.fileName}
-                                    </span>
-                                    <span style={META_TEXT_STYLE}>
-                                        {formatFileSize(item.fileSize)}
-                                    </span>
+                        <UploadCollectionItem
+                            key={item.id}
+                            file={item.file ?? null}
+                            fileName={item.fileName}
+                            progress={progressValue}
+                            uploadState={uploadState}
+                            type="Inactive"
+                            hideDeleteButton
+                            hideRetryButton
+                            hideTerminateButton
+                            highlight={item.failureState ? "Negative" : "None"}
+                        >
+                            <div style={UPLOAD_ITEM_STYLE}>
+                                <div style={UPLOAD_ITEM_HEADER_STYLE}>
+                                    <span style={META_TEXT_STYLE}>{formatFileSize(item.fileSize)}</span>
+                                    <div style={ACTIONS_STYLE}>
+                                        {showMetadata && !parentSaveMode ? (
+                                            <Button
+                                                design="Emphasized"
+                                                icon="save"
+                                                disabled={!canFinalize}
+                                                tooltip={targetId ? undefined : saveFirstText}
+                                                onClick={() => {
+                                                    void retryFinalization(item);
+                                                }}
+                                            >
+                                                {finalizeText}
+                                            </Button>
+                                        ) : null}
+                                        {item.failureState || parentSaveMode ? (
+                                            <Button
+                                                design="Transparent"
+                                                onClick={() => removeUploadItem(item.id)}
+                                            >
+                                                {t("document.upload.removeFailed", {
+                                                    defaultValue: "Delete",
+                                                })}
+                                            </Button>
+                                        ) : null}
+                                    </div>
                                 </div>
-                                <div style={ACTIONS_STYLE}>
-                                    {showMetadata && !parentSaveMode ? (
-                                        <Button
-                                            design="Emphasized"
-                                            icon="save"
-                                            disabled={!canFinalize}
-                                            tooltip={
-                                                targetId
-                                                    ? undefined
-                                                    : saveFirstText
-                                            }
-                                            onClick={() => {
-                                                void retryFinalization(item);
-                                            }}
-                                        >
-                                            {finalizeText}
-                                        </Button>
-                                    ) : null}
-                                    {item.failureState || parentSaveMode ? (
-                                        <Button
-                                            design="Transparent"
-                                            onClick={() => removeUploadItem(item.id)}
-                                        >
-                                            {t("document.upload.removeFailed", {
-                                                defaultValue: "Delete",
+
+                                {showMetadata ? (
+                                    <div style={STAGED_METADATA_STYLE}>
+                                        {!item.existingDocument ? (
+                                            <>
+                                                <Input
+                                                    accessibleName={t("document.fields.title", {
+                                                        defaultValue: "Title",
+                                                    })}
+                                                    placeholder={t("document.fields.title", {
+                                                        defaultValue: "Title",
+                                                    })}
+                                                    value={item.title}
+                                                    maxlength={255}
+                                                    disabled={busy || item.state === "FINALIZING"}
+                                                    valueState={titleMissing ? "Negative" : "None"}
+                                                    onInput={(event) =>
+                                                        updateStagedField(item.id, "title", readInputValue(event))
+                                                    }
+                                                />
+                                                <Input
+                                                    accessibleName={t("document.fields.code", {
+                                                        defaultValue: "Code",
+                                                    })}
+                                                    placeholder={t("document.fields.code", {
+                                                        defaultValue: "Code",
+                                                    })}
+                                                    value={item.code}
+                                                    maxlength={64}
+                                                    disabled={busy || item.state === "FINALIZING"}
+                                                    onInput={(event) =>
+                                                        updateStagedField(item.id, "code", readInputValue(event))
+                                                    }
+                                                />
+                                                <Input
+                                                    accessibleName={t("document.fields.description", {
+                                                        defaultValue: "Description",
+                                                    })}
+                                                    placeholder={t("document.fields.description", {
+                                                        defaultValue: "Description",
+                                                    })}
+                                                    value={item.description}
+                                                    maxlength={1000}
+                                                    disabled={busy || item.state === "FINALIZING"}
+                                                    onInput={(event) =>
+                                                        updateStagedField(item.id, "description", readInputValue(event))
+                                                    }
+                                                />
+                                            </>
+                                        ) : null}
+                                        <PersianDatePicker
+                                            accessibleName={t("document.fields.validFrom", {
+                                                defaultValue: "Valid From",
                                             })}
-                                        </Button>
-                                    ) : null}
-                                </div>
+                                            value={item.validFrom}
+                                            disabled={busy || item.state === "FINALIZING"}
+                                            invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
+                                            onChange={(value) => updateStagedField(item.id, "validFrom", value)}
+                                            onDraftStateChange={(state) => updateUploadItem(item.id, { validFromDraftValid: state.valid })}
+                                        />
+                                        <PersianDatePicker
+                                            accessibleName={t("document.fields.validTo", {
+                                                defaultValue: "Valid To",
+                                            })}
+                                            value={item.validTo}
+                                            disabled={busy || item.state === "FINALIZING"}
+                                            valueState={invalidValidityRange ? "Negative" : "None"}
+                                            invalidValueMessage={invalidValidityRange
+                                                ? t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })
+                                                : t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
+                                            onChange={(value) => updateStagedField(item.id, "validTo", value)}
+                                            onDraftStateChange={(state) => updateUploadItem(item.id, { validToDraftValid: state.valid })}
+                                        />
+                                        {invalidValidityRange ? <span style={ERROR_TEXT_STYLE}>{t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })}</span> : null}
+                                    </div>
+                                ) : null}
+
+                                <span style={item.failureState ? ERROR_TEXT_STYLE : META_TEXT_STYLE}>
+                                    {statusText}
+                                    {item.error ? ` - ${item.error}` : ""}
+                                </span>
                             </div>
-
-                            {showMetadata ? (
-                                <div style={STAGED_METADATA_STYLE}>
-                                    {!item.existingDocument ? (
-                                        <>
-                                            <Input
-                                                accessibleName={t("document.fields.title", {
-                                                    defaultValue: "Title",
-                                                })}
-                                                placeholder={t("document.fields.title", {
-                                                    defaultValue: "Title",
-                                                })}
-                                                value={item.title}
-                                                maxlength={255}
-                                                disabled={busy || item.state === "FINALIZING"}
-                                                valueState={titleMissing ? "Negative" : "None"}
-                                                onInput={(event) =>
-                                                    updateStagedField(item.id, "title", readInputValue(event))
-                                                }
-                                            />
-                                            <Input
-                                                accessibleName={t("document.fields.code", {
-                                                    defaultValue: "Code",
-                                                })}
-                                                placeholder={t("document.fields.code", {
-                                                    defaultValue: "Code",
-                                                })}
-                                                value={item.code}
-                                                maxlength={64}
-                                                disabled={busy || item.state === "FINALIZING"}
-                                                onInput={(event) =>
-                                                    updateStagedField(item.id, "code", readInputValue(event))
-                                                }
-                                            />
-                                            <Input
-                                                accessibleName={t("document.fields.description", {
-                                                    defaultValue: "Description",
-                                                })}
-                                                placeholder={t("document.fields.description", {
-                                                    defaultValue: "Description",
-                                                })}
-                                                value={item.description}
-                                                maxlength={1000}
-                                                disabled={busy || item.state === "FINALIZING"}
-                                                onInput={(event) =>
-                                                    updateStagedField(item.id, "description", readInputValue(event))
-                                                }
-                                            />
-                                        </>
-                                    ) : null}
-                                    <PersianDatePicker
-                                        accessibleName={t("document.fields.validFrom", {
-                                            defaultValue: "Valid From",
-                                        })}
-                                        value={item.validFrom}
-                                        disabled={busy || item.state === "FINALIZING"}
-                                        invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
-                                        onChange={(value) => updateStagedField(item.id, "validFrom", value)}
-                                        onDraftStateChange={(state) => updateUploadItem(item.id, { validFromDraftValid: state.valid })}
-                                    />
-                                    <PersianDatePicker
-                                        accessibleName={t("document.fields.validTo", {
-                                            defaultValue: "Valid To",
-                                        })}
-                                        value={item.validTo}
-                                        disabled={busy || item.state === "FINALIZING"}
-                                        valueState={invalidValidityRange ? "Negative" : "None"}
-                                        invalidValueMessage={invalidValidityRange
-                                            ? t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })
-                                            : t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
-                                        onChange={(value) => updateStagedField(item.id, "validTo", value)}
-                                        onDraftStateChange={(state) => updateUploadItem(item.id, { validToDraftValid: state.valid })}
-                                    />
-                                    {invalidValidityRange ? <span style={ERROR_TEXT_STYLE}>{t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })}</span> : null}
-                                </div>
-                            ) : null}
-
-                            <ProgressIndicator
-                                accessibleName={statusText}
-                                displayValue={
-                                    item.state === "UPLOADING"
-                                          ? `${progress}%`
-                                          : ""
-                                }
-                                hideValue={item.state !== "UPLOADING"}
-                                value={progressValue}
-                                valueState={
-                                    item.failureState
-                                        ? "Negative"
-                                        : "Information"
-                                }
-                            />
-
-                            <span style={item.failureState ? ERROR_TEXT_STYLE : META_TEXT_STYLE}>
-                                {statusText}
-                                {item.error ? ` - ${item.error}` : ""}
-                            </span>
-                        </div>
+                        </UploadCollectionItem>
                     );
                 })}
-            </div>
+            </UploadCollection>
         );
     };
 

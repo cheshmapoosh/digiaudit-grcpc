@@ -10,7 +10,9 @@ import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentL
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentTempUploadEntity;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentVersionEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.converter.CentralControlRelevanceConverter;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.CentralControlEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.CentralControlGroupEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.domain.entity.CentralControlObjectiveEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyGroupEntity;
@@ -66,6 +68,8 @@ public class GrcpcPersistenceConfiguration {
                 DocumentVersionEntity.class.getName(),
                 CentralDefinitionEntity.class.getName(),
                 CentralControlEntity.class.getName(),
+                CentralControlGroupEntity.class.getName(),
+                CentralControlRelevanceConverter.class.getName(),
                 CentralControlObjectiveEntity.class.getName(),
                 CentralRiskCategoryEntity.class.getName(),
                 CentralRiskTemplateEntity.class.getName(),

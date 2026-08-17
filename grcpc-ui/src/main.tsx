@@ -22,6 +22,7 @@ import "./ui/ui5-custom-css";
 
 import App from "./app/App";
 import { applySettings, loadSettings } from "./ui/ui-settings";
+import { registerUi5I18nBridge } from "./ui/ui5-i18n-bridge";
 import { initI18n } from "./i18n/i18n";
 import { reportInitialAppBootstrapFailure } from "./shared/bootstrap/initialLoader";
 
@@ -34,6 +35,7 @@ try {
 
     // 3) init resource bundle language
     initI18n(settings.lang);
+    registerUi5I18nBridge();
 
     ReactDOM.createRoot(document.getElementById("root")!).render(
         <React.StrictMode>

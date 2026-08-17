@@ -10,14 +10,11 @@ import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.api.dto.CreateCentralControlRequest;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.api.dto.UpdateCentralControlRequest;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.CentralControlEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.enums.CentralControlTriggerType;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.repository.CentralControlGroupRepository;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.repository.CentralControlRepository;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.CatalogCommandSupport;
-import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionActorProvider;
-import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionCoordinator;
-import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionContext;
-import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionResult;
-import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionOperationResult;
-import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionRequest;
+import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionEntityType;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationType;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
@@ -40,6 +37,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class CentralControlCommandService {
   private final CentralControlRepository repository;
+  private final CentralControlGroupRepository groups;
   private final MasterDataRevisionCoordinator revisionCoordinator;
   private final MasterDataRevisionActorProvider actorProvider;
   private final DocumentCommandService documentCommandService;
@@ -49,6 +47,7 @@ public class CentralControlCommandService {
 
   public CentralControlCommandService(
       CentralControlRepository repository,
+      CentralControlGroupRepository groups,
       MasterDataRevisionCoordinator revisionCoordinator,
       MasterDataRevisionActorProvider actorProvider,
       DocumentCommandService documentCommandService,
@@ -56,6 +55,7 @@ public class CentralControlCommandService {
       MasterDataStructuralDependencyChecker dependencyChecker,
       @Qualifier("masterDataRevisionClock") Clock clock) {
     this.repository = repository;
+    this.groups = groups;
     this.revisionCoordinator = revisionCoordinator;
     this.actorProvider = actorProvider;
     this.documentCommandService = documentCommandService;
@@ -68,6 +68,12 @@ public class CentralControlCommandService {
     String code = support.normalizeCode(request.code());
     String title = support.normalizeTitle(request.title());
     String description = support.normalizeDescription(request.description());
+    String eventDescription = support.normalizeDescription(request.eventDescription());
+    validate(
+        request.controlGroupId(),
+        request.triggerType(),
+        eventDescription,
+        request.operationFrequency());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> documents = new AtomicReference<>(List.of());
 
@@ -93,10 +99,21 @@ public class CentralControlCommandService {
                           code,
                           title,
                           description,
+                          request.controlGroupId(),
                           request.controlClass(),
                           request.importance(),
+                          request.controlRisk(),
                           request.automationType(),
                           request.controlPurpose(),
+                          request.nature(),
+                          request.controlRelevance(),
+                          request.triggerType(),
+                          eventDescription,
+                          request.operationFrequency(),
+                          request.toBeTested(),
+                          request.testAutomationType(),
+                          request.testingTechnique(),
+                          request.evidenceLevel(),
                           request.validFrom(),
                           request.validTo(),
                           actorId,
@@ -114,10 +131,21 @@ public class CentralControlCommandService {
                     entity.restoreFromCreate(
                         title,
                         description,
+                        request.controlGroupId(),
                         request.controlClass(),
                         request.importance(),
+                        request.controlRisk(),
                         request.automationType(),
                         request.controlPurpose(),
+                        request.nature(),
+                        request.controlRelevance(),
+                        request.triggerType(),
+                        eventDescription,
+                        request.operationFrequency(),
+                        request.toBeTested(),
+                        request.testAutomationType(),
+                        request.testingTechnique(),
+                        request.evidenceLevel(),
                         request.validFrom(),
                         request.validTo(),
                         actorId,
@@ -127,10 +155,21 @@ public class CentralControlCommandService {
                     entity.reactivateFromCreate(
                         title,
                         description,
+                        request.controlGroupId(),
                         request.controlClass(),
                         request.importance(),
+                        request.controlRisk(),
                         request.automationType(),
                         request.controlPurpose(),
+                        request.nature(),
+                        request.controlRelevance(),
+                        request.triggerType(),
+                        eventDescription,
+                        request.operationFrequency(),
+                        request.toBeTested(),
+                        request.testAutomationType(),
+                        request.testingTechnique(),
+                        request.evidenceLevel(),
                         request.validFrom(),
                         request.validTo(),
                         actorId,
@@ -158,7 +197,13 @@ public class CentralControlCommandService {
     long expectedVersion = support.requireVersion(request.version());
     String title = support.normalizeTitle(request.title());
     String description = support.normalizeDescription(request.description());
+    String eventDescription = support.normalizeDescription(request.eventDescription());
     MasterDataLifecycleStatus requestedStatus = requireEditableStatus(request.status());
+    validate(
+        request.controlGroupId(),
+        request.triggerType(),
+        eventDescription,
+        request.operationFrequency());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> documents = new AtomicReference<>(List.of());
 
@@ -171,10 +216,8 @@ public class CentralControlCommandService {
                   documentCommandService.prepareAggregate(request.documents());
               CentralControlEntity entity = lock(id);
               support.assertVersion(entity, expectedVersion);
-              if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) {
-                throw notFound(id);
-              }
-              if (sameDefinition(entity, title, description, requestedStatus, request)
+              if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
+              if (sameDefinition(entity, title, description, eventDescription, requestedStatus, request)
                   && isEmpty(request.documents())) {
                 throw new UnprocessableEntityException(
                     "NO_CHANGE", "error.masterdata.v2.noChange", "The command contains no change");
@@ -186,20 +229,28 @@ public class CentralControlCommandService {
               entity.update(
                   title,
                   description,
+                  request.controlGroupId(),
                   request.controlClass(),
                   request.importance(),
+                  request.controlRisk(),
                   request.automationType(),
                   request.controlPurpose(),
+                  request.nature(),
+                  request.controlRelevance(),
+                  request.triggerType(),
+                  eventDescription,
+                  request.operationFrequency(),
+                  request.toBeTested(),
+                  request.testAutomationType(),
+                  request.testingTechnique(),
+                  request.evidenceLevel(),
                   request.validFrom(),
                   request.validTo(),
                   actorId,
                   now);
               if (entity.getStatus() != requestedStatus) {
-                if (requestedStatus == MasterDataLifecycleStatus.ACTIVE) {
-                  entity.activate(actorId, now);
-                } else {
-                  entity.inactivate(actorId, now);
-                }
+                if (requestedStatus == MasterDataLifecycleStatus.ACTIVE) entity.activate(actorId, now);
+                else entity.inactivate(actorId, now);
               }
               CentralControlEntity saved = repository.saveAndFlush(entity);
               documents.set(
@@ -267,6 +318,32 @@ public class CentralControlCommandService {
     return MasterDataRevisionMutationResponse.from(result.primaryResult());
   }
 
+  private void validate(
+      UUID controlGroupId,
+      CentralControlTriggerType triggerType,
+      String eventDescription,
+      Object operationFrequency) {
+    if (controlGroupId != null
+        && groups.findByIdAndStatusNot(controlGroupId, MasterDataLifecycleStatus.DELETED).isEmpty()) {
+      throw new UnprocessableEntityException(
+          "INVALID_PARENT",
+          "error.masterdata.v2.invalidParent",
+          "Control Group does not exist or is deleted");
+    }
+    if (eventDescription != null && triggerType != CentralControlTriggerType.EVENT) {
+      throw new UnprocessableEntityException(
+          "INVALID_CONTROL_EVENT_DESCRIPTION",
+          "error.masterdata.v2.invalidControlEventDescription",
+          "Event description is only valid for EVENT trigger");
+    }
+    if (operationFrequency != null && triggerType != CentralControlTriggerType.DATE) {
+      throw new UnprocessableEntityException(
+          "INVALID_CONTROL_FREQUENCY",
+          "error.masterdata.v2.invalidControlFrequency",
+          "Operation frequency is only valid for DATE trigger");
+    }
+  }
+
   private RevisionOperationResult completed(
       RevisionExecutionContext context,
       CentralControlEntity entity,
@@ -289,10 +366,21 @@ public class CentralControlCommandService {
 
   private Map<String, Object> typedFields(CentralControlEntity entity) {
     Map<String, Object> fields = new LinkedHashMap<>();
+    fields.put("controlGroupId", entity.getControlGroupId());
     fields.put("controlClass", entity.getControlClass());
     fields.put("importance", entity.getImportance());
+    fields.put("controlRisk", entity.getControlRisk());
     fields.put("automationType", entity.getAutomationType());
     fields.put("controlPurpose", entity.getControlPurpose());
+    fields.put("nature", entity.getNature());
+    fields.put("controlRelevance", entity.getControlRelevance());
+    fields.put("triggerType", entity.getTriggerType());
+    fields.put("eventDescription", entity.getEventDescription());
+    fields.put("operationFrequency", entity.getOperationFrequency());
+    fields.put("toBeTested", entity.getToBeTested());
+    fields.put("testAutomationType", entity.getTestAutomationType());
+    fields.put("testingTechnique", entity.getTestingTechnique());
+    fields.put("evidenceLevel", entity.getEvidenceLevel());
     return fields;
   }
 
@@ -319,14 +407,28 @@ public class CentralControlCommandService {
       CentralControlEntity entity,
       String title,
       String description,
+      String eventDescription,
       MasterDataLifecycleStatus requestedStatus,
       UpdateCentralControlRequest request) {
     return Objects.equals(entity.getTitle(), title)
         && Objects.equals(entity.getDescription(), description)
+        && Objects.equals(entity.getControlGroupId(), request.controlGroupId())
         && Objects.equals(entity.getControlClass(), request.controlClass())
         && Objects.equals(entity.getImportance(), request.importance())
+        && Objects.equals(entity.getControlRisk(), request.controlRisk())
         && Objects.equals(entity.getAutomationType(), request.automationType())
         && Objects.equals(entity.getControlPurpose(), request.controlPurpose())
+        && Objects.equals(entity.getNature(), request.nature())
+        && Objects.equals(
+            entity.getControlRelevance(),
+            request.controlRelevance() == null ? java.util.Set.of() : request.controlRelevance())
+        && Objects.equals(entity.getTriggerType(), request.triggerType())
+        && Objects.equals(entity.getEventDescription(), eventDescription)
+        && Objects.equals(entity.getOperationFrequency(), request.operationFrequency())
+        && Objects.equals(entity.getToBeTested(), request.toBeTested())
+        && Objects.equals(entity.getTestAutomationType(), request.testAutomationType())
+        && Objects.equals(entity.getTestingTechnique(), request.testingTechnique())
+        && Objects.equals(entity.getEvidenceLevel(), request.evidenceLevel())
         && entity.getStatus() == requestedStatus
         && Objects.equals(entity.getValidFrom(), request.validFrom())
         && Objects.equals(entity.getValidTo(), request.validTo());

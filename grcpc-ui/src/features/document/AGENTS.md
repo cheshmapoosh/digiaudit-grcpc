@@ -23,6 +23,9 @@ Document is the shared Master Data V2 UI for:
 - Hide free-text Document Category until an approved controlled vocabulary exists; keep the nullable Backend-compatible response field unchanged.
 - Document dirty state includes selected/uploading/staged/finalizing files, retryable failed finalization with a temporary upload, and unsaved metadata drafts.
 - Parent General Information, hierarchy, and Document drafts use one aggregate browser Save. The component exposes dirty/uploading/valid/ready state, hides per-document Save/finalize controls, and clears consumed drafts only after aggregate success.
+- Use UI5 `FileUploader` for file selection and UI5 `UploadCollection` / `UploadCollectionItem` for pending-upload progress presentation. Do not reintroduce a standalone `ProgressIndicator` for this flow.
+- Keep upload/finalization state owned by `DocumentManager`; built-in UploadCollection retry/terminate/delete actions stay hidden when they would bypass the existing temp/finalize lifecycle.
+- Persian-facing internal UI5 strings required by MultiComboBox/UploadCollection are supplied through the shared UI5-to-application i18n bridge; keep those translations in the application resource bundles and preserve RTL inheritance from the application shell.
 
 ## Verification
 - Run `npm run lint` and `npm run build` from `grcpc-ui`.

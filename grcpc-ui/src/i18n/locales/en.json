@@ -120,6 +120,29 @@
       "copyright": "© {{year}} {{company}} — {{product}} v{{version}}"
     }
   },
+  "ui5": {
+    "multiComboBox": {
+      "selectAll": "Select all ({{selected}} of {{total}})",
+      "items": "{{count}} items",
+      "moreItems": "{{count}} more",
+      "clearAll": "Clear all"
+    },
+    "uploadCollection": {
+      "cancel": "Cancel",
+      "rename": "Rename",
+      "error": "Terminated",
+      "ready": "Pending",
+      "uploading": "Uploading",
+      "terminate": "Terminate",
+      "retry": "Retry",
+      "edit": "Edit",
+      "noData": "No files found",
+      "noDataDescription": "Select a file to upload.",
+      "ariaRole": "Upload collection",
+      "dragHere": "Drag files here",
+      "dropHere": "Drop files to upload"
+    }
+  },
   "common.active": "Active",
   "common.inactive": "Inactive",
   "common.invalidPersianDate": "Enter a valid Persian calendar date.",

@@ -18,6 +18,8 @@ public interface CentralControlRepository extends JpaRepository<CentralControlEn
 
   Optional<CentralControlEntity> findByIdAndStatusNot(UUID id, MasterDataLifecycleStatus status);
 
+  boolean existsByControlGroupIdAndStatusNot(UUID controlGroupId, MasterDataLifecycleStatus status);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   Optional<CentralControlEntity> findByCode(String code);
 

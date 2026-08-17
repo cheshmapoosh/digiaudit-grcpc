@@ -8,6 +8,7 @@ public record CentralControlSummaryResponse(
     UUID id,
     String code,
     String title,
+    UUID controlGroupId,
     MasterDataLifecycleStatus status,
     LocalDate validFrom,
     LocalDate validTo,

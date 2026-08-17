@@ -1,4 +1,5 @@
 {
+  "masterData.eyebrow": "Master Data",
   "masterData.title": "Master Data",
   "masterData.subtitle": "Manage the application's reference structures and catalogs.",
   "masterData.groups.structure": "Organization and Process Structures",

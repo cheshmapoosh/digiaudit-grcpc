@@ -1,90 +1,150 @@
 {
   "control": {
     "list": {
-      "title": "کنترل‌ها",
-      "search": "جستجو بر اساس نام کنترل"
+      "title": "ساختار کنترل‌ها",
+      "search": "جستجو بر اساس شناسه یا نام کنترل/گروه",
+      "empty": "هیچ گروه کنترل یا کنترلی ثبت نشده است."
     },
     "summary": {
       "title": "جزئیات کنترل",
-      "selectPrompt": "برای مشاهده جزئیات، یک کنترل را انتخاب کنید."
+      "selectPrompt": "برای مشاهده جزئیات، یک کنترل یا گروه کنترل را انتخاب کنید."
     },
-    "object": {
-      "title": "کنترل",
-      "notFound": "کنترل انتخاب‌شده یافت نشد."
+    "nodeType": { "group": "گروه کنترل", "control": "کنترل" },
+    "group": {
+      "createTitle": "ایجاد گروه کنترل",
+      "viewTitle": "مشاهده گروه کنترل",
+      "editTitle": "ویرایش گروه کنترل",
+      "valueHelpTitle": "انتخاب گروه کنترل",
+      "noParent": "بدون گروه",
+      "search": "جستجوی گروه کنترل"
     },
+    "object": { "title": "کنترل", "notFound": "کنترل انتخاب‌شده یافت نشد." },
     "create": { "title": "ایجاد کنترل" },
     "view": { "title": "مشاهده کنترل" },
     "edit": { "title": "ویرایش کنترل" },
     "delete": {
-      "title": "حذف کنترل",
-      "confirm": "آیا از حذف کنترل «{{title}}» مطمئن هستید؟"
+      "title": "حذف",
+      "confirm": "آیا از حذف «{{title}}» مطمئن هستید؟"
     },
     "tabs": {
       "general": "اطلاعات کلی",
+      "subprocesses": "زیرفرآیندها",
       "regulations": "قوانین",
       "requirements": "الزام‌ها",
-      "risks": "ریسک",
-      "accountGroups": "گروه حساب",
+      "risks": "ریسک‌ها",
+      "accountGroups": "گروه حساب‌ها",
       "documents": "مستندات"
     },
     "fields": {
       "code": "شناسه",
       "name": "نام",
       "description": "شرح",
+      "parentGroup": "گروه والد",
+      "controlGroup": "گروه کنترل",
       "controlClass": "طبقه کنترل",
       "importance": "اهمیت",
+      "controlRisk": "ریسک کنترل",
       "automationType": "اتوماسیون کنترل",
       "controlPurpose": "هدف",
+      "nature": "ماهیت",
+      "controlRelevance": "حوزه‌های کنترلی",
+      "triggerType": "محرک اجرا",
+      "eventDescription": "شرح رخداد",
+      "operationFrequency": "تناوب اجرا",
+      "toBeTested": "نیاز به آزمون",
+      "testAutomationType": "نحوه آزمون",
+      "testingTechnique": "روش آزمون",
+      "evidenceLevel": "سطح شواهد",
+      "testPlan": "برنامه آزمون",
       "status": "وضعیت",
+      "validity": "بازه اعتبار",
       "validFrom": "تاریخ اعتبار از",
       "validTo": "تاریخ اعتبار تا",
       "createdAt": "تاریخ ایجاد",
       "updatedAt": "تاریخ بروزرسانی"
     },
-    "controlClass": {
-      "ACTIVITY_LEVEL": "سطح فعالیت",
-      "ENTITY_LEVEL": "سطح کلی"
+    "controlClass": { "ACTIVITY_LEVEL": "سطح فعالیت", "ENTITY_LEVEL": "سطح کلی" },
+    "importance": { "PRIMARY": "اصلی", "SECONDARY": "ثانویه" },
+    "controlRisk": { "LOW": "کم", "MEDIUM": "متوسط", "HIGH": "زیاد" },
+    "automationType": { "MANUAL": "دستی", "SYSTEM": "سیستمی", "SEMI_AUTOMATED": "نیمه‌دستی/سیستمی" },
+    "controlPurpose": { "PREVENTIVE": "پیشگیرانه", "DETECTIVE": "کشف‌کننده" },
+    "nature": {
+      "ADJUSTMENT": "اصلاح / تعدیل",
+      "AUTHORIZATION": "مجوز / تأیید",
+      "INITIATION": "آغاز",
+      "MATCH": "تطبیق",
+      "PROCESSING": "پردازش",
+      "RECONCILIATION": "مغایرت‌گیری",
+      "RECORDING": "ثبت",
+      "RESTRICTED_ACCESS": "دسترسی محدود",
+      "REVIEW": "بازبینی",
+      "SAFEGUARDING_OF_ASSETS": "حفاظت از دارایی‌ها",
+      "SEGREGATION_OF_DUTIES": "تفکیک وظایف"
     },
-    "importance": {
-      "PRIMARY": "اصلی",
-      "SECONDARY": "ثانویه"
+    "controlRelevance": {
+      "CONTROL_ACTIVITIES": "فعالیت‌های کنترلی",
+      "CONTROL_ENVIRONMENT": "محیط کنترلی",
+      "INFORMATION_AND_COMMUNICATION": "اطلاعات و ارتباطات",
+      "MONITORING": "پایش",
+      "FRAUD_PREVENTION_AND_DETECTION": "پیشگیری و کشف تقلب",
+      "RISK_ASSESSMENT": "ارزیابی ریسک"
     },
-    "automationType": {
-      "MANUAL": "دستی",
-      "SYSTEM": "سیستمی",
-      "SEMI_AUTOMATED": "نیمه‌دستی/سیستمی"
+    "triggerType": { "EVENT": "رخداد", "DATE": "زمان" },
+    "operationFrequency": {
+      "ANNUAL": "سالانه",
+      "BI_WEEKLY": "دوهفته‌ای",
+      "CONTINUAL": "مستمر",
+      "DAILY": "روزانه",
+      "MONTHLY": "ماهانه",
+      "QUARTERLY": "فصلی",
+      "SEMI_MONTHLY": "نیمه‌ماهانه",
+      "WEEKLY": "هفتگی"
     },
-    "controlPurpose": {
-      "PREVENTIVE": "پیشگیرانه",
-      "DETECTIVE": "کشف‌کننده"
+    "testAutomationType": { "AUTOMATED": "سیستمی", "MANUAL": "دستی", "SEMI_AUTOMATED": "نیمه‌سیستمی / نیمه‌دستی" },
+    "testingTechnique": {
+      "ATTRIBUTE_SAMPLING": "نمونه‌گیری ویژگی‌ها",
+      "DOCUMENT_INSPECTION_WITH_INQUIRY": "بررسی مستندات همراه با پرس‌وجو",
+      "CONTROL_OBSERVATION_WITH_INQUIRY": "مشاهده اجرای کنترل همراه با پرس‌وجو",
+      "CONTROL_REPERFORMANCE_WITH_INQUIRY": "اجرای مجدد کنترل همراه با پرس‌وجو"
     },
-    "status": {
-      "ACTIVE": "فعال",
-      "INACTIVE": "غیرفعال",
-      "DELETED": "حذف‌شده"
+    "evidenceLevel": {
+      "NO_TESTING": "عدم آزمون",
+      "SELF_ASSESSMENT": "خودارزیابی",
+      "CONTROL_DESIGN_AND_EFFECTIVENESS": "ارزیابی طراحی و اثربخشی کنترل",
+      "NOT_APPLICABLE": "کاربرد ندارد"
     },
+    "testPlan": { "deferred": "در این مرحله غیرفعال است" },
+    "status": { "ACTIVE": "فعال", "INACTIVE": "غیرفعال", "DELETED": "حذف‌شده" },
     "actions": {
       "view": "مشاهده",
-      "submit": "ثبت"
+      "submit": "ثبت",
+      "selectAll": "انتخاب همه",
+      "clearSelection": "پاک‌کردن انتخاب‌ها"
     },
     "validation": {
       "codeRequired": "شناسه کنترل الزامی است.",
       "nameRequired": "نام کنترل الزامی است.",
+      "groupRequired": "شناسه و نام گروه کنترل الزامی است.",
       "invalidDate": "تاریخ واردشده معتبر نیست.",
       "invalidValidityRange": "بازه اعتبار معتبر نیست.",
       "documentsNotReady": "مستندات موقت هنوز برای ثبت نهایی آماده نیستند."
     },
     "errors": {
-      "loadList": "خطا در بارگذاری کنترل‌ها.",
-      "loadDetail": "خطا در بارگذاری جزئیات کنترل.",
+      "loadList": "خطا در بارگذاری ساختار کنترل‌ها.",
+      "loadDetail": "خطا در بارگذاری جزئیات.",
       "create": "خطا در ایجاد کنترل.",
       "update": "خطا در ویرایش کنترل.",
-      "delete": "خطا در حذف کنترل.",
-      "duplicateCode": "شناسه کنترل تکراری است.",
-      "notFound": "کنترل انتخاب‌شده یافت نشد.",
-      "versionConflict": "کنترل توسط کاربر دیگری تغییر کرده است. اطلاعات را دوباره بارگذاری کنید.",
-      "invalidStatus": "وضعیت کنترل در ویرایش فقط می‌تواند فعال یا غیرفعال باشد.",
-      "dependencies": "به دلیل وجود وابستگی، حذف این کنترل امکان‌پذیر نیست."
+      "createGroup": "خطا در ایجاد گروه کنترل.",
+      "updateGroup": "خطا در ویرایش گروه کنترل.",
+      "delete": "خطا در حذف.",
+      "duplicateCode": "شناسه تکراری است.",
+      "notFound": "آیتم انتخاب‌شده یافت نشد.",
+      "versionConflict": "اطلاعات توسط کاربر دیگری تغییر کرده است. دوباره بارگذاری کنید.",
+      "invalidStatus": "وضعیت فقط می‌تواند فعال یا غیرفعال باشد.",
+      "invalidParent": "گروه والد انتخاب‌شده معتبر نیست.",
+      "invalidFrequency": "تناوب اجرا فقط برای محرک زمانی قابل انتخاب است.",
+      "invalidEventDescription": "شرح رخداد فقط برای محرک رخداد قابل ثبت است.",
+      "dependencies": "به دلیل وجود زیرمجموعه یا وابستگی، حذف امکان‌پذیر نیست."
     }
   }
 }

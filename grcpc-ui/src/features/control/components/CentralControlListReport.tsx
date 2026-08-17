@@ -1,135 +1,104 @@
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Bar,
-  Button,
-  BusyIndicator,
-  Input,
-  List,
-  ListItemCustom,
-  MessageStrip,
-  Text,
-  Title,
-} from "@ui5/webcomponents-react";
+import { Bar, Button, BusyIndicator, Input, MessageStrip, Title } from "@ui5/webcomponents-react";
 
-import type { CentralControlSummary } from "../domain/centralControl.model";
+import type {
+  CentralControlGroupSummary,
+  CentralControlNodeType,
+  CentralControlSummary,
+} from "../domain/centralControl.model";
+import type { CentralControlTreeNode } from "../utils/centralControl.tree";
+import CentralControlTree from "./CentralControlTree";
+import ControlCreateMenu from "./ControlCreateMenu";
 
-export interface CentralControlListReportProps {
-  items: CentralControlSummary[];
+interface Props {
+  groups: CentralControlGroupSummary[];
+  controls: CentralControlSummary[];
   selectedId: string | null;
+  expansionAnchorId?: string | null;
   searchText: string;
-  busy?: boolean;
-  error?: string | null;
+  busy: boolean;
+  error: string | null;
   canCreate: boolean;
   canDelete: boolean;
+  allowedCreateTypes: CentralControlNodeType[];
   onErrorClose: () => void;
   onSearchTextChange: (value: string) => void;
-  onCreate: () => void;
-  onShow: (id: string) => void;
-  onDelete: (id: string) => void;
-  onSelect: (id: string) => void;
+  onCreate: (type: CentralControlNodeType) => void;
+  onShow: () => void;
+  onDelete: () => void;
+  onSelect: (node: CentralControlTreeNode) => void;
 }
 
 export default function CentralControlListReport({
-  items,
+  groups,
+  controls,
   selectedId,
+  expansionAnchorId,
   searchText,
-  busy = false,
+  busy,
   error,
   canCreate,
   canDelete,
+  allowedCreateTypes,
   onErrorClose,
   onSearchTextChange,
   onCreate,
   onShow,
   onDelete,
   onSelect,
-}: CentralControlListReportProps) {
+}: Props) {
   const { t } = useTranslation();
-  const actionButtonStyle = useMemo(() => ({ minWidth: "8rem" }), []);
-  const visibleItems = useMemo(() => {
-    const query = searchText.trim().toLocaleLowerCase();
-    if (!query) return items;
-    return items.filter((item) => item.title.toLocaleLowerCase().includes(query));
-  }, [items, searchText]);
+  const actionButtonStyle = useMemo<CSSProperties>(() => ({ minWidth: "8rem" }), []);
+  const actionGroupStyle = useMemo<CSSProperties>(
+    () => ({ display: "inline-flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", whiteSpace: "nowrap" }),
+    [],
+  );
 
   return (
     <div className="controlListReport">
       <Bar
         startContent={<Title level="H4">{t("control.list.title")}</Title>}
         endContent={
-          <>
-            <Button
-              design="Emphasized"
+          <div style={actionGroupStyle}>
+            <ControlCreateMenu
               disabled={busy || !canCreate}
               style={actionButtonStyle}
-              onClick={onCreate}
-            >
-              {t("common.create", { defaultValue: "ایجاد" })}
-            </Button>
-            <Button
-              design="Emphasized"
-              disabled={busy || !selectedId}
-              style={actionButtonStyle}
-              onClick={() => selectedId && onShow(selectedId)}
-            >
-              {t("control.actions.view")}
+              nodeTypes={allowedCreateTypes}
+              onCreate={onCreate}
+            />
+            <Button design="Emphasized" disabled={busy || !selectedId} style={actionButtonStyle} onClick={onShow}>
+              {t("common.view", { defaultValue: "نمایش" })}
             </Button>
             <Button
               design="Negative"
               disabled={busy || !selectedId || !canDelete}
               style={{ ...actionButtonStyle, marginInlineStart: "0.75rem" }}
-              onClick={() => selectedId && onDelete(selectedId)}
+              onClick={onDelete}
             >
               {t("common.delete", { defaultValue: "حذف" })}
             </Button>
-          </>
+          </div>
         }
       />
-
       <Input
         value={searchText}
         disabled={busy}
         placeholder={t("control.list.search")}
         onInput={(event) => onSearchTextChange(event.target.value)}
       />
-
-      {error ? (
-        <MessageStrip design="Negative" onClose={onErrorClose}>
-          {error}
-        </MessageStrip>
-      ) : null}
-
-      <div className="controlListBody">
+      {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
+      <div className="controlTreeFrame">
         {busy ? <BusyIndicator active delay={0} /> : null}
-        <List separators="Inner" accessibleName={t("control.list.title")}>
-          {visibleItems.map((item, index) => (
-            <ListItemCustom
-              key={item.id}
-              type="Active"
-              selected={item.id === selectedId}
-              onClick={() => {
-                if (item.id !== selectedId) onSelect(item.id);
-              }}
-            >
-              <div
-                dir="rtl"
-                style={{
-                  width: "100%",
-                  display: "grid",
-                  gridTemplateColumns: "4rem minmax(0, 1fr)",
-                  alignItems: "center",
-                  columnGap: "1rem",
-                  boxSizing: "border-box",
-                  paddingInline: "0.5rem",
-                }}
-              >
-                <Text style={{ textAlign: "right" }}>{index + 1}</Text>
-                <Text style={{ textAlign: "right" }}>{item.title}</Text>
-              </div>
-            </ListItemCustom>
-          ))}
-        </List>
+        <CentralControlTree
+          groups={groups}
+          controls={controls}
+          selectedId={selectedId}
+          expansionAnchorId={expansionAnchorId}
+          searchText={searchText}
+          busy={busy}
+          onSelect={onSelect}
+        />
       </div>
     </div>
   );

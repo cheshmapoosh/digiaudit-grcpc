@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Icon, List, ListItemStandard, Title } from "@ui5/webcomponents-react";
+import { Icon, Title } from "@ui5/webcomponents-react";
 
 import "./master-data.css";
 
@@ -14,6 +14,7 @@ type MasterDataItem = {
     icon: string;
     route: string;
     group: "structure" | "catalog";
+    iconTone: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 };
 
 const MASTER_DATA_ITEMS: MasterDataItem[] = [
@@ -26,6 +27,7 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         icon: "org-chart",
         route: "/organizations",
         group: "structure",
+        iconTone: 6,
     },
     {
         key: "processes",
@@ -36,6 +38,7 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         icon: "process",
         route: "/processes",
         group: "structure",
+        iconTone: 8,
     },
     {
         key: "controls",
@@ -46,6 +49,7 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         icon: "validate",
         route: "/controls",
         group: "catalog",
+        iconTone: 2,
     },
     {
         key: "objectives",
@@ -56,6 +60,7 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         icon: "activity-assigned-to-goal",
         route: "/control-objectives",
         group: "catalog",
+        iconTone: 3,
     },
     {
         key: "regulations",
@@ -66,6 +71,7 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         icon: "official-service",
         route: "/regulations",
         group: "catalog",
+        iconTone: 5,
     },
     {
         key: "risks",
@@ -76,6 +82,7 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         icon: "quality-issue",
         route: "/risks",
         group: "catalog",
+        iconTone: 1,
     },
     {
         key: "accountGroups",
@@ -86,6 +93,7 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         icon: "accounting-document-verification",
         route: "/account-groups",
         group: "catalog",
+        iconTone: 7,
     },
     {
         key: "policies",
@@ -96,6 +104,7 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         icon: "document-text",
         route: "/policies",
         group: "catalog",
+        iconTone: 4,
     },
 ];
 
@@ -137,9 +146,15 @@ export default function MasterDataFeaturePage() {
 
     return (
         <section className="masterDataPage" aria-labelledby="master-data-page-title">
-            <header className="masterDataHeader">
-                <div>
-                    <Title id="master-data-page-title" level="H3" size="H3">
+            <header className="masterDataHero">
+                <div className="masterDataHeroIcon" aria-hidden="true">
+                    <Icon name="database" />
+                </div>
+                <div className="masterDataHeroText">
+                    <span className="masterDataEyebrow">
+                        {t("masterData.eyebrow", { defaultValue: "Master Data" })}
+                    </span>
+                    <Title id="master-data-page-title" level="H2" size="H2">
                         {t("masterData.title", { defaultValue: "اطلاعات پایه" })}
                     </Title>
                     <p className="masterDataSubtitle">
@@ -153,23 +168,32 @@ export default function MasterDataFeaturePage() {
             <div className="masterDataSections">
                 {groups.map((group) => (
                     <section key={group.key} className="masterDataSection">
-                        <Title level="H4" size="H4">{group.title}</Title>
-                        <List className="masterDataList" separators="Inner">
+                        <div className="masterDataSectionHeader">
+                            <Title level="H4" size="H4">{group.title}</Title>
+                        </div>
+
+                        <div className="masterDataTileGrid">
                             {group.items.map((item) => (
-                                <ListItemStandard
+                                <button
                                     key={item.key}
-                                    type="Active"
-                                    description={item.description}
-                                    additionalText={t("masterData.open", {
-                                        defaultValue: "ورود",
-                                    })}
+                                    type="button"
+                                    className="masterDataTile"
                                     onClick={() => navigate(item.route)}
+                                    aria-label={`${item.title} — ${item.description}`}
                                 >
-                                    <Icon name={item.icon} slot="image" />
-                                    {item.title}
-                                </ListItemStandard>
+                                    <span
+                                        className={`masterDataTileIcon masterDataTileIconTone${item.iconTone}`}
+                                        aria-hidden="true"
+                                    >
+                                        <Icon name={item.icon} />
+                                    </span>
+                                    <span className="masterDataTileBody">
+                                        <span className="masterDataTileTitle">{item.title}</span>
+                                        <span className="masterDataTileDescription">{item.description}</span>
+                                    </span>
+                                </button>
                             ))}
-                        </List>
+                        </div>
                     </section>
                 ))}
             </div>

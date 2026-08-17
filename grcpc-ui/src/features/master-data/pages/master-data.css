@@ -1,54 +1,224 @@
 .masterDataPage {
     min-height: 100%;
+    padding: 1.5rem 1.5rem 2.5rem;
+    box-sizing: border-box;
     background: var(--sapBackgroundColor);
-    padding-bottom: 2rem;
 }
 
-.masterDataHeader {
-    min-height: 5.5rem;
-    padding: 1rem 1.5rem;
+.masterDataHero {
+    width: min(76rem, 100%);
+    margin: 0 auto;
+    padding: 1.25rem 1.5rem;
+    box-sizing: border-box;
     direction: rtl;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    background: var(--sapList_HeaderBackground);
-    border-bottom: 1px solid var(--sapList_BorderColor);
+    gap: 1rem;
+    border: 1px solid var(--sapGroup_ContentBorderColor);
+    border-top: 3px solid var(--sapBrandColor, var(--sapInformativeColor));
+    border-radius: 0.5rem;
+    background: var(--sapGroup_ContentBackground);
+}
+
+.masterDataHeroIcon {
+    width: 3.75rem;
+    height: 3.75rem;
+    flex: 0 0 3.75rem;
+    display: grid;
+    place-items: center;
+    border-radius: 0.4rem;
+    color: var(--sapBrandColor, var(--sapInformativeColor));
+    background: color-mix(in srgb, var(--sapBrandColor, var(--sapInformativeColor)) 8%, var(--sapList_Background));
+    border: 1px solid color-mix(in srgb, var(--sapBrandColor, var(--sapInformativeColor)) 18%, var(--sapGroup_ContentBorderColor));
+}
+
+.masterDataHeroIcon ui5-icon {
+    width: 1.9rem;
+    height: 1.9rem;
+}
+
+.masterDataHeroText {
+    min-width: 0;
+}
+
+.masterDataEyebrow {
+    display: inline-block;
+    margin-bottom: 0.15rem;
+    color: var(--sapContent_LabelColor);
+    font-size: var(--sapFontSmallSize);
+    font-weight: 700;
+    letter-spacing: 0.03em;
 }
 
 .masterDataSubtitle {
     margin: 0.35rem 0 0;
+    max-width: 48rem;
     color: var(--sapContent_LabelColor);
+    line-height: 1.8;
 }
 
 .masterDataSections {
-    width: min(72rem, calc(100% - 3rem));
-    margin: 1.5rem auto 0;
+    width: min(76rem, 100%);
+    margin: 1.25rem auto 0;
     direction: rtl;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.5rem;
+    gap: 1.25rem;
 }
 
 .masterDataSection {
     min-width: 0;
-    padding: 1rem;
+    padding: 0;
     border: 1px solid var(--sapGroup_ContentBorderColor);
     border-radius: 0.5rem;
     background: var(--sapGroup_ContentBackground);
-    box-shadow: var(--sapContent_Shadow0);
+    overflow: hidden;
 }
 
-.masterDataList {
-    margin-top: 0.75rem;
+.masterDataSectionHeader {
+    display: flex;
+    align-items: center;
+    min-height: 3.25rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--sapGroup_ContentBorderColor);
+    background: var(--sapList_HeaderBackground);
 }
 
-.masterDataList ui5-li {
+.masterDataTileGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    padding: 1px;
+    background: var(--sapGroup_ContentBorderColor);
+}
+
+.masterDataTile {
+    min-width: 0;
+    min-height: 7.75rem;
+    padding: 1rem 1.1rem;
+    box-sizing: border-box;
+    border: 0;
+    border-inline-start: 3px solid transparent;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "icon body";
+    align-items: center;
+    gap: 0.95rem;
     direction: rtl;
+    text-align: start;
+    color: var(--sapTextColor);
+    background: var(--sapList_Background);
+    cursor: pointer;
+    font: inherit;
+    appearance: none;
+    transition:
+        background-color 120ms ease,
+        border-color 120ms ease;
 }
 
-@media (max-width: 56rem) {
-    .masterDataSections {
+.masterDataTile:hover {
+    border-inline-start-color: var(--sapBrandColor, var(--sapInformativeColor));
+    background: var(--sapList_Hover_Background, var(--sapList_Background));
+}
+
+.masterDataTile:active {
+    background: var(--sapList_Active_Background, var(--sapList_Background));
+}
+
+.masterDataTile:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid var(--sapContent_FocusColor);
+    outline-offset: -2px;
+}
+
+.masterDataTileIcon {
+    --master-data-icon-accent: var(--sapBrandColor, var(--sapInformativeColor));
+
+    grid-area: icon;
+    width: 3.1rem;
+    height: 3.1rem;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 0.45rem;
+    color: var(--master-data-icon-accent);
+    background: color-mix(in srgb, var(--master-data-icon-accent) 9%, var(--sapGroup_ContentBackground));
+    border: 1px solid color-mix(in srgb, var(--master-data-icon-accent) 18%, var(--sapGroup_ContentBorderColor));
+}
+
+.masterDataTileIcon ui5-icon {
+    width: 1.55rem;
+    height: 1.55rem;
+}
+
+.masterDataTileIconTone1 { --master-data-icon-accent: var(--sapAccentColor1, var(--sapNegativeColor)); }
+.masterDataTileIconTone2 { --master-data-icon-accent: var(--sapAccentColor2, var(--sapCriticalColor)); }
+.masterDataTileIconTone3 { --master-data-icon-accent: var(--sapAccentColor3, var(--sapPositiveColor)); }
+.masterDataTileIconTone4 { --master-data-icon-accent: var(--sapAccentColor4, var(--sapInformativeColor)); }
+.masterDataTileIconTone5 { --master-data-icon-accent: var(--sapAccentColor5, var(--sapCriticalColor)); }
+.masterDataTileIconTone6 { --master-data-icon-accent: var(--sapAccentColor6, var(--sapInformativeColor)); }
+.masterDataTileIconTone7 { --master-data-icon-accent: var(--sapAccentColor7, var(--sapPositiveColor)); }
+.masterDataTileIconTone8 { --master-data-icon-accent: var(--sapAccentColor8, var(--sapInformativeColor)); }
+
+.masterDataTileBody {
+    grid-area: body;
+    min-width: 0;
+    display: grid;
+    gap: 0.3rem;
+}
+
+.masterDataTileTitle {
+    color: var(--sapTextColor);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.masterDataTileDescription {
+    color: var(--sapContent_LabelColor);
+    font-size: var(--sapFontSmallSize);
+    line-height: 1.65;
+}
+
+@media (min-width: 70rem) {
+    .masterDataSection:first-child .masterDataTileGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .masterDataSection:last-child .masterDataTileGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 48rem) {
+    .masterDataPage {
+        padding: 1rem 0.75rem 2rem;
+    }
+
+    .masterDataHero {
+        padding: 1rem;
+        align-items: flex-start;
+    }
+
+    .masterDataHeroIcon {
+        width: 3.1rem;
+        height: 3.1rem;
+        flex-basis: 3.1rem;
+    }
+
+    .masterDataTileGrid {
         grid-template-columns: 1fr;
-        width: calc(100% - 2rem);
+    }
+}
+
+@media (max-width: 32rem) {
+    .masterDataHeroIcon {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .masterDataTile {
+        transition: none;
     }
 }

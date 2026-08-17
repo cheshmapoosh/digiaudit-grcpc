@@ -1,90 +1,34 @@
 {
   "control": {
-    "list": {
-      "title": "Controls",
-      "search": "Search by control name"
-    },
-    "summary": {
-      "title": "Control details",
-      "selectPrompt": "Select a control to view its details."
-    },
-    "object": {
-      "title": "Control",
-      "notFound": "The selected control was not found."
-    },
+    "list": { "title": "Control Structure", "search": "Search control/group by code or name", "empty": "No control group or control has been registered." },
+    "summary": { "title": "Control Details", "selectPrompt": "Select a control or control group to view details." },
+    "nodeType": { "group": "Control Group", "control": "Control" },
+    "group": { "createTitle": "Create Control Group", "viewTitle": "View Control Group", "editTitle": "Edit Control Group", "valueHelpTitle": "Select Control Group", "noParent": "No group", "search": "Search control groups" },
+    "object": { "title": "Control", "notFound": "The selected control was not found." },
     "create": { "title": "Create Control" },
     "view": { "title": "View Control" },
     "edit": { "title": "Edit Control" },
-    "delete": {
-      "title": "Delete Control",
-      "confirm": "Are you sure you want to delete control “{{title}}”?"
-    },
-    "tabs": {
-      "general": "General Information",
-      "regulations": "Regulations",
-      "requirements": "Requirements",
-      "risks": "Risk",
-      "accountGroups": "Account Group",
-      "documents": "Documents"
-    },
+    "delete": { "title": "Delete", "confirm": "Are you sure you want to delete “{{title}}”?" },
+    "tabs": { "general": "General", "subprocesses": "Subprocesses", "regulations": "Regulations", "requirements": "Requirements", "risks": "Risks", "accountGroups": "Account Groups", "documents": "Documents" },
     "fields": {
-      "code": "Identifier",
-      "name": "Name",
-      "description": "Description",
-      "controlClass": "Control Class",
-      "importance": "Importance",
-      "automationType": "Control Automation",
-      "controlPurpose": "Purpose",
-      "status": "Status",
-      "validFrom": "Valid From",
-      "validTo": "Valid To",
-      "createdAt": "Created At",
-      "updatedAt": "Updated At"
+      "code": "Code", "name": "Name", "description": "Description", "parentGroup": "Parent Group", "controlGroup": "Control Group", "controlClass": "Control Class", "importance": "Importance", "controlRisk": "Control Risk", "automationType": "Control Automation", "controlPurpose": "Purpose", "nature": "Nature", "controlRelevance": "Control Relevance", "triggerType": "Execution Trigger", "eventDescription": "Event Description", "operationFrequency": "Execution Frequency", "toBeTested": "To Be Tested", "testAutomationType": "Test Automation", "testingTechnique": "Testing Technique", "evidenceLevel": "Level of Evidence", "testPlan": "Test Plan", "status": "Status", "validity": "Validity", "validFrom": "Valid From", "validTo": "Valid To", "createdAt": "Created At", "updatedAt": "Updated At"
     },
-    "controlClass": {
-      "ACTIVITY_LEVEL": "Activity Level",
-      "ENTITY_LEVEL": "Entity Level"
-    },
-    "importance": {
-      "PRIMARY": "Primary",
-      "SECONDARY": "Secondary"
-    },
-    "automationType": {
-      "MANUAL": "Manual",
-      "SYSTEM": "System",
-      "SEMI_AUTOMATED": "Semi-automated"
-    },
-    "controlPurpose": {
-      "PREVENTIVE": "Preventive",
-      "DETECTIVE": "Detective"
-    },
-    "status": {
-      "ACTIVE": "Active",
-      "INACTIVE": "Inactive",
-      "DELETED": "Deleted"
-    },
-    "actions": {
-      "view": "View",
-      "submit": "Save"
-    },
-    "validation": {
-      "codeRequired": "Control identifier is required.",
-      "nameRequired": "Control name is required.",
-      "invalidDate": "The entered date is invalid.",
-      "invalidValidityRange": "The validity range is invalid.",
-      "documentsNotReady": "Temporary document drafts are not ready to be finalized."
-    },
-    "errors": {
-      "loadList": "Failed to load controls.",
-      "loadDetail": "Failed to load control details.",
-      "create": "Failed to create control.",
-      "update": "Failed to update control.",
-      "delete": "Failed to delete control.",
-      "duplicateCode": "The control identifier already exists.",
-      "notFound": "The selected control was not found.",
-      "versionConflict": "The control was changed by another user. Reload the data and try again.",
-      "invalidStatus": "A control can only be Active or Inactive while editing.",
-      "dependencies": "This control cannot be deleted because dependencies exist."
-    }
+    "controlClass": { "ACTIVITY_LEVEL": "Activity Level", "ENTITY_LEVEL": "Entity Level" },
+    "importance": { "PRIMARY": "Primary", "SECONDARY": "Secondary" },
+    "controlRisk": { "LOW": "Low", "MEDIUM": "Medium", "HIGH": "High" },
+    "automationType": { "MANUAL": "Manual", "SYSTEM": "Automated", "SEMI_AUTOMATED": "Semi-Automated" },
+    "controlPurpose": { "PREVENTIVE": "Preventive", "DETECTIVE": "Detective" },
+    "nature": { "ADJUSTMENT": "Adjustment", "AUTHORIZATION": "Authorization", "INITIATION": "Initiation", "MATCH": "Match", "PROCESSING": "Processing", "RECONCILIATION": "Reconciliation", "RECORDING": "Recording", "RESTRICTED_ACCESS": "Restricted Access", "REVIEW": "Review", "SAFEGUARDING_OF_ASSETS": "Safeguarding of Assets", "SEGREGATION_OF_DUTIES": "Segregation of Duties" },
+    "controlRelevance": { "CONTROL_ACTIVITIES": "Control Activities", "CONTROL_ENVIRONMENT": "Control Environment", "INFORMATION_AND_COMMUNICATION": "Information and Communication", "MONITORING": "Monitoring", "FRAUD_PREVENTION_AND_DETECTION": "Fraud Prevention and Detection", "RISK_ASSESSMENT": "Risk Assessment" },
+    "triggerType": { "EVENT": "Event", "DATE": "Date" },
+    "operationFrequency": { "ANNUAL": "Annual", "BI_WEEKLY": "Bi-Weekly", "CONTINUAL": "Continual", "DAILY": "Daily", "MONTHLY": "Monthly", "QUARTERLY": "Quarterly", "SEMI_MONTHLY": "Semi-Monthly", "WEEKLY": "Weekly" },
+    "testAutomationType": { "AUTOMATED": "Automated", "MANUAL": "Manual", "SEMI_AUTOMATED": "Semi-Automated" },
+    "testingTechnique": { "ATTRIBUTE_SAMPLING": "Attribute sampling", "DOCUMENT_INSPECTION_WITH_INQUIRY": "Inspection of documentation corroborated by inquiry", "CONTROL_OBSERVATION_WITH_INQUIRY": "Observation of control corroborated by inquiry", "CONTROL_REPERFORMANCE_WITH_INQUIRY": "Reperformance of control corroborated by inquiry" },
+    "evidenceLevel": { "NO_TESTING": "No Testing", "SELF_ASSESSMENT": "Self-Assessment", "CONTROL_DESIGN_AND_EFFECTIVENESS": "Control Design Assessment + Control Effectiveness", "NOT_APPLICABLE": "N/A" },
+    "testPlan": { "deferred": "Disabled in this phase" },
+    "status": { "ACTIVE": "Active", "INACTIVE": "Inactive", "DELETED": "Deleted" },
+    "actions": { "view": "View", "submit": "Save", "selectAll": "Select all", "clearSelection": "Clear selection" },
+    "validation": { "codeRequired": "Control code is required.", "nameRequired": "Control name is required.", "groupRequired": "Control group code and name are required.", "invalidDate": "The entered date is invalid.", "invalidValidityRange": "The validity range is invalid.", "documentsNotReady": "Temporary documents are not ready for final save." },
+    "errors": { "loadList": "Failed to load control structure.", "loadDetail": "Failed to load details.", "create": "Failed to create control.", "update": "Failed to update control.", "createGroup": "Failed to create control group.", "updateGroup": "Failed to update control group.", "delete": "Failed to delete.", "duplicateCode": "The code is duplicated.", "notFound": "The selected item was not found.", "versionConflict": "The item was changed by another user. Reload and try again.", "invalidStatus": "Status must be Active or Inactive.", "invalidParent": "The selected parent group is invalid.", "invalidFrequency": "Execution frequency is only valid for a date trigger.", "invalidEventDescription": "Event description is only valid for an event trigger.", "dependencies": "The item cannot be deleted because it has children or dependencies." }
   }
 }

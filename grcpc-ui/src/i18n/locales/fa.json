@@ -120,6 +120,29 @@
       "copyright": "© {{year}} {{company}} — {{product}} v{{version}}"
     }
   },
+  "ui5": {
+    "multiComboBox": {
+      "selectAll": "انتخاب همه ({{selected}} از {{total}})",
+      "items": "{{count}} آیتم",
+      "moreItems": "{{count}} مورد دیگر",
+      "clearAll": "پاک‌کردن همه"
+    },
+    "uploadCollection": {
+      "cancel": "انصراف",
+      "rename": "تغییر نام",
+      "error": "متوقف‌شده",
+      "ready": "در انتظار",
+      "uploading": "در حال بارگذاری",
+      "terminate": "توقف",
+      "retry": "تلاش دوباره",
+      "edit": "ویرایش",
+      "noData": "فایلی وجود ندارد",
+      "noDataDescription": "برای بارگذاری، فایل را انتخاب کنید.",
+      "ariaRole": "مجموعه فایل‌های بارگذاری",
+      "dragHere": "فایل‌ها را اینجا بکشید",
+      "dropHere": "برای بارگذاری، فایل‌ها را اینجا رها کنید"
+    }
+  },
   "common.active": "فعال",
   "common.inactive": "غیرفعال",
   "common.invalidPersianDate": "تاریخ معتبر تقویم فارسی را وارد کنید.",
