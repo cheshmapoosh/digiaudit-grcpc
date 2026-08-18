@@ -31,6 +31,16 @@ function localizedNumber(value: number | string | undefined): string {
     return new Intl.NumberFormat(isPersian() ? "fa-IR" : "en-US", { useGrouping: false }).format(numeric);
 }
 
+function numericParam(value: number | string | undefined): number {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function localizeDigits(value: string): string {
+    if (!isPersian()) return value;
+    return value.replace(/\d+/g, (digits) => localizedNumber(Number(digits)));
+}
+
 function translatedUi5Text(key: string, params: Array<number | string>): string | null {
     if (!isPersian()) return null;
 
@@ -41,9 +51,13 @@ function translatedUi5Text(key: string, params: Array<number | string>): string 
                 total: localizedNumber(params[1]),
             });
         case "TOKENIZER_SHOW_ALL_ITEMS":
-            return i18n.t("ui5.multiComboBox.items", { count: localizedNumber(params[0]) });
+            return localizeDigits(
+                i18n.t("ui5.multiComboBox.items", { count: numericParam(params[0]) }),
+            );
         case "MULTIINPUT_SHOW_MORE_TOKENS":
-            return i18n.t("ui5.multiComboBox.moreItems", { count: localizedNumber(params[0]) });
+            return localizeDigits(
+                i18n.t("ui5.multiComboBox.moreItems", { count: numericParam(params[0]) }),
+            );
         case "TOKENIZER_CLEAR_ALL":
             return i18n.t("ui5.multiComboBox.clearAll");
         case "UPLOADCOLLECTIONITEM_CANCELBUTTON_TEXT":
