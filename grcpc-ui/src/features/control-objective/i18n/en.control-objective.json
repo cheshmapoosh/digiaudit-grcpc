@@ -2,7 +2,8 @@
   "controlObjective": {
     "list": {
       "title": "Control Objectives",
-      "search": "Search by control objective name"
+      "search": "Search by control objective name",
+      "empty": "No control objectives have been created."
     },
     "summary": {
       "title": "Control Objective details",

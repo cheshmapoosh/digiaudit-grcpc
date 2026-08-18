@@ -102,41 +102,47 @@ export default function CentralControlObjectiveListReport({
 
       <div className="controlObjectiveListBody">
         {busy ? <BusyIndicator active delay={0} /> : null}
-        <List
-          separators="Inner"
-          selectionMode="Single"
-          accessibleName={t("controlObjective.list.title")}
-          onSelectionChange={(event) => {
-            const selectedItem = event.detail.selectedItems[0];
-            const id = selectedItem?.dataset.controlObjectiveId;
-            if (id && id !== selectedId) onSelect(id);
-          }}
-        >
-          {visibleItems.map((item, index) => (
-            <ListItemCustom
-              key={item.id}
-              type="Active"
-              selected={item.id === selectedId}
-              data-control-objective-id={item.id}
-            >
-              <div
-                dir="rtl"
-                style={{
-                  width: "100%",
-                  display: "grid",
-                  gridTemplateColumns: "4rem minmax(0, 1fr)",
-                  alignItems: "center",
-                  columnGap: "1rem",
-                  boxSizing: "border-box",
-                  paddingInline: "0.5rem",
-                }}
+        {!busy && items.length === 0 ? (
+          <MessageStrip design="Information" hideCloseButton>
+            {t("controlObjective.list.empty")}
+          </MessageStrip>
+        ) : (
+          <List
+            separators="Inner"
+            selectionMode="Single"
+            accessibleName={t("controlObjective.list.title")}
+            onSelectionChange={(event) => {
+              const selectedItem = event.detail.selectedItems[0];
+              const id = selectedItem?.dataset.controlObjectiveId;
+              if (id && id !== selectedId) onSelect(id);
+            }}
+          >
+            {visibleItems.map((item, index) => (
+              <ListItemCustom
+                key={item.id}
+                type="Active"
+                selected={item.id === selectedId}
+                data-control-objective-id={item.id}
               >
-                <Text style={{ textAlign: "right" }}>{index + 1}</Text>
-                <Text style={{ textAlign: "right" }}>{item.title}</Text>
-              </div>
-            </ListItemCustom>
-          ))}
-        </List>
+                <div
+                  dir="rtl"
+                  style={{
+                    width: "100%",
+                    display: "grid",
+                    gridTemplateColumns: "4rem minmax(0, 1fr)",
+                    alignItems: "center",
+                    columnGap: "1rem",
+                    boxSizing: "border-box",
+                    paddingInline: "0.5rem",
+                  }}
+                >
+                  <Text style={{ textAlign: "right" }}>{index + 1}</Text>
+                  <Text style={{ textAlign: "right" }}>{item.title}</Text>
+                </div>
+              </ListItemCustom>
+            ))}
+          </List>
+        )}
       </div>
     </div>
   );
