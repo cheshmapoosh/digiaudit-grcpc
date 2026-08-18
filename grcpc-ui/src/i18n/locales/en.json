@@ -94,6 +94,7 @@
   "common.cancel": "Cancel",
   "common.noData": "No data",
   "common.error": "Error",
+  "common.networkError": "Unable to connect to the server. Please check your network connection and server availability.",
   "toast.success.generic": "Operation completed successfully.",
   "toast.success.created": "Record created successfully.",
   "toast.success.saved": "Changes saved successfully.",

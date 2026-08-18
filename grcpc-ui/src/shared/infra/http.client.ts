@@ -100,6 +100,16 @@ function getCurrentLanguage(): string {
     return i18n.resolvedLanguage || i18n.language || "fa";
 }
 
+function getNetworkErrorMessage(): string {
+    return i18n.t("common.networkError", {
+        defaultValue: "امکان ارتباط با سرور وجود ندارد. لطفاً اتصال شبکه و وضعیت سرور را بررسی کنید.",
+    });
+}
+
+function isAbortError(error: unknown): boolean {
+    return error instanceof Error && error.name === "AbortError";
+}
+
 function getDefaultSuccessMessage(method: HttpMethod, url: string): string | null {
     if (method === "GET") {
         return null;
@@ -181,23 +191,46 @@ async function request<T>(
 ): Promise<T> {
     const finalUrl = buildUrl(url);
     const hasBody = options.body !== undefined;
+    let response: Response;
 
-    const response = await fetch(finalUrl, {
-        method,
-        headers: {
-            Accept: "application/json",
-            "Accept-Language": getCurrentLanguage(),
-            ...(hasBody ? { "Content-Type": "application/json" } : {}),
-            ...options.headers,
-        },
-        body: hasBody ? JSON.stringify(options.body) : undefined,
-        signal: options.signal,
-        credentials: "include",
-    });
+    try {
+        response = await fetch(finalUrl, {
+            method,
+            headers: {
+                Accept: "application/json",
+                "Accept-Language": getCurrentLanguage(),
+                ...(hasBody ? { "Content-Type": "application/json" } : {}),
+                ...options.headers,
+            },
+            body: hasBody ? JSON.stringify(options.body) : undefined,
+            signal: options.signal,
+            credentials: "include",
+        });
+    } catch (error) {
+        if (isAbortError(error)) {
+            throw error;
+        }
+
+        throw new HttpError(
+            getNetworkErrorMessage(),
+            0,
+            "NETWORK_ERROR",
+        );
+    }
 
     const payload = await parseResponseBody(response);
+    const errorCode = extractErrorCode(payload);
 
     if (!response.ok) {
+        if (errorCode === "NETWORK_ERROR") {
+            throw new HttpError(
+                getNetworkErrorMessage(),
+                0,
+                "NETWORK_ERROR",
+                payload,
+            );
+        }
+
         await notifyUnauthorizedSession({
             method,
             status: response.status,
@@ -207,7 +240,7 @@ async function request<T>(
         throw new HttpError(
             extractErrorMessage(response.status, payload),
             response.status,
-            extractErrorCode(payload),
+            errorCode,
             payload,
         );
     }

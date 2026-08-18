@@ -94,6 +94,7 @@
   "common.cancel": "انصراف",
   "common.noData": "داده‌ای وجود ندارد",
   "common.error": "خطا",
+  "common.networkError": "امکان ارتباط با سرور وجود ندارد. لطفاً اتصال شبکه و وضعیت سرور را بررسی کنید.",
   "toast.success.generic": "عملیات با موفقیت انجام شد.",
   "toast.success.created": "رکورد با موفقیت ایجاد شد.",
   "toast.success.saved": "تغییرات با موفقیت ذخیره شد.",

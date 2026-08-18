@@ -36,8 +36,25 @@ export default defineConfig(({ mode }) => {
                     "/api": {
                         target:
                             env.VITE_GRCPC_DEV_API_TARGET ||
-                            "http://localhost:8080",
+                            "http://127.0.0.1:8080",
                         changeOrigin: true,
+                        configure: (proxy) => {
+                            proxy.on("error", (_error, _request, response) => {
+                                if (
+                                    !("req" in response) ||
+                                    response.headersSent ||
+                                    response.writableEnded
+                                ) {
+                                    return;
+                                }
+
+                                response
+                                    .writeHead(503, {
+                                        "Content-Type": "application/json; charset=utf-8",
+                                    })
+                                    .end(JSON.stringify({ code: "NETWORK_ERROR" }));
+                            });
+                        },
                     },
                 },
             }
