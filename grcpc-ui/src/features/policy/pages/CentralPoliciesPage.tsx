@@ -312,7 +312,6 @@ export default function CentralPoliciesPage() {
             policyType: draft.policyType,
             responsibleOrganization: draft.responsibleOrganization,
             communicationMethod: draft.communicationMethod,
-            communicationTiming: draft.communicationTiming,
             nextReviewDate: draft.nextReviewDate,
             objective: draft.objective,
             description: draft.description,
@@ -331,7 +330,6 @@ export default function CentralPoliciesPage() {
           currentPolicy.policyType !== draft.policyType ||
           (currentPolicy.responsibleOrganization ?? null) !== draft.responsibleOrganization ||
           (currentPolicy.communicationMethod ?? null) !== draft.communicationMethod ||
-          (currentPolicy.communicationTiming ?? null) !== draft.communicationTiming ||
           (currentPolicy.nextReviewDate ?? null) !== draft.nextReviewDate ||
           (currentPolicy.objective ?? null) !== draft.objective
         );
@@ -358,7 +356,6 @@ export default function CentralPoliciesPage() {
                 policyType: draft.policyType,
                 responsibleOrganization: draft.responsibleOrganization,
                 communicationMethod: draft.communicationMethod,
-                communicationTiming: draft.communicationTiming,
                 nextReviewDate: draft.nextReviewDate,
                 objective: draft.objective,
                 description: draft.description,

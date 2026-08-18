@@ -48,7 +48,6 @@ export interface CentralPolicyDetail
     DefinitionAuditFields {
   responsibleOrganization: string | null;
   communicationMethod: CentralPolicyCommunicationMethod | null;
-  communicationTiming: string | null;
   nextReviewDate: string | null;
   objective: string | null;
   description: string | null;
@@ -94,7 +93,6 @@ interface PolicyMetadata {
   policyType: CentralPolicyType;
   responsibleOrganization: string | null;
   communicationMethod: CentralPolicyCommunicationMethod | null;
-  communicationTiming: string | null;
   nextReviewDate: string | null;
   objective: string | null;
 }

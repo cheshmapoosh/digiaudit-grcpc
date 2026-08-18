@@ -18,6 +18,7 @@ Policies are tree-based master data with policy groups and policy leaf nodes.
 - Use the split-button creation pattern only for valid child types.
 - Keep tree expansion/selection stable across CRUD and navigation.
 - Put all visible text in `i18n/fa.policy.json` and `i18n/en.policy.json`.
+- `communicationTiming` / Communication Timing has been removed from the V2 Policy model; do not expose or reintroduce it in UI drafts, API contracts, domain models, or revision payloads.
 - Policy Group parent changes are performed through Edit/parent selection; do not add a separate Move button.
 - The Policy Documents tab is the ordinary parent-save document surface for the Policy itself, using target `CENTRAL_POLICY`. It must support temporary file selection during Create and parent-save finalization on Save, and the same document-management UX during Edit. Do not require selecting or creating a Policy Version before Policy documents can be managed.
 - Policy Group documents use target `CENTRAL_POLICY_GROUP` with the same parent-save UX.

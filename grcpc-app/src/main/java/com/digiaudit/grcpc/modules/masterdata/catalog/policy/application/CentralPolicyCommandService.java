@@ -61,7 +61,6 @@ public class CentralPolicyCommandService {
     String code = support.normalizeCode(r.code()),
         title = support.normalizeTitle(r.title()),
         responsibleOrganization = normalizeShortText(r.responsibleOrganization(), "responsibleOrganization"),
-        communicationTiming = normalizeShortText(r.communicationTiming(), "communicationTiming"),
         objective = normalizeLongText(r.objective()),
         description = support.normalizeDescription(r.description());
     int sort = support.normalizeSortOrder(r.sortOrder());
@@ -92,7 +91,6 @@ public class CentralPolicyCommandService {
                           r.policyType(),
                           responsibleOrganization,
                           r.communicationMethod(),
-                          communicationTiming,
                           r.nextReviewDate(),
                           objective,
                           description,
@@ -117,7 +115,6 @@ public class CentralPolicyCommandService {
                         r.policyType(),
                         responsibleOrganization,
                         r.communicationMethod(),
-                        communicationTiming,
                         r.nextReviewDate(),
                         objective,
                         description,
@@ -134,7 +131,6 @@ public class CentralPolicyCommandService {
                         r.policyType(),
                         responsibleOrganization,
                         r.communicationMethod(),
-                        communicationTiming,
                         r.nextReviewDate(),
                         objective,
                         description,
@@ -166,7 +162,6 @@ public class CentralPolicyCommandService {
     long expected = support.requireVersion(r.version());
     String title = support.normalizeTitle(r.title()),
         responsibleOrganization = normalizeShortText(r.responsibleOrganization(), "responsibleOrganization"),
-        communicationTiming = normalizeShortText(r.communicationTiming(), "communicationTiming"),
         objective = normalizeLongText(r.objective()),
         description = support.normalizeDescription(r.description());
     support.validateValidity(r.validFrom(), r.validTo());
@@ -183,7 +178,6 @@ public class CentralPolicyCommandService {
                   && e.getPolicyType() == r.policyType()
                   && Objects.equals(e.getResponsibleOrganization(), responsibleOrganization)
                   && e.getCommunicationMethod() == r.communicationMethod()
-                  && Objects.equals(e.getCommunicationTiming(), communicationTiming)
                   && Objects.equals(e.getNextReviewDate(), r.nextReviewDate())
                   && Objects.equals(e.getObjective(), objective)
                   && Objects.equals(e.getDescription(), description)
@@ -196,7 +190,6 @@ public class CentralPolicyCommandService {
                   r.policyType(),
                   responsibleOrganization,
                   r.communicationMethod(),
-                  communicationTiming,
                   r.nextReviewDate(),
                   objective,
                   description,
@@ -385,7 +378,6 @@ public class CentralPolicyCommandService {
     fields.put("policyType", e.getPolicyType());
     fields.put("responsibleOrganization", e.getResponsibleOrganization());
     fields.put("communicationMethod", e.getCommunicationMethod());
-    fields.put("communicationTiming", e.getCommunicationTiming());
     fields.put("nextReviewDate", e.getNextReviewDate());
     fields.put("objective", e.getObjective());
     fields.put("sortOrder", e.getSortOrder());

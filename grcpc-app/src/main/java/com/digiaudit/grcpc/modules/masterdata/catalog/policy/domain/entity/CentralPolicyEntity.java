@@ -33,9 +33,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
   @Column(name = "communication_method", length = 32)
   private PolicyCommunicationMethod communicationMethod;
 
-  @Column(name = "communication_timing", length = 255)
-  private String communicationTiming;
-
   @Column(name = "next_review_date")
   private LocalDate nextReviewDate;
 
@@ -56,7 +53,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       CentralPolicyType policyType,
       String responsibleOrganization,
       PolicyCommunicationMethod communicationMethod,
-      String communicationTiming,
       LocalDate nextReviewDate,
       String objective,
       String description,
@@ -70,7 +66,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
     this.policyType = policyType;
     this.responsibleOrganization = responsibleOrganization;
     this.communicationMethod = communicationMethod;
-    this.communicationTiming = communicationTiming;
     this.nextReviewDate = nextReviewDate;
     this.objective = objective;
     this.sortOrder = sortOrder;
@@ -84,7 +79,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       CentralPolicyType policyType,
       String responsibleOrganization,
       PolicyCommunicationMethod communicationMethod,
-      String communicationTiming,
       LocalDate nextReviewDate,
       String objective,
       String description,
@@ -101,7 +95,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
         policyType,
         responsibleOrganization,
         communicationMethod,
-        communicationTiming,
         nextReviewDate,
         objective,
         description,
@@ -117,7 +110,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       CentralPolicyType policyType,
       String responsibleOrganization,
       PolicyCommunicationMethod communicationMethod,
-      String communicationTiming,
       LocalDate nextReviewDate,
       String objective,
       String description,
@@ -129,7 +121,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
     this.policyType = policyType;
     this.responsibleOrganization = responsibleOrganization;
     this.communicationMethod = communicationMethod;
-    this.communicationTiming = communicationTiming;
     this.nextReviewDate = nextReviewDate;
     this.objective = objective;
   }
@@ -147,7 +138,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       CentralPolicyType policyType,
       String responsibleOrganization,
       PolicyCommunicationMethod communicationMethod,
-      String communicationTiming,
       LocalDate nextReviewDate,
       String objective,
       String description,
@@ -160,7 +150,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
     this.policyType = policyType;
     this.responsibleOrganization = responsibleOrganization;
     this.communicationMethod = communicationMethod;
-    this.communicationTiming = communicationTiming;
     this.nextReviewDate = nextReviewDate;
     this.objective = objective;
     this.sortOrder = sortOrder;
@@ -173,7 +162,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       CentralPolicyType policyType,
       String responsibleOrganization,
       PolicyCommunicationMethod communicationMethod,
-      String communicationTiming,
       LocalDate nextReviewDate,
       String objective,
       String description,
@@ -186,7 +174,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
     this.policyType = policyType;
     this.responsibleOrganization = responsibleOrganization;
     this.communicationMethod = communicationMethod;
-    this.communicationTiming = communicationTiming;
     this.nextReviewDate = nextReviewDate;
     this.objective = objective;
     this.sortOrder = sortOrder;
@@ -207,10 +194,6 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
 
   public PolicyCommunicationMethod getCommunicationMethod() {
     return communicationMethod;
-  }
-
-  public String getCommunicationTiming() {
-    return communicationTiming;
   }
 
   public LocalDate getNextReviewDate() {

@@ -64,7 +64,6 @@ public class CentralPolicyMapper {
         entity.getPolicyType(),
         entity.getResponsibleOrganization(),
         entity.getCommunicationMethod(),
-        entity.getCommunicationTiming(),
         entity.getNextReviewDate(),
         entity.getObjective(),
         entity.getDescription(),

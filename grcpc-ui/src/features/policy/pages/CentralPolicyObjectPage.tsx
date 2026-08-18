@@ -53,7 +53,6 @@ export interface CentralPolicyObjectDraft {
   policyType: CentralPolicyType;
   responsibleOrganization: string | null;
   communicationMethod: CentralPolicyCommunicationMethod | null;
-  communicationTiming: string | null;
   nextReviewDate: string | null;
   objective: string | null;
   description: string | null;
@@ -175,7 +174,6 @@ export default function CentralPolicyObjectPage({
   const [communicationMethod, setCommunicationMethod] = useState<CentralPolicyCommunicationMethod | "">(
     policyValue?.communicationMethod ?? "",
   );
-  const [communicationTiming, setCommunicationTiming] = useState(policyValue?.communicationTiming ?? "");
   const [nextReviewDate, setNextReviewDate] = useState(policyValue?.nextReviewDate ?? "");
   const [objective, setObjective] = useState(policyValue?.objective ?? "");
   const [description, setDescription] = useState(value?.description ?? "");
@@ -202,7 +200,6 @@ export default function CentralPolicyObjectPage({
         policyType: policyValue?.policyType ?? "POLICY",
         responsibleOrganization: policyValue?.responsibleOrganization ?? "",
         communicationMethod: policyValue?.communicationMethod ?? "",
-        communicationTiming: policyValue?.communicationTiming ?? "",
         nextReviewDate: policyValue?.nextReviewDate ?? "",
         objective: policyValue?.objective ?? "",
         description: value?.description ?? "",
@@ -225,7 +222,6 @@ export default function CentralPolicyObjectPage({
       policyType,
       responsibleOrganization,
       communicationMethod,
-      communicationTiming,
       nextReviewDate,
       objective,
       description,
@@ -297,7 +293,6 @@ export default function CentralPolicyObjectPage({
       policyType,
       responsibleOrganization: nodeType === "POLICY" ? responsibleOrganization.trim() || null : null,
       communicationMethod: nodeType === "POLICY" && communicationMethod ? communicationMethod : null,
-      communicationTiming: nodeType === "POLICY" ? communicationTiming.trim() || null : null,
       nextReviewDate: nodeType === "POLICY" ? nextReviewDate || null : null,
       objective: nodeType === "POLICY" ? objective.trim() || null : null,
       description: description.trim() || null,
@@ -463,15 +458,6 @@ export default function CentralPolicyObjectPage({
                       </Option>
                     ))}
                   </Select>
-                </FormField>
-                <FormField label={t("policy.fields.communicationTiming", { defaultValue: "زمان اطلاع‌رسانی" })}>
-                  <Input
-                    value={communicationTiming}
-                    readonly={readOnly}
-                    disabled={busy}
-                    maxlength={255}
-                    onInput={(event) => setCommunicationTiming(readValue(event))}
-                  />
                 </FormField>
                 <FormField label={t("policy.fields.nextReviewDate", { defaultValue: "تاریخ بازنگری بعدی" })}>
                   <PersianDatePicker
