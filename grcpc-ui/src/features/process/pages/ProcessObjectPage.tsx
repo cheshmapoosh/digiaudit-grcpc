@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
 
 import { DocumentManager, EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE, toDocumentAggregateRequest, type DocumentAggregateDraftError, type DocumentLinkTargetType, type ParentSaveDocumentDraftState } from "@/features/document";
+import { EMPTY_CONTROL_SCOPE_DRAFT_STATE, SubprocessControlScopesTab, useControlScopePermissions, type ControlScopeDraftState } from "@/features/control-scope";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime, toEnglishDigits } from "@/shared/utils/date.utils";
@@ -11,7 +12,7 @@ import type { ProcessNode, ProcessNodeCreate, ProcessNodeType, ProcessNodeUpdate
 import { buildTree, collectDescendantIds } from "../utils/process.tree";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
-export type ProcessTabKey = "general" | "documents";
+export type ProcessTabKey = "general" | "controls" | "documents";
 
 interface ProcessFormState {
     code: string;
@@ -92,6 +93,7 @@ function FormField({ label, required, fullWidth, children }: { label: string; re
 
 export default function ProcessObjectPage({ mode, allItems, value, parent, requestedNodeType, activeTab: controlledTab, busy = false, error, documentAggregateError, onErrorClose, onSubmit, onCancel, onEdit, onActiveTabChange, onDirtyChange, onDocumentDirtyChange }: ProcessObjectPageProps) {
     const { t } = useTranslation();
+    const controlScopePermissions = useControlScopePermissions();
     const initial = toFormState(value, parent, requestedNodeType);
     const [form, setForm] = useState(initial);
     const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(initial, mode)));
@@ -99,6 +101,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const [internalTab, setInternalTab] = useState<ProcessTabKey>("general");
     const [parentDialogOpen, setParentDialogOpen] = useState(false);
     const [documentDraft, setDocumentDraft] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
+    const [controlScopeDraft, setControlScopeDraft] = useState<ControlScopeDraftState>(EMPTY_CONTROL_SCOPE_DRAFT_STATE);
     const [dateDrafts, setDateDrafts] = useState<Record<"validFrom" | "validTo", PersianDateDraftState>>({
         validFrom: { draftValue: "", valid: true, dirty: false },
         validTo: { draftValue: "", valid: true, dirty: false },
@@ -107,7 +110,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const scopeRef = useRef(scope);
     const generalInformationDirty = JSON.stringify(normalized(form, mode)) !== baseline;
     const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
-    const dirty = generalInformationDirty || invalidDateDraft;
+    const dirty = generalInformationDirty || invalidDateDraft || controlScopeDraft.dirty;
     const activeTab = controlledTab ?? internalTab;
     const readOnly = mode === "view";
 
@@ -145,19 +148,20 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
         if (form.parentId && !processParents.some((item) => item.id === form.parentId)) return setValidationError(t("process.errors.invalidHierarchyMove", { defaultValue: "Invalid parent" })), false;
         if (form.validFrom && form.validTo && form.validFrom > form.validTo) return setValidationError(t("process.validation.invalidValidityRange", { defaultValue: "Invalid validity range" })), false;
         if (!documentDraft.ready || documentDraft.invalid || documentDraft.uploading) return setValidationError(t("document.errors.finalize", { defaultValue: "Document drafts are not ready" })), false;
+        if (form.nodeType === "SUBPROCESS" && (!controlScopeDraft.ready || controlScopeDraft.invalid)) return setValidationError(t("controlScope.validation.notReady")), false;
         setValidationError(null); return true;
     };
 
     const submit = async () => {
         if (readOnly || !validate()) return;
-        const common = { title: form.title.trim(), sortOrder: parseSortOrder(form.sortOrder) ?? 0, description: optional(form.description), validFrom: optional(form.validFrom), validTo: optional(form.validTo), documents: toDocumentAggregateRequest(documentDraft) };
+        const common = { title: form.title.trim(), sortOrder: parseSortOrder(form.sortOrder) ?? 0, description: optional(form.description), validFrom: optional(form.validFrom), validTo: optional(form.validTo), documents: toDocumentAggregateRequest(documentDraft), controlScopeChanges: form.nodeType === "SUBPROCESS" ? controlScopeDraft.changes : [] };
         const payload = mode === "create"
             ? { ...common, nodeType: form.nodeType, code: form.code.trim(), parentId: form.parentId } satisfies ProcessNodeCreate
             : { ...common, version: value?.version ?? 0, status: form.status, parentId: form.parentId } satisfies ProcessNodeUpdate;
         if (await onSubmit(payload)) { setBaseline(JSON.stringify(normalized(form, mode))); onDirtyChange?.(false); }
     };
 
-    const saveDisabled = busy || invalidDateDraft || documentDraft.uploading || documentDraft.invalid || !documentDraft.ready || (!generalInformationDirty && !documentDraft.dirty);
+    const saveDisabled = busy || invalidDateDraft || documentDraft.uploading || documentDraft.invalid || !documentDraft.ready || (form.nodeType === "SUBPROCESS" && (!controlScopeDraft.ready || controlScopeDraft.invalid)) || (!generalInformationDirty && !documentDraft.dirty && !controlScopeDraft.dirty);
 
     return (
         <>
@@ -180,7 +184,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                     <Tab text={t("process.tabs.general", { defaultValue: "General Information" })} selected={activeTab === "general"} data-tab-key="general" />
                     {form.nodeType === "SUBPROCESS" ? (
                         <>
-                            <Tab text={t("process.tabs.controls", { defaultValue: "Controls" })} disabled />
+                            <Tab text={t("process.tabs.controls", { defaultValue: "Controls" })} selected={activeTab === "controls"} disabled={!controlScopePermissions.view} data-tab-key="controls" />
                             <Tab text={t("process.tabs.regulations", { defaultValue: "Regulations" })} disabled />
                             <Tab text={t("process.tabs.objectives", { defaultValue: "Objectives" })} disabled />
                             <Tab text={t("process.tabs.accountGroups", { defaultValue: "Account Groups" })} disabled />
@@ -213,6 +217,9 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                         <FormField label={t("process.fields.validTo", { defaultValue: "Valid to" })}><PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validTo", { defaultValue: "Valid to" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validTo", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validTo.valid === state.valid && current.validTo.draftValue === state.draftValue && current.validTo.dirty === state.dirty ? current : { ...current, validTo: state })} /></FormField>
                         <FormField label={t("process.fields.description", { defaultValue: "Description" })} fullWidth><TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", readValue(e))} /></FormField>
                     </div></div>
+                    <div style={{ display: activeTab === "controls" ? "block" : "none" }}>
+                        {form.nodeType === "SUBPROCESS" ? <SubprocessControlScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlScopeDraft} /> : null}
+                    </div>
                     <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("process.tabs.documents", { defaultValue: "Documents" })} targetType={documentTarget(form.nodeType)} targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentAggregateError} onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
                 </div>
 

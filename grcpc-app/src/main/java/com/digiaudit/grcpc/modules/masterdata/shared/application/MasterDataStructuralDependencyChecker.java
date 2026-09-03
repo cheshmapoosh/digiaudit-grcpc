@@ -64,6 +64,18 @@ public class MasterDataStructuralDependencyChecker {
           "select count(*) from local_policy_subprocess_scope where policy_version_id = ?",
           "select count(*) from local_policy_control_scope where policy_version_id = ?",
           "select count(*) from local_policy_requirement_scope where policy_version_id = ?");
+  private static final List<String> CENTRAL_CONTROL_SCOPE_DEPENDENCY_QUERIES =
+      List.of(
+          "select count(*) from central_policy_version_control_scope where central_control_scope_id"
+              + " = ? and status <> 'DELETED'",
+          "select count(*) from central_subprocess_risk_control_coverage where control_scope_id = ?"
+              + " and status <> 'DELETED'",
+          "select count(*) from central_subprocess_control_control_objective_coverage where"
+              + " control_scope_id = ? and status <> 'DELETED'",
+          "select count(*) from central_subprocess_requirement_control_coverage where"
+              + " control_scope_id = ? and status <> 'DELETED'",
+          "select count(*) from local_subprocess_control_scope where central_control_scope_id = ?"
+              + " and status <> 'DELETED'");
 
   private final JdbcTemplate jdbcTemplate;
 
@@ -105,6 +117,10 @@ public class MasterDataStructuralDependencyChecker {
 
   public boolean centralPolicyVersionHasApprovedDependencies(UUID policyVersionId) {
     return anyExists(CENTRAL_POLICY_VERSION_DEPENDENCY_QUERIES, policyVersionId);
+  }
+
+  public boolean centralControlScopeHasLiveDependencies(UUID scopeId) {
+    return anyExists(CENTRAL_CONTROL_SCOPE_DEPENDENCY_QUERIES, scopeId);
   }
 
   private boolean anyExists(List<String> queries, UUID id) {

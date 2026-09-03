@@ -82,6 +82,7 @@ function toSubprocessCreateBody(payload: ProcessNodeCreate) {
         validFrom: payload.validFrom ?? null,
         validTo: payload.validTo ?? null,
         documents: payload.documents,
+        controlScopeChanges: payload.controlScopeChanges,
     };
 }
 
@@ -110,6 +111,7 @@ function toSubprocessUpdateBody(payload: ProcessNodeUpdate) {
         validFrom: payload.validFrom ?? null,
         validTo: payload.validTo ?? null,
         documents: payload.documents,
+        controlScopeChanges: payload.controlScopeChanges,
     };
 }
 

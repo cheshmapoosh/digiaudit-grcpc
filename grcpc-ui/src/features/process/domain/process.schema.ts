@@ -49,6 +49,19 @@ const validitySchema = z
         message: t("process.validation.invalidValidityRange", "بازه اعتبار معتبر نیست"),
     });
 
+const controlScopeChangeSchema = z.object({
+    operation: z.enum(["CREATE_OR_RESTORE", "UPDATE", "ACTIVATE", "INACTIVATE", "DELETE"]),
+    controlId: z.string().trim().min(1),
+    scopeId: z.string().trim().min(1).nullable().optional(),
+    version: z.number().int().min(0).nullable().optional(),
+    recommendedFrequencyCode: z.string().trim().nullable().optional(),
+    recommendedExecutionMethodCode: z.string().trim().nullable().optional(),
+    recommendedTestMethodCode: z.string().trim().nullable().optional(),
+    validFrom: optionalDateSchema,
+    validTo: optionalDateSchema,
+    requestedStatus: processEditableStatusSchema.nullable().optional(),
+});
+
 const baseProcessPayloadSchema = validitySchema.extend({
     code: z
         .string()
@@ -76,6 +89,7 @@ const baseProcessPayloadSchema = validitySchema.extend({
     sortOrder: z.number().int().min(0).nullable().optional(),
     description: optionalTextSchema,
     documents: documentAggregateRequestSchema,
+    controlScopeChanges: z.array(controlScopeChangeSchema),
 });
 
 export const processCreateSchema = baseProcessPayloadSchema;
@@ -98,6 +112,7 @@ export const processUpdateSchema = validitySchema.extend({
     sortOrder: z.number().int().min(0).nullable().optional(),
     description: optionalTextSchema,
     documents: documentAggregateRequestSchema,
+    controlScopeChanges: z.array(controlScopeChangeSchema),
 });
 
 export const processLifecycleSchema = z.object({

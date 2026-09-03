@@ -9,6 +9,8 @@ import faOrganization from "../features/organization/i18n/fa.organization.json";
 import enOrganization from "../features/organization/i18n/en.organization.json";
 import faControl from "../features/control/i18n/fa.control.json";
 import enControl from "../features/control/i18n/en.control.json";
+import faControlScope from "../features/control-scope/i18n/fa.control-scope.json";
+import enControlScope from "../features/control-scope/i18n/en.control-scope.json";
 import faControlObjective from "../features/control-objective/i18n/fa.control-objective.json";
 import enControlObjective from "../features/control-objective/i18n/en.control-objective.json";
 import faRisk from "../features/risk/i18n/fa.risk.json";
@@ -27,8 +29,8 @@ import fa from "./locales/fa.json";
 import en from "./locales/en.json";
 
 export const resources = {
-    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faControlObjective, ...faRisk, ...faAccountGroup, ...faRegulation, ...faPolicy, ...faCentralCatalog, ...faMasterData } },
-    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enControlObjective, ...enRisk, ...enAccountGroup, ...enRegulation, ...enPolicy, ...enCentralCatalog, ...enMasterData } }
+    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faControlScope, ...faControlObjective, ...faRisk, ...faAccountGroup, ...faRegulation, ...faPolicy, ...faCentralCatalog, ...faMasterData } },
+    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enControlScope, ...enControlObjective, ...enRisk, ...enAccountGroup, ...enRegulation, ...enPolicy, ...enCentralCatalog, ...enMasterData } }
 } as const;
 
 export function initI18n(lang: "fa" | "en") {

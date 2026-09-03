@@ -11,6 +11,7 @@ import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CentralProcessLife
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CentralProcessResponse;
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CentralSubprocessLifecycleCommandRequest;
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CentralSubprocessResponse;
+import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CentralSubprocessAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CreateCentralProcessRequest;
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.CreateCentralSubprocessRequest;
 import com.digiaudit.grcpc.modules.masterdata.process.api.dto.MoveCentralProcessRequest;
@@ -23,6 +24,9 @@ import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralProce
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralSubprocessEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.CentralProcessRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.CentralSubprocessRepository;
+import com.digiaudit.grcpc.modules.masterdata.scope.control.api.dto.CentralSubprocessControlScopeResponse;
+import com.digiaudit.grcpc.modules.masterdata.scope.control.api.dto.CentralControlScopeChangeRequest;
+import com.digiaudit.grcpc.modules.masterdata.scope.control.application.CentralSubprocessControlScopeAggregateService;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionActorProvider;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionCoordinator;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionContext;
@@ -85,6 +89,7 @@ public class ProcessService {
     private final MasterDataStructuralDependencyChecker dependencyChecker;
     private final RevisionMutationGuard mutationGuard;
     private final DocumentCommandService documentCommandService;
+    private final CentralSubprocessControlScopeAggregateService controlScopes;
 
     public ProcessService(
             CentralProcessRepository processRepository,
@@ -95,7 +100,8 @@ public class ProcessService {
             ObjectMapper objectMapper,
             MasterDataStructuralDependencyChecker dependencyChecker,
             RevisionMutationGuard mutationGuard,
-            DocumentCommandService documentCommandService
+            DocumentCommandService documentCommandService,
+            CentralSubprocessControlScopeAggregateService controlScopes
     ) {
         this.processRepository = Objects.requireNonNull(processRepository, "processRepository is required");
         this.subprocessRepository = Objects.requireNonNull(subprocessRepository, "subprocessRepository is required");
@@ -106,6 +112,7 @@ public class ProcessService {
         this.dependencyChecker = Objects.requireNonNull(dependencyChecker, "dependencyChecker is required");
         this.mutationGuard = Objects.requireNonNull(mutationGuard, "mutationGuard is required");
         this.documentCommandService = Objects.requireNonNull(documentCommandService, "documentCommandService is required");
+        this.controlScopes = Objects.requireNonNull(controlScopes, "controlScopes is required");
     }
 
     @Transactional(readOnly = true)
@@ -237,13 +244,14 @@ public class ProcessService {
         return processLifecycle(processId, request.version(), RevisionOperationType.RESTORE);
     }
 
-    public MasterDataAggregateMutationResponse createSubprocess(CreateCentralSubprocessRequest request) {
+    public CentralSubprocessAggregateMutationResponse createSubprocess(CreateCentralSubprocessRequest request) {
         String code = normalizeCode(request.code(), "DUPLICATE_SUBPROCESS_CODE");
         String title = normalizeTitle(request.title());
         String description = normalizeDescription(request.description());
         int sortOrder = normalizeSortOrder(request.sortOrder());
         validateValidity(request.validFrom(), request.validTo());
         AtomicReference<List<DocumentCommandResponse>> finalizedDocuments = new AtomicReference<>(List.of());
+        AtomicReference<List<CentralSubprocessControlScopeResponse>> canonicalScopes = new AtomicReference<>(List.of());
         RevisionExecutionResult result = revisionCoordinator.executeStructural(
                     MasterDataHierarchyKey.PROCESS,
                     RevisionRequest.central("Create central subprocess " + code, "Central subprocess structural create", null),
@@ -252,18 +260,32 @@ public class ProcessService {
                         DocumentCommandService.PreparedAggregateContext preparedDocuments =
                                 documentCommandService.prepareAggregate(request.documents());
                         RevisionOperationResult operation = createSubprocessInsideRevision(context, code, title, request.processId(), description, sortOrder, request.validFrom(), request.validTo());
+                        CentralSubprocessEntity subprocess = subprocessRepository.lockById(operation.primaryResult().entityId())
+                                .orElseThrow(() -> subprocessNotFound(operation.primaryResult().entityId()));
+                        CentralSubprocessControlScopeAggregateService.PreparedChanges preparedScopes =
+                                controlScopes.prepare(
+                                        context,
+                                        subprocess,
+                                        subprocess.getStatus(),
+                                        subprocess.getValidFrom(),
+                                        subprocess.getValidTo(),
+                                        request.controlScopeChanges()
+                                );
+                        CentralSubprocessControlScopeAggregateService.ApplyResult scopeResult =
+                                controlScopes.apply(preparedScopes, subprocess);
+                        canonicalScopes.set(scopeResult.canonicalRows());
                         finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
                                 preparedDocuments,
                                 DocumentLinkTargetType.CENTRAL_SUBPROCESS,
                                 operation.primaryResult().entityId()
                         ));
-                        return operation;
+                        return combine(context, operation, scopeResult.revisionContents());
                     }
         );
-        return aggregateResponse(result, finalizedDocuments.get());
+        return subprocessAggregateResponse(result, finalizedDocuments.get(), canonicalScopes.get());
     }
 
-    public MasterDataAggregateMutationResponse updateSubprocess(UUID subprocessId, UpdateCentralSubprocessRequest request) {
+    public CentralSubprocessAggregateMutationResponse updateSubprocess(UUID subprocessId, UpdateCentralSubprocessRequest request) {
         long expectedVersion = requireVersion(request.version());
         String title = normalizeTitle(request.title());
         String description = normalizeDescription(request.description());
@@ -271,6 +293,7 @@ public class ProcessService {
         MasterDataLifecycleStatus status = requireGeneralInformationStatus(request.status(), "Subprocess");
         validateValidity(request.validFrom(), request.validTo());
         AtomicReference<List<DocumentCommandResponse>> finalizedDocuments = new AtomicReference<>(List.of());
+        AtomicReference<List<CentralSubprocessControlScopeResponse>> canonicalScopes = new AtomicReference<>(List.of());
         RevisionExecutionResult result = revisionCoordinator.executeStructural(
                 MasterDataHierarchyKey.PROCESS,
                 RevisionRequest.central(
@@ -290,10 +313,12 @@ public class ProcessService {
                         request.validFrom(),
                         request.validTo(),
                         request.documents(),
-                        finalizedDocuments
+                        finalizedDocuments,
+                        request.controlScopeChanges(),
+                        canonicalScopes
                 )
         );
-        return aggregateResponse(result, finalizedDocuments.get());
+        return subprocessAggregateResponse(result, finalizedDocuments.get(), canonicalScopes.get());
     }
 
     public MasterDataRevisionMutationResponse moveSubprocess(UUID subprocessId, MoveCentralSubprocessRequest request) {
@@ -517,7 +542,7 @@ public class ProcessService {
                 processRepository.findAllByOrderByIdAsc()
         );
         requireSubprocessOwner(processId, processById);
-        CentralSubprocessEntity entity = subprocessRepository.findByNormalizedCode(code).orElse(null);
+        CentralSubprocessEntity entity = subprocessRepository.lockByNormalizedCode(code).orElse(null);
         if (entity == null) {
             CentralSubprocessEntity created = CentralSubprocessEntity.create(
                     UUID.randomUUID(),
@@ -564,16 +589,20 @@ public class ProcessService {
             LocalDate validFrom,
             LocalDate validTo,
             DocumentAggregateBatchRequest documents,
-            AtomicReference<List<DocumentCommandResponse>> finalizedDocuments
+            AtomicReference<List<DocumentCommandResponse>> finalizedDocuments,
+            List<CentralControlScopeChangeRequest> scopeChanges,
+            AtomicReference<List<CentralSubprocessControlScopeResponse>> canonicalScopes
     ) {
         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
-        DocumentCommandService.PreparedAggregateContext preparedDocuments =
-                documentCommandService.prepareAggregate(documents);
-        CentralSubprocessEntity entity = findSubprocessIncludingDeleted(subprocessId);
+        CentralSubprocessEntity entity = lockSubprocessIncludingDeleted(subprocessId);
         assertVersion(entity, expectedVersion, "Subprocess");
         requireMutableSubprocess(entity);
+        DocumentCommandService.PreparedAggregateContext preparedDocuments =
+                documentCommandService.prepareAggregate(documents);
         Map<UUID, CentralProcessEntity> processById = indexProcesses(processRepository.findAllByOrderByIdAsc());
         requireSubprocessOwner(processId, processById);
+        CentralSubprocessControlScopeAggregateService.PreparedChanges preparedScopes =
+                controlScopes.prepare(context, entity, status, validFrom, validTo, scopeChanges);
         JsonNode before = subprocessSnapshot(entity);
         entity.updateDetails(
                 title,
@@ -592,7 +621,12 @@ public class ProcessService {
                 DocumentLinkTargetType.CENTRAL_SUBPROCESS,
                 subprocessId
         ));
-        return completedSubprocess(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
+        RevisionOperationResult parentResult = completedSubprocess(
+                context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
+        CentralSubprocessControlScopeAggregateService.ApplyResult scopeResult =
+                controlScopes.apply(preparedScopes, saved);
+        canonicalScopes.set(scopeResult.canonicalRows());
+        return combine(context, parentResult, scopeResult.revisionContents());
     }
 
     private RevisionOperationResult moveSubprocessInsideRevision(
@@ -737,6 +771,36 @@ public class ProcessService {
                 primary.revisionId(),
                 primary.version(),
                 finalizedDocuments
+        );
+    }
+
+    private CentralSubprocessAggregateMutationResponse subprocessAggregateResponse(
+            RevisionExecutionResult result,
+            List<DocumentCommandResponse> finalizedDocuments,
+            List<CentralSubprocessControlScopeResponse> canonicalScopes
+    ) {
+        MasterDataMutationResult primary = result.primaryResult();
+        return new CentralSubprocessAggregateMutationResponse(
+                primary.entityId(),
+                primary.revisionId(),
+                primary.version(),
+                finalizedDocuments,
+                canonicalScopes
+        );
+    }
+
+    private RevisionOperationResult combine(
+            RevisionExecutionContext context,
+            RevisionOperationResult parent,
+            List<RevisionContentResult> relationshipContents
+    ) {
+        if (relationshipContents.isEmpty()) return parent;
+        List<RevisionContentResult> contents = new ArrayList<>(parent.contentResults());
+        contents.addAll(relationshipContents);
+        return RevisionOperationResult.completed(
+                context,
+                parent.primaryResult(),
+                contents
         );
     }
 
@@ -888,6 +952,11 @@ public class ProcessService {
     }
 
     private CentralSubprocessEntity lockSubprocess(UUID subprocessId) {
+        return subprocessRepository.lockById(subprocessId)
+                .orElseThrow(() -> subprocessNotFound(subprocessId));
+    }
+
+    private CentralSubprocessEntity lockSubprocessIncludingDeleted(UUID subprocessId) {
         return subprocessRepository.lockById(subprocessId)
                 .orElseThrow(() -> subprocessNotFound(subprocessId));
     }

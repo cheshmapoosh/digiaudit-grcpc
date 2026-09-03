@@ -1,5 +1,6 @@
 import type { AuditFields } from "@/shared/domain/audit.model";
 import type { DocumentAggregateRequest, DocumentCommandResponse } from "@/features/document";
+import type { CentralSubprocessControlScope, ControlScopeChange } from "@/features/control-scope";
 
 export type ProcessStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type ProcessEditableStatus = "ACTIVE" | "INACTIVE";
@@ -14,6 +15,7 @@ export interface MasterDataRevisionMutationResponse {
 
 export interface MasterDataAggregateMutationResponse extends MasterDataRevisionMutationResponse {
     finalizedDocuments: DocumentCommandResponse[];
+    controlScopes?: CentralSubprocessControlScope[];
 }
 
 export interface ProcessNode extends AuditFields {
@@ -51,6 +53,7 @@ export interface ProcessNodeCreate {
     validFrom?: string | null;
     validTo?: string | null;
     documents: DocumentAggregateRequest;
+    controlScopeChanges: ControlScopeChange[];
 }
 
 export interface ProcessNodeUpdate {
@@ -63,6 +66,7 @@ export interface ProcessNodeUpdate {
     validFrom?: string | null;
     validTo?: string | null;
     documents: DocumentAggregateRequest;
+    controlScopeChanges: ControlScopeChange[];
 }
 
 export interface ProcessLifecycleCommand {

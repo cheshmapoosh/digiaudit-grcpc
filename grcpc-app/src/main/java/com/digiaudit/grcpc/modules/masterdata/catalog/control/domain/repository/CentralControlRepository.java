@@ -26,4 +26,8 @@ public interface CentralControlRepository extends JpaRepository<CentralControlEn
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select e from CentralControlEntity e where e.id = :id")
   Optional<CentralControlEntity> lockById(@Param("id") UUID id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select e from CentralControlEntity e where e.id in :ids order by e.id")
+  List<CentralControlEntity> lockAllByIds(@Param("ids") List<UUID> ids);
 }

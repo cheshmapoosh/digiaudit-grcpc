@@ -22,6 +22,7 @@ import {
   type ParentSaveDocumentDraftState,
 } from "@/features/document";
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
+import { ControlSubprocessScopesTab, useControlScopePermissions } from "@/features/control-scope";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -176,6 +177,7 @@ export default function CentralControlObjectPage({
   onDirtyChange,
 }: Props) {
   const { t } = useTranslation();
+  const controlScopePermissions = useControlScopePermissions();
   const [form, setForm] = useState<FormState>(() => toForm(value, initialControlGroupId));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, initialControlGroupId))));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -285,10 +287,10 @@ export default function CentralControlObjectPage({
 
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key") as CentralControlTabKey | null;
-        if (key === "general" || key === "documents") onActiveTabChange(key);
+        if (key === "general" || key === "documents" || (key === "subprocesses" && value?.id && controlScopePermissions.view)) onActiveTabChange(key);
       }}>
         <Tab text={t("control.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
-        <Tab text={t("control.tabs.subprocesses")} disabled data-tab-key="subprocesses" />
+        <Tab text={t("control.tabs.subprocesses")} selected={activeTab === "subprocesses"} disabled={!value?.id || !controlScopePermissions.view} data-tab-key="subprocesses" />
         <Tab text={t("control.tabs.regulations")} disabled data-tab-key="regulations" />
         <Tab text={t("control.tabs.requirements")} disabled data-tab-key="requirements" />
         <Tab text={t("control.tabs.risks")} disabled data-tab-key="risks" />
@@ -366,6 +368,10 @@ export default function CentralControlObjectPage({
             </div>
             <Field label={t("control.fields.description")} fullWidth><TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", e.target.value)} /></Field>
           </div>
+        </div>
+
+        <div className={activeTab === "subprocesses" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>
+          {value?.id ? <ControlSubprocessScopesTab controlId={value.id} /> : null}
         </div>
 
         <div className={activeTab === "documents" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>
