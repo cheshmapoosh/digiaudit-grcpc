@@ -84,6 +84,14 @@ public class MasterDataStructuralDependencyChecker {
               + " risk_scope_id = ? and status <> 'DELETED'",
           "select count(*) from local_subprocess_risk_scope where central_risk_scope_id = ?"
               + " and status <> 'DELETED'");
+  private static final List<String> CENTRAL_CONTROL_OBJECTIVE_SCOPE_DEPENDENCY_QUERIES =
+      List.of(
+          "select count(*) from central_subprocess_risk_control_objective_coverage where"
+              + " control_objective_scope_id = ? and status <> 'DELETED'",
+          "select count(*) from central_subprocess_control_control_objective_coverage where"
+              + " control_objective_scope_id = ? and status <> 'DELETED'",
+          "select count(*) from local_subprocess_control_objective_scope where"
+              + " central_control_objective_scope_id = ? and status <> 'DELETED'");
 
   private final JdbcTemplate jdbcTemplate;
 
@@ -133,6 +141,10 @@ public class MasterDataStructuralDependencyChecker {
 
   public boolean centralRiskScopeHasLiveDependencies(UUID scopeId) {
     return anyExists(CENTRAL_RISK_SCOPE_DEPENDENCY_QUERIES, scopeId);
+  }
+
+  public boolean centralControlObjectiveScopeHasLiveDependencies(UUID scopeId) {
+    return anyExists(CENTRAL_CONTROL_OBJECTIVE_SCOPE_DEPENDENCY_QUERIES, scopeId);
   }
 
   private boolean anyExists(List<String> queries, UUID id) {

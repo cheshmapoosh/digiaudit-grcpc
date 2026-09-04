@@ -1,0 +1,14 @@
+{
+  "controlObjectiveScope": {
+    "title": "Control Objectives",
+    "empty": "No relationship matches the selected search and filter.",
+    "filter": { "label": "Status", "all": "All" },
+    "fields": { "controlObjective": "Control Objective", "objectiveClass": "Objective Class", "lifecycle": "Status", "validFrom": "Valid From", "validTo": "Valid To" },
+    "actions": { "edit": "Edit validity", "activate": "Activate", "inactivate": "Inactivate", "remove": "Delete", "undo": "Undo draft", "selectControlObjectives": "Select", "confirmSelection": "Confirm", "applyDraft": "Apply", "retry": "Retry" },
+    "dialog": { "editTitle": "Edit Control Objective Scope Validity", "valueHelpTitle": "Select Control Objectives", "search": "Search Control Objectives by code, title, or class", "noControlObjectives": "No Control Objectives match the search." },
+    "status": { "ACTIVE": "Active", "INACTIVE": "Inactive" },
+    "editState": { "ACTIVE": "Draft-Active", "INACTIVE": "Draft-Inactive", "EDITED": "Draft-Edit", "DELETED": "Draft-Delete" },
+    "validation": { "invalidDate": "The entered date is invalid.", "invalidRange": "The validity range is invalid.", "notReady": "Control Objective Scope information is not ready to save." },
+    "errors": { "generic": "Failed to save Control Objective Scopes.", "duplicate": "This Control Objective is already in scope for the Subprocess.", "dependency": "Live dependent records prevent deleting this Control Objective Scope.", "lifecycle": "This lifecycle operation is not valid for the current status.", "version": "The Control Objective Scope was changed by another user. Reload and try again.", "endpointInactive": "The Subprocess and Control Objective must both be active for this operation.", "validityOutsideEndpoints": "The Scope validity must fit within both endpoint validity ranges.", "invalidChange": "The requested Control Objective Scope change is invalid.", "notFound": "The Control Objective Scope or one of its endpoints was not found.", "forbidden": "You do not have permission for this Control Objective Scope action." }
+  }
+}

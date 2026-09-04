@@ -28,4 +28,8 @@ public interface CentralControlObjectiveRepository
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select e from CentralControlObjectiveEntity e where e.id = :id")
   Optional<CentralControlObjectiveEntity> lockById(@Param("id") UUID id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select e from CentralControlObjectiveEntity e where e.id in :ids order by e.id")
+  List<CentralControlObjectiveEntity> lockAllByIds(@Param("ids") List<UUID> ids);
 }

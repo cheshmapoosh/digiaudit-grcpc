@@ -119,6 +119,21 @@ function mapError(
             return t("process.errors.versionConflict", {
                 defaultValue: "رکورد توسط کاربر دیگری تغییر کرده است. صفحه را دوباره بارگذاری کنید.",
             });
+        case "DUPLICATE_RELATION":
+            return t("controlObjectiveScope.errors.duplicate");
+        case "CONTROL_OBJECTIVE_SCOPE_DEPENDENCY_CONFLICT":
+            return t("controlObjectiveScope.errors.dependency");
+        case "CONTROL_OBJECTIVE_SCOPE_ENDPOINT_NOT_ACTIVE":
+            return t("controlObjectiveScope.errors.endpointInactive");
+        case "CONTROL_OBJECTIVE_SCOPE_VALIDITY_OUTSIDE_ENDPOINTS":
+            return t("controlObjectiveScope.errors.validityOutsideEndpoints");
+        case "CONTROL_OBJECTIVE_SCOPE_CHANGE_INVALID":
+            return t("controlObjectiveScope.errors.invalidChange");
+        case "CENTRAL_CONTROL_OBJECTIVE_SCOPE_NOT_FOUND":
+        case "CONTROL_OBJECTIVE_SCOPE_ENDPOINT_NOT_FOUND":
+            return t("controlObjectiveScope.errors.notFound");
+        case "FORBIDDEN":
+            return t("controlObjectiveScope.errors.forbidden");
         case "INVALID_SORT_ORDER":
             return t("process.validation.sortOrderInvalid", {
                 defaultValue: "ترتیب نمایش باید عدد صحیح نامنفی باشد",

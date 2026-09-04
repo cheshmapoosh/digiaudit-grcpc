@@ -13,6 +13,8 @@ import faControlScope from "../features/control-scope/i18n/fa.control-scope.json
 import enControlScope from "../features/control-scope/i18n/en.control-scope.json";
 import faRiskScope from "../features/risk-scope/i18n/fa.risk-scope.json";
 import enRiskScope from "../features/risk-scope/i18n/en.risk-scope.json";
+import faControlObjectiveScope from "../features/control-objective-scope/i18n/fa.control-objective-scope.json";
+import enControlObjectiveScope from "../features/control-objective-scope/i18n/en.control-objective-scope.json";
 import faControlObjective from "../features/control-objective/i18n/fa.control-objective.json";
 import enControlObjective from "../features/control-objective/i18n/en.control-objective.json";
 import faRisk from "../features/risk/i18n/fa.risk.json";
@@ -31,8 +33,8 @@ import fa from "./locales/fa.json";
 import en from "./locales/en.json";
 
 export const resources = {
-    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faControlScope, ...faRiskScope, ...faControlObjective, ...faRisk, ...faAccountGroup, ...faRegulation, ...faPolicy, ...faCentralCatalog, ...faMasterData } },
-    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enControlScope, ...enRiskScope, ...enControlObjective, ...enRisk, ...enAccountGroup, ...enRegulation, ...enPolicy, ...enCentralCatalog, ...enMasterData } }
+    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faControlScope, ...faRiskScope, ...faControlObjectiveScope, ...faControlObjective, ...faRisk, ...faAccountGroup, ...faRegulation, ...faPolicy, ...faCentralCatalog, ...faMasterData } },
+    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enControlScope, ...enRiskScope, ...enControlObjectiveScope, ...enControlObjective, ...enRisk, ...enAccountGroup, ...enRegulation, ...enPolicy, ...enCentralCatalog, ...enMasterData } }
 } as const;
 
 export function initI18n(lang: "fa" | "en") {

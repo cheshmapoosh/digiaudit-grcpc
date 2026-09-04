@@ -1,0 +1,34 @@
+-- Cycle 7.3 typed Central Subprocess Control Objective Scope authorities.
+insert into business_permission (id, code, module_name, created_at, updated_at, created_by, updated_by, version) values ('22000000-0000-0000-0000-000000000601', 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_VIEW', 'MASTER_DATA', current_timestamp, null, null, null, 0);
+insert into business_permission (id, code, module_name, created_at, updated_at, created_by, updated_by, version) values ('22000000-0000-0000-0000-000000000602', 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_CREATE', 'MASTER_DATA', current_timestamp, null, null, null, 0);
+insert into business_permission (id, code, module_name, created_at, updated_at, created_by, updated_by, version) values ('22000000-0000-0000-0000-000000000603', 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_UPDATE', 'MASTER_DATA', current_timestamp, null, null, null, 0);
+insert into business_permission (id, code, module_name, created_at, updated_at, created_by, updated_by, version) values ('22000000-0000-0000-0000-000000000604', 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_LIFECYCLE', 'MASTER_DATA', current_timestamp, null, null, null, 0);
+insert into business_permission (id, code, module_name, created_at, updated_at, created_by, updated_by, version) values ('22000000-0000-0000-0000-000000000605', 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_DELETE', 'MASTER_DATA', current_timestamp, null, null, null, 0);
+insert into business_permission (id, code, module_name, created_at, updated_at, created_by, updated_by, version) values ('22000000-0000-0000-0000-000000000606', 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_RESTORE', 'MASTER_DATA', current_timestamp, null, null, null, 0);
+
+insert into role_business_permission (id, role_id, business_permission_id, created_at, created_by)
+select '24000000-0000-0000-0000-000000000601', r.id, bp.id, current_timestamp, null from role r join business_permission bp on bp.code = 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_VIEW' where r.code = 'ROOT_ADMIN';
+insert into role_business_permission (id, role_id, business_permission_id, created_at, created_by)
+select '24000000-0000-0000-0000-000000000602', r.id, bp.id, current_timestamp, null from role r join business_permission bp on bp.code = 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_CREATE' where r.code = 'ROOT_ADMIN';
+insert into role_business_permission (id, role_id, business_permission_id, created_at, created_by)
+select '24000000-0000-0000-0000-000000000603', r.id, bp.id, current_timestamp, null from role r join business_permission bp on bp.code = 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_UPDATE' where r.code = 'ROOT_ADMIN';
+insert into role_business_permission (id, role_id, business_permission_id, created_at, created_by)
+select '24000000-0000-0000-0000-000000000604', r.id, bp.id, current_timestamp, null from role r join business_permission bp on bp.code = 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_LIFECYCLE' where r.code = 'ROOT_ADMIN';
+insert into role_business_permission (id, role_id, business_permission_id, created_at, created_by)
+select '24000000-0000-0000-0000-000000000605', r.id, bp.id, current_timestamp, null from role r join business_permission bp on bp.code = 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_DELETE' where r.code = 'ROOT_ADMIN';
+insert into role_business_permission (id, role_id, business_permission_id, created_at, created_by)
+select '24000000-0000-0000-0000-000000000606', r.id, bp.id, current_timestamp, null from role r join business_permission bp on bp.code = 'CENTRAL_CONTROL_OBJECTIVE_SCOPE_RESTORE' where r.code = 'ROOT_ADMIN';
+
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001001', '22000000-0000-0000-0000-000000000601', 'en', 'View Central Control Objective Scope', 'View Control Objectives assigned to Central Subprocesses');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001002', '22000000-0000-0000-0000-000000000601', 'fa', 'مشاهده دامنه هدف کنترلی مرکزی', 'مجوز مشاهده اهداف کنترلی تخصیص‌یافته به زیرفرآیندهای مرکزی');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001003', '22000000-0000-0000-0000-000000000602', 'en', 'Create Central Control Objective Scope', 'Assign one Central Control Objective to a Central Subprocess');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001004', '22000000-0000-0000-0000-000000000602', 'fa', 'ایجاد دامنه هدف کنترلی مرکزی', 'مجوز تخصیص یک هدف کنترلی مرکزی به زیرفرآیند مرکزی');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001005', '22000000-0000-0000-0000-000000000603', 'en', 'Update Central Control Objective Scope', 'Update the validity of a Central Control Objective Scope');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001006', '22000000-0000-0000-0000-000000000603', 'fa', 'ویرایش دامنه هدف کنترلی مرکزی', 'مجوز ویرایش بازه اعتبار دامنه هدف کنترلی مرکزی');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001007', '22000000-0000-0000-0000-000000000604', 'en', 'Manage Central Control Objective Scope Lifecycle', 'Activate or inactivate Central Control Objective Scopes');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001008', '22000000-0000-0000-0000-000000000604', 'fa', 'مدیریت چرخه حیات دامنه هدف کنترلی مرکزی', 'مجوز فعال یا غیرفعال‌سازی دامنه هدف کنترلی مرکزی');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001009', '22000000-0000-0000-0000-000000000605', 'en', 'Delete Central Control Objective Scope', 'Soft-delete Central Control Objective Scopes without live dependencies');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001010', '22000000-0000-0000-0000-000000000605', 'fa', 'حذف دامنه هدف کنترلی مرکزی', 'مجوز حذف نرم دامنه هدف کنترلی مرکزی بدون وابستگی فعال');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001011', '22000000-0000-0000-0000-000000000606', 'en', 'Restore Central Control Objective Scope', 'Restore a deleted Central Control Objective Scope using the same identity');
+insert into business_permission_i18n (id, business_permission_id, locale, title, description) values ('23000000-0000-0000-0000-000000001012', '22000000-0000-0000-0000-000000000606', 'fa', 'بازیابی دامنه هدف کنترلی مرکزی', 'مجوز بازیابی دامنه هدف کنترلی مرکزی حذف‌شده با همان شناسه');
+
