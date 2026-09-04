@@ -22,7 +22,8 @@ import {
   type ParentSaveDocumentDraftState,
 } from "@/features/document";
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
-import { ControlSubprocessScopesTab, useControlScopePermissions } from "@/features/control-scope";
+import ControlSubprocessScopesTab from "@/features/control-scope/components/ControlSubprocessScopesTab";
+import { useControlScopePermissions } from "@/features/control-scope/security/controlScopePermissions";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";

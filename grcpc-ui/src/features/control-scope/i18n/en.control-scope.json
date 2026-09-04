@@ -2,14 +2,14 @@
   "controlScope": {
     "title": "Control Scopes",
     "empty": "No relationship matches the selected search and filter.",
-    "filter": { "label": "Lifecycle", "all": "All" },
+    "filter": { "label": "Status", "all": "All" },
     "fields": {
-      "control": "Control", "subprocess": "Subprocess", "status": "Status", "lifecycle": "Lifecycle", "editState": "Edit State", "validFrom": "Valid From", "validTo": "Valid To", "frequency": "Recommended Frequency", "executionMethod": "Recommended Execution Method", "testMethod": "Recommended Test Method"
+      "control": "Control", "subprocess": "Subprocess", "status": "Status", "lifecycle": "Status", "validFrom": "Valid From", "validTo": "Valid To", "frequency": "Recommended Frequency", "executionMethod": "Recommended Execution Method", "testMethod": "Recommended Test Method"
     },
-    "actions": { "edit": "Edit", "activate": "Activate", "inactivate": "Inactivate", "remove": "Remove", "undo": "Undo", "selectControls": "Select Controls", "confirmSelection": "Confirm Selection", "applyDraft": "Apply to Draft", "retry": "Retry" },
-    "dialog": { "editTitle": "Configure Control Relationship", "valueHelpTitle": "Select Controls", "search": "Search Controls by code or title", "subprocessSearch": "Search Subprocesses by code or title" },
+    "actions": { "edit": "Edit", "activate": "Activate", "inactivate": "Inactivate", "remove": "Delete", "undo": "Undo", "selectControls": "Select", "confirmSelection": "Confirm", "applyDraft": "Draft", "retry": "Retry" },
+    "dialog": { "editTitle": "Configure Control Relationship", "valueHelpTitle": "Select Control", "search": "Search Controls by code or title", "subprocessSearch": "Search Subprocesses by code or title", "ungrouped": "No Control Group", "noControls": "No Controls match the search." },
     "status": { "ACTIVE": "Active", "INACTIVE": "Inactive" },
-    "editState": { "FINAL": "Final", "DRAFT_NEW": "Draft — New", "DRAFT_EDITED": "Draft — Edited", "DRAFT_PENDING_DELETE": "Draft — Pending deletion" },
+    "editState": { "ACTIVE": "Draft-Active", "INACTIVE": "Draft-Inactive", "EDITED": "Draft-Edit", "DELETED": "Draft-Delete" },
     "options": { "none": "No selection" },
     "validation": { "invalidDate": "The entered date is invalid.", "invalidRange": "The validity range is invalid.", "notReady": "Control Scope information is not ready to save." },
     "errors": { "load": "Failed to load Control Scopes.", "generic": "Failed to save Control Scopes.", "duplicate": "This Control is already in scope for the Subprocess.", "dependency": "Live dependent records prevent deleting this Control Scope.", "lifecycle": "This lifecycle operation is not valid for the current status.", "version": "The Control Scope was changed by another user. Reload and try again.", "endpointInactive": "The Subprocess and Control must both be active for this operation.", "validityOutsideEndpoints": "The Scope validity must fit within both endpoint validity ranges.", "notFound": "The Control Scope or one of its endpoints was not found.", "forbidden": "You do not have permission for this Control Scope action.", "invalidCatalog": "A Control Scope catalog value is invalid.", "invalidChange": "The requested Control Scope change is invalid." }
