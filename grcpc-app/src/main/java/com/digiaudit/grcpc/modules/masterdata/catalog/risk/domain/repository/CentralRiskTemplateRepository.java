@@ -33,4 +33,8 @@ public interface CentralRiskTemplateRepository
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select e from CentralRiskTemplateEntity e where e.id = :id")
   Optional<CentralRiskTemplateEntity> lockById(@Param("id") UUID id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select e from CentralRiskTemplateEntity e where e.id in :ids order by e.id")
+  List<CentralRiskTemplateEntity> lockAllByIds(@Param("ids") List<UUID> ids);
 }

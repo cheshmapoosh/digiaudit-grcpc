@@ -62,6 +62,16 @@ const controlScopeChangeSchema = z.object({
     requestedStatus: processEditableStatusSchema.nullable().optional(),
 });
 
+const riskScopeChangeSchema = z.object({
+    operation: z.enum(["CREATE_OR_RESTORE", "UPDATE", "ACTIVATE", "INACTIVATE", "DELETE"]),
+    riskTemplateId: z.string().trim().min(1),
+    scopeId: z.string().trim().min(1).nullable().optional(),
+    version: z.number().int().min(0).nullable().optional(),
+    validFrom: optionalDateSchema,
+    validTo: optionalDateSchema,
+    requestedStatus: processEditableStatusSchema.nullable().optional(),
+});
+
 const baseProcessPayloadSchema = validitySchema.extend({
     code: z
         .string()
@@ -90,6 +100,7 @@ const baseProcessPayloadSchema = validitySchema.extend({
     description: optionalTextSchema,
     documents: documentAggregateRequestSchema,
     controlScopeChanges: z.array(controlScopeChangeSchema),
+    riskScopeChanges: z.array(riskScopeChangeSchema),
 });
 
 export const processCreateSchema = baseProcessPayloadSchema;
@@ -113,6 +124,7 @@ export const processUpdateSchema = validitySchema.extend({
     description: optionalTextSchema,
     documents: documentAggregateRequestSchema,
     controlScopeChanges: z.array(controlScopeChangeSchema),
+    riskScopeChanges: z.array(riskScopeChangeSchema),
 });
 
 export const processLifecycleSchema = z.object({

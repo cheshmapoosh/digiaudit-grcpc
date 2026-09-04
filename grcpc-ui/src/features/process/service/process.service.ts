@@ -42,6 +42,7 @@ function normalizeCreatePayload(payload: ProcessNodeCreate): ProcessNodeCreate {
         validTo: normalizeOptionalText(parsed.validTo),
         documents: parsed.documents,
         controlScopeChanges: parsed.controlScopeChanges,
+        riskScopeChanges: parsed.riskScopeChanges,
     };
 }
 
@@ -59,6 +60,7 @@ function normalizeUpdatePayload(payload: ProcessNodeUpdate): ProcessNodeUpdate {
         validTo: normalizeOptionalText(parsed.validTo),
         documents: parsed.documents,
         controlScopeChanges: parsed.controlScopeChanges,
+        riskScopeChanges: parsed.riskScopeChanges,
     };
 }
 

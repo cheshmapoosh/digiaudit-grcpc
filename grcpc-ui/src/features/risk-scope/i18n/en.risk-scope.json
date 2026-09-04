@@ -1,0 +1,14 @@
+{
+  "riskScope": {
+    "title": "Risk Templates",
+    "empty": "No relationship matches the selected search and filter.",
+    "filter": { "label": "Status", "all": "All" },
+    "fields": { "riskTemplate": "Risk Template", "riskType": "Risk Type", "lifecycle": "Status", "validFrom": "Valid From", "validTo": "Valid To" },
+    "actions": { "edit": "Edit validity", "activate": "Activate", "inactivate": "Inactivate", "remove": "Delete", "undo": "Undo draft", "selectRiskTemplates": "Select", "confirmSelection": "Confirm", "applyDraft": "Apply", "retry": "Retry" },
+    "dialog": { "editTitle": "Edit Risk Scope Validity", "valueHelpTitle": "Select Risk Templates", "search": "Search Risk Templates by code or title", "ungrouped": "No Risk Category", "noRiskTemplates": "No Risk Templates match the search." },
+    "status": { "ACTIVE": "Active", "INACTIVE": "Inactive" },
+    "editState": { "ACTIVE": "Draft-Active", "INACTIVE": "Draft-Inactive", "EDITED": "Draft-Edit", "DELETED": "Draft-Delete" },
+    "validation": { "invalidDate": "The entered date is invalid.", "invalidRange": "The validity range is invalid.", "notReady": "Risk Scope information is not ready to save." },
+    "errors": { "generic": "Failed to save Risk Scopes.", "duplicate": "This Risk Template is already in scope for the Subprocess.", "dependency": "Live dependent records prevent deleting this Risk Scope.", "lifecycle": "This lifecycle operation is not valid for the current status.", "version": "The Risk Scope was changed by another user. Reload and try again.", "endpointInactive": "The Subprocess and Risk Template must both be active for this operation.", "validityOutsideEndpoints": "The Scope validity must fit within both endpoint validity ranges.", "invalidChange": "The requested Risk Scope change is invalid.", "notFound": "The Risk Scope or one of its endpoints was not found.", "forbidden": "You do not have permission for this Risk Scope action." }
+  }
+}
