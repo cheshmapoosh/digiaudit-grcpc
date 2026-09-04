@@ -35,3 +35,38 @@ npm run lint
 npm run build
 ```
 - If only changing copy/i18n, still ensure JSON is valid and referenced keys exist in both `fa` and `en` resources where the feature uses both.
+------------------------------------------------------------------------
+
+## UI5 Component Compliance
+
+For all frontend implementation follow:
+
+`UI5_COMPONENT_GUIDE.md`
+
+## Mandatory Rules
+
+-   SAP UI5 Web Components React has priority.
+-   Before creating HTML elements or custom React components, check UI5
+    equivalent.
+-   Do not replace UI5 components with custom CSS/widgets.
+-   Use semantic UI5 components for status, navigation, actions,
+    selection and dialogs.
+
+## Required Mapping
+
+-   Status -\> ObjectStatus
+-   Semantic labels -\> Tag
+-   Navigation -\> Link
+-   Row actions -\> ActionSheet/Menu
+-   Actions -\> Button
+-   Selection -\> Checkbox/List/Table
+-   Dialogs -\> Dialog
+-   Dates -\> DatePicker
+-   Layout -\> FlexBox/Grid/Toolbar
+
+Any exception requires documented UI5 limitation.
+
+## Agent Instruction
+
+Before completing UI work verify that all visible interactive elements
+use UI5 components when available.
