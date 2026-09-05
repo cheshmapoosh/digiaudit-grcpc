@@ -15,6 +15,8 @@ import faRiskScope from "../features/risk-scope/i18n/fa.risk-scope.json";
 import enRiskScope from "../features/risk-scope/i18n/en.risk-scope.json";
 import faControlObjectiveScope from "../features/control-objective-scope/i18n/fa.control-objective-scope.json";
 import enControlObjectiveScope from "../features/control-objective-scope/i18n/en.control-objective-scope.json";
+import faRequirementScope from "../features/requirement-scope/i18n/fa.requirement-scope.json";
+import enRequirementScope from "../features/requirement-scope/i18n/en.requirement-scope.json";
 import faControlObjective from "../features/control-objective/i18n/fa.control-objective.json";
 import enControlObjective from "../features/control-objective/i18n/en.control-objective.json";
 import faRisk from "../features/risk/i18n/fa.risk.json";
@@ -33,8 +35,8 @@ import fa from "./locales/fa.json";
 import en from "./locales/en.json";
 
 export const resources = {
-    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faControlScope, ...faRiskScope, ...faControlObjectiveScope, ...faControlObjective, ...faRisk, ...faAccountGroup, ...faRegulation, ...faPolicy, ...faCentralCatalog, ...faMasterData } },
-    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enControlScope, ...enRiskScope, ...enControlObjectiveScope, ...enControlObjective, ...enRisk, ...enAccountGroup, ...enRegulation, ...enPolicy, ...enCentralCatalog, ...enMasterData } }
+    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faControlScope, ...faRiskScope, ...faControlObjectiveScope, ...faRequirementScope, ...faControlObjective, ...faRisk, ...faAccountGroup, ...faRegulation, ...faPolicy, ...faCentralCatalog, ...faMasterData } },
+    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enControlScope, ...enRiskScope, ...enControlObjectiveScope, ...enRequirementScope, ...enControlObjective, ...enRisk, ...enAccountGroup, ...enRegulation, ...enPolicy, ...enCentralCatalog, ...enMasterData } }
 } as const;
 
 export function initI18n(lang: "fa" | "en") {

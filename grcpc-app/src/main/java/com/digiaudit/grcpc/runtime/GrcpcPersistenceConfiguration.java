@@ -32,6 +32,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.infrastructure.persistenc
 import com.digiaudit.grcpc.modules.masterdata.scope.control.domain.entity.CentralSubprocessControlScopeEntity;
 import com.digiaudit.grcpc.modules.masterdata.scope.controlobjective.domain.entity.CentralSubprocessControlObjectiveScopeEntity;
 import com.digiaudit.grcpc.modules.masterdata.scope.risk.domain.entity.CentralSubprocessRiskScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.scope.requirement.domain.entity.CentralSubprocessRequirementScopeEntity;
 import com.digiaudit.grcpc.modules.masterdata.shared.infrastructure.persistence.MasterDataHierarchyGuardEntity;
 import com.digiaudit.grcpc.modules.masterdata.shared.infrastructure.persistence.MasterDataLifecycleStatusConverter;
 import com.digiaudit.grcpc.modules.organization.domain.entity.OrganizationEntity;
@@ -88,6 +89,7 @@ public class GrcpcPersistenceConfiguration {
                 CentralSubprocessControlScopeEntity.class.getName(),
                 CentralSubprocessRiskScopeEntity.class.getName(),
                 CentralSubprocessControlObjectiveScopeEntity.class.getName(),
+                CentralSubprocessRequirementScopeEntity.class.getName(),
                 JsonNodeClobConverter.class.getName(),
                 MasterDataRevisionContentEntity.class.getName(),
                 MasterDataRevisionEntity.class.getName(),

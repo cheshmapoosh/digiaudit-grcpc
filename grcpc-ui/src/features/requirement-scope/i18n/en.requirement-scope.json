@@ -1,0 +1,14 @@
+{
+  "requirementScope": {
+    "title": "Requirements",
+    "empty": "No relationship matches the selected search and filter.",
+    "filter": { "label": "Status", "all": "All" },
+    "fields": { "requirement": "Requirement", "regulation": "Regulation", "lifecycle": "Status", "validFrom": "Valid From", "validTo": "Valid To" },
+    "actions": { "edit": "Edit validity", "activate": "Activate", "inactivate": "Inactivate", "remove": "Delete/remove", "undo": "Undo draft", "selectRequirements": "Select", "confirmSelection": "Confirm", "applyDraft": "Apply", "retry": "Retry" },
+    "dialog": { "editTitle": "Edit Requirement Scope Validity", "valueHelpTitle": "Select Requirements", "search": "Search Requirements by code, title, Regulation, or Regulation Group", "noRequirements": "No Requirements match the search." },
+    "status": { "ACTIVE": "Active", "INACTIVE": "Inactive" },
+    "editState": { "ACTIVE": "Draft-Active", "INACTIVE": "Draft-Inactive", "EDITED": "Draft-Edit", "DELETED": "Draft-Delete" },
+    "validation": { "invalidDate": "The entered date is invalid.", "invalidRange": "The validity range is invalid.", "notReady": "Requirement Scope information is not ready to save." },
+    "errors": { "generic": "Failed to save Requirement Scopes.", "duplicate": "This Requirement is already in scope for the Subprocess.", "dependency": "Live dependent records prevent deleting this Requirement Scope.", "lifecycle": "This lifecycle operation is not valid for the current status.", "version": "The Requirement Scope was changed by another user. Reload and try again.", "endpointInactive": "The Subprocess and Requirement must both be active for this operation.", "validityOutsideEndpoints": "The Scope validity must fit within both endpoint validity ranges.", "invalidChange": "The requested Requirement Scope change is invalid.", "notFound": "The Requirement Scope or one of its endpoints was not found.", "forbidden": "You do not have permission for this Requirement Scope action." }
+  }
+}

@@ -33,6 +33,9 @@ import com.digiaudit.grcpc.modules.masterdata.scope.controlobjective.application
 import com.digiaudit.grcpc.modules.masterdata.scope.risk.api.dto.CentralRiskScopeChangeRequest;
 import com.digiaudit.grcpc.modules.masterdata.scope.risk.api.dto.CentralSubprocessRiskScopeResponse;
 import com.digiaudit.grcpc.modules.masterdata.scope.risk.application.CentralSubprocessRiskScopeAggregateService;
+import com.digiaudit.grcpc.modules.masterdata.scope.requirement.api.dto.CentralRequirementScopeChangeRequest;
+import com.digiaudit.grcpc.modules.masterdata.scope.requirement.api.dto.CentralSubprocessRequirementScopeResponse;
+import com.digiaudit.grcpc.modules.masterdata.scope.requirement.application.CentralSubprocessRequirementScopeAggregateService;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionActorProvider;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionCoordinator;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionContext;
@@ -98,6 +101,7 @@ public class ProcessService {
     private final CentralSubprocessControlScopeAggregateService controlScopes;
     private final CentralSubprocessRiskScopeAggregateService riskScopes;
     private final CentralSubprocessControlObjectiveScopeAggregateService controlObjectiveScopes;
+    private final CentralSubprocessRequirementScopeAggregateService requirementScopes;
 
     public ProcessService(
             CentralProcessRepository processRepository,
@@ -111,7 +115,8 @@ public class ProcessService {
             DocumentCommandService documentCommandService,
             CentralSubprocessControlScopeAggregateService controlScopes,
             CentralSubprocessRiskScopeAggregateService riskScopes,
-            CentralSubprocessControlObjectiveScopeAggregateService controlObjectiveScopes
+            CentralSubprocessControlObjectiveScopeAggregateService controlObjectiveScopes,
+            CentralSubprocessRequirementScopeAggregateService requirementScopes
     ) {
         this.processRepository = Objects.requireNonNull(processRepository, "processRepository is required");
         this.subprocessRepository = Objects.requireNonNull(subprocessRepository, "subprocessRepository is required");
@@ -125,6 +130,7 @@ public class ProcessService {
         this.controlScopes = Objects.requireNonNull(controlScopes, "controlScopes is required");
         this.riskScopes = Objects.requireNonNull(riskScopes, "riskScopes is required");
         this.controlObjectiveScopes = Objects.requireNonNull(controlObjectiveScopes, "controlObjectiveScopes is required");
+        this.requirementScopes = Objects.requireNonNull(requirementScopes, "requirementScopes is required");
     }
 
     @Transactional(readOnly = true)
@@ -266,6 +272,7 @@ public class ProcessService {
         AtomicReference<List<CentralSubprocessControlScopeResponse>> canonicalControlScopes = new AtomicReference<>(List.of());
         AtomicReference<List<CentralSubprocessRiskScopeResponse>> canonicalRiskScopes = new AtomicReference<>(List.of());
         AtomicReference<List<CentralSubprocessControlObjectiveScopeResponse>> canonicalControlObjectiveScopes = new AtomicReference<>(List.of());
+        AtomicReference<List<CentralSubprocessRequirementScopeResponse>> canonicalRequirementScopes = new AtomicReference<>(List.of());
         RevisionExecutionResult result = revisionCoordinator.executeStructural(
                     MasterDataHierarchyKey.PROCESS,
                     RevisionRequest.central("Create central subprocess " + code, "Central subprocess structural create", null),
@@ -304,6 +311,15 @@ public class ProcessService {
                                         request.validTo(),
                                         request.controlObjectiveScopeChanges()
                                 );
+                        CentralSubprocessRequirementScopeAggregateService.PreparedChanges preparedRequirementScopes =
+                                requirementScopes.prepare(
+                                        context,
+                                        subprocess,
+                                        MasterDataLifecycleStatus.ACTIVE,
+                                        request.validFrom(),
+                                        request.validTo(),
+                                        request.requirementScopeChanges()
+                                );
                         RevisionOperationResult operation = persistPreparedSubprocessCreate(context, preparedSubprocess);
                         finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
                                 preparedDocuments,
@@ -316,13 +332,17 @@ public class ProcessService {
                                 riskScopes.apply(preparedRiskScopes, subprocess);
                         CentralSubprocessControlObjectiveScopeAggregateService.ApplyResult controlObjectiveScopeResult =
                                 controlObjectiveScopes.apply(preparedControlObjectiveScopes, subprocess);
+                        CentralSubprocessRequirementScopeAggregateService.ApplyResult requirementScopeResult =
+                                requirementScopes.apply(preparedRequirementScopes, subprocess);
                         canonicalControlScopes.set(controlScopeResult.canonicalRows());
                         canonicalRiskScopes.set(riskScopeResult.canonicalRows());
                         canonicalControlObjectiveScopes.set(controlObjectiveScopeResult.canonicalRows());
+                        canonicalRequirementScopes.set(requirementScopeResult.canonicalRows());
                         List<RevisionContentResult> relationshipContents =
                                 new ArrayList<>(controlScopeResult.revisionContents());
                         relationshipContents.addAll(riskScopeResult.revisionContents());
                         relationshipContents.addAll(controlObjectiveScopeResult.revisionContents());
+                        relationshipContents.addAll(requirementScopeResult.revisionContents());
                         return combine(context, operation, relationshipContents);
                     }
         );
@@ -331,7 +351,8 @@ public class ProcessService {
                 finalizedDocuments.get(),
                 canonicalControlScopes.get(),
                 canonicalRiskScopes.get(),
-                canonicalControlObjectiveScopes.get());
+                canonicalControlObjectiveScopes.get(),
+                canonicalRequirementScopes.get());
     }
 
     public CentralSubprocessAggregateMutationResponse updateSubprocess(UUID subprocessId, UpdateCentralSubprocessRequest request) {
@@ -345,6 +366,7 @@ public class ProcessService {
         AtomicReference<List<CentralSubprocessControlScopeResponse>> canonicalControlScopes = new AtomicReference<>(List.of());
         AtomicReference<List<CentralSubprocessRiskScopeResponse>> canonicalRiskScopes = new AtomicReference<>(List.of());
         AtomicReference<List<CentralSubprocessControlObjectiveScopeResponse>> canonicalControlObjectiveScopes = new AtomicReference<>(List.of());
+        AtomicReference<List<CentralSubprocessRequirementScopeResponse>> canonicalRequirementScopes = new AtomicReference<>(List.of());
         RevisionExecutionResult result = revisionCoordinator.executeStructural(
                 MasterDataHierarchyKey.PROCESS,
                 RevisionRequest.central(
@@ -370,7 +392,9 @@ public class ProcessService {
                         request.riskScopeChanges(),
                         canonicalRiskScopes,
                         request.controlObjectiveScopeChanges(),
-                        canonicalControlObjectiveScopes
+                        canonicalControlObjectiveScopes,
+                        request.requirementScopeChanges(),
+                        canonicalRequirementScopes
                 )
         );
         return subprocessAggregateResponse(
@@ -378,7 +402,8 @@ public class ProcessService {
                 finalizedDocuments.get(),
                 canonicalControlScopes.get(),
                 canonicalRiskScopes.get(),
-                canonicalControlObjectiveScopes.get());
+                canonicalControlObjectiveScopes.get(),
+                canonicalRequirementScopes.get());
     }
 
     public MasterDataRevisionMutationResponse moveSubprocess(UUID subprocessId, MoveCentralSubprocessRequest request) {
@@ -707,7 +732,9 @@ public class ProcessService {
             List<CentralRiskScopeChangeRequest> riskScopeChanges,
             AtomicReference<List<CentralSubprocessRiskScopeResponse>> canonicalRiskScopes,
             List<CentralControlObjectiveScopeChangeRequest> controlObjectiveScopeChanges,
-            AtomicReference<List<CentralSubprocessControlObjectiveScopeResponse>> canonicalControlObjectiveScopes
+            AtomicReference<List<CentralSubprocessControlObjectiveScopeResponse>> canonicalControlObjectiveScopes,
+            List<CentralRequirementScopeChangeRequest> requirementScopeChanges,
+            AtomicReference<List<CentralSubprocessRequirementScopeResponse>> canonicalRequirementScopes
     ) {
         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
         CentralSubprocessEntity entity = lockSubprocessIncludingDeleted(subprocessId);
@@ -726,6 +753,9 @@ public class ProcessService {
         CentralSubprocessControlObjectiveScopeAggregateService.PreparedChanges preparedControlObjectiveScopes =
                 controlObjectiveScopes.prepare(
                         context, entity, status, validFrom, validTo, controlObjectiveScopeChanges);
+        CentralSubprocessRequirementScopeAggregateService.PreparedChanges preparedRequirementScopes =
+                requirementScopes.prepare(
+                        context, entity, status, validFrom, validTo, requirementScopeChanges);
         JsonNode before = subprocessSnapshot(entity);
         entity.updateDetails(
                 title,
@@ -752,13 +782,17 @@ public class ProcessService {
                 riskScopes.apply(preparedRiskScopes, saved);
         CentralSubprocessControlObjectiveScopeAggregateService.ApplyResult controlObjectiveScopeResult =
                 controlObjectiveScopes.apply(preparedControlObjectiveScopes, saved);
+        CentralSubprocessRequirementScopeAggregateService.ApplyResult requirementScopeResult =
+                requirementScopes.apply(preparedRequirementScopes, saved);
         canonicalControlScopes.set(controlScopeResult.canonicalRows());
         canonicalRiskScopes.set(riskScopeResult.canonicalRows());
         canonicalControlObjectiveScopes.set(controlObjectiveScopeResult.canonicalRows());
+        canonicalRequirementScopes.set(requirementScopeResult.canonicalRows());
         List<RevisionContentResult> relationshipContents =
                 new ArrayList<>(controlScopeResult.revisionContents());
         relationshipContents.addAll(riskScopeResult.revisionContents());
         relationshipContents.addAll(controlObjectiveScopeResult.revisionContents());
+        relationshipContents.addAll(requirementScopeResult.revisionContents());
         return combine(context, parentResult, relationshipContents);
     }
 
@@ -912,7 +946,8 @@ public class ProcessService {
             List<DocumentCommandResponse> finalizedDocuments,
             List<CentralSubprocessControlScopeResponse> canonicalControlScopes,
             List<CentralSubprocessRiskScopeResponse> canonicalRiskScopes,
-            List<CentralSubprocessControlObjectiveScopeResponse> canonicalControlObjectiveScopes
+            List<CentralSubprocessControlObjectiveScopeResponse> canonicalControlObjectiveScopes,
+            List<CentralSubprocessRequirementScopeResponse> canonicalRequirementScopes
     ) {
         MasterDataMutationResult primary = result.primaryResult();
         return new CentralSubprocessAggregateMutationResponse(
@@ -922,7 +957,8 @@ public class ProcessService {
                 finalizedDocuments,
                 canonicalControlScopes,
                 canonicalRiskScopes,
-                canonicalControlObjectiveScopes
+                canonicalControlObjectiveScopes,
+                canonicalRequirementScopes
         );
     }
 

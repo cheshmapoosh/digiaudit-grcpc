@@ -4,7 +4,9 @@ import { HttpError } from "@/shared/infra/http.client";
 export function riskScopeErrorMessage(error: unknown, t: TFunction): string {
   const code = error instanceof HttpError ? error.code : undefined;
   switch (code) {
-    case "DUPLICATE_RELATION": return t("riskScope.errors.duplicate");
+    case "DUPLICATE_RELATION": return error instanceof Error && error.message.trim()
+      ? error.message
+      : t("riskScope.errors.duplicate");
     case "RISK_SCOPE_DEPENDENCY_CONFLICT": return t("riskScope.errors.dependency");
     case "INVALID_LIFECYCLE_TRANSITION": return t("riskScope.errors.lifecycle");
     case "VERSION_CONFLICT": return t("riskScope.errors.version");

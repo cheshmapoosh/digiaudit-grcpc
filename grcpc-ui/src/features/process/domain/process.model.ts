@@ -3,6 +3,7 @@ import type { DocumentAggregateRequest, DocumentCommandResponse } from "@/featur
 import type { CentralSubprocessControlScope, ControlScopeChange } from "@/features/control-scope";
 import type { CentralSubprocessRiskScope, RiskScopeChange } from "@/features/risk-scope";
 import type { CentralSubprocessControlObjectiveScope, ControlObjectiveScopeChange } from "@/features/control-objective-scope";
+import type { CentralSubprocessRequirementScope, RequirementScopeChange } from "@/features/requirement-scope";
 
 export type ProcessStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type ProcessEditableStatus = "ACTIVE" | "INACTIVE";
@@ -20,6 +21,7 @@ export interface MasterDataAggregateMutationResponse extends MasterDataRevisionM
     controlScopes?: CentralSubprocessControlScope[];
     riskScopes?: CentralSubprocessRiskScope[];
     controlObjectiveScopes?: CentralSubprocessControlObjectiveScope[];
+    requirementScopes?: CentralSubprocessRequirementScope[];
 }
 
 export interface ProcessNode extends AuditFields {
@@ -60,6 +62,7 @@ export interface ProcessNodeCreate {
     controlScopeChanges: ControlScopeChange[];
     riskScopeChanges: RiskScopeChange[];
     controlObjectiveScopeChanges: ControlObjectiveScopeChange[];
+    requirementScopeChanges: RequirementScopeChange[];
 }
 
 export interface ProcessNodeUpdate {
@@ -75,6 +78,7 @@ export interface ProcessNodeUpdate {
     controlScopeChanges: ControlScopeChange[];
     riskScopeChanges: RiskScopeChange[];
     controlObjectiveScopeChanges: ControlObjectiveScopeChange[];
+    requirementScopeChanges: RequirementScopeChange[];
 }
 
 export interface ProcessLifecycleCommand {

@@ -34,4 +34,8 @@ public interface CentralRegulationRequirementRepository
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select e from CentralRegulationRequirementEntity e where e.id = :id")
   Optional<CentralRegulationRequirementEntity> lockById(@Param("id") UUID id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select e from CentralRegulationRequirementEntity e where e.id in :ids order by e.id")
+  List<CentralRegulationRequirementEntity> lockAllByIds(@Param("ids") List<UUID> ids);
 }

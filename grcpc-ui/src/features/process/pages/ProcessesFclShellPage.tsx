@@ -120,7 +120,20 @@ function mapError(
                 defaultValue: "رکورد توسط کاربر دیگری تغییر کرده است. صفحه را دوباره بارگذاری کنید.",
             });
         case "DUPLICATE_RELATION":
-            return t("controlObjectiveScope.errors.duplicate");
+            return error instanceof Error && error.message.trim()
+                ? error.message
+                : t("process.errors.duplicateRelation");
+        case "REQUIREMENT_SCOPE_DEPENDENCY_CONFLICT":
+            return t("requirementScope.errors.dependency");
+        case "REQUIREMENT_SCOPE_ENDPOINT_NOT_ACTIVE":
+            return t("requirementScope.errors.endpointInactive");
+        case "REQUIREMENT_SCOPE_VALIDITY_OUTSIDE_ENDPOINTS":
+            return t("requirementScope.errors.validityOutsideEndpoints");
+        case "REQUIREMENT_SCOPE_CHANGE_INVALID":
+            return t("requirementScope.errors.invalidChange");
+        case "CENTRAL_REQUIREMENT_SCOPE_NOT_FOUND":
+        case "REQUIREMENT_SCOPE_ENDPOINT_NOT_FOUND":
+            return t("requirementScope.errors.notFound");
         case "CONTROL_OBJECTIVE_SCOPE_DEPENDENCY_CONFLICT":
             return t("controlObjectiveScope.errors.dependency");
         case "CONTROL_OBJECTIVE_SCOPE_ENDPOINT_NOT_ACTIVE":

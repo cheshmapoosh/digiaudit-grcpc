@@ -71,6 +71,7 @@ function toProcessCreateBody(payload: ProcessNodeCreate) {
         documents: payload.documents,
         riskScopeChanges: [],
         controlObjectiveScopeChanges: [],
+        requirementScopeChanges: [],
     };
 }
 
@@ -87,6 +88,7 @@ function toSubprocessCreateBody(payload: ProcessNodeCreate) {
         controlScopeChanges: payload.controlScopeChanges,
         riskScopeChanges: payload.riskScopeChanges,
         controlObjectiveScopeChanges: payload.controlObjectiveScopeChanges,
+        requirementScopeChanges: payload.requirementScopeChanges,
     };
 }
 
@@ -103,6 +105,7 @@ function toProcessUpdateBody(payload: ProcessNodeUpdate) {
         documents: payload.documents,
         riskScopeChanges: [],
         controlObjectiveScopeChanges: [],
+        requirementScopeChanges: [],
     };
 }
 
@@ -120,6 +123,7 @@ function toSubprocessUpdateBody(payload: ProcessNodeUpdate) {
         controlScopeChanges: payload.controlScopeChanges,
         riskScopeChanges: payload.riskScopeChanges,
         controlObjectiveScopeChanges: payload.controlObjectiveScopeChanges,
+        requirementScopeChanges: payload.requirementScopeChanges,
     };
 }
 

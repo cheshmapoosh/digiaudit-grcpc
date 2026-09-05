@@ -6,6 +6,7 @@ import { DocumentManager, EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE, toDocumentAggr
 import { EMPTY_CONTROL_SCOPE_DRAFT_STATE, SubprocessControlScopesTab, useControlScopePermissions, type ControlScopeDraftState } from "@/features/control-scope";
 import { EMPTY_RISK_SCOPE_DRAFT_STATE, SubprocessRiskScopesTab, useRiskScopePermissions, type RiskScopeDraftState } from "@/features/risk-scope";
 import { EMPTY_CONTROL_OBJECTIVE_SCOPE_DRAFT_STATE, SubprocessControlObjectiveScopesTab, useControlObjectiveScopePermissions, type ControlObjectiveScopeDraftState } from "@/features/control-objective-scope";
+import { EMPTY_REQUIREMENT_SCOPE_DRAFT_STATE, SubprocessRequirementScopesTab, useRequirementScopePermissions, type RequirementScopeDraftState } from "@/features/requirement-scope";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime, toEnglishDigits } from "@/shared/utils/date.utils";
@@ -14,7 +15,7 @@ import type { ProcessNode, ProcessNodeCreate, ProcessNodeType, ProcessNodeUpdate
 import { buildTree, collectDescendantIds } from "../utils/process.tree";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
-export type ProcessTabKey = "general" | "controls" | "controlObjectives" | "riskTemplates" | "documents";
+export type ProcessTabKey = "general" | "controls" | "requirements" | "controlObjectives" | "riskTemplates" | "documents";
 
 interface ProcessFormState {
     code: string;
@@ -98,6 +99,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const controlScopePermissions = useControlScopePermissions();
     const riskScopePermissions = useRiskScopePermissions();
     const controlObjectiveScopePermissions = useControlObjectiveScopePermissions();
+    const requirementScopePermissions = useRequirementScopePermissions();
     const initial = toFormState(value, parent, requestedNodeType);
     const [form, setForm] = useState(initial);
     const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(initial, mode)));
@@ -108,6 +110,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const [controlScopeDraft, setControlScopeDraft] = useState<ControlScopeDraftState>(EMPTY_CONTROL_SCOPE_DRAFT_STATE);
     const [riskScopeDraft, setRiskScopeDraft] = useState<RiskScopeDraftState>(EMPTY_RISK_SCOPE_DRAFT_STATE);
     const [controlObjectiveScopeDraft, setControlObjectiveScopeDraft] = useState<ControlObjectiveScopeDraftState>(EMPTY_CONTROL_OBJECTIVE_SCOPE_DRAFT_STATE);
+    const [requirementScopeDraft, setRequirementScopeDraft] = useState<RequirementScopeDraftState>(EMPTY_REQUIREMENT_SCOPE_DRAFT_STATE);
     const [dateDrafts, setDateDrafts] = useState<Record<"validFrom" | "validTo", PersianDateDraftState>>({
         validFrom: { draftValue: "", valid: true, dirty: false },
         validTo: { draftValue: "", valid: true, dirty: false },
@@ -116,7 +119,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const scopeRef = useRef(scope);
     const generalInformationDirty = JSON.stringify(normalized(form, mode)) !== baseline;
     const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
-    const dirty = generalInformationDirty || invalidDateDraft || documentDraft.dirty || controlScopeDraft.dirty || riskScopeDraft.dirty || controlObjectiveScopeDraft.dirty;
+    const dirty = generalInformationDirty || invalidDateDraft || documentDraft.dirty || controlScopeDraft.dirty || riskScopeDraft.dirty || controlObjectiveScopeDraft.dirty || requirementScopeDraft.dirty;
     const activeTab = controlledTab ?? internalTab;
     const readOnly = mode === "view";
 
@@ -157,19 +160,20 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
         if (form.nodeType === "SUBPROCESS" && (!controlScopeDraft.ready || controlScopeDraft.invalid)) return setValidationError(t("controlScope.validation.notReady")), false;
         if (form.nodeType === "SUBPROCESS" && (!riskScopeDraft.ready || riskScopeDraft.invalid)) return setValidationError(t("riskScope.validation.notReady")), false;
         if (form.nodeType === "SUBPROCESS" && (!controlObjectiveScopeDraft.ready || controlObjectiveScopeDraft.invalid)) return setValidationError(t("controlObjectiveScope.validation.notReady")), false;
+        if (form.nodeType === "SUBPROCESS" && (!requirementScopeDraft.ready || requirementScopeDraft.invalid)) return setValidationError(t("requirementScope.validation.notReady")), false;
         setValidationError(null); return true;
     };
 
     const submit = async () => {
         if (readOnly || !validate()) return;
-        const common = { title: form.title.trim(), sortOrder: parseSortOrder(form.sortOrder) ?? 0, description: optional(form.description), validFrom: optional(form.validFrom), validTo: optional(form.validTo), documents: toDocumentAggregateRequest(documentDraft), controlScopeChanges: form.nodeType === "SUBPROCESS" ? controlScopeDraft.changes : [], riskScopeChanges: form.nodeType === "SUBPROCESS" ? riskScopeDraft.changes : [], controlObjectiveScopeChanges: form.nodeType === "SUBPROCESS" ? controlObjectiveScopeDraft.changes : [] };
+        const common = { title: form.title.trim(), sortOrder: parseSortOrder(form.sortOrder) ?? 0, description: optional(form.description), validFrom: optional(form.validFrom), validTo: optional(form.validTo), documents: toDocumentAggregateRequest(documentDraft), controlScopeChanges: form.nodeType === "SUBPROCESS" ? controlScopeDraft.changes : [], riskScopeChanges: form.nodeType === "SUBPROCESS" ? riskScopeDraft.changes : [], controlObjectiveScopeChanges: form.nodeType === "SUBPROCESS" ? controlObjectiveScopeDraft.changes : [], requirementScopeChanges: form.nodeType === "SUBPROCESS" ? requirementScopeDraft.changes : [] };
         const payload = mode === "create"
             ? { ...common, nodeType: form.nodeType, code: form.code.trim(), parentId: form.parentId } satisfies ProcessNodeCreate
             : { ...common, version: value?.version ?? 0, status: form.status, parentId: form.parentId } satisfies ProcessNodeUpdate;
         if (await onSubmit(payload)) { setBaseline(JSON.stringify(normalized(form, mode))); onDirtyChange?.(false); }
     };
 
-    const saveDisabled = busy || invalidDateDraft || documentDraft.uploading || documentDraft.invalid || !documentDraft.ready || (form.nodeType === "SUBPROCESS" && (!controlScopeDraft.ready || controlScopeDraft.invalid || !riskScopeDraft.ready || riskScopeDraft.invalid || !controlObjectiveScopeDraft.ready || controlObjectiveScopeDraft.invalid)) || (!generalInformationDirty && !documentDraft.dirty && !controlScopeDraft.dirty && !riskScopeDraft.dirty && !controlObjectiveScopeDraft.dirty);
+    const saveDisabled = busy || invalidDateDraft || documentDraft.uploading || documentDraft.invalid || !documentDraft.ready || (form.nodeType === "SUBPROCESS" && (!controlScopeDraft.ready || controlScopeDraft.invalid || !riskScopeDraft.ready || riskScopeDraft.invalid || !controlObjectiveScopeDraft.ready || controlObjectiveScopeDraft.invalid || !requirementScopeDraft.ready || requirementScopeDraft.invalid)) || (!generalInformationDirty && !documentDraft.dirty && !controlScopeDraft.dirty && !riskScopeDraft.dirty && !controlObjectiveScopeDraft.dirty && !requirementScopeDraft.dirty);
 
     return (
         <>
@@ -193,7 +197,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                     {form.nodeType === "SUBPROCESS" ? (
                         <>
                             <Tab text={t("process.tabs.controls", { defaultValue: "Controls" })} selected={activeTab === "controls"} disabled={!controlScopePermissions.view} data-tab-key="controls" />
-                            <Tab text={t("process.tabs.regulations", { defaultValue: "Regulations" })} disabled />
+                            <Tab text={t("process.tabs.requirements")} selected={activeTab === "requirements"} disabled={!requirementScopePermissions.view} data-tab-key="requirements" />
                             <Tab text={t("process.tabs.controlObjectives", { defaultValue: "Control Objectives" })} selected={activeTab === "controlObjectives"} disabled={!controlObjectiveScopePermissions.view} data-tab-key="controlObjectives" />
                             <Tab text={t("process.tabs.accountGroups", { defaultValue: "Account Groups" })} disabled />
                             <Tab text={t("process.tabs.riskTemplates", { defaultValue: "Risk Templates" })} selected={activeTab === "riskTemplates"} disabled={!riskScopePermissions.view} data-tab-key="riskTemplates" />
@@ -233,6 +237,9 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                     </div>
                     <div style={{ display: activeTab === "controlObjectives" ? "block" : "none" }}>
                         {form.nodeType === "SUBPROCESS" ? <SubprocessControlObjectiveScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlObjectiveScopeDraft} /> : null}
+                    </div>
+                    <div style={{ display: activeTab === "requirements" ? "block" : "none" }}>
+                        {form.nodeType === "SUBPROCESS" ? <SubprocessRequirementScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRequirementScopeDraft} /> : null}
                     </div>
                     <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("process.tabs.documents", { defaultValue: "Documents" })} targetType={documentTarget(form.nodeType)} targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentAggregateError} onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
                 </div>
