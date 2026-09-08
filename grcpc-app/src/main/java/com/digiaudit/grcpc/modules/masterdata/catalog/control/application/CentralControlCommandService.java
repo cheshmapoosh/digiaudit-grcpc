@@ -13,14 +13,17 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.Cent
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.enums.CentralControlTriggerType;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.repository.CentralControlGroupRepository;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.repository.CentralControlRepository;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.CentralControlAccountGroupResponse;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.CentralControlAggregateMutationResponse;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.application.CentralControlAccountGroupAggregateService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.CatalogCommandSupport;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionEntityType;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationType;
-import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Clock;
 import java.time.Instant;
@@ -29,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -44,6 +49,7 @@ public class CentralControlCommandService {
   private final CatalogCommandSupport support;
   private final MasterDataStructuralDependencyChecker dependencyChecker;
   private final Clock clock;
+  private final CentralControlAccountGroupAggregateService accountGroupClassifications;
 
   public CentralControlCommandService(
       CentralControlRepository repository,
@@ -53,6 +59,7 @@ public class CentralControlCommandService {
       DocumentCommandService documentCommandService,
       CatalogCommandSupport support,
       MasterDataStructuralDependencyChecker dependencyChecker,
+      CentralControlAccountGroupAggregateService accountGroupClassifications,
       @Qualifier("masterDataRevisionClock") Clock clock) {
     this.repository = repository;
     this.groups = groups;
@@ -61,31 +68,31 @@ public class CentralControlCommandService {
     this.documentCommandService = documentCommandService;
     this.support = support;
     this.dependencyChecker = dependencyChecker;
+    this.accountGroupClassifications = accountGroupClassifications;
     this.clock = clock;
   }
 
-  public MasterDataAggregateMutationResponse create(CreateCentralControlRequest request) {
+  public CentralControlAggregateMutationResponse create(CreateCentralControlRequest request) {
     String code = support.normalizeCode(request.code());
     String title = support.normalizeTitle(request.title());
     String description = support.normalizeDescription(request.description());
     String eventDescription = support.normalizeDescription(request.eventDescription());
-    validate(
-        request.controlGroupId(),
-        request.triggerType(),
-        eventDescription,
-        request.operationFrequency());
+    validateDefinition(request.triggerType(), eventDescription, request.operationFrequency());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> documents = new AtomicReference<>(List.of());
+    AtomicReference<List<CentralControlAccountGroupResponse>> canonicalClassifications = new AtomicReference<>(List.of());
 
     try {
       RevisionExecutionResult result =
-          revisionCoordinator.execute(
+          revisionCoordinator.executeStructural(
+              requiredGuards(request.accountGroupChanges()),
               RevisionRequest.central(
                   "Create central control " + code, "Central Control definition create", null),
               context -> {
                 DocumentCommandService.PreparedAggregateContext prepared =
                     documentCommandService.prepareAggregate(request.documents());
                 CentralControlEntity entity = repository.findByCode(code).orElse(null);
+                validateControlGroup(request.controlGroupId());
                 RevisionOperationType operationType;
                 Long expectedVersion;
                 JsonNode before;
@@ -178,6 +185,8 @@ public class CentralControlCommandService {
                   }
                 }
 
+                CentralControlAccountGroupAggregateService.PreparedChanges preparedClassifications =
+                    accountGroupClassifications.prepare(context, entity, MasterDataLifecycleStatus.ACTIVE, request.accountGroupChanges());
                 CentralControlEntity saved = repository.saveAndFlush(entity);
                 documents.set(
                     documentCommandService.finalizePreparedAggregate(
@@ -185,30 +194,31 @@ public class CentralControlCommandService {
                         DocumentLinkTargetType.CENTRAL_CONTROL,
                         saved.getId(),
                         "CENTRAL_CONTROL_CREATE"));
-                return completed(context, saved, operationType, expectedVersion, before);
+                CentralControlAccountGroupAggregateService.ApplyResult classificationResult =
+                    accountGroupClassifications.apply(preparedClassifications, saved);
+                canonicalClassifications.set(classificationResult.canonicalRows());
+                return combine(context, completed(context, saved, operationType, expectedVersion, before), classificationResult.revisionContents());
               });
-      return support.aggregateResponse(result, documents.get());
+      return aggregateResponse(result, documents.get(), canonicalClassifications.get());
     } catch (DataIntegrityViolationException exception) {
       throw support.translateBusinessKeyViolation(exception, "UK_CENTRAL_CONTROL_CODE", code);
     }
   }
 
-  public MasterDataAggregateMutationResponse update(UUID id, UpdateCentralControlRequest request) {
+  public CentralControlAggregateMutationResponse update(UUID id, UpdateCentralControlRequest request) {
     long expectedVersion = support.requireVersion(request.version());
     String title = support.normalizeTitle(request.title());
     String description = support.normalizeDescription(request.description());
     String eventDescription = support.normalizeDescription(request.eventDescription());
     MasterDataLifecycleStatus requestedStatus = requireEditableStatus(request.status());
-    validate(
-        request.controlGroupId(),
-        request.triggerType(),
-        eventDescription,
-        request.operationFrequency());
+    validateDefinition(request.triggerType(), eventDescription, request.operationFrequency());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> documents = new AtomicReference<>(List.of());
+    AtomicReference<List<CentralControlAccountGroupResponse>> canonicalClassifications = new AtomicReference<>(List.of());
 
     RevisionExecutionResult result =
-        revisionCoordinator.execute(
+        revisionCoordinator.executeStructural(
+            requiredGuards(request.accountGroupChanges()),
             RevisionRequest.central(
                 "Update central control " + id, "Central Control definition update", null),
             context -> {
@@ -217,13 +227,16 @@ public class CentralControlCommandService {
               CentralControlEntity entity = lock(id);
               support.assertVersion(entity, expectedVersion);
               if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
+              validateControlGroup(request.controlGroupId());
               if (sameDefinition(entity, title, description, eventDescription, requestedStatus, request)
-                  && isEmpty(request.documents())) {
+                  && isEmpty(request.documents()) && isEmpty(request.accountGroupChanges())) {
                 throw new UnprocessableEntityException(
                     "NO_CHANGE", "error.masterdata.v2.noChange", "The command contains no change");
               }
 
               JsonNode before = snapshot(entity);
+              CentralControlAccountGroupAggregateService.PreparedChanges preparedClassifications =
+                  accountGroupClassifications.prepare(context, entity, requestedStatus, request.accountGroupChanges());
               UUID actorId = actorProvider.currentActorId();
               Instant now = Instant.now(clock);
               entity.update(
@@ -259,10 +272,12 @@ public class CentralControlCommandService {
                       DocumentLinkTargetType.CENTRAL_CONTROL,
                       saved.getId(),
                       "CENTRAL_CONTROL_UPDATE"));
-              return completed(
-                  context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
+              CentralControlAccountGroupAggregateService.ApplyResult classificationResult =
+                  accountGroupClassifications.apply(preparedClassifications, saved);
+              canonicalClassifications.set(classificationResult.canonicalRows());
+              return combine(context, completed(context, saved, RevisionOperationType.UPDATE, expectedVersion, before), classificationResult.revisionContents());
             });
-    return support.aggregateResponse(result, documents.get());
+    return aggregateResponse(result, documents.get(), canonicalClassifications.get());
   }
 
   public MasterDataRevisionMutationResponse activate(UUID id, Long version) {
@@ -285,7 +300,8 @@ public class CentralControlCommandService {
       UUID id, Long requestedVersion, RevisionOperationType operationType) {
     long expectedVersion = support.requireVersion(requestedVersion);
     RevisionExecutionResult result =
-        revisionCoordinator.execute(
+        revisionCoordinator.executeStructural(
+            MasterDataHierarchyKey.CONTROL,
             RevisionRequest.central(
                 operationType + " central control " + id,
                 "Central Control lifecycle command",
@@ -318,18 +334,10 @@ public class CentralControlCommandService {
     return MasterDataRevisionMutationResponse.from(result.primaryResult());
   }
 
-  private void validate(
-      UUID controlGroupId,
+  private void validateDefinition(
       CentralControlTriggerType triggerType,
       String eventDescription,
       Object operationFrequency) {
-    if (controlGroupId != null
-        && groups.findByIdAndStatusNot(controlGroupId, MasterDataLifecycleStatus.DELETED).isEmpty()) {
-      throw new UnprocessableEntityException(
-          "INVALID_PARENT",
-          "error.masterdata.v2.invalidParent",
-          "Control Group does not exist or is deleted");
-    }
     if (eventDescription != null && triggerType != CentralControlTriggerType.EVENT) {
       throw new UnprocessableEntityException(
           "INVALID_CONTROL_EVENT_DESCRIPTION",
@@ -342,6 +350,32 @@ public class CentralControlCommandService {
           "error.masterdata.v2.invalidControlFrequency",
           "Operation frequency is only valid for DATE trigger");
     }
+  }
+
+  private void validateControlGroup(UUID controlGroupId) {
+    if (controlGroupId != null && groups.findByIdAndStatusNot(controlGroupId, MasterDataLifecycleStatus.DELETED).isEmpty()) {
+      throw new UnprocessableEntityException(
+          "INVALID_PARENT",
+          "error.masterdata.v2.invalidParent",
+          "Control Group does not exist or is deleted");
+    }
+  }
+
+  private Collection<MasterDataHierarchyKey> requiredGuards(List<?> changes) {
+    return isEmpty(changes) ? List.of(MasterDataHierarchyKey.CONTROL)
+        : List.of(MasterDataHierarchyKey.ACCOUNT_GROUP, MasterDataHierarchyKey.CONTROL);
+  }
+
+  private RevisionOperationResult combine(RevisionExecutionContext context, RevisionOperationResult primary, List<com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentResult> relationContents) {
+    List<com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentResult> contents = new ArrayList<>(primary.contentResults());
+    contents.addAll(relationContents);
+    return RevisionOperationResult.completed(context, primary.primaryResult(), contents);
+  }
+
+  private CentralControlAggregateMutationResponse aggregateResponse(RevisionExecutionResult result,
+      List<DocumentCommandResponse> documents, List<CentralControlAccountGroupResponse> classifications) {
+    var primary = result.primaryResult();
+    return new CentralControlAggregateMutationResponse(primary.entityId(), primary.revisionId(), primary.version(), documents, classifications);
   }
 
   private RevisionOperationResult completed(
@@ -440,4 +474,6 @@ public class CentralControlCommandService {
             && request.newVersions().isEmpty()
             && request.metadataUpdates().isEmpty());
   }
+
+  private boolean isEmpty(List<?> values) { return values == null || values.isEmpty(); }
 }

@@ -2,11 +2,13 @@ package com.digiaudit.grcpc.modules.masterdata.catalog.control.api.dto;
 
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.enums.*;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.CentralControlAccountGroupChangeRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 public record CreateCentralControlRequest(
@@ -30,4 +32,5 @@ public record CreateCentralControlRequest(
     CentralControlEvidenceLevel evidenceLevel,
     LocalDate validFrom,
     LocalDate validTo,
-    @Valid DocumentAggregateBatchRequest documents) {}
+    @Valid DocumentAggregateBatchRequest documents,
+    @Valid List<CentralControlAccountGroupChangeRequest> accountGroupChanges) {}

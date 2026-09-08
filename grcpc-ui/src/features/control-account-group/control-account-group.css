@@ -1,0 +1,14 @@
+.controlAccountGroupTab { display: grid; gap: .75rem; min-width: 0; }
+.controlAccountGroupToolbar { display: flex; align-items: end; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.controlAccountGroupToolbarGroup { display: flex; gap: .5rem; align-items: end; flex-wrap: wrap; }
+.controlAccountGroupSearch { min-width: min(20rem, 70vw); }
+.controlAccountGroupEmpty { padding: 1.5rem; text-align: center; color: var(--sapContent_LabelColor); }
+.controlAccountGroupDialog { width: min(48rem, 92vw); }
+.controlAccountGroupDialogBody { display: grid; gap: .75rem; padding: 1rem; min-width: min(42rem, 84vw); max-height: 70vh; overflow: auto; }
+.controlAccountGroupDialogFooter { display: flex; justify-content: flex-end; gap: .5rem; }
+.controlAccountGroupTreeFrame { min-height: 18rem; max-height: 48vh; overflow: auto; border: 1px solid var(--sapList_BorderColor); }
+.controlAccountGroupTreeContent { display: grid; grid-template-columns: auto minmax(6rem, 9rem) minmax(0, 1fr) auto; gap: .65rem; align-items: center; width: 100%; padding-inline: .35rem; }
+.controlAccountGroupCode { direction: ltr; unicode-bidi: isolate; }
+.controlAccountGroupEditorGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.controlAccountGroupContributionList { display: grid; gap: .2rem; }
+@media (max-width: 48rem) { .controlAccountGroupDialogBody { min-width: 78vw; } .controlAccountGroupEditorGrid { grid-template-columns: 1fr; } }

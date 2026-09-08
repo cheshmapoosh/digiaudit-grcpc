@@ -15,7 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -61,19 +65,40 @@ public class TransactionalMasterDataRevisionCoordinator implements MasterDataRev
         Objects.requireNonNull(operation, "operation is required");
 
         hierarchyGuard.lock(hierarchyKey);
-        return executeRevision(hierarchyKey, request, operation);
+        return executeRevision(Set.of(hierarchyKey), request, operation);
+    }
+
+    @Override
+    @Transactional
+    public RevisionExecutionResult executeStructural(
+            Collection<MasterDataHierarchyKey> hierarchyKeys,
+            RevisionRequest request,
+            RevisionOperation operation
+    ) {
+        Objects.requireNonNull(hierarchyKeys, "hierarchyKeys is required");
+        Objects.requireNonNull(request, "request is required");
+        Objects.requireNonNull(operation, "operation is required");
+        LinkedHashSet<MasterDataHierarchyKey> orderedKeys = hierarchyKeys.stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(Enum::name))
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (orderedKeys.isEmpty()) {
+            throw new IllegalArgumentException("At least one hierarchy key is required");
+        }
+        orderedKeys.forEach(hierarchyGuard::lock);
+        return executeRevision(Set.copyOf(orderedKeys), request, operation);
     }
 
     private RevisionExecutionResult executeRevision(
-            MasterDataHierarchyKey hierarchyKey,
+            Set<MasterDataHierarchyKey> hierarchyKeys,
             RevisionRequest request,
             RevisionOperation operation
     ) {
 
         MasterDataRevision revision = startRevision(request);
-        RevisionExecutionContext draftContext = hierarchyKey == null
+        RevisionExecutionContext draftContext = hierarchyKeys == null || hierarchyKeys.isEmpty()
                 ? RevisionExecutionContext.ordinaryFrom(revision)
-                : RevisionExecutionContext.structuralFrom(revision, hierarchyKey);
+                : RevisionExecutionContext.structuralFrom(revision, hierarchyKeys);
 
         RevisionOperationResult operationResult = Objects.requireNonNull(
                 operation.execute(draftContext),
@@ -97,9 +122,9 @@ public class TransactionalMasterDataRevisionCoordinator implements MasterDataRev
         persistencePort.saveAppliedRevision(revision, orderedContents, new RevisionAuditMetadata(actorId, occurredAt));
         persistencePort.flush();
 
-        RevisionExecutionContext appliedContext = hierarchyKey == null
+        RevisionExecutionContext appliedContext = hierarchyKeys == null || hierarchyKeys.isEmpty()
                 ? RevisionExecutionContext.ordinaryFrom(revision)
-                : RevisionExecutionContext.structuralFrom(revision, hierarchyKey);
+                : RevisionExecutionContext.structuralFrom(revision, hierarchyKeys);
         return new RevisionExecutionResult(appliedContext, primaryResult, orderedContents);
     }
 

@@ -103,6 +103,13 @@ export default function CentralControlsFclShellPage() {
       case "INVALID_CONTROL_FREQUENCY": return t("control.errors.invalidFrequency");
       case "INVALID_CONTROL_EVENT_DESCRIPTION": return t("control.errors.invalidEventDescription");
       case "DEPENDENCY_EXISTS": return t("control.errors.dependencies");
+      case "DUPLICATE_RELATION": return t("controlAccountGroup.errors.duplicate");
+      case "CONTROL_ACCOUNT_GROUP_ENDPOINT_NOT_ACTIVE": return t("controlAccountGroup.errors.endpointInactive");
+      case "CONTROL_ACCOUNT_GROUP_CHANGE_INVALID": return t("controlAccountGroup.errors.invalidChange");
+      case "CENTRAL_CONTROL_ACCOUNT_GROUP_NOT_FOUND":
+      case "CONTROL_ACCOUNT_GROUP_ENDPOINT_NOT_FOUND": return t("controlAccountGroup.errors.notFound");
+      case "INVALID_LIFECYCLE_TRANSITION": return t("controlAccountGroup.errors.lifecycle");
+      case "FORBIDDEN": return t("controlAccountGroup.errors.forbidden");
       default: return fallback;
     }
   }, [t]);
@@ -246,7 +253,15 @@ export default function CentralControlsFclShellPage() {
     setBusy(true); setObjectError(null); setDocumentError(null);
     try {
       const result = modalMode === "create" ? await centralControlApi.create(payload as CreateCentralControlCommand) : await centralControlApi.update((modalValue as CentralControlDetail).id, payload as UpdateCentralControlCommand);
-      setDirty(false); await refreshSelection("CONTROL", result.entityId); setModalMode("view"); return true;
+      setDirty(false);
+      try {
+        await refreshSelection("CONTROL", result.entityId);
+        setModalMode("view");
+      } catch {
+        setModalOpen(false);
+        setPageError(t("control.errors.savedRefreshFailed"));
+      }
+      return true;
     } catch (error) {
       setDocumentError(toDocumentAggregateDraftError(error)); setObjectError(mapError(error, t(modalMode === "create" ? "control.errors.create" : "control.errors.update"))); return false;
     } finally { setBusy(false); }

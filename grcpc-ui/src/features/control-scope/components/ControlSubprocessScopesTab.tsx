@@ -65,16 +65,18 @@ export default function ControlSubprocessScopesTab({ controlId }: Props) {
     <section className="controlScopeTab">
       <div className="controlScopeToolbar">
         <Title level="H5">{t("control.tabs.subprocesses")}</Title>
-        <div className="controlScopeFilter">
-          <Label showColon>{t("controlScope.filter.label")}</Label>
-          <Select value={filter} disabled={busy} onChange={(event) => setFilter(event.target.value as ControlScopeStatusFilter)}>
-            <Option value="ALL">{t("controlScope.filter.all")}</Option>
-            <Option value="ACTIVE">{t("controlScope.status.ACTIVE")}</Option>
-            <Option value="INACTIVE">{t("controlScope.status.INACTIVE")}</Option>
-          </Select>
+        <div className="controlScopeToolbarGroup">
+          <Input className="controlScopeToolbarSearch" value={search} placeholder={t("controlScope.dialog.subprocessSearch")} disabled={busy} onInput={(event) => setSearch(event.target.value)} />
+          <div className="controlScopeFilter">
+            <Label showColon>{t("controlScope.filter.label")}</Label>
+            <Select value={filter} disabled={busy} onChange={(event) => setFilter(event.target.value as ControlScopeStatusFilter)}>
+              <Option value="ALL">{t("controlScope.filter.all")}</Option>
+              <Option value="ACTIVE">{t("controlScope.status.ACTIVE")}</Option>
+              <Option value="INACTIVE">{t("controlScope.status.INACTIVE")}</Option>
+            </Select>
+          </div>
         </div>
       </div>
-      <Input value={search} placeholder={t("controlScope.dialog.subprocessSearch")} disabled={busy} onInput={(event) => setSearch(event.target.value)} />
       {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}</MessageStrip> : null}
       {busy ? <BusyIndicator active delay={0} /> : loaded && rows.length ? <Table headerRow={<TableHeaderRow>
           <TableHeaderCell>{t("controlScope.fields.subprocess")}</TableHeaderCell>

@@ -18,7 +18,7 @@ Applies to `src/features/process`.
 - Create does not send status. Edit sends `ACTIVE` or `INACTIVE`, typed parent/owner, General Information, and Document drafts; it never sends code or node type.
 - Process parent and Subprocess owner are selectable on both Create and Edit and are submitted by the same Save command. Exclude the current Process and descendants; Subprocess always selects an eligible Process owner.
 - Process modal shows only General Information and Documents.
-- Subprocess modal tab order is General Information, Controls, Regulations, Objectives, Account Groups, Risks, Documents. General Information and Documents are active; the intermediate relationship tabs are visible but disabled until their typed V2 flows are implemented.
+- Subprocess modal tab order is General Information, Controls, Regulations, Objectives, Account Groups, Risks, Documents. Prompt 7.1–7.4 enable their typed Scope tabs, and Prompt 7.5 enables Account Groups as a derived read-only projection through Control Scope and Control classification. This projection contributes no drafts or Save fields.
 - The List Report toolbar exposes typed Create, View, and Delete.
 - The Create submenu always shows both Process and Subprocess. Contextually invalid choices are disabled instead of removed; without a selected parent, Subprocess is disabled.
 - Do not send `nodeType`, generic parent IDs, process category, document count, objective, or operation-cycle fields in Update payloads. Use only typed `parentProcessId` or `processId`.

@@ -54,10 +54,10 @@ public class RevisionMutationGuard {
     ) {
         RevisionExecutionContext verifiedContext = requireContext(context);
         Objects.requireNonNull(expectedKey, "expectedKey is required");
-        if (verifiedContext.acquiredHierarchyKey() == null) {
+        if (verifiedContext.acquiredHierarchyKeys().isEmpty()) {
             throw MasterDataRevisionRequiredException.hierarchyGuardMissing();
         }
-        if (verifiedContext.acquiredHierarchyKey() != expectedKey) {
+        if (!verifiedContext.hasHierarchyGuard(expectedKey)) {
             throw MasterDataRevisionRequiredException.hierarchyGuardMismatch();
         }
     }

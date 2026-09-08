@@ -21,6 +21,7 @@ import {
   type ParentSaveDocumentDraftState,
 } from "@/features/document";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
+import { AccountGroupControlsTab, useControlAccountGroupPermissions } from "@/features/control-account-group";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import AccountGroupParentValueHelpDialog from "../components/AccountGroupParentValueHelpDialog";
@@ -36,7 +37,7 @@ import {
 import { collectAccountGroupDescendantIds } from "../utils/centralAccountGroup.tree";
 
 export type CentralAccountGroupObjectMode = "create" | "view" | "edit";
-export type CentralAccountGroupTabKey = "general" | "risks" | "documents";
+export type CentralAccountGroupTabKey = "general" | "controls" | "risks" | "documents";
 type AccountGroupCommand = CreateCentralAccountGroupCommand | EditCentralAccountGroupCommand;
 
 interface FormState {
@@ -135,6 +136,7 @@ export default function CentralAccountGroupObjectPage({
   onDirtyChange,
 }: Props) {
   const { t } = useTranslation();
+  const classificationPermissions = useControlAccountGroupPermissions();
   const [form, setForm] = useState<FormState>(() => toForm(value, initialParentId));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, initialParentId))));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -263,10 +265,11 @@ export default function CentralAccountGroupObjectPage({
         <DetailTabContainer
           onTabSelect={(event) => {
             const key = event.detail.tab.getAttribute("data-tab-key") as CentralAccountGroupTabKey | null;
-            if (key === "general" || key === "documents") onActiveTabChange(key);
+            if (key === "general" || key === "documents" || (key === "controls" && value?.id && classificationPermissions.view)) onActiveTabChange(key);
           }}
         >
           <Tab text={t("accountGroup.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
+          <Tab text={t("accountGroup.tabs.controls", { defaultValue: "Controls" })} selected={activeTab === "controls"} disabled={!value?.id || !classificationPermissions.view} data-tab-key="controls" />
           <Tab text={t("accountGroup.tabs.risks")} disabled data-tab-key="risks" />
           <Tab text={t("accountGroup.tabs.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
@@ -386,6 +389,10 @@ export default function CentralAccountGroupObjectPage({
               onDraftStateChange={setDocuments}
               title={t("accountGroup.tabs.documents")}
             />
+          </div>
+
+          <div className={activeTab === "controls" ? "accountGroupTabPanel" : "accountGroupTabPanel accountGroupTabPanelHidden"}>
+            {value?.id && classificationPermissions.view ? <AccountGroupControlsTab accountGroupId={value.id} /> : null}
           </div>
         </div>
 

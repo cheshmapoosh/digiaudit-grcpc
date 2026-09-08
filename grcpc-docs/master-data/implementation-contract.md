@@ -245,6 +245,14 @@ Account Group classification is a direct typed relation to Control or Control Ob
 
 Account Group relationships are not stored in JSON arrays.
 
+Prompt 7.5 implements `central_control_account_group` as a typed Control-owned aggregate
+classification. Control Save accepts `accountGroupChanges`, advances the Control aggregate
+version for classification-only changes, and produces one Central Business Revision containing
+the Control content plus one content per changed classification. Relation mutations acquire
+`ACCOUNT_GROUP` and `CONTROL` Guards in lexical order. The Subprocess Account Groups UI is a
+query-only projection through Control Scope and this classification; no direct Subprocess
+classification table, command, or Save field exists.
+
 ## 8. Typed Scope, Classification, and Coverage rules
 
 Scope means membership or applicability of a Central definition in a Subprocess or Local Context.

@@ -6,6 +6,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionStatus;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
 
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 public record RevisionExecutionContext(
@@ -13,12 +14,13 @@ public record RevisionExecutionContext(
         RevisionDomain domain,
         UUID organizationId,
         RevisionStatus status,
-        MasterDataHierarchyKey acquiredHierarchyKey
+        Set<MasterDataHierarchyKey> acquiredHierarchyKeys
 ) {
     public RevisionExecutionContext {
         Objects.requireNonNull(revisionId, "revisionId is required");
         Objects.requireNonNull(domain, "domain is required");
         Objects.requireNonNull(status, "status is required");
+        acquiredHierarchyKeys = acquiredHierarchyKeys == null ? Set.of() : Set.copyOf(acquiredHierarchyKeys);
         if (domain == RevisionDomain.CENTRAL && organizationId != null) {
             throw new IllegalArgumentException("Central revision context must not have an organizationId");
         }
@@ -34,7 +36,7 @@ public record RevisionExecutionContext(
                 revision.domain(),
                 revision.organizationId(),
                 revision.status(),
-                null
+                Set.of()
         );
     }
 
@@ -49,8 +51,30 @@ public record RevisionExecutionContext(
                 revision.domain(),
                 revision.organizationId(),
                 revision.status(),
-                acquiredHierarchyKey
+                Set.of(acquiredHierarchyKey)
         );
+    }
+
+    public static RevisionExecutionContext structuralFrom(
+            MasterDataRevision revision,
+            Set<MasterDataHierarchyKey> acquiredHierarchyKeys
+    ) {
+        Objects.requireNonNull(revision, "revision is required");
+        Objects.requireNonNull(acquiredHierarchyKeys, "acquiredHierarchyKeys is required");
+        if (acquiredHierarchyKeys.isEmpty()) {
+            throw new IllegalArgumentException("At least one acquiredHierarchyKey is required");
+        }
+        return new RevisionExecutionContext(
+                revision.id(), revision.domain(), revision.organizationId(), revision.status(), acquiredHierarchyKeys);
+    }
+
+    /** Compatibility accessor for existing single-guard aggregate services. */
+    public MasterDataHierarchyKey acquiredHierarchyKey() {
+        return acquiredHierarchyKeys.size() == 1 ? acquiredHierarchyKeys.iterator().next() : null;
+    }
+
+    public boolean hasHierarchyGuard(MasterDataHierarchyKey hierarchyKey) {
+        return acquiredHierarchyKeys.contains(hierarchyKey);
     }
 
     public boolean isDraft() {

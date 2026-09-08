@@ -6,8 +6,8 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.control.api.dto.CreateCent
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.api.dto.UpdateCentralControlRequest;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.application.CentralControlCommandService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.application.CentralControlQueryService;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.CentralControlAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.api.dto.CatalogLifecycleCommandRequest;
-import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -53,14 +53,14 @@ public class CentralControlController {
 
   @PostMapping
   @PreAuthorize("hasAuthority('CENTRAL_CONTROL_CREATE') or hasAuthority('ROLE_ROOT_ADMIN')")
-  public MasterDataAggregateMutationResponse create(
+  public CentralControlAggregateMutationResponse create(
       @Valid @RequestBody CreateCentralControlRequest request) {
     return commands.create(request);
   }
 
   @PatchMapping("/{id}")
   @PreAuthorize("hasAuthority('CENTRAL_CONTROL_UPDATE') or hasAuthority('ROLE_ROOT_ADMIN')")
-  public MasterDataAggregateMutationResponse update(
+  public CentralControlAggregateMutationResponse update(
       @PathVariable UUID id, @Valid @RequestBody UpdateCentralControlRequest request) {
     return commands.update(id, request);
   }

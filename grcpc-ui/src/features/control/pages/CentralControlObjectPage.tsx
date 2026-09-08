@@ -24,6 +24,7 @@ import {
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import ControlSubprocessScopesTab from "@/features/control-scope/components/ControlSubprocessScopesTab";
 import { useControlScopePermissions } from "@/features/control-scope/security/controlScopePermissions";
+import { ControlAccountGroupsTab, EMPTY_CLASSIFICATION_DRAFT_STATE, useControlAccountGroupPermissions, type ClassificationDraftState } from "@/features/control-account-group";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -179,17 +180,19 @@ export default function CentralControlObjectPage({
 }: Props) {
   const { t } = useTranslation();
   const controlScopePermissions = useControlScopePermissions();
+  const accountGroupPermissions = useControlAccountGroupPermissions();
   const [form, setForm] = useState<FormState>(() => toForm(value, initialControlGroupId));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, initialControlGroupId))));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
   const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
   const [groupHelpOpen, setGroupHelpOpen] = useState(false);
+  const [accountGroupDraft, setAccountGroupDraft] = useState<ClassificationDraftState>(EMPTY_CLASSIFICATION_DRAFT_STATE);
   const scopeRef = useRef(mode === "create" ? "CREATE" : value?.id ?? "EMPTY");
   const readOnly = mode === "view";
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const generalDirty = JSON.stringify(normalized(form)) !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
-  const dirty = generalDirty || documents.dirty || documents.uploading;
+  const dirty = generalDirty || documents.dirty || documents.uploading || accountGroupDraft.dirty;
   const scope = mode === "create" ? "CREATE" : value?.id ?? "EMPTY";
   const allRelevanceSelected = form.controlRelevance.length === RELEVANCE_VALUES.length;
 
@@ -201,6 +204,7 @@ export default function CentralControlObjectPage({
       setBaseline(JSON.stringify(normalized(next)));
       setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
       setDateDrafts({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
+      setAccountGroupDraft(EMPTY_CLASSIFICATION_DRAFT_STATE);
       scopeRef.current = scope;
     }, 0);
     return () => window.clearTimeout(timer);
@@ -230,6 +234,11 @@ export default function CentralControlObjectPage({
       onActiveTabChange("documents");
       return false;
     }
+    if (!accountGroupDraft.ready || accountGroupDraft.invalid) {
+      setValidationError(t("controlAccountGroup.validation.notReady"));
+      onActiveTabChange("accountGroups");
+      return false;
+    }
     setValidationError(null);
     return true;
   };
@@ -257,6 +266,7 @@ export default function CentralControlObjectPage({
       validFrom: form.validFrom || null,
       validTo: form.validTo || null,
       documents: toDocumentAggregateRequest(documents),
+      accountGroupChanges: accountGroupDraft.changes,
     };
     const payload: CreateCentralControlCommand | UpdateCentralControlCommand = mode === "create"
       ? { ...common, code: form.code.trim().toUpperCase() }
@@ -267,7 +277,7 @@ export default function CentralControlObjectPage({
     }
   };
 
-  const saveDisabled = busy || invalidDate || documents.uploading || documents.invalid || !documents.ready || (!generalDirty && !documents.dirty);
+  const saveDisabled = busy || invalidDate || documents.uploading || documents.invalid || !documents.ready || !accountGroupDraft.ready || accountGroupDraft.invalid || (!generalDirty && !documents.dirty && !accountGroupDraft.dirty);
   const headerValues = useMemo(() => [
     [t("control.fields.code"), form.code || "-"],
     [t("control.fields.createdAt"), formatPersianDateTime(value?.createdAt)],
@@ -288,14 +298,14 @@ export default function CentralControlObjectPage({
 
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key") as CentralControlTabKey | null;
-        if (key === "general" || key === "documents" || (key === "subprocesses" && value?.id && controlScopePermissions.view)) onActiveTabChange(key);
+        if (key === "general" || key === "documents" || (key === "subprocesses" && value?.id && controlScopePermissions.view) || (key === "accountGroups" && accountGroupPermissions.view)) onActiveTabChange(key);
       }}>
         <Tab text={t("control.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
         <Tab text={t("control.tabs.subprocesses")} selected={activeTab === "subprocesses"} disabled={!value?.id || !controlScopePermissions.view} data-tab-key="subprocesses" />
         <Tab text={t("control.tabs.regulations")} disabled data-tab-key="regulations" />
         <Tab text={t("control.tabs.requirements")} disabled data-tab-key="requirements" />
         <Tab text={t("control.tabs.risks")} disabled data-tab-key="risks" />
-        <Tab text={t("control.tabs.accountGroups")} disabled data-tab-key="accountGroups" />
+        <Tab text={t("control.tabs.accountGroups")} selected={activeTab === "accountGroups"} disabled={!accountGroupPermissions.view} data-tab-key="accountGroups" />
         <Tab text={t("control.tabs.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
       </DetailTabContainer>
 
@@ -373,6 +383,10 @@ export default function CentralControlObjectPage({
 
         <div className={activeTab === "subprocesses" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>
           {value?.id ? <ControlSubprocessScopesTab controlId={value.id} /> : null}
+        </div>
+
+        <div className={activeTab === "accountGroups" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>
+          {accountGroupPermissions.view ? <ControlAccountGroupsTab controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setAccountGroupDraft} /> : null}
         </div>
 
         <div className={activeTab === "documents" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>

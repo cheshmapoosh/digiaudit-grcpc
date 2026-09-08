@@ -18,6 +18,7 @@
       "title": "Edit Account Group"
     },
     "tabs": {
+      "controls": "Controls",
       "general": "General Information",
       "risks": "Risks",
       "documents": "Documents"

@@ -1,0 +1,19 @@
+{
+  "controlAccountGroup": {
+    "title": "Account Group Classifications",
+    "empty": "No Account Group classification matches the current filter.",
+    "search": "Search Account Groups by code or title",
+    "filter": { "all": "All" },
+    "fields": { "accountGroup": "Account Group", "control": "Control", "status": "Classification Status", "validFrom": "Valid From", "validTo": "Valid To" },
+    "status": { "ACTIVE": "Active", "INACTIVE": "Inactive", "DELETED": "Deleted" },
+    "accountGroupStatus": { "ACTIVE": "Account Group Active", "INACTIVE": "Account Group Inactive", "DELETED": "Account Group Deleted" },
+    "editState": { "DRAFT_NEW": "Draft-New", "DRAFT_EDITED": "Draft-Edit", "DRAFT_DELETE": "Draft-Delete", "FINAL": "Final" },
+    "actions": { "select": "Select", "confirm": "Confirm", "edit": "Edit Validity", "activate": "Activate", "inactivate": "Inactivate", "delete": "Delete", "undo": "Undo", "apply": "Draft", "retry": "Retry" },
+    "selection": { "title": "Select Exact Account Group Nodes", "search": "Search without losing hidden selections" },
+    "editor": { "title": "Edit Classification Validity" },
+    "validation": { "invalidDate": "The entered date is invalid.", "invalidRange": "The validity range is invalid.", "notReady": "Account Group classification drafts are not ready to save." },
+    "inverse": { "title": "Classified Controls", "empty": "No Controls are classified to this exact Account Group." },
+    "derived": { "title": "Derived Account Groups", "empty": "No Account Groups are derived from the scoped Controls.", "accountGroupStatus": "Account Group Status", "contributingControls": "Contributing Scoped Controls", "sourceStatus": "Scope: {{scope}} · Classification: {{classification}}" },
+    "errors": { "generic": "Failed to load or save Account Group classifications.", "duplicate": "This exact Control and Account Group pair is already active.", "version": "The classification was changed by another user. Reload and try again.", "lifecycle": "The requested classification lifecycle transition is invalid.", "endpointInactive": "The Control and exact Account Group must both be active for this operation.", "invalidChange": "The classification change set is invalid.", "notFound": "The classification or one of its endpoints was not found.", "forbidden": "You do not have permission to view or change these classifications." }
+  }
+}

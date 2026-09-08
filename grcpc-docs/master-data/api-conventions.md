@@ -251,10 +251,23 @@ No scope command accepts an arbitrary `definitionType` + `definitionId` pair.
 
 Central classification commands are type-specific.
 
+Prompt 7.5 binds Control–Account Group classification mutation ownership to the existing
+Control aggregate `POST/PATCH` Save. Its typed `accountGroupChanges` change set is prepared
+and applied in the Control transaction; omission or an empty list means no classification
+changes. The response retains the Control aggregate fields and conditionally includes safe
+canonical `accountGroupClassifications` for callers with classification VIEW authority.
+There is no browser row-mutation chain or standalone classification mutation owner.
+
 ```text
 POST /api/master-data/central/controls/{controlId}/account-groups/{accountGroupId}
 POST /api/master-data/central/control-objectives/{controlObjectiveId}/account-groups/{accountGroupId}
 ```
+
+Prompt 7.5 also exposes typed Control/Account Group inverse reads and the query-only
+`GET /api/master-data/central/subprocesses/{subprocessId}/account-groups` projection. The
+Subprocess result is derived through exact non-deleted Control Scope and exact non-deleted
+Control classification rows, deduplicates exact Account Group IDs, and retains safe
+contributing-Control attribution. It does not persist or mutate a Subprocess–Account Group relation.
 
 Central Policy Scope commands are type-specific.
 

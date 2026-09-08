@@ -32,4 +32,8 @@ public interface CentralAccountGroupRepository
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select e from CentralAccountGroupEntity e where e.id = :id")
   Optional<CentralAccountGroupEntity> lockById(@Param("id") UUID id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select e from CentralAccountGroupEntity e where e.id in :ids order by e.id")
+  List<CentralAccountGroupEntity> lockAllByIds(@Param("ids") List<UUID> ids);
 }

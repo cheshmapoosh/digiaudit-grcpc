@@ -1,4 +1,5 @@
 import type { DocumentAggregateRequest } from "@/features/document";
+import type { ControlAccountGroupChange, ControlAccountGroupClassification } from "@/features/control-account-group";
 
 export type CentralControlStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type CentralControlEditableStatus = Exclude<CentralControlStatus, "DELETED">;
@@ -149,6 +150,7 @@ export interface CreateCentralControlCommand {
   validFrom: string | null;
   validTo: string | null;
   documents: DocumentAggregateRequest;
+  accountGroupChanges: ControlAccountGroupChange[];
 }
 
 export interface UpdateCentralControlCommand extends Omit<CreateCentralControlCommand, "code"> {
@@ -161,6 +163,7 @@ export interface CentralControlMutationResponse {
   revisionId: string;
   version: number;
   finalizedDocuments: unknown[];
+  accountGroupClassifications: ControlAccountGroupClassification[];
 }
 
 export interface CentralControlRevisionResponse {

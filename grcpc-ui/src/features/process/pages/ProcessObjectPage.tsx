@@ -7,6 +7,7 @@ import { EMPTY_CONTROL_SCOPE_DRAFT_STATE, SubprocessControlScopesTab, useControl
 import { EMPTY_RISK_SCOPE_DRAFT_STATE, SubprocessRiskScopesTab, useRiskScopePermissions, type RiskScopeDraftState } from "@/features/risk-scope";
 import { EMPTY_CONTROL_OBJECTIVE_SCOPE_DRAFT_STATE, SubprocessControlObjectiveScopesTab, useControlObjectiveScopePermissions, type ControlObjectiveScopeDraftState } from "@/features/control-objective-scope";
 import { EMPTY_REQUIREMENT_SCOPE_DRAFT_STATE, SubprocessRequirementScopesTab, useRequirementScopePermissions, type RequirementScopeDraftState } from "@/features/requirement-scope";
+import { SubprocessAccountGroupsTab, useControlAccountGroupPermissions } from "@/features/control-account-group";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime, toEnglishDigits } from "@/shared/utils/date.utils";
@@ -15,7 +16,7 @@ import type { ProcessNode, ProcessNodeCreate, ProcessNodeType, ProcessNodeUpdate
 import { buildTree, collectDescendantIds } from "../utils/process.tree";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
-export type ProcessTabKey = "general" | "controls" | "requirements" | "controlObjectives" | "riskTemplates" | "documents";
+export type ProcessTabKey = "general" | "controls" | "requirements" | "controlObjectives" | "accountGroups" | "riskTemplates" | "documents";
 
 interface ProcessFormState {
     code: string;
@@ -97,6 +98,7 @@ function FormField({ label, required, fullWidth, children }: { label: string; re
 export default function ProcessObjectPage({ mode, allItems, value, parent, requestedNodeType, activeTab: controlledTab, busy = false, error, documentAggregateError, onErrorClose, onSubmit, onCancel, onEdit, onActiveTabChange, onDirtyChange, onDocumentDirtyChange }: ProcessObjectPageProps) {
     const { t } = useTranslation();
     const controlScopePermissions = useControlScopePermissions();
+    const accountGroupClassificationPermissions = useControlAccountGroupPermissions();
     const riskScopePermissions = useRiskScopePermissions();
     const controlObjectiveScopePermissions = useControlObjectiveScopePermissions();
     const requirementScopePermissions = useRequirementScopePermissions();
@@ -199,7 +201,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                             <Tab text={t("process.tabs.controls", { defaultValue: "Controls" })} selected={activeTab === "controls"} disabled={!controlScopePermissions.view} data-tab-key="controls" />
                             <Tab text={t("process.tabs.requirements")} selected={activeTab === "requirements"} disabled={!requirementScopePermissions.view} data-tab-key="requirements" />
                             <Tab text={t("process.tabs.controlObjectives", { defaultValue: "Control Objectives" })} selected={activeTab === "controlObjectives"} disabled={!controlObjectiveScopePermissions.view} data-tab-key="controlObjectives" />
-                            <Tab text={t("process.tabs.accountGroups", { defaultValue: "Account Groups" })} disabled />
+                            <Tab text={t("process.tabs.accountGroups", { defaultValue: "Account Groups" })} selected={activeTab === "accountGroups"} disabled={!value?.id || !controlScopePermissions.view || !accountGroupClassificationPermissions.view} data-tab-key="accountGroups" />
                             <Tab text={t("process.tabs.riskTemplates", { defaultValue: "Risk Templates" })} selected={activeTab === "riskTemplates"} disabled={!riskScopePermissions.view} data-tab-key="riskTemplates" />
                         </>
                     ) : null}
@@ -240,6 +242,9 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                     </div>
                     <div style={{ display: activeTab === "requirements" ? "block" : "none" }}>
                         {form.nodeType === "SUBPROCESS" ? <SubprocessRequirementScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRequirementScopeDraft} /> : null}
+                    </div>
+                    <div style={{ display: activeTab === "accountGroups" ? "block" : "none" }}>
+                        {form.nodeType === "SUBPROCESS" && value?.id ? <SubprocessAccountGroupsTab subprocessId={value.id} /> : null}
                     </div>
                     <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("process.tabs.documents", { defaultValue: "Documents" })} targetType={documentTarget(form.nodeType)} targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentAggregateError} onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
                 </div>
