@@ -15,6 +15,7 @@ interface Props {
   busy: boolean;
   canCreate: boolean;
   canDelete: boolean;
+  canRestore: boolean;
   onClose: () => void;
   onConfirm: (selected: Set<string>) => void;
 }
@@ -88,6 +89,7 @@ export default function ControlObjectiveAccountGroupSelectionDialog({
   busy,
   canCreate,
   canDelete,
+  canRestore,
   onClose,
   onConfirm,
 }: Props) {
@@ -113,22 +115,26 @@ export default function ControlObjectiveAccountGroupSelectionDialog({
       : options;
   }, [options, search]);
   const persistedIds = useMemo(
-    () => new Set(rows.filter((row) => row.original?.status !== "DELETED").map((row) => row.accountGroupId)),
+    () => new Set(rows
+      .filter((row) => row.original && row.original.status !== "DELETED")
+      .map((row) => row.accountGroupId)),
     [rows],
   );
   const lockedIds = useMemo(() => {
-    const result = new Set(deletedAccountGroupIds);
+    const result = canRestore ? new Set<string>() : new Set(deletedAccountGroupIds);
     for (const row of rows) {
-      if (row.original && selected.has(row.accountGroupId) && !canDelete) {
+      if (row.original && selected.has(row.accountGroupId) && !canDelete
+        && row.editState !== "DRAFT_RESTORE") {
         result.add(row.accountGroupId);
       }
     }
     return result;
-  }, [canDelete, deletedAccountGroupIds, rows, selected]);
+  }, [canDelete, canRestore, deletedAccountGroupIds, rows, selected]);
 
   const toggle = (id: string, checked: boolean) => {
-    if (deletedAccountGroupIds.has(id)) return;
-    if ((checked && !persistedIds.has(id) && !canCreate)
+    const deleted = deletedAccountGroupIds.has(id);
+    if ((checked && deleted && !canRestore)
+      || (checked && !deleted && !persistedIds.has(id) && !canCreate)
       || (!checked && persistedIds.has(id) && !canDelete)) return;
     setSelected((current) => {
       const next = new Set(current);

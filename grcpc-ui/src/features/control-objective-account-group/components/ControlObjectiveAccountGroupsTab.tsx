@@ -35,7 +35,6 @@ import {
 import { controlObjectiveAccountGroupErrorMessage } from "../utils/controlObjectiveAccountGroupError";
 import ControlObjectiveAccountGroupSelectionDialog from "./ControlObjectiveAccountGroupSelectionDialog";
 import ControlObjectiveClassificationValidityDialog from "./ControlObjectiveClassificationValidityDialog";
-import DeletedControlObjectiveClassificationDialog from "./DeletedControlObjectiveClassificationDialog";
 import "../control-objective-account-group.css";
 
 interface Props {
@@ -153,7 +152,6 @@ export default function ControlObjectiveAccountGroupsTab({
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [selectOpen, setSelectOpen] = useState(false);
-  const [restoreOpen, setRestoreOpen] = useState(false);
   const [editKey, setEditKey] = useState<string | null>(null);
   const [actionKey, setActionKey] = useState<string | null>(null);
   const [actionOpener, setActionOpener] = useState<HTMLElement | null>(null);
@@ -224,9 +222,13 @@ export default function ControlObjectiveAccountGroupsTab({
   }), [error, loaded, onDraftStateChange, pending, permissions.view]);
 
   const allOptions = useMemo(() => flatten(options), [options]);
-  const deletedAccountGroupIds = useMemo(
-    () => new Set(deletedRows.map((row) => row.accountGroupId)),
+  const deletedByAccountGroupId = useMemo(
+    () => new Map(deletedRows.map((row) => [row.accountGroupId, row])),
     [deletedRows],
+  );
+  const deletedAccountGroupIds = useMemo(
+    () => new Set(deletedByAccountGroupId.keys()),
+    [deletedByAccountGroupId],
   );
   const visible = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase();
@@ -242,7 +244,9 @@ export default function ControlObjectiveAccountGroupsTab({
     setRows((current) => {
       const optionById = new Map(allOptions.map((item) => [item.id, item]));
       const next = current.flatMap((row) => {
-        if (row.editState === "DRAFT_RESTORE") return [row];
+        if (row.editState === "DRAFT_RESTORE") {
+          return selected.has(row.accountGroupId) ? [row] : [];
+        }
         if (selected.has(row.accountGroupId)) {
           return [{
             ...row,
@@ -254,11 +258,22 @@ export default function ControlObjectiveAccountGroupsTab({
           ? [{ ...row, editState: "DRAFT_DELETE" as const }]
           : [];
       });
-      const occupied = new Set(current.map((row) => row.accountGroupId));
+      const occupied = new Set(next.map((row) => row.accountGroupId));
       for (const id of selected) {
-        if (occupied.has(id) || deletedAccountGroupIds.has(id)) continue;
+        if (occupied.has(id)) continue;
         const item = optionById.get(id);
         if (item?.status !== "ACTIVE") continue;
+        const deleted = deletedByAccountGroupId.get(id);
+        if (deleted) {
+          if (!permissions.restore) continue;
+          next.push({
+            ...persisted(deleted),
+            status: "ACTIVE",
+            editState: "DRAFT_RESTORE",
+          });
+          continue;
+        }
+        if (!permissions.create) continue;
         next.push({
           key: `new:${id}`,
           classificationId: null,
@@ -278,20 +293,6 @@ export default function ControlObjectiveAccountGroupsTab({
       return next;
     });
     setSelectOpen(false);
-  };
-
-  const stageRestore = (selectedRows: ControlObjectiveAccountGroupClassification[]) => {
-    setRows((current) => {
-      const occupied = new Set(current.map((row) => row.accountGroupId));
-      return [...current, ...selectedRows
-        .filter((row) => !occupied.has(row.accountGroupId))
-        .map((row): ControlObjectiveClassificationDraftRow => ({
-          ...persisted(row),
-          status: "ACTIVE",
-          editState: "DRAFT_RESTORE",
-        }))];
-    });
-    setRestoreOpen(false);
   };
 
   const saveValidity = (from: string | null, to: string | null) => {
@@ -319,7 +320,7 @@ export default function ControlObjectiveAccountGroupsTab({
         status,
         editState: candidate.original && same({ ...candidate, status }, candidate.original)
           ? "FINAL"
-          : "DRAFT_EDITED",
+          : candidate.original ? "DRAFT_EDITED" : "DRAFT_NEW",
       }));
   const remove = (row: ControlObjectiveClassificationDraftRow) => setRows((current) =>
     row.original
@@ -374,21 +375,13 @@ export default function ControlObjectiveAccountGroupsTab({
               <Option value="INACTIVE">{t("controlObjectiveAccountGroup.status.INACTIVE")}</Option>
             </Select>
           </div>
-          {!readOnly && (permissions.create || permissions.delete) ? (
+          {!readOnly && (permissions.create || permissions.restore || permissions.delete) ? (
             <Button
               design="Emphasized"
               disabled={mutationBusy || !loaded}
               onClick={() => setSelectOpen(true)}
             >
               {t("controlObjectiveAccountGroup.actions.select")}
-            </Button>
-          ) : null}
-          {!readOnly && permissions.restore && controlObjectiveId ? (
-            <Button
-              disabled={mutationBusy || !loaded}
-              onClick={() => setRestoreOpen(true)}
-            >
-              {t("controlObjectiveAccountGroup.actions.restore")}
             </Button>
           ) : null}
         </div>
@@ -508,6 +501,7 @@ export default function ControlObjectiveAccountGroupsTab({
         busy={mutationBusy}
         canCreate={permissions.create}
         canDelete={permissions.delete}
+        canRestore={permissions.restore}
         onClose={() => setSelectOpen(false)}
         onConfirm={confirmSelection}
       />
@@ -518,18 +512,6 @@ export default function ControlObjectiveAccountGroupsTab({
         onClose={() => setEditKey(null)}
         onSave={saveValidity}
       />
-      {controlObjectiveId ? (
-        <DeletedControlObjectiveClassificationDialog
-          open={restoreOpen}
-          controlObjectiveId={controlObjectiveId}
-          stagedAccountGroupIds={new Set(rows
-            .filter((row) => row.editState === "DRAFT_RESTORE")
-            .map((row) => row.accountGroupId))}
-          busy={mutationBusy}
-          onClose={() => setRestoreOpen(false)}
-          onRestore={stageRestore}
-        />
-      ) : null}
     </section>
   );
 }
