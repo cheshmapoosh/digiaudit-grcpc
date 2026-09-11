@@ -41,4 +41,9 @@ export interface DerivedSubprocessAccountGroup {
   contributingControls: Array<{ controlId: string; controlCode: string; controlTitle: string;
     controlScopeId: string; controlScopeStatus: ClassificationEditableStatus;
     classificationId: string; classificationStatus: ClassificationEditableStatus }>;
+  contributingControlObjectives: Array<{
+    controlObjectiveId: string; controlObjectiveCode: string; controlObjectiveTitle: string;
+    objectiveClass: string | null;
+    controlObjectiveScopeId: string; controlObjectiveScopeStatus: ClassificationEditableStatus;
+    classificationId: string; classificationStatus: ClassificationEditableStatus }>; 
 }

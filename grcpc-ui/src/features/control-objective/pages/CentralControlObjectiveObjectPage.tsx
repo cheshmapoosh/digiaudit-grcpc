@@ -20,18 +20,31 @@ import {
   type ParentSaveDocumentDraftState,
 } from "@/features/document";
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
+import {
+  ControlObjectiveAccountGroupsTab,
+  EMPTY_CONTROL_OBJECTIVE_CLASSIFICATION_DRAFT_STATE,
+  useControlObjectiveAccountGroupPermissions,
+  type ControlObjectiveAccountGroupClassification,
+  type ControlObjectiveClassificationDraftState,
+} from "@/features/control-objective-account-group";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type {
   CentralControlObjectiveDetail,
   CentralControlObjectiveEditableStatus,
+  CentralControlObjectiveMutationResponse,
   CreateCentralControlObjectiveCommand,
   UpdateCentralControlObjectiveCommand,
 } from "../domain/centralControlObjective.model";
 
 export type CentralControlObjectiveObjectMode = "create" | "view" | "edit";
-export type CentralControlObjectiveTabKey = "general" | "subprocesses" | "risks" | "documents";
+export type CentralControlObjectiveTabKey =
+  | "general"
+  | "subprocesses"
+  | "risks"
+  | "accountGroups"
+  | "documents";
 
 interface FormState {
   code: string;
@@ -52,11 +65,14 @@ interface Props {
   error: string | null;
   documentError: DocumentAggregateDraftError | null;
   onErrorClose: () => void;
-  onSubmit: (payload: CreateCentralControlObjectiveCommand | UpdateCentralControlObjectiveCommand) => Promise<boolean>;
+  onSubmit: (
+    payload: CreateCentralControlObjectiveCommand | UpdateCentralControlObjectiveCommand,
+  ) => Promise<CentralControlObjectiveMutationResponse | null>;
   onCancel: () => void;
   onEdit: () => void;
   onActiveTabChange: (tab: CentralControlObjectiveTabKey) => void;
   onDirtyChange: (dirty: boolean) => void;
+  allowAccountGroupNavigation?: boolean;
 }
 
 const EMPTY_DATE_DRAFT: PersianDateDraftState = {
@@ -116,19 +132,26 @@ export default function CentralControlObjectiveObjectPage({
   onEdit,
   onActiveTabChange,
   onDirtyChange,
+  allowAccountGroupNavigation = true,
 }: Props) {
   const { t } = useTranslation();
+  const classificationPermissions = useControlObjectiveAccountGroupPermissions();
   const [form, setForm] = useState<FormState>(() => toForm(value));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value))));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
+  const [classifications, setClassifications] = useState<ControlObjectiveClassificationDraftState>(
+    EMPTY_CONTROL_OBJECTIVE_CLASSIFICATION_DRAFT_STATE,
+  );
+  const [adoptedClassifications, setAdoptedClassifications] = useState<
+  ControlObjectiveAccountGroupClassification[] | null>(null);
   const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
   const scopeRef = useRef(mode === "create" ? "CREATE" : value?.id ?? "EMPTY");
 
   const readOnly = mode === "view";
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const generalDirty = JSON.stringify(normalized(form)) !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
-  const dirty = generalDirty || documents.dirty || documents.uploading;
+  const dirty = generalDirty || documents.dirty || documents.uploading || classifications.dirty;
   const scope = mode === "create" ? "CREATE" : value?.id ?? "EMPTY";
 
   useEffect(() => {
@@ -138,6 +161,8 @@ export default function CentralControlObjectiveObjectPage({
       setForm(next);
       setBaseline(JSON.stringify(normalized(next)));
       setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
+      setClassifications(EMPTY_CONTROL_OBJECTIVE_CLASSIFICATION_DRAFT_STATE);
+      setAdoptedClassifications(null);
       setDateDrafts({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
       scopeRef.current = scope;
     }, 0);
@@ -175,6 +200,11 @@ export default function CentralControlObjectiveObjectPage({
       onActiveTabChange("documents");
       return false;
     }
+    if (!classifications.ready || classifications.invalid) {
+      setValidationError(t("controlObjectiveAccountGroup.validation.notReady"));
+      onActiveTabChange("accountGroups");
+      return false;
+    }
     setValidationError(null);
     return true;
   };
@@ -188,19 +218,30 @@ export default function CentralControlObjectiveObjectPage({
       validFrom: form.validFrom || null,
       validTo: form.validTo || null,
       documents: toDocumentAggregateRequest(documents),
+      accountGroupChanges: classifications.changes,
     };
     const payload: CreateCentralControlObjectiveCommand | UpdateCentralControlObjectiveCommand =
       mode === "create"
         ? { ...common, code: form.code.trim().toUpperCase() }
         : { ...common, status: form.status, version: value?.version ?? 0 };
-    if (await onSubmit(payload)) {
+    const result = await onSubmit(payload);
+    if (result) {
+      setAdoptedClassifications(result.accountGroupClassifications);
+      setClassifications(EMPTY_CONTROL_OBJECTIVE_CLASSIFICATION_DRAFT_STATE);
       setBaseline(JSON.stringify(normalized(form)));
       onDirtyChange(false);
     }
   };
 
   const saveDisabled =
-    busy || invalidDate || documents.uploading || documents.invalid || !documents.ready || (!generalDirty && !documents.dirty);
+    busy
+    || invalidDate
+    || documents.uploading
+    || documents.invalid
+    || !documents.ready
+    || classifications.invalid
+    || !classifications.ready
+    || (!generalDirty && !documents.dirty && !classifications.dirty);
 
   const headerValues = useMemo(
     () => [
@@ -229,12 +270,21 @@ export default function CentralControlObjectiveObjectPage({
       <DetailTabContainer
         onTabSelect={(event) => {
           const key = event.detail.tab.getAttribute("data-tab-key") as CentralControlObjectiveTabKey | null;
-          if (key === "general" || key === "documents") onActiveTabChange(key);
+          if (key === "general" || key === "documents"
+            || (key === "accountGroups" && classificationPermissions.view)) {
+            onActiveTabChange(key);
+          }
         }}
       >
         <Tab text={t("controlObjective.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
         <Tab text={t("controlObjective.tabs.subprocesses")} disabled data-tab-key="subprocesses" />
         <Tab text={t("controlObjective.tabs.risks")} disabled data-tab-key="risks" />
+        <Tab
+          text={t("controlObjective.tabs.accountGroups")}
+          selected={activeTab === "accountGroups"}
+          disabled={!classificationPermissions.view}
+          data-tab-key="accountGroups"
+        />
         <Tab text={t("controlObjective.tabs.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
       </DetailTabContainer>
 
@@ -290,6 +340,19 @@ export default function CentralControlObjectiveObjectPage({
               <TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(event) => change("description", readValue(event))} />
             </Field>
           </div>
+        </div>
+
+        <div className={activeTab === "accountGroups" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
+          {classificationPermissions.view ? (
+            <ControlObjectiveAccountGroupsTab
+              controlObjectiveId={value?.id ?? null}
+              readOnly={readOnly}
+              busy={busy}
+              adoptedCanonical={adoptedClassifications}
+              allowAccountGroupNavigation={allowAccountGroupNavigation}
+              onDraftStateChange={setClassifications}
+            />
+          ) : null}
         </div>
 
         <div className={activeTab === "documents" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>

@@ -7,9 +7,20 @@ import java.util.UUID;
 public record DerivedSubprocessAccountGroupResponse(
     UUID accountGroupId, String accountGroupCode, String accountGroupTitle,
     UUID parentAccountGroupId, MasterDataLifecycleStatus accountGroupStatus,
-    List<Contribution> contributingControls) {
-  public DerivedSubprocessAccountGroupResponse { contributingControls = List.copyOf(contributingControls); }
-  public record Contribution(UUID controlId, String controlCode, String controlTitle,
+    List<ControlContribution> contributingControls,
+    List<ControlObjectiveContribution> contributingControlObjectives) {
+  public DerivedSubprocessAccountGroupResponse {
+    contributingControls = List.copyOf(contributingControls);
+    contributingControlObjectives = List.copyOf(contributingControlObjectives);
+  }
+
+  public record ControlContribution(UUID controlId, String controlCode, String controlTitle,
       UUID controlScopeId, MasterDataLifecycleStatus controlScopeStatus,
+      UUID classificationId, MasterDataLifecycleStatus classificationStatus) {}
+
+  public record ControlObjectiveContribution(
+      UUID controlObjectiveId, String controlObjectiveCode, String controlObjectiveTitle,
+      String objectiveClass,
+      UUID controlObjectiveScopeId, MasterDataLifecycleStatus controlObjectiveScopeStatus,
       UUID classificationId, MasterDataLifecycleStatus classificationStatus) {}
 }

@@ -12,22 +12,27 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.api.dto.U
 import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.domain.entity.CentralControlObjectiveEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.domain.repository.CentralControlObjectiveRepository;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.CatalogCommandSupport;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveaccountgroup.api.dto.CentralControlObjectiveAccountGroupResponse;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveaccountgroup.api.dto.CentralControlObjectiveAggregateMutationResponse;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveaccountgroup.application.CentralControlObjectiveAccountGroupAggregateService;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionActorProvider;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionCoordinator;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionContext;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionResult;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionOperationResult;
+import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionOperation;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionRequest;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionEntityType;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationType;
-import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +50,7 @@ public class CentralControlObjectiveCommandService {
   private final DocumentCommandService documentCommandService;
   private final CatalogCommandSupport support;
   private final MasterDataStructuralDependencyChecker dependencyChecker;
+  private final CentralControlObjectiveAccountGroupAggregateService accountGroupClassifications;
   private final Clock clock;
 
   public CentralControlObjectiveCommandService(
@@ -54,6 +60,7 @@ public class CentralControlObjectiveCommandService {
       DocumentCommandService documentCommandService,
       CatalogCommandSupport support,
       MasterDataStructuralDependencyChecker dependencyChecker,
+      CentralControlObjectiveAccountGroupAggregateService accountGroupClassifications,
       @Qualifier("masterDataRevisionClock") Clock clock) {
     this.repository = repository;
     this.revisionCoordinator = revisionCoordinator;
@@ -61,25 +68,27 @@ public class CentralControlObjectiveCommandService {
     this.documentCommandService = documentCommandService;
     this.support = support;
     this.dependencyChecker = dependencyChecker;
+    this.accountGroupClassifications = accountGroupClassifications;
     this.clock = clock;
   }
 
-  public MasterDataAggregateMutationResponse create(CreateCentralControlObjectiveRequest request) {
+  public CentralControlObjectiveAggregateMutationResponse create(
+      CreateCentralControlObjectiveRequest request) {
     String code = support.normalizeCode(request.code());
     String title = support.normalizeTitle(request.title());
     String description = support.normalizeDescription(request.description());
     String objectiveClass = normalizeObjectiveClass(request.objectiveClass());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> documents = new AtomicReference<>(List.of());
+    AtomicReference<List<CentralControlObjectiveAccountGroupResponse>> canonicalClassifications =
+        new AtomicReference<>(List.of());
 
     try {
-      RevisionExecutionResult result =
-          revisionCoordinator.execute(
-              RevisionRequest.central(
-                  "Create central control objective " + code,
-                  "Central Control Objective create",
-                  null),
-              context -> {
+      RevisionRequest revisionRequest = RevisionRequest.central(
+          "Create central control objective " + code,
+          "Central Control Objective create",
+          null);
+      RevisionOperation operation = context -> {
                 DocumentCommandService.PreparedAggregateContext prepared =
                     documentCommandService.prepareAggregate(request.documents());
                 CentralControlObjectiveEntity entity = repository.findByCode(code).orElse(null);
@@ -133,6 +142,10 @@ public class CentralControlObjectiveCommandService {
                   }
                 }
 
+                CentralControlObjectiveAccountGroupAggregateService.PreparedChanges
+                    preparedClassifications = accountGroupClassifications.prepare(
+                        context, entity, MasterDataLifecycleStatus.ACTIVE,
+                        request.accountGroupChanges());
                 CentralControlObjectiveEntity saved = repository.saveAndFlush(entity);
                 documents.set(
                     documentCommandService.finalizePreparedAggregate(
@@ -140,16 +153,27 @@ public class CentralControlObjectiveCommandService {
                         DocumentLinkTargetType.CENTRAL_CONTROL_OBJECTIVE,
                         saved.getId(),
                         "CENTRAL_CONTROL_OBJECTIVE_CREATE"));
-                return completed(context, saved, operationType, expectedVersion, before);
-              });
-      return support.aggregateResponse(result, documents.get());
+                CentralControlObjectiveAccountGroupAggregateService.ApplyResult
+                    classificationResult = accountGroupClassifications.apply(
+                        preparedClassifications, saved);
+                canonicalClassifications.set(classificationResult.canonicalRows());
+                return combine(
+                    context,
+                    completed(context, saved, operationType, expectedVersion, before),
+                    classificationResult.revisionContents());
+              };
+      RevisionExecutionResult result = isEmpty(request.accountGroupChanges())
+          ? revisionCoordinator.execute(revisionRequest, operation)
+          : revisionCoordinator.executeStructural(
+              MasterDataHierarchyKey.ACCOUNT_GROUP, revisionRequest, operation);
+      return aggregateResponse(result, documents.get(), canonicalClassifications.get());
     } catch (DataIntegrityViolationException exception) {
       throw support.translateBusinessKeyViolation(
           exception, "UK_CENTRAL_CONTROL_OBJECTIVE_CODE", code);
     }
   }
 
-  public MasterDataAggregateMutationResponse update(
+  public CentralControlObjectiveAggregateMutationResponse update(
       UUID id, UpdateCentralControlObjectiveRequest request) {
     long expectedVersion = support.requireVersion(request.version());
     String title = support.normalizeTitle(request.title());
@@ -158,14 +182,14 @@ public class CentralControlObjectiveCommandService {
     MasterDataLifecycleStatus requestedStatus = requireEditableStatus(request.status());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> documents = new AtomicReference<>(List.of());
+    AtomicReference<List<CentralControlObjectiveAccountGroupResponse>> canonicalClassifications =
+        new AtomicReference<>(List.of());
 
-    RevisionExecutionResult result =
-        revisionCoordinator.execute(
-            RevisionRequest.central(
-                "Update central control objective " + id,
-                "Central Control Objective update",
-                null),
-            context -> {
+    RevisionRequest revisionRequest = RevisionRequest.central(
+        "Update central control objective " + id,
+        "Central Control Objective update",
+        null);
+    RevisionOperation operation = context -> {
               DocumentCommandService.PreparedAggregateContext prepared =
                   documentCommandService.prepareAggregate(request.documents());
               CentralControlObjectiveEntity entity = lock(id);
@@ -175,12 +199,15 @@ public class CentralControlObjectiveCommandService {
               }
               if (sameDefinition(
                       entity, title, description, objectiveClass, requestedStatus, request)
-                  && isEmpty(request.documents())) {
+                  && isEmpty(request.documents()) && isEmpty(request.accountGroupChanges())) {
                 throw new UnprocessableEntityException(
                     "NO_CHANGE", "error.masterdata.v2.noChange", "The command contains no change");
               }
 
               JsonNode before = snapshot(entity);
+              CentralControlObjectiveAccountGroupAggregateService.PreparedChanges
+                  preparedClassifications = accountGroupClassifications.prepare(
+                      context, entity, requestedStatus, request.accountGroupChanges());
               UUID actorId = actorProvider.currentActorId();
               Instant now = Instant.now(clock);
               entity.update(
@@ -206,10 +233,20 @@ public class CentralControlObjectiveCommandService {
                       DocumentLinkTargetType.CENTRAL_CONTROL_OBJECTIVE,
                       saved.getId(),
                       "CENTRAL_CONTROL_OBJECTIVE_UPDATE"));
-              return completed(
-                  context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
-            });
-    return support.aggregateResponse(result, documents.get());
+              CentralControlObjectiveAccountGroupAggregateService.ApplyResult
+                  classificationResult = accountGroupClassifications.apply(
+                      preparedClassifications, saved);
+              canonicalClassifications.set(classificationResult.canonicalRows());
+              return combine(
+                  context,
+                  completed(context, saved, RevisionOperationType.UPDATE, expectedVersion, before),
+                  classificationResult.revisionContents());
+            };
+    RevisionExecutionResult result = isEmpty(request.accountGroupChanges())
+        ? revisionCoordinator.execute(revisionRequest, operation)
+        : revisionCoordinator.executeStructural(
+            MasterDataHierarchyKey.ACCOUNT_GROUP, revisionRequest, operation);
+    return aggregateResponse(result, documents.get(), canonicalClassifications.get());
   }
 
   public MasterDataRevisionMutationResponse activate(UUID id, Long version) {
@@ -281,6 +318,26 @@ public class CentralControlObjectiveCommandService {
         typedFields(entity));
   }
 
+  private RevisionOperationResult combine(
+      RevisionExecutionContext context,
+      RevisionOperationResult primary,
+      List<com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentResult>
+          relationContents) {
+    List<com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentResult> contents =
+        new ArrayList<>(primary.contentResults());
+    contents.addAll(relationContents);
+    return RevisionOperationResult.completed(context, primary.primaryResult(), contents);
+  }
+
+  private CentralControlObjectiveAggregateMutationResponse aggregateResponse(
+      RevisionExecutionResult result,
+      List<DocumentCommandResponse> documents,
+      List<CentralControlObjectiveAccountGroupResponse> classifications) {
+    var primary = result.primaryResult();
+    return new CentralControlObjectiveAggregateMutationResponse(
+        primary.entityId(), primary.revisionId(), primary.version(), documents, classifications);
+  }
+
   private JsonNode snapshot(CentralControlObjectiveEntity entity) {
     return support.snapshot(entity, typedFields(entity));
   }
@@ -347,5 +404,9 @@ public class CentralControlObjectiveCommandService {
         || (request.newDocuments().isEmpty()
             && request.newVersions().isEmpty()
             && request.metadataUpdates().isEmpty());
+  }
+
+  private boolean isEmpty(List<?> values) {
+    return values == null || values.isEmpty();
   }
 }

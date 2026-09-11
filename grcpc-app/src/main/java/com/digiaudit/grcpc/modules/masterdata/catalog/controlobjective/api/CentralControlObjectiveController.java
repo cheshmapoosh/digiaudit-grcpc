@@ -7,7 +7,7 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.api.dto.U
 import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.application.CentralControlObjectiveCommandService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.application.CentralControlObjectiveQueryService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.api.dto.CatalogLifecycleCommandRequest;
-import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveaccountgroup.api.dto.CentralControlObjectiveAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -54,7 +54,7 @@ public class CentralControlObjectiveController {
   @PostMapping
   @PreAuthorize(
       "hasAuthority('CENTRAL_CONTROL_OBJECTIVE_CREATE') or hasAuthority('ROLE_ROOT_ADMIN')")
-  public MasterDataAggregateMutationResponse create(
+  public CentralControlObjectiveAggregateMutationResponse create(
       @Valid @RequestBody CreateCentralControlObjectiveRequest request) {
     return commands.create(request);
   }
@@ -62,7 +62,7 @@ public class CentralControlObjectiveController {
   @PatchMapping("/{id}")
   @PreAuthorize(
       "hasAuthority('CENTRAL_CONTROL_OBJECTIVE_UPDATE') or hasAuthority('ROLE_ROOT_ADMIN')")
-  public MasterDataAggregateMutationResponse update(
+  public CentralControlObjectiveAggregateMutationResponse update(
       @PathVariable UUID id, @Valid @RequestBody UpdateCentralControlObjectiveRequest request) {
     return commands.update(id, request);
   }

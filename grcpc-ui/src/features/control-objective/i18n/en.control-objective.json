@@ -24,6 +24,7 @@
       "general": "General Information",
       "subprocesses": "Subprocess",
       "risks": "Risks",
+      "accountGroups": "Account Groups",
       "documents": "Documents"
     },
     "fields": {
@@ -64,7 +65,8 @@
       "notFound": "The selected control objective was not found.",
       "versionConflict": "The Control Objective was changed by another user. Reload the data and try again.",
       "invalidStatus": "The requested Control Objective status change is invalid.",
-      "dependencies": "This Control Objective cannot be deleted because dependencies exist."
+      "dependencies": "This Control Objective cannot be deleted because dependencies exist.",
+      "savedRefreshFailed": "The Control Objective was saved, but its canonical view could not be reloaded. Refresh the list."
     }
   }
 }

@@ -22,6 +22,10 @@ import {
 } from "@/features/document";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { AccountGroupControlsTab, useControlAccountGroupPermissions } from "@/features/control-account-group";
+import {
+  AccountGroupControlObjectivesTab,
+  useControlObjectiveAccountGroupPermissions,
+} from "@/features/control-objective-account-group";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import AccountGroupParentValueHelpDialog from "../components/AccountGroupParentValueHelpDialog";
@@ -37,7 +41,12 @@ import {
 import { collectAccountGroupDescendantIds } from "../utils/centralAccountGroup.tree";
 
 export type CentralAccountGroupObjectMode = "create" | "view" | "edit";
-export type CentralAccountGroupTabKey = "general" | "controls" | "risks" | "documents";
+export type CentralAccountGroupTabKey =
+  | "general"
+  | "controls"
+  | "controlObjectives"
+  | "risks"
+  | "documents";
 type AccountGroupCommand = CreateCentralAccountGroupCommand | EditCentralAccountGroupCommand;
 
 interface FormState {
@@ -137,6 +146,7 @@ export default function CentralAccountGroupObjectPage({
 }: Props) {
   const { t } = useTranslation();
   const classificationPermissions = useControlAccountGroupPermissions();
+  const objectiveClassificationPermissions = useControlObjectiveAccountGroupPermissions();
   const [form, setForm] = useState<FormState>(() => toForm(value, initialParentId));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, initialParentId))));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -265,11 +275,20 @@ export default function CentralAccountGroupObjectPage({
         <DetailTabContainer
           onTabSelect={(event) => {
             const key = event.detail.tab.getAttribute("data-tab-key") as CentralAccountGroupTabKey | null;
-            if (key === "general" || key === "documents" || (key === "controls" && value?.id && classificationPermissions.view)) onActiveTabChange(key);
+            if (key === "general" || key === "documents"
+              || (key === "controls" && value?.id && classificationPermissions.view)
+              || (key === "controlObjectives" && value?.id
+                && objectiveClassificationPermissions.view)) onActiveTabChange(key);
           }}
         >
           <Tab text={t("accountGroup.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
           <Tab text={t("accountGroup.tabs.controls", { defaultValue: "Controls" })} selected={activeTab === "controls"} disabled={!value?.id || !classificationPermissions.view} data-tab-key="controls" />
+          <Tab
+            text={t("accountGroup.tabs.controlObjectives")}
+            selected={activeTab === "controlObjectives"}
+            disabled={!value?.id || !objectiveClassificationPermissions.view}
+            data-tab-key="controlObjectives"
+          />
           <Tab text={t("accountGroup.tabs.risks")} disabled data-tab-key="risks" />
           <Tab text={t("accountGroup.tabs.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
@@ -393,6 +412,15 @@ export default function CentralAccountGroupObjectPage({
 
           <div className={activeTab === "controls" ? "accountGroupTabPanel" : "accountGroupTabPanel accountGroupTabPanelHidden"}>
             {value?.id && classificationPermissions.view ? <AccountGroupControlsTab accountGroupId={value.id} /> : null}
+          </div>
+
+          <div className={activeTab === "controlObjectives" ? "accountGroupTabPanel" : "accountGroupTabPanel accountGroupTabPanelHidden"}>
+            {value?.id && objectiveClassificationPermissions.view ? (
+              <AccountGroupControlObjectivesTab
+                accountGroupId={value.id}
+                allowControlObjectiveNavigation
+              />
+            ) : null}
           </div>
         </div>
 

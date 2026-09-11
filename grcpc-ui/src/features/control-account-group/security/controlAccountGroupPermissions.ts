@@ -9,5 +9,5 @@ export function useControlAccountGroupPermissions(): ControlAccountGroupPermissi
 
 export function useClassificationDestinationPermissions() {
   const me = useAuthState((state) => state.me);
-  return useMemo(() => { const values = new Set(me?.authorities ?? []); const root = Boolean(me?.rootUser || values.has("ROLE_ROOT_ADMIN")); return { accountGroupView: root || values.has("CENTRAL_ACCOUNT_GROUP_VIEW"), controlView: root || values.has("CENTRAL_CONTROL_VIEW") }; }, [me]);
+  return useMemo(() => { const values = new Set(me?.authorities ?? []); const root = Boolean(me?.rootUser || values.has("ROLE_ROOT_ADMIN")); return { accountGroupView: root || values.has("CENTRAL_ACCOUNT_GROUP_VIEW"), controlView: root || values.has("CENTRAL_CONTROL_VIEW"), controlObjectiveView: root || values.has("CENTRAL_CONTROL_OBJECTIVE_VIEW") }; }, [me]);
 }

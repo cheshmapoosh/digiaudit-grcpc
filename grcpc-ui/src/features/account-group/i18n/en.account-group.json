@@ -19,6 +19,7 @@
     },
     "tabs": {
       "controls": "Controls",
+      "controlObjectives": "Control Objectives",
       "general": "General Information",
       "risks": "Risks",
       "documents": "Documents"

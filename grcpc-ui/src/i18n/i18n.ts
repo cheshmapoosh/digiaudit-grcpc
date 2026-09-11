@@ -13,6 +13,8 @@ import faControlScope from "../features/control-scope/i18n/fa.control-scope.json
 import enControlScope from "../features/control-scope/i18n/en.control-scope.json";
 import faControlAccountGroup from "../features/control-account-group/i18n/fa.control-account-group.json";
 import enControlAccountGroup from "../features/control-account-group/i18n/en.control-account-group.json";
+import faControlObjectiveAccountGroup from "../features/control-objective-account-group/i18n/fa.control-objective-account-group.json";
+import enControlObjectiveAccountGroup from "../features/control-objective-account-group/i18n/en.control-objective-account-group.json";
 import faRiskScope from "../features/risk-scope/i18n/fa.risk-scope.json";
 import enRiskScope from "../features/risk-scope/i18n/en.risk-scope.json";
 import faControlObjectiveScope from "../features/control-objective-scope/i18n/fa.control-objective-scope.json";
@@ -37,8 +39,8 @@ import fa from "./locales/fa.json";
 import en from "./locales/en.json";
 
 export const resources = {
-    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faControlScope, ...faControlAccountGroup, ...faRiskScope, ...faControlObjectiveScope, ...faRequirementScope, ...faControlObjective, ...faRisk, ...faAccountGroup, ...faRegulation, ...faPolicy, ...faCentralCatalog, ...faMasterData } },
-    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enControlScope, ...enControlAccountGroup, ...enRiskScope, ...enControlObjectiveScope, ...enRequirementScope, ...enControlObjective, ...enRisk, ...enAccountGroup, ...enRegulation, ...enPolicy, ...enCentralCatalog, ...enMasterData } }
+    fa: { translation: { ...fa, ...faProcess, ...faDocument, ...faOrganization, ...faControl, ...faControlScope, ...faControlAccountGroup, ...faControlObjectiveAccountGroup, ...faRiskScope, ...faControlObjectiveScope, ...faRequirementScope, ...faControlObjective, ...faRisk, ...faAccountGroup, ...faRegulation, ...faPolicy, ...faCentralCatalog, ...faMasterData } },
+    en: { translation: { ...en, ...enProcess, ...enDocument, ...enOrganization, ...enControl, ...enControlScope, ...enControlAccountGroup, ...enControlObjectiveAccountGroup, ...enRiskScope, ...enControlObjectiveScope, ...enRequirementScope, ...enControlObjective, ...enRisk, ...enAccountGroup, ...enRegulation, ...enPolicy, ...enCentralCatalog, ...enMasterData } }
 } as const;
 
 export function initI18n(lang: "fa" | "en") {

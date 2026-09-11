@@ -16,6 +16,7 @@ import CentralControlObjectiveListReport from "../components/CentralControlObjec
 import CentralControlObjectiveSummaryPanel from "../components/CentralControlObjectiveSummaryPanel";
 import type {
   CentralControlObjectiveDetail,
+  CentralControlObjectiveMutationResponse,
   CentralControlObjectiveSummary,
   CreateCentralControlObjectiveCommand,
   UpdateCentralControlObjectiveCommand,
@@ -162,10 +163,12 @@ export default function CentralControlObjectivesFclShellPage() {
         setSelectedDetail(null);
       }
       setPageError(null);
+      return true;
     } catch (error) {
       if (request === listGeneration.current) {
         setPageError(mapError(error, t("controlObjective.errors.loadList"), t));
       }
+      return false;
     } finally {
       if (request === listGeneration.current) setBusy(false);
     }
@@ -265,30 +268,43 @@ export default function CentralControlObjectivesFclShellPage() {
     });
   }, [navigate, requestLeave]);
 
-  const submit = useCallback(async (payload: CreateCentralControlObjectiveCommand | UpdateCentralControlObjectiveCommand) => {
+  const submit = useCallback(async (
+    payload: CreateCentralControlObjectiveCommand | UpdateCentralControlObjectiveCommand,
+  ): Promise<CentralControlObjectiveMutationResponse | null> => {
     setBusy(true);
     setObjectError(null);
     setDocumentError(null);
     detailGeneration.current += 1;
+    let result: CentralControlObjectiveMutationResponse;
     try {
-      const result = routeMode === "create"
+      result = routeMode === "create"
         ? await centralControlObjectiveApi.create(payload as CreateCentralControlObjectiveCommand)
         : await centralControlObjectiveApi.update(controlObjectiveId!, payload as UpdateCentralControlObjectiveCommand);
-      setDirty(false);
-      await loadList(result.entityId);
+    } catch (error) {
+      setDocumentError(toDocumentAggregateDraftError(error));
+      setObjectError(mapError(error, t(routeMode === "create" ? "controlObjective.errors.create" : "controlObjective.errors.update"), t));
+      setBusy(false);
+      return null;
+    }
+
+    setDirty(false);
+    try {
+      const listLoaded = await loadList(result.entityId);
+      if (!listLoaded) throw new Error("CONTROL_OBJECTIVE_LIST_REFRESH_FAILED");
       const detail = await centralControlObjectiveApi.detail(result.entityId);
       setSelectedId(result.entityId);
       setSelectedDetail(detail);
       setRouteDetail(detail);
       runWithNavigationBypass(() => navigate(`/control-objectives/${result.entityId}`, { replace: true }));
-      return true;
-    } catch (error) {
-      setDocumentError(toDocumentAggregateDraftError(error));
-      setObjectError(mapError(error, t(routeMode === "create" ? "controlObjective.errors.create" : "controlObjective.errors.update"), t));
-      return false;
+    } catch {
+      setRouteDetail(null);
+      setObjectError(null);
+      setPageError(t("controlObjective.errors.savedRefreshFailed"));
+      runWithNavigationBypass(() => navigate("/control-objectives", { replace: true }));
     } finally {
       setBusy(false);
     }
+    return result;
   }, [controlObjectiveId, loadList, navigate, routeMode, runWithNavigationBypass, t]);
 
   const confirmDelete = useCallback(async () => {

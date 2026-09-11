@@ -1,4 +1,8 @@
 import type { DocumentAggregateRequest } from "@/features/document";
+import type {
+  ControlObjectiveAccountGroupChange,
+  ControlObjectiveAccountGroupClassification,
+} from "@/features/control-objective-account-group";
 
 export type CentralControlObjectiveStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type CentralControlObjectiveEditableStatus = Exclude<CentralControlObjectiveStatus, "DELETED">;
@@ -32,6 +36,7 @@ export interface CreateCentralControlObjectiveCommand {
   validFrom: string | null;
   validTo: string | null;
   documents: DocumentAggregateRequest;
+  accountGroupChanges: ControlObjectiveAccountGroupChange[];
 }
 
 export interface UpdateCentralControlObjectiveCommand {
@@ -43,6 +48,7 @@ export interface UpdateCentralControlObjectiveCommand {
   validFrom: string | null;
   validTo: string | null;
   documents: DocumentAggregateRequest;
+  accountGroupChanges: ControlObjectiveAccountGroupChange[];
 }
 
 export interface CentralControlObjectiveMutationResponse {
@@ -50,6 +56,7 @@ export interface CentralControlObjectiveMutationResponse {
   revisionId: string;
   version: number;
   finalizedDocuments: unknown[];
+  accountGroupClassifications: ControlObjectiveAccountGroupClassification[];
 }
 
 export interface CentralControlObjectiveRevisionResponse {

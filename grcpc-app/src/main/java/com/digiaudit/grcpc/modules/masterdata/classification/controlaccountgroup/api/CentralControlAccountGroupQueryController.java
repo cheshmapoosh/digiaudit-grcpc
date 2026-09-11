@@ -29,6 +29,6 @@ public class CentralControlAccountGroupQueryController {
   public CentralControlAccountGroupOptionsResponse options() { return queries.options(); }
 
   @GetMapping("/api/master-data/central/subprocesses/{subprocessId}/account-groups")
-  @PreAuthorize("(hasAuthority('PROCESS_VIEW') and hasAuthority('CENTRAL_CONTROL_SCOPE_VIEW') and hasAuthority('CENTRAL_CONTROL_ACCOUNT_GROUP_VIEW')) or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("(hasAuthority('PROCESS_VIEW') and ((hasAuthority('CENTRAL_CONTROL_SCOPE_VIEW') and hasAuthority('CENTRAL_CONTROL_ACCOUNT_GROUP_VIEW')) or (hasAuthority('CENTRAL_CONTROL_OBJECTIVE_SCOPE_VIEW') and hasAuthority('CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_VIEW')))) or hasAuthority('ROLE_ROOT_ADMIN')")
   public List<DerivedSubprocessAccountGroupResponse> forSubprocess(@PathVariable UUID subprocessId) { return queries.forSubprocess(subprocessId); }
 }

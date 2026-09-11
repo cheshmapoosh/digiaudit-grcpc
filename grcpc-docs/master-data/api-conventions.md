@@ -269,6 +269,15 @@ Subprocess result is derived through exact non-deleted Control Scope and exact n
 Control classification rows, deduplicates exact Account Group IDs, and retains safe
 contributing-Control attribution. It does not persist or mutate a Subprocess–Account Group relation.
 
+Prompt 7.6 binds Control Objective–Account Group classification mutation ownership to the
+existing Control Objective aggregate `POST/PATCH` Save through nullable `accountGroupChanges`.
+It exposes owner, deleted-owner, inverse, and option reads under the typed Control Objective
+classification routes. The existing Subprocess Account Groups route now returns a deduplicated
+union of authorized Control and Control Objective source paths, preserving separate
+`contributingControls` and `contributingControlObjectives`. Callers receive contributions only
+from complete source paths for which they hold both Scope VIEW and classification VIEW; hidden
+source existence and counts are not exposed.
+
 Central Policy Scope commands are type-specific.
 
 ```text

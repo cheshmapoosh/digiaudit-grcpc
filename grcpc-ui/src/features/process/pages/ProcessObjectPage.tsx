@@ -8,6 +8,7 @@ import { EMPTY_RISK_SCOPE_DRAFT_STATE, SubprocessRiskScopesTab, useRiskScopePerm
 import { EMPTY_CONTROL_OBJECTIVE_SCOPE_DRAFT_STATE, SubprocessControlObjectiveScopesTab, useControlObjectiveScopePermissions, type ControlObjectiveScopeDraftState } from "@/features/control-objective-scope";
 import { EMPTY_REQUIREMENT_SCOPE_DRAFT_STATE, SubprocessRequirementScopesTab, useRequirementScopePermissions, type RequirementScopeDraftState } from "@/features/requirement-scope";
 import { SubprocessAccountGroupsTab, useControlAccountGroupPermissions } from "@/features/control-account-group";
+import { useControlObjectiveAccountGroupPermissions } from "@/features/control-objective-account-group";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime, toEnglishDigits } from "@/shared/utils/date.utils";
@@ -99,6 +100,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const { t } = useTranslation();
     const controlScopePermissions = useControlScopePermissions();
     const accountGroupClassificationPermissions = useControlAccountGroupPermissions();
+    const objectiveAccountGroupClassificationPermissions = useControlObjectiveAccountGroupPermissions();
     const riskScopePermissions = useRiskScopePermissions();
     const controlObjectiveScopePermissions = useControlObjectiveScopePermissions();
     const requirementScopePermissions = useRequirementScopePermissions();
@@ -201,7 +203,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                             <Tab text={t("process.tabs.controls", { defaultValue: "Controls" })} selected={activeTab === "controls"} disabled={!controlScopePermissions.view} data-tab-key="controls" />
                             <Tab text={t("process.tabs.requirements")} selected={activeTab === "requirements"} disabled={!requirementScopePermissions.view} data-tab-key="requirements" />
                             <Tab text={t("process.tabs.controlObjectives", { defaultValue: "Control Objectives" })} selected={activeTab === "controlObjectives"} disabled={!controlObjectiveScopePermissions.view} data-tab-key="controlObjectives" />
-                            <Tab text={t("process.tabs.accountGroups", { defaultValue: "Account Groups" })} selected={activeTab === "accountGroups"} disabled={!value?.id || !controlScopePermissions.view || !accountGroupClassificationPermissions.view} data-tab-key="accountGroups" />
+                            <Tab text={t("process.tabs.accountGroups", { defaultValue: "Account Groups" })} selected={activeTab === "accountGroups"} disabled={!value?.id || !((controlScopePermissions.view && accountGroupClassificationPermissions.view) || (controlObjectiveScopePermissions.view && objectiveAccountGroupClassificationPermissions.view))} data-tab-key="accountGroups" />
                             <Tab text={t("process.tabs.riskTemplates", { defaultValue: "Risk Templates" })} selected={activeTab === "riskTemplates"} disabled={!riskScopePermissions.view} data-tab-key="riskTemplates" />
                         </>
                     ) : null}

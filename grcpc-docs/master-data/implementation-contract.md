@@ -253,6 +253,17 @@ the Control content plus one content per changed classification. Relation mutati
 query-only projection through Control Scope and this classification; no direct Subprocess
 classification table, command, or Save field exists.
 
+Prompt 7.6 implements `central_control_objective_account_group` as a typed Control
+Objective-owned aggregate classification. Control Objective Save accepts nullable
+`accountGroupChanges`; omission or an empty list makes no classification mutation. A non-empty
+change set uses the `ACCOUNT_GROUP` Guard only, advances the owning Control Objective version,
+and produces one Central Business Revision with owner-first content followed by classification
+contents ordered by exact Account Group ID. Control Objective is non-hierarchical and does not
+introduce a Guard key. The Subprocess Account Groups projection is the permission-filtered union
+of the Control Scope path and Control Objective Scope path, deduplicated by exact Account Group
+ID with separate contribution lists. It remains query-only and does not authorize direct
+Subprocess–Account Group persistence or mutation ownership.
+
 ## 8. Typed Scope, Classification, and Coverage rules
 
 Scope means membership or applicability of a Central definition in a Subprocess or Local Context.
