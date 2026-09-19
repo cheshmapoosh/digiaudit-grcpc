@@ -10,6 +10,7 @@ public record AuthMeResponse(
         String firstName,
         String lastName,
         boolean rootUser,
+        boolean passwordChangeRequired,
         Set<String> authorities
 ) {
 }

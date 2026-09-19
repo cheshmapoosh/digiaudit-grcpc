@@ -1,3 +1,4 @@
+import "../components/user-management-forms.css";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -6,10 +7,8 @@ import {
     Button,
     Input,
     Label,
-    List,
-    ListItemCustom,
+    Table, TableHeaderRow, TableHeaderCell, TableRow, TableCell, Link, ObjectStatus,
     MessageStrip,
-    Text,
     Title,
 } from "@ui5/webcomponents-react";
 
@@ -50,7 +49,6 @@ export default function RolesListReport({
 
         return items.filter((role) => {
             return (
-                normalize(role.code).includes(query) ||
                 normalize(role.title).includes(query) ||
                 normalize(role.description).includes(query)
             );
@@ -98,61 +96,20 @@ export default function RolesListReport({
 
             {busy ? <BusyIndicator active delay={0} /> : null}
 
-            <List>
-                {filteredItems.length === 0 ? (
-                    <ListItemCustom>
-                        <Text>
-                            {t("usermanagement.roles.empty", {
-                                defaultValue: "نقشی برای نمایش وجود ندارد",
-                            })}
-                        </Text>
-                    </ListItemCustom>
-                ) : (
-                    filteredItems.map((item) => {
-                        const selected = item.id === selectedId;
+            <Table noDataText={t("usermanagement.roles.empty")} headerRow={
+                <TableHeaderRow>
+                    <TableHeaderCell>{t("usermanagement.roles.fields.title")}</TableHeaderCell>
+                    <TableHeaderCell>{t("usermanagement.roles.fields.status")}</TableHeaderCell>
+                </TableHeaderRow>
+            }>
+                {filteredItems.map((item) => (
+                    <TableRow key={item.id} rowKey={item.id} className={selectedId === item.id ? "userManagementSelectedRow" : undefined}>
+                        <TableCell><Link onClick={() => onSelect(item.id)}>{item.title && item.title !== item.code ? item.title : t("usermanagement.roles.untitled")}</Link></TableCell>
 
-                        return (
-                            <ListItemCustom key={item.id}>
-                                <button
-                                    type="button"
-                                    onClick={() => onSelect(item.id)}
-                                    style={{
-                                        width: "100%",
-                                        textAlign: "right",
-                                        border: selected
-                                            ? "1px solid var(--sapSelectedColor)"
-                                            : "1px solid var(--sapGroup_ContentBorderColor)",
-                                        borderRadius: "0.875rem",
-                                        padding: "0.875rem",
-                                        background: selected
-                                            ? "var(--sapList_SelectionBackgroundColor)"
-                                            : "var(--sapGroup_ContentBackground)",
-                                        cursor: "pointer",
-                                        display: "grid",
-                                        gap: ".45rem",
-                                        fontFamily: "inherit",
-                                        fontSize: "inherit",
-                                        color: "inherit",
-                                    }}
-                                >
-                                    <div style={{ display: "grid", gap: ".35rem", minWidth: 0 }}>
-                                        <div style={{ fontWeight: 700, fontFamily: "inherit" }}>
-                                            {item.title || item.code}
-                                        </div>
-                                        <Text>{item.code}</Text>
-                                        {item.description ? <Text>{item.description}</Text> : null}
-                                        <Text>
-                                            {item.enabled
-                                                ? t("usermanagement.roles.status.enabled", { defaultValue: "فعال" })
-                                                : t("usermanagement.roles.status.disabled", { defaultValue: "غیرفعال" })}
-                                        </Text>
-                                    </div>
-                                </button>
-                            </ListItemCustom>
-                        );
-                    })
-                )}
-            </List>
+                        <TableCell><ObjectStatus state={item.enabled ? "Positive" : "None"}>{t(item.enabled ? "usermanagement.roles.status.enabled" : "usermanagement.roles.status.disabled")}</ObjectStatus></TableCell>
+                    </TableRow>
+                ))}
+            </Table>
         </div>
     );
 }

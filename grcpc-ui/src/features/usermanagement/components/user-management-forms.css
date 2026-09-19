@@ -9,3 +9,6 @@
 .userManagementForm ui5-select {
   width: 100%;
 }
+
+.userManagementSelectedRow { background: var(--sapList_SelectionBackgroundColor); }
+.userManagementActions { gap: 0.75rem; }

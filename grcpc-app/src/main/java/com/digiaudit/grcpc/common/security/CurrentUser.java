@@ -17,6 +17,7 @@ public class CurrentUser implements UserDetails {
     private final String firstName;
     private final String lastName;
     private final boolean rootUser;
+    private final long credentialVersion;
     private final boolean enabled;
     private final boolean accountNonExpired;
     private final boolean accountNonLocked;

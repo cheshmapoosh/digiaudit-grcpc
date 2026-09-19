@@ -1,5 +1,6 @@
 package com.digiaudit.grcpc.modules.usermanagement.api;
 
+import com.digiaudit.grcpc.modules.usermanagement.api.dto.ResetPasswordRequest;
 import com.digiaudit.grcpc.modules.usermanagement.api.dto.AssignRoleRequest;
 import com.digiaudit.grcpc.modules.usermanagement.api.dto.CreateUserRequest;
 import com.digiaudit.grcpc.modules.usermanagement.api.dto.IdResponse;
@@ -90,6 +91,15 @@ public class UserController {
     public void disableUser(@PathVariable UUID userId, HttpServletRequest httpServletRequest) {
         log.debug("HTTP PATCH /api/usermanagement/users/{}/disable", userId);
         userManagementService.disableUser(userId, httpServletRequest);
+    }
+
+    @PostMapping("/{userId}/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('ROLE_ROOT_ADMIN')")
+    public void resetPassword(@PathVariable UUID userId,
+            @Valid @RequestBody ResetPasswordRequest request,
+            HttpServletRequest httpRequest) {
+        userManagementService.resetPassword(userId, request.password(), httpRequest);
     }
 
     @PostMapping("/{userId}/roles")

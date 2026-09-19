@@ -29,8 +29,7 @@ export default function UserAssignmentsList({ items }: UserAssignmentsListProps)
             {items.map((assignment) => (
                 <ListItemCustom key={assignment.id}>
                     <div style={{ display: "grid", gap: ".35rem", width: "100%" }}>
-                        <Title level="H6">{assignment.roleTitle || assignment.roleCode}</Title>
-                        <Text>{assignment.roleCode}</Text>
+                        <Title level="H6">{assignment.roleTitle && assignment.roleTitle !== assignment.roleCode ? assignment.roleTitle : t("usermanagement.roles.untitled")}</Title>
                         <ObjectStatus state={assignment.active ? "Positive" : "None"}>{t(`usermanagement.demo.${assignment.active ? "active" : "inactive"}`)}</ObjectStatus>
                         <Text>
                             {t("usermanagement.users.assignment.scope", {

@@ -1,5 +1,7 @@
 package com.digiaudit.grcpc.modules.usermanagement.domain.repository;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import com.digiaudit.grcpc.modules.usermanagement.domain.entity.AppUserEntity;
 import java.util.List;
 import java.util.Optional;
@@ -9,6 +11,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from AppUserEntity u where u.id = :id")
+    Optional<AppUserEntity> findByIdForUpdate(@Param("id") UUID id);
 
     Optional<AppUserEntity> findByUsername(String username);
 

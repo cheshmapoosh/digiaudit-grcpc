@@ -36,6 +36,7 @@ const anonymousUser: AuthMeResponse = {
     firstName: null,
     lastName: null,
     rootUser: false,
+    passwordChangeRequired: false,
     authorities: [],
 };
 

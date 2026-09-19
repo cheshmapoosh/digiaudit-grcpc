@@ -1,0 +1,99 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-09-19 17:06:12.680 [background-preinit] INFO  o.h.validator.internal.util.Version [requestId=] - HV000001: Hibernate Validator 8.0.3.Final
+2026-09-19 17:06:13.305 [main] INFO  c.d.grcpc.GrcpcApiApplication [requestId=] - Starting GrcpcApiApplication v1.4.0 using Java 21.0.11 with PID 1 (/app/app.jar started by root in /)
+2026-09-19 17:06:13.307 [main] DEBUG c.d.grcpc.GrcpcApiApplication [requestId=] - Running with Spring Boot v3.5.9, Spring v6.2.15
+2026-09-19 17:06:13.309 [main] INFO  c.d.grcpc.GrcpcApiApplication [requestId=] - No active profile set, falling back to 1 default profile: "default"
+2026-09-19 17:06:38.314 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate [requestId=] - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-19 17:06:39.542 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate [requestId=] - Finished Spring Data repository scanning in 1168 ms. Found 42 JPA repository interfaces.
+2026-09-19 17:06:58.009 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer [requestId=] - Tomcat initialized with port 8080 (http)
+2026-09-19 17:06:58.176 [main] INFO  o.a.coyote.http11.Http11NioProtocol [requestId=] - Initializing ProtocolHandler ["http-nio-8080"]
+2026-09-19 17:06:58.199 [main] INFO  o.a.catalina.core.StandardService [requestId=] - Starting service [Tomcat]
+2026-09-19 17:06:58.200 [main] INFO  o.a.catalina.core.StandardEngine [requestId=] - Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-09-19 17:06:58.522 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] [requestId=] - Initializing Spring embedded WebApplicationContext
+2026-09-19 17:06:58.523 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext [requestId=] - Root WebApplicationContext: initialization completed in 44680 ms
+2026-09-19 17:07:06.209 [main] INFO  com.zaxxer.hikari.HikariDataSource [requestId=] - HikariPool-1 - Starting...
+2026-09-19 17:07:07.966 [main] INFO  com.zaxxer.hikari.pool.HikariPool [requestId=] - HikariPool-1 - Added connection oracle.jdbc.driver.T4CConnection@7793b55d
+2026-09-19 17:07:07.975 [main] INFO  com.zaxxer.hikari.HikariDataSource [requestId=] - HikariPool-1 - Start completed.
+2026-09-19 17:07:08.208 [main] INFO  org.flywaydb.core.FlywayExecutor [requestId=] - Database: jdbc:oracle:thin:@//host.docker.internal:1521/FREEPDB1 (Oracle 23.26)
+2026-09-19 17:07:14.953 [main] WARN  o.f.c.i.database.base.Database [requestId=] - Flyway upgrade recommended: Oracle 23.26 is newer than this version of Flyway and support has not been tested. The latest supported version of Oracle is 21.3.
+2026-09-19 17:07:15.674 [main] INFO  o.f.c.i.s.JdbcTableSchemaHistory [requestId=] - Schema history table "CODEX_USER_SECURITY_20260919"."flyway_schema_history" does not exist yet
+2026-09-19 17:07:15.686 [main] INFO  o.f.core.internal.command.DbValidate [requestId=] - Successfully validated 42 migrations (execution time 00:00.615s)
+2026-09-19 17:07:20.292 [main] INFO  org.flywaydb.core.Flyway [requestId=] - All configured schemas are empty; baseline operation skipped. A baseline or migration script with a lower version than the baseline version may execute if available. Check the Schemas parameter if this is not intended.
+2026-09-19 17:07:20.421 [main] INFO  o.f.c.i.s.JdbcTableSchemaHistory [requestId=] - Creating Schema History table "CODEX_USER_SECURITY_20260919"."flyway_schema_history" ...
+2026-09-19 17:07:23.124 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Current version of schema "CODEX_USER_SECURITY_20260919": << Empty Schema >>
+2026-09-19 17:07:23.199 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "0010 - create system setup table"
+2026-09-19 17:07:23.898 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "0020 - create usermanagement core tables"
+2026-09-19 17:07:24.639 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "0030 - create usermanagement i18n tables"
+2026-09-19 17:07:25.408 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "0040 - create usermanagement assignment tables"
+2026-09-19 17:07:27.722 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "0050 - create usermanagement delegation tables"
+2026-09-19 17:07:29.137 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "0060 - create audit tables"
+2026-09-19 17:07:30.225 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "0070 - seed base roles"
+2026-09-19 17:07:30.512 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "0080 - create indexes and constraints"
+2026-09-19 17:07:31.587 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1000 - seed system permissions"
+2026-09-19 17:07:31.954 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1010 - seed system permissions i18n"
+2026-09-19 17:07:32.390 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1020 - seed business permissions core"
+2026-09-19 17:07:32.512 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1030 - seed business permissions core i18n"
+2026-09-19 17:07:32.749 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1040 - seed root admin role i18n"
+2026-09-19 17:07:32.899 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1050 - seed root admin role permissions"
+2026-09-19 17:07:33.273 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1060 - seed root admin role business permissions"
+2026-09-19 17:07:33.900 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1070 - seed master data business permissions"
+2026-09-19 17:07:37.151 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1080 - create master data security document tables"
+2026-09-19 17:07:38.214 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1090 - seed regulation and organization business permissions"
+2026-09-19 17:07:38.570 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1100 - drop resource acl entry"
+2026-09-19 17:07:39.178 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1110 - remove acl business permission"
+2026-09-19 17:07:39.429 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1120 - recreate resource acl entry"
+2026-09-19 17:07:39.625 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1130 - restore acl business permission"
+2026-09-19 17:07:39.754 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1162 - master data v2 structural and central definitions"
+2026-09-19 17:07:44.370 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1163 - master data v2 central scope policy and coverage"
+2026-09-19 17:07:47.032 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1164 - master data v2 local context scope policy and coverage"
+2026-09-19 17:07:48.902 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1165 - master data v2 document family"
+2026-09-19 17:07:49.796 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1166 - master data v2 business revision"
+2026-09-19 17:07:51.428 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1167 - master data v2 hierarchy guard"
+2026-09-19 17:07:52.571 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1168 - seed central catalog v2 permissions"
+2026-09-19 17:07:55.875 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1169 - add central policy type"
+2026-09-19 17:07:56.038 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1170 - add central policy metadata"
+2026-09-19 17:07:56.153 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1171 - enhance central control catalog"
+2026-09-19 17:07:56.852 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1172 - add central control event description"
+2026-09-19 17:07:57.076 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1173 - drop central policy communication timing"
+2026-09-19 17:08:00.611 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1174 - seed central control scope permissions"
+2026-09-19 17:08:01.944 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1175 - seed central risk scope permissions"
+2026-09-19 17:08:02.822 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1176 - seed central control objective scope permissions"
+2026-09-19 17:08:03.373 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1177 - seed central requirement scope permissions"
+2026-09-19 17:08:03.681 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1178 - seed central control account group permissions"
+2026-09-19 17:08:04.204 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1179 - seed central control objective account group permissions"
+2026-09-19 17:08:04.517 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1180 - seed master data area authorization"
+2026-09-19 17:08:05.165 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_USER_SECURITY_20260919" to version "1181 - user password lifecycle"
+2026-09-19 17:08:05.325 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Successfully applied 42 migrations to schema "CODEX_USER_SECURITY_20260919", now at version v1181 (execution time 00:30.663s)
+2026-09-19 17:08:08.381 [main] INFO  o.h.jpa.internal.util.LogHelper [requestId=] - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-09-19 17:08:10.084 [main] INFO  org.hibernate.Version [requestId=] - HHH000412: Hibernate ORM core version 6.6.39.Final
+2026-09-19 17:08:10.525 [main] INFO  o.h.c.i.RegionFactoryInitiator [requestId=] - HHH000026: Second-level cache disabled
+2026-09-19 17:08:12.478 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo [requestId=] - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-19 17:08:13.087 [main] INFO  o.hibernate.orm.connections.pooling [requestId=] - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 23.26
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-09-19 17:08:13.214 [main] WARN  org.hibernate.orm.incubating [requestId=] - HHH90006001: Encountered incubating setting [hibernate.type.preferred_uuid_jdbc_type].  See javadoc on corresponding `org.hibernate.cfg.AvailableSettings` constant for details.
+2026-09-19 17:08:19.478 [main] WARN  org.hibernate.orm.incubating [requestId=] - HHH90006001: Encountered incubating setting [hibernate.type.preferred_uuid_jdbc_type].  See javadoc on corresponding `org.hibernate.cfg.AvailableSettings` constant for details.
+2026-09-19 17:08:30.680 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator [requestId=] - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-09-19 17:08:37.258 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean [requestId=] - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-19 17:08:41.051 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory [requestId=] - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-09-19 17:08:44.138 [main] INFO  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [requestId=] - Global AuthenticationManager configured with UserDetailsService bean with name databaseUserDetailsService
+2026-09-19 17:08:44.343 [main] DEBUG c.d.g.c.logging.RequestLoggingFilter [requestId=] - Filter 'requestLoggingFilter' configured for use
+2026-09-19 17:08:57.834 [main] INFO  c.d.g.common.security.SecurityConfig [requestId=] - Configuring Spring Security filter chain
+2026-09-19 17:08:58.263 [main] INFO  o.s.b.a.w.s.WelcomePageHandlerMapping [requestId=] - Adding welcome page: class path resource [static/index.html]
+2026-09-19 17:09:01.623 [main] INFO  o.a.coyote.http11.Http11NioProtocol [requestId=] - Starting ProtocolHandler ["http-nio-8080"]
+2026-09-19 17:09:01.659 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer [requestId=] - Tomcat started on port 8080 (http) with context path '/'
+2026-09-19 17:09:01.672 [main] INFO  c.d.grcpc.GrcpcApiApplication [requestId=] - Started GrcpcApiApplication in 180.418 seconds (process running for 191.824)

@@ -1,5 +1,6 @@
 package com.digiaudit.grcpc.modules.usermanagement.application;
 
+import com.digiaudit.grcpc.common.security.PasswordPolicy;
 import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
@@ -46,7 +47,11 @@ public class UserManagementService {
     public UUID createUser(CreateUserRequest request, HttpServletRequest httpServletRequest) {
         currentUserProvider.assertCurrentUserIsRoot();
 
-        String normalizedUsername = request.username().trim().toLowerCase(Locale.ROOT);
+        if (request.username() == null || !request.username().matches("[A-Za-z0-9]{1,100}")) {
+            throw new ConflictException("INVALID_USERNAME", "security.username.invalid", "Username must contain only ASCII letters and digits");
+        }
+        PasswordPolicy.validate(request.password());
+        String normalizedUsername = request.username().toLowerCase(Locale.ROOT);
         if (appUserRepository.existsByUsername(normalizedUsername)) {
             throw new ConflictException("Username already exists");
         }
@@ -58,6 +63,7 @@ public class UserManagementService {
                 AppUserEntity.builder()
                         .username(normalizedUsername)
                         .passwordHash(passwordEncoder.encode(request.password()))
+                        .passwordChangeRequired(true)
                         .firstName(request.firstName().trim())
                         .lastName(request.lastName().trim())
                         .mobile(blankToNull(request.mobile()))
@@ -87,7 +93,7 @@ public class UserManagementService {
     @Transactional
     public void updateUser(UUID userId, UpdateUserRequest request, HttpServletRequest httpServletRequest) {
         currentUserProvider.assertCurrentUserIsRoot();
-        AppUserEntity user = appUserRepository.findById(userId)
+        AppUserEntity user = appUserRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new NotFoundException("User was not found"));
 
         UUID actorUserId = currentUserProvider.getCurrentUserIdOrNull();
@@ -103,9 +109,11 @@ public class UserManagementService {
         user.setEmail(blankToNull(request.email()));
         user.setDefaultOrgUnitId(request.defaultOrgUnitId());
         if (request.enabled() != null) {
+            if (user.isEnabled() != request.enabled()) user.setCredentialVersion(user.getCredentialVersion() + 1);
             user.setEnabled(request.enabled());
         }
         if (request.locked() != null) {
+            if (user.isLocked() != request.locked()) user.setCredentialVersion(user.getCredentialVersion() + 1);
             user.setLocked(request.locked());
         }
         user.setUpdatedBy(actorUserId);
@@ -136,7 +144,7 @@ public class UserManagementService {
     public void assignRole(UUID userId, AssignRoleRequest request, HttpServletRequest httpServletRequest) {
         currentUserProvider.assertCurrentUserIsRoot();
 
-        AppUserEntity user = appUserRepository.findById(userId)
+        AppUserEntity user = appUserRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new NotFoundException("User was not found"));
 
         RoleEntity role = roleRepository.findById(request.roleId())
@@ -193,10 +201,11 @@ public class UserManagementService {
 
     private void updateEnabledFlag(UUID userId, boolean enabled, HttpServletRequest httpServletRequest) {
         currentUserProvider.assertCurrentUserIsRoot();
-        AppUserEntity user = appUserRepository.findById(userId)
+        AppUserEntity user = appUserRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new NotFoundException("User was not found"));
         UUID actorUserId = currentUserProvider.getCurrentUserIdOrNull();
         if (user.isRootUser() && !enabled) throw new ConflictException("Root user cannot be disabled");
+        if (user.isEnabled() != enabled) user.setCredentialVersion(user.getCredentialVersion() + 1);
         user.setEnabled(enabled);
         user.setUpdatedBy(actorUserId);
         appUserRepository.save(user);
@@ -211,6 +220,21 @@ public class UserManagementService {
                 httpServletRequest,
                 Map.of("enabled", enabled, "username", user.getUsername())
         );
+    }
+
+    @Transactional
+    public void resetPassword(UUID userId, String password, HttpServletRequest httpRequest) {
+        currentUserProvider.assertCurrentUserIsRoot();
+        PasswordPolicy.validate(password);
+        AppUserEntity user = appUserRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new NotFoundException("User was not found"));
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setPasswordChangeRequired(true);
+        user.setCredentialVersion(user.getCredentialVersion() + 1);
+        user.setUpdatedBy(currentUserProvider.getCurrentUserIdOrNull());
+        auditService.log(AuditEventType.USER_UPDATED, AuditTargetType.USER, userId.toString(),
+                ActionResult.SUCCESS, currentUserProvider.getCurrentUserIdOrNull(), httpRequest,
+                Map.of("operation", "PASSWORD_RESET", "passwordChangeRequired", true));
     }
 
     private void validateScope(ScopeType scopeType, UUID scopeOrgUnitId) {

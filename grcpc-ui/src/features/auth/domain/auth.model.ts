@@ -4,6 +4,7 @@ export type AuthUser = {
     firstName: string | null;
     lastName: string | null;
     rootUser: boolean;
+    passwordChangeRequired: boolean;
     authorities: string[];
 };
 
@@ -14,6 +15,7 @@ export type AuthMeResponse = {
     firstName: string | null;
     lastName: string | null;
     rootUser: boolean;
+    passwordChangeRequired: boolean;
     authorities: string[];
 };
 

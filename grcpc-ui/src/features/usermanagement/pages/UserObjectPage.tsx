@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Card, CardHeader, Label, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
+import { Bar, Button, Card, CardHeader, FlexBox, Label, ObjectStatus, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
 import type { UserDetail } from "@/features/usermanagement";
 import UserAssignmentsList from "../components/UserAssignmentsList";
 import { formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -8,6 +8,8 @@ export interface UserObjectPageProps {
     value: UserDetail | null;
     busy?: boolean;
     error?: string | null;
+    onResetPassword?: () => void;
+    onToggleEnabled?: () => void;
     onAssignRole?: () => void;
     onCancel: () => void;
 }
@@ -16,7 +18,7 @@ function formatDate(value?: string | null): string {
     return formatPersianDateTime(value);
 }
 
-export default function UserObjectPage({ value, busy = false, error, onCancel, onAssignRole }: UserObjectPageProps) {
+export default function UserObjectPage({ value, busy = false, error, onCancel, onAssignRole, onResetPassword, onToggleEnabled }: UserObjectPageProps) {
     const { t } = useTranslation();
 
     if (!value) {
@@ -45,6 +47,12 @@ export default function UserObjectPage({ value, busy = false, error, onCancel, o
                     {error}
                 </MessageStrip>
             ) : null}
+
+            <FlexBox alignItems="Center" wrap="Wrap" className="userManagementActions">
+                <ObjectStatus state={value.enabled ? "Positive" : "None"}>{t(value.enabled ? "usermanagement.users.status.enabled" : "usermanagement.users.status.disabled")}</ObjectStatus>
+                {onResetPassword && !value.rootUser ? <Button disabled={busy} onClick={onResetPassword}>{t("usermanagement.security.resetPassword")}</Button> : null}
+                {onToggleEnabled && !value.rootUser ? <Button disabled={busy} onClick={onToggleEnabled}>{t(value.enabled ? "usermanagement.security.disable" : "usermanagement.security.enable")}</Button> : null}
+            </FlexBox>
 
             <div
                 style={{

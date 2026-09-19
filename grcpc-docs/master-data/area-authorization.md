@@ -134,7 +134,9 @@ The backend package uses the pre-existing static UI because UI packaging
 was explicitly skipped; it is a compile/package check, not a combined deployment.
 
 Manual acceptance when the runtime is available: Root creates a user, assigns
-RISK_MASTER_DATA_MANAGER with GLOBAL/null, and logs in as that user. Only Risk should
+RISK_MASTER_DATA_MANAGER with GLOBAL/null, and logs in as that user. Complete the
+mandatory initial password change and sign in again (see
+[User account lifecycle](../security/user-account-lifecycle.md)). Only Risk should
 be offered in the launcher; Risk definitions/documents should be manageable; direct
 Process/Control/Governance/Reference and IAM access should be forbidden. Repeat with
 MASTER_DATA_VIEWER (reads only) and MASTER_DATA_ADMIN (all Master Data, no IAM).

@@ -1,5 +1,7 @@
 package com.digiaudit.grcpc.common.security;
 
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import com.digiaudit.grcpc.modules.usermanagement.domain.repository.AppUserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
@@ -138,7 +140,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             SecurityContextRepository securityContextRepository,
-            AuthenticationFilter jsonLoginAuthenticationFilter
+            AuthenticationFilter jsonLoginAuthenticationFilter,
+            AppUserRepository users,
+            ObjectMapper objectMapper
     ) throws Exception {
         log.info("Configuring Spring Security filter chain");
 
@@ -177,6 +181,7 @@ public class SecurityConfig {
                         })
                 )
                 .addFilterAt(jsonLoginAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new AccountSessionFilter(users, objectMapper), AuthorizationFilter.class)
                 .build();
     }
 
@@ -196,6 +201,7 @@ public class SecurityConfig {
             Authentication authentication,
             SecurityContextRepository securityContextRepository
     ) {
+        if (request.getSession(false) != null) request.changeSessionId();
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);

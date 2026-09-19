@@ -7,6 +7,8 @@ import type {
 } from "@/features/usermanagement";
 
 export interface UserManagementRepo {
+    resetPassword(userId: string, password: string): Promise<void>;
+    setEnabled(userId: string, enabled: boolean): Promise<void>;
     createUser(input: CreateUserInput): Promise<string>;
     assignRole(userId: string, input: AssignGlobalRoleInput): Promise<void>;
     listUsers(): Promise<UserSummary[]>;

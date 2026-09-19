@@ -1,3 +1,4 @@
+import "../components/user-management-forms.css";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -6,10 +7,8 @@ import {
     Button,
     Input,
     Label,
-    List,
-    ListItemCustom,
+    Table, TableHeaderRow, TableHeaderCell, TableRow, TableCell, Link, ObjectStatus,
     MessageStrip,
-    Text,
     Title,
 } from "@ui5/webcomponents-react";
 
@@ -115,115 +114,21 @@ export default function UsersListReport({
 
             {busy ? <BusyIndicator active delay={0} /> : null}
 
-            <List>
-                {filteredItems.length === 0 ? (
-                    <ListItemCustom>
-                        <div
-                            style={{
-                                padding: ".5rem 0",
-                                display: "grid",
-                                gap: ".25rem",
-                            }}
-                        >
-                            <Text>
-                                {t("usermanagement.users.empty", {
-                                    defaultValue: "کاربری برای نمایش وجود ندارد",
-                                })}
-                            </Text>
-                        </div>
-                    </ListItemCustom>
-                ) : (
-                    filteredItems.map((item) => {
-                        const selected = item.id === selectedId;
-                        const fullName = buildFullName(item);
-
-                        return (
-                            <ListItemCustom key={item.id} type="Active" onClick={() => onSelect(item.id)}>
-                                <div
-                                    style={{
-                                        width: "100%",
-                                        textAlign: "right",
-                                        border: selected
-                                            ? "1px solid var(--sapSelectedColor)"
-                                            : "1px solid var(--sapGroup_ContentBorderColor)",
-                                        borderRadius: "0.875rem",
-                                        padding: "0.875rem",
-                                        background: selected
-                                            ? "var(--sapList_SelectionBackgroundColor)"
-                                            : "var(--sapGroup_ContentBackground)",
-                                        cursor: "pointer",
-                                        display: "grid",
-                                        gap: ".5rem",
-                                        fontFamily: "inherit",
-                                        fontSize: "inherit",
-                                        color: "inherit",
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "flex-start",
-                                            gap: "1rem",
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                display: "grid",
-                                                gap: ".35rem",
-                                                minWidth: 0,
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    fontWeight: 700,
-                                                    fontFamily: "inherit",
-                                                    lineHeight: 1.5,
-                                                }}
-                                            >
-                                                {fullName}
-                                            </div>
-
-                                            <Text>{item.username}</Text>
-
-                                            {item.email ? <Text>{item.email}</Text> : null}
-
-                                            {item.mobile ? <Text>{item.mobile}</Text> : null}
-                                        </div>
-
-                                        <div
-                                            style={{
-                                                display: "grid",
-                                                gap: ".35rem",
-                                                justifyItems: "end",
-                                                flex: "0 0 auto",
-                                            }}
-                                        >
-                                            <Text>
-                                                {item.enabled
-                                                    ? t("usermanagement.users.status.enabled", {
-                                                        defaultValue: "فعال",
-                                                    })
-                                                    : t("usermanagement.users.status.disabled", {
-                                                        defaultValue: "غیرفعال",
-                                                    })}
-                                            </Text>
-
-                                            {item.rootUser ? (
-                                                <Text>
-                                                    {t("usermanagement.users.status.rootUser", {
-                                                        defaultValue: "ریشه",
-                                                    })}
-                                                </Text>
-                                            ) : null}
-                                        </div>
-                                    </div>
-                                </div>
-                            </ListItemCustom>
-                        );
-                    })
-                )}
-            </List>
+            <Table noDataText={t("usermanagement.users.empty")} headerRow={
+                <TableHeaderRow>
+                    <TableHeaderCell>{t("usermanagement.users.fields.fullName")}</TableHeaderCell>
+                    <TableHeaderCell>{t("usermanagement.users.fields.username")}</TableHeaderCell>
+                    <TableHeaderCell>{t("usermanagement.roles.fields.status")}</TableHeaderCell>
+                </TableHeaderRow>
+            }>
+                {filteredItems.map((item) => (
+                    <TableRow key={item.id} rowKey={item.id} className={selectedId === item.id ? "userManagementSelectedRow" : undefined}>
+                        <TableCell><Link onClick={() => onSelect(item.id)}>{buildFullName(item)}</Link></TableCell>
+                        <TableCell>{item.username}</TableCell>
+                        <TableCell><ObjectStatus state={item.enabled ? "Positive" : "None"}>{t(item.enabled ? "usermanagement.users.status.enabled" : "usermanagement.users.status.disabled")}</ObjectStatus></TableCell>
+                    </TableRow>
+                ))}
+            </Table>
         </div>
     );
 }

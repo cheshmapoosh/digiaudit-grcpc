@@ -6,8 +6,6 @@ import { userManagementService } from "../service/usermanagement.service";
 import type { RoleSummary } from "../domain/usermanagement.model";
 import "./user-management-forms.css";
 
-const DEMO_ROLES = new Set(["MASTER_DATA_ADMIN", "PROCESS_MASTER_DATA_MANAGER", "RISK_MASTER_DATA_MANAGER", "CONTROL_MASTER_DATA_MANAGER", "MASTER_DATA_VIEWER"]);
-
 export default function AssignGlobalRoleDialog({ userId, onClose, onAssigned }: { userId: string; onClose: () => void; onAssigned: () => void }) {
   const { t } = useTranslation();
   const [roles, setRoles] = useState<RoleSummary[]>([]);
@@ -23,13 +21,13 @@ export default function AssignGlobalRoleDialog({ userId, onClose, onAssigned }: 
   useEffect(() => {
     let active = true;
     void userManagementService.listRoles().then((items) => {
-      if (active) setRoles(items.filter((role) => role.enabled && DEMO_ROLES.has(role.code)));
+      if (active) setRoles(items);
     }).catch(() => { if (active) setError(t("usermanagement.demo.loadRolesError")); });
     return () => { active = false; };
   }, [t]);
 
   async function save() {
-    if (!roleId || !ordered || !datesValid.from || !datesValid.to || saving.current) return;
+    if (!roles.some((role) => role.id === roleId && role.enabled) || !ordered || !datesValid.from || !datesValid.to || saving.current) return;
     saving.current = true;
     setBusy(true);
     setError(null);
@@ -49,14 +47,15 @@ export default function AssignGlobalRoleDialog({ userId, onClose, onAssigned }: 
   }
 
   return <Dialog open headerText={t("usermanagement.demo.assignRole")} onBeforeClose={(event) => { if (saving.current) event.preventDefault(); }} onClose={onClose}
-    footer={<Bar endContent={<><Button design="Emphasized" disabled={busy || !roleId || !ordered || !datesValid.from || !datesValid.to} onClick={() => void save()}>{t("common.save")}</Button><Button disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></>} />}>
+    footer={<Bar endContent={<><Button design="Emphasized" disabled={busy || !roles.some((role) => role.id === roleId && role.enabled) || !ordered || !datesValid.from || !datesValid.to} onClick={() => void save()}>{t("common.save")}</Button><Button disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></>} />}>
     <FlexBox direction="Column" className="userManagementForm">
       {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
       <Label for="assign-global-role" required>{t("usermanagement.demo.role")}</Label>
       <Select id="assign-global-role" disabled={busy} onChange={(event) => setRoleId(event.detail.selectedOption.dataset.id ?? "")}>
         <Option selected={!roleId} data-id="">{t("usermanagement.demo.selectRole")}</Option>
-        {roles.map((role) => <Option key={role.id} data-id={role.id} selected={roleId === role.id}>{role.title || role.code}</Option>)}
+        {roles.map((role) => <Option key={role.id} data-id={role.id} selected={roleId === role.id}>{role.title && role.title !== role.code ? role.title : t("usermanagement.roles.untitled")}{!role.enabled ? ` (${t("usermanagement.roles.status.disabled")})` : ""}</Option>)}
       </Select>
+      {roleId && !roles.some((role) => role.id === roleId && role.enabled) ? <MessageStrip design="Negative" hideCloseButton>{t("usermanagement.security.disabledRole")}</MessageStrip> : null}
       <Text>{t("usermanagement.demo.globalScope")}</Text>
       <Text>{t("usermanagement.demo.globalHint")}</Text>
       <Label>{t("usermanagement.demo.validFrom")}</Label>

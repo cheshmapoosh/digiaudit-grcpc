@@ -9,7 +9,7 @@ type AuthGuardProps = {
 };
 
 export default function AuthGuard({ children }: AuthGuardProps) {
-    const { authenticated, loading } = useAuthStatus();
+    const { authenticated, loading, me } = useAuthStatus();
     const location = useLocation();
 
     if (loading || authenticated === null) {
@@ -24,6 +24,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
                 state={{ from: location }}
             />
         );
+    }
+
+    if (me?.passwordChangeRequired && location.pathname !== "/change-password") {
+        return <Navigate to="/change-password" replace />;
     }
 
     return <>{children}</>;

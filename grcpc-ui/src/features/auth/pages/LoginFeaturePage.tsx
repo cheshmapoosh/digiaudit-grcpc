@@ -63,8 +63,10 @@ export default function LoginFeaturePage() {
                 password,
             });
 
-            navigate(redirectTo, { replace: true });
+            setPassword("");
+            navigate(useAuthState.getState().me?.passwordChangeRequired ? "/change-password" : redirectTo, { replace: true });
         } catch {
+            setPassword("");
             // خطا در store مدیریت می‌شود
         }
     }

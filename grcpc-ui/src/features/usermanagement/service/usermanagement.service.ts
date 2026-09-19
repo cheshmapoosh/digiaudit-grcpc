@@ -9,6 +9,8 @@ import type {
 } from "@/features/usermanagement";
 
 export interface UserManagementService {
+    resetPassword(userId: string, password: string): Promise<void>;
+    setEnabled(userId: string, enabled: boolean): Promise<void>;
     createUser(input: CreateUserInput): Promise<string>;
     assignRole(userId: string, input: AssignGlobalRoleInput): Promise<void>;
     listUsers(): Promise<UserSummary[]>;
@@ -22,11 +24,13 @@ function sortUsers(items: UserSummary[]): UserSummary[] {
 }
 
 function sortRoles(items: RoleSummary[]): RoleSummary[] {
-    return [...items].sort((left, right) => left.code.localeCompare(right.code));
+    return [...items].sort((left, right) => (left.title ?? "").localeCompare(right.title ?? "", "fa"));
 }
 
 export function createUserManagementService(repo: UserManagementRepo): UserManagementService {
     return {
+        resetPassword: (userId, password) => repo.resetPassword(userId, password),
+        setEnabled: (userId, enabled) => repo.setEnabled(userId, enabled),
         createUser: (input) => repo.createUser(input),
         assignRole: (userId, input) => repo.assignRole(userId, input),
         async listUsers() {

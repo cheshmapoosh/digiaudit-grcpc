@@ -37,6 +37,14 @@ function toErrorMessage(error: unknown, fallback: string): string {
 }
 
 export class UserManagementApiRepo implements UserManagementRepo {
+    async resetPassword(userId: string, password: string): Promise<void> {
+        await httpClient.post<void>(USERS_BASE_URL + "/" + userId + "/reset-password", { password });
+    }
+
+    async setEnabled(userId: string, enabled: boolean): Promise<void> {
+        await httpClient.patch<void>(USERS_BASE_URL + "/" + userId + (enabled ? "/enable" : "/disable"));
+    }
+
     async createUser(input: CreateUserInput): Promise<string> {
         const response = await httpClient.post<{ id: string }>(USERS_BASE_URL, input);
         return response.id;

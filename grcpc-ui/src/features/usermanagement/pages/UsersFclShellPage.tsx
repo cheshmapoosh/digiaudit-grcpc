@@ -5,6 +5,8 @@ import { BusyIndicator, MessageStrip } from "@ui5/webcomponents-react";
 
 import { useUserManagementState } from "@/features/usermanagement";
 import { useAuthState } from "@/features/auth/state/auth.state";
+import type { UserDetail } from "../domain/usermanagement.model";
+import UserSecurityDialog from "../components/UserSecurityDialog";
 import CreateUserDialog from "../components/CreateUserDialog";
 import AssignGlobalRoleDialog from "../components/AssignGlobalRoleDialog";
 import UsersListReport from "./UsersListReport";
@@ -33,6 +35,7 @@ export default function UsersFclShellPage() {
     const reset = useUserManagementState((state) => state.reset);
 
     const isRoot = useAuthState((state) => Boolean(state.me?.rootUser));
+    const [securityAction, setSecurityAction] = useState<{ user: UserDetail; mode: "password" | "status" } | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
     const [assignOpen, setAssignOpen] = useState(false);
     const [searchText, setSearchText] = useState("");
@@ -111,6 +114,10 @@ export default function UsersFclShellPage() {
 
     return (
         <>
+        {securityAction && isRoot ? <UserSecurityDialog user={securityAction.user} mode={securityAction.mode} onClose={() => setSecurityAction(null)} onSaved={() => {
+            setSecurityAction(null);
+            void Promise.all([refreshUsers(), ...(userId ? [loadUser(userId)] : [])]).catch(() => setPageError(t("usermanagement.errors.refresh")));
+        }} /> : null}
         {createOpen && isRoot ? <CreateUserDialog onClose={() => setCreateOpen(false)} onCreated={(id) => { setCreateOpen(false); navigate(`/access-control/users/${id}`); void refreshUsers().catch(() => setPageError(t("usermanagement.errors.refresh"))); }} /> : null}
         {assignOpen && isRoot && userId ? <AssignGlobalRoleDialog userId={userId} onClose={() => setAssignOpen(false)} onAssigned={() => { setAssignOpen(false); void loadUser(userId).catch(() => setPageError(t("usermanagement.errors.loadDetail"))); }} /> : null}
         <div
@@ -168,6 +175,8 @@ export default function UsersFclShellPage() {
                             value={visibleUser}
                             busy={loading}
                             error={pageError}
+                            onResetPassword={isRoot ? () => setSecurityAction({ user: visibleUser, mode: "password" }) : undefined}
+                            onToggleEnabled={isRoot ? () => setSecurityAction({ user: visibleUser, mode: "status" }) : undefined}
                             onAssignRole={isRoot ? () => setAssignOpen(true) : undefined}
                             onCancel={handleClose}
                         />

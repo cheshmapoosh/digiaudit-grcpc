@@ -83,6 +83,7 @@ public class DatabaseUserDetailsService implements UserDetailsService {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .rootUser(user.isRootUser())
+                .credentialVersion(user.getCredentialVersion())
                 .enabled(user.isEnabled())
                 .accountNonExpired(true)
                 .accountNonLocked(!user.isLocked())
