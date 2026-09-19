@@ -24,14 +24,14 @@ public class CentralControlScopeOptionsController {
   }
 
   @GetMapping("/options")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_SCOPE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('CONTROL')")
   public CentralControlScopeOptionsResponse options() {
     return new CentralControlScopeOptionsResponse(
         scopes.frequencyCodes(), scopes.executionMethodCodes(), scopes.testMethodCodes());
   }
 
   @GetMapping("/eligible-controls")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_SCOPE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('CONTROL')")
   public List<CentralControlSummaryResponse> eligibleControls() {
     return controls.list();
   }

@@ -34,60 +34,60 @@ public class CentralControlController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('CONTROL')")
   public List<CentralControlSummaryResponse> list() {
     return queries.list();
   }
 
   @GetMapping("/deleted")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('CONTROL')")
   public List<CentralControlSummaryResponse> deleted() {
     return queries.listDeleted();
   }
 
   @GetMapping("/{id}")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('CONTROL')")
   public CentralControlResponse detail(@PathVariable UUID id) {
     return queries.detail(id);
   }
 
   @PostMapping
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_CREATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
   public CentralControlAggregateMutationResponse create(
       @Valid @RequestBody CreateCentralControlRequest request) {
     return commands.create(request);
   }
 
   @PatchMapping("/{id}")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_UPDATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
   public CentralControlAggregateMutationResponse update(
       @PathVariable UUID id, @Valid @RequestBody UpdateCentralControlRequest request) {
     return commands.update(id, request);
   }
 
   @PostMapping("/{id}/activate")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
   public MasterDataRevisionMutationResponse activate(
       @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) {
     return commands.activate(id, request.version());
   }
 
   @PostMapping("/{id}/inactivate")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
   public MasterDataRevisionMutationResponse inactivate(
       @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) {
     return commands.inactivate(id, request.version());
   }
 
   @PostMapping("/{id}/delete")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_DELETE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
   public MasterDataRevisionMutationResponse delete(
       @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) {
     return commands.delete(id, request.version());
   }
 
   @PostMapping("/{id}/restore")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_RESTORE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
   public MasterDataRevisionMutationResponse restore(
       @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest request) {
     return commands.restore(id, request.version());

@@ -4,6 +4,7 @@ import MainLayout from "../../layout/MainLayout";
 import PublicLayout from "../../layout/components/PublicLayout";
 
 import SetupGuard from "../guards/SetupGuard";
+import BusinessAccessGuard from "../guards/BusinessAccessGuard";
 import AuthGuard from "../guards/AuthGuard";
 
 import NotFoundPage from "@/pages/NotFoundPage";
@@ -39,12 +40,14 @@ export const appRouter = createBrowserRouter(
                     </SetupGuard>
                 }
             >
+                <Route element={<BusinessAccessGuard />}>
                 {dashboardRoutes}
                 {masterDataRoutes}
                 {organizationRoutes}
                 {processRoutes}
                 {centralCatalogRoutes}
                 {usermanagementRoutes}
+                </Route>
 
                 <Route path="*" element={<NotFoundPage />} />
             </Route>

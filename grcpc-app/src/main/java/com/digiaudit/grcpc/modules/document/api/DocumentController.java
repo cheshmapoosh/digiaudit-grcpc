@@ -39,7 +39,7 @@ public class DocumentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse create(@Valid @RequestBody DocumentCreateRequest request) {
         return commandService.createLinkedDocument(new DocumentCommands.CreateLinkedDocument(
                 request.tempUploadId(),
@@ -55,19 +55,19 @@ public class DocumentController {
     }
 
     @GetMapping("/{documentId}")
-    @PreAuthorize("hasAuthority('DOCUMENT_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canViewAny()")
     public DocumentDetailResponse get(@PathVariable UUID documentId) {
         return readService.getDocument(documentId);
     }
 
     @GetMapping("/{documentId}/versions")
-    @PreAuthorize("hasAuthority('DOCUMENT_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canViewAny()")
     public List<DocumentVersionResponse> versions(@PathVariable UUID documentId) {
         return readService.listVersions(documentId);
     }
 
     @PostMapping("/{documentId}/versions")
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse addVersion(
             @PathVariable UUID documentId,
             @Valid @RequestBody DocumentAddVersionRequest request
@@ -84,7 +84,7 @@ public class DocumentController {
     }
 
     @PatchMapping("/{documentId}")
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse updateMetadata(
             @PathVariable UUID documentId,
             @Valid @RequestBody DocumentMetadataUpdateRequest request
@@ -104,25 +104,25 @@ public class DocumentController {
     }
 
     @PostMapping("/{documentId}/activate")
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse activate(@PathVariable UUID documentId, @Valid @RequestBody DocumentLifecycleCommandRequest request) {
         return lifecycle(documentId, request, DocumentCommands.LifecycleAction.ACTIVATE);
     }
 
     @PostMapping("/{documentId}/inactivate")
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse inactivate(@PathVariable UUID documentId, @Valid @RequestBody DocumentLifecycleCommandRequest request) {
         return lifecycle(documentId, request, DocumentCommands.LifecycleAction.INACTIVATE);
     }
 
     @PostMapping("/{documentId}/delete")
-    @PreAuthorize("hasAuthority('DOCUMENT_DELETE') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse delete(@PathVariable UUID documentId, @Valid @RequestBody DocumentLifecycleCommandRequest request) {
         return lifecycle(documentId, request, DocumentCommands.LifecycleAction.DELETE);
     }
 
     @PostMapping("/{documentId}/restore")
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse restore(@PathVariable UUID documentId, @Valid @RequestBody DocumentLifecycleCommandRequest request) {
         return lifecycle(documentId, request, DocumentCommands.LifecycleAction.RESTORE);
     }

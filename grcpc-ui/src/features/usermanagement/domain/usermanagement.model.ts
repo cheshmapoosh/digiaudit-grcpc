@@ -68,3 +68,12 @@ export interface RoleDetail {
     systemPermissions: PermissionItem[];
     businessPermissions: PermissionItem[];
 }
+export interface CreateUserInput {
+    username: string; password: string; firstName: string; lastName: string;
+    email?: string | null; mobile?: string | null; enabled: boolean; defaultOrgUnitId: null;
+}
+
+export interface AssignGlobalRoleInput {
+    roleId: string; scopeType: "GLOBAL"; scopeOrgUnitId: null;
+    validFrom: string | null; validTo: string | null;
+}

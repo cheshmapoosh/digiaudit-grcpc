@@ -17,7 +17,7 @@ public class CentralProcessTreeController {
     private final ProcessService processService;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canView('PROCESS')")
     public List<ProcessTreeNodeResponse> findTree() {
         return processService.findProcessTree();
     }

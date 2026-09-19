@@ -1,3 +1,4 @@
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
@@ -111,6 +112,7 @@ export default function OrganizationObjectPage({
     onSubmit, onCancel, onEdit, onActiveTabChange, onDirtyChange, onDocumentDirtyChange,
 }: OrganizationObjectPageProps) {
     const { t } = useTranslation();
+    const { manage } = useMasterDataAccess("REFERENCE");
     const [form, setForm] = useState(() => toFormState(value));
     const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toFormState(value), mode)));
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -235,7 +237,7 @@ export default function OrganizationObjectPage({
         </div>
 
         <div style={FOOTER_STYLE}>
-            {mode === "view" ? <Button design="Emphasized" disabled={busy || !onEdit} onClick={onEdit}>{t("common.edit", { defaultValue: "Edit" })}</Button> : <Button design="Emphasized" disabled={saveDisabled} onClick={() => void submit()}>{t("common.save", { defaultValue: "Save" })}</Button>}
+            {mode === "view" ? <Button design="Emphasized" hidden={!manage} disabled={busy || !onEdit} onClick={onEdit}>{t("common.edit", { defaultValue: "Edit" })}</Button> : <Button design="Emphasized" disabled={saveDisabled} onClick={() => void submit()}>{t("common.save", { defaultValue: "Save" })}</Button>}
             <Button design="Transparent" disabled={busy} onClick={onCancel}>{mode === "view" ? t("common.close", { defaultValue: "Close" }) : t("common.cancel", { defaultValue: "Cancel" })}</Button>
         </div>
 

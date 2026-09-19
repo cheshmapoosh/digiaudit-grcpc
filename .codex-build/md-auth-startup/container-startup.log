@@ -1,0 +1,52 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-09-19 02:03:46.340 [background-preinit] INFO  o.h.validator.internal.util.Version [requestId=] - HV000001: Hibernate Validator 8.0.3.Final
+2026-09-19 02:03:46.559 [main] INFO  c.d.grcpc.GrcpcApiApplication [requestId=] - Starting GrcpcApiApplication v1.4.0 using Java 21.0.11 with PID 1 (/app/app.jar started by root in /)
+2026-09-19 02:03:46.560 [main] INFO  c.d.grcpc.GrcpcApiApplication [requestId=] - No active profile set, falling back to 1 default profile: "default"
+2026-09-19 02:03:49.990 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate [requestId=] - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-19 02:03:50.441 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate [requestId=] - Finished Spring Data repository scanning in 430 ms. Found 42 JPA repository interfaces.
+2026-09-19 02:03:54.075 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer [requestId=] - Tomcat initialized with port 8080 (http)
+2026-09-19 02:03:54.112 [main] INFO  o.a.coyote.http11.Http11NioProtocol [requestId=] - Initializing ProtocolHandler ["http-nio-8080"]
+2026-09-19 02:03:54.119 [main] INFO  o.a.catalina.core.StandardService [requestId=] - Starting service [Tomcat]
+2026-09-19 02:03:54.120 [main] INFO  o.a.catalina.core.StandardEngine [requestId=] - Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-09-19 02:03:54.229 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] [requestId=] - Initializing Spring embedded WebApplicationContext
+2026-09-19 02:03:54.230 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext [requestId=] - Root WebApplicationContext: initialization completed in 7501 ms
+2026-09-19 02:03:55.460 [main] INFO  com.zaxxer.hikari.HikariDataSource [requestId=] - HikariPool-1 - Starting...
+2026-09-19 02:03:56.613 [main] INFO  com.zaxxer.hikari.pool.HikariPool [requestId=] - HikariPool-1 - Added connection oracle.jdbc.driver.T4CConnection@7bb25046
+2026-09-19 02:03:56.618 [main] INFO  com.zaxxer.hikari.HikariDataSource [requestId=] - HikariPool-1 - Start completed.
+2026-09-19 02:03:56.693 [main] INFO  org.flywaydb.core.FlywayExecutor [requestId=] - Database: jdbc:oracle:thin:@//host.docker.internal:1521/FREEPDB1 (Oracle 23.26)
+2026-09-19 02:03:58.150 [main] WARN  o.f.c.i.database.base.Database [requestId=] - Flyway upgrade recommended: Oracle 23.26 is newer than this version of Flyway and support has not been tested. The latest supported version of Oracle is 21.3.
+2026-09-19 02:03:58.757 [main] INFO  o.f.core.internal.command.DbValidate [requestId=] - Successfully validated 41 migrations (execution time 00:00.435s)
+2026-09-19 02:03:58.892 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Current version of schema "CODEX_MD_AUTH_20260919": 1180
+2026-09-19 02:03:58.911 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Schema "CODEX_MD_AUTH_20260919" is up to date. No migration necessary.
+2026-09-19 02:03:59.356 [main] INFO  o.h.jpa.internal.util.LogHelper [requestId=] - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-09-19 02:03:59.636 [main] INFO  org.hibernate.Version [requestId=] - HHH000412: Hibernate ORM core version 6.6.39.Final
+2026-09-19 02:03:59.763 [main] INFO  o.h.c.i.RegionFactoryInitiator [requestId=] - HHH000026: Second-level cache disabled
+2026-09-19 02:04:00.919 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo [requestId=] - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-19 02:04:01.224 [main] INFO  o.hibernate.orm.connections.pooling [requestId=] - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 23.26
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-09-19 02:04:01.296 [main] WARN  org.hibernate.orm.incubating [requestId=] - HHH90006001: Encountered incubating setting [hibernate.type.preferred_uuid_jdbc_type].  See javadoc on corresponding `org.hibernate.cfg.AvailableSettings` constant for details.
+2026-09-19 02:04:02.643 [main] WARN  org.hibernate.orm.incubating [requestId=] - HHH90006001: Encountered incubating setting [hibernate.type.preferred_uuid_jdbc_type].  See javadoc on corresponding `org.hibernate.cfg.AvailableSettings` constant for details.
+2026-09-19 02:04:05.930 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator [requestId=] - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-09-19 02:04:08.661 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean [requestId=] - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-19 02:04:09.290 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory [requestId=] - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-09-19 02:04:10.573 [main] INFO  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [requestId=] - Global AuthenticationManager configured with UserDetailsService bean with name databaseUserDetailsService
+2026-09-19 02:04:13.924 [main] INFO  c.d.g.common.security.SecurityConfig [requestId=] - Configuring Spring Security filter chain
+2026-09-19 02:04:13.984 [main] INFO  o.s.b.a.w.s.WelcomePageHandlerMapping [requestId=] - Adding welcome page: class path resource [static/index.html]
+2026-09-19 02:04:15.007 [main] INFO  o.a.coyote.http11.Http11NioProtocol [requestId=] - Starting ProtocolHandler ["http-nio-8080"]
+2026-09-19 02:04:15.038 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer [requestId=] - Tomcat started on port 8080 (http) with context path '/'
+2026-09-19 02:04:15.048 [main] INFO  c.d.grcpc.GrcpcApiApplication [requestId=] - Started GrcpcApiApplication in 30.55 seconds (process running for 32.477)

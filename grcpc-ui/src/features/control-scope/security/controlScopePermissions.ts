@@ -1,3 +1,4 @@
+import { canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
 import { useMemo } from "react";
 import { useAuthState } from "@/features/auth/state/auth.state";
 import type { ControlScopePermissions } from "../domain/controlScope.model";
@@ -5,9 +6,9 @@ import type { ControlScopePermissions } from "../domain/controlScope.model";
 export function useControlScopePermissions(): ControlScopePermissions {
   const me = useAuthState((state) => state.me);
   return useMemo(() => {
-    const authorities = new Set(me?.authorities ?? []);
-    const root = Boolean(me?.rootUser || authorities.has("ROLE_ROOT_ADMIN"));
-    const has = (suffix: string) => root || authorities.has(`CENTRAL_CONTROL_SCOPE_${suffix}`);
+
+
+    const has = (suffix: string) => canAccessMasterData(me, "PROCESS", suffix !== "VIEW") && canAccessMasterData(me, "CONTROL");
     return {
       view: has("VIEW"),
       create: has("CREATE"),

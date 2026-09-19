@@ -22,6 +22,8 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
             join ura.role r
             where ura.user.id = :userId
               and ura.active = true
+              and ura.scopeType = com.digiaudit.grcpc.modules.usermanagement.domain.enums.ScopeType.GLOBAL
+              and ura.scopeOrgUnitId is null
               and r.enabled = true
               and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
               and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
@@ -34,6 +36,8 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
             join ura.role r
             where ura.user.id = :userId
               and ura.active = true
+              and ura.scopeType = com.digiaudit.grcpc.modules.usermanagement.domain.enums.ScopeType.GLOBAL
+              and ura.scopeOrgUnitId is null
               and r.enabled = true
               and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
               and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
@@ -48,6 +52,8 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
             join rp.permission p
             where ura.user.id = :userId
               and ura.active = true
+              and ura.scopeType = com.digiaudit.grcpc.modules.usermanagement.domain.enums.ScopeType.GLOBAL
+              and ura.scopeOrgUnitId is null
               and r.enabled = true
               and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
               and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
@@ -62,6 +68,8 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
             join rbp.businessPermission bp
             where ura.user.id = :userId
               and ura.active = true
+              and ura.scopeType = com.digiaudit.grcpc.modules.usermanagement.domain.enums.ScopeType.GLOBAL
+              and ura.scopeOrgUnitId is null
               and r.enabled = true
               and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
               and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)

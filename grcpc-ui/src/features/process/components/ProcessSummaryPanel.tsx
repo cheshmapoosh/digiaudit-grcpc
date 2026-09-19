@@ -1,3 +1,4 @@
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import type { CSSProperties, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Bar, Button, Label, MessageStrip, ObjectStatus, Title } from "@ui5/webcomponents-react";
@@ -25,6 +26,7 @@ function DetailRow({ label, value }: { label: string; value?: ReactNode }) { ret
 
 export default function ProcessSummaryPanel({ value, allItems = [], busy = false, error, onErrorClose, onEdit, onClose }: ProcessSummaryPanelProps) {
     const { t } = useTranslation();
+    const { manage } = useMasterDataAccess("PROCESS");
     const parent = value?.parentId ? allItems.find((item) => item.id === value.parentId) : null;
     return <div style={{ display: "grid", gridTemplateRows: "auto 1fr auto", minHeight: "100%", gap: "1rem", minWidth: 0 }}>
         <Bar startContent={<Title level="H4">{value?.title ?? t("process.object.summaryTitle", { defaultValue: "Process details" })}</Title>} />
@@ -53,6 +55,6 @@ export default function ProcessSummaryPanel({ value, allItems = [], busy = false
                 </div>
             </div> : <MessageStrip design="Information" hideCloseButton>{t("process.object.selectPrompt", { defaultValue: "Select an item to view details." })}</MessageStrip>}
         </div>
-        <Bar endContent={<><Button design="Emphasized" disabled={!value || busy} style={ACTION_STYLE} onClick={() => value && onEdit?.(value.id)}>{t("common.edit", { defaultValue: "Edit" })}</Button><Button design="Transparent" disabled={busy} style={ACTION_STYLE} onClick={onClose}>{t("common.close", { defaultValue: "Close" })}</Button></>} />
+        <Bar endContent={<><Button design="Emphasized" disabled={!value || busy} style={ACTION_STYLE} hidden={!manage} onClick={() => value && onEdit?.(value.id)}>{t("common.edit", { defaultValue: "Edit" })}</Button><Button design="Transparent" disabled={busy} style={ACTION_STYLE} onClick={onClose}>{t("common.close", { defaultValue: "Close" })}</Button></>} />
     </div>;
 }

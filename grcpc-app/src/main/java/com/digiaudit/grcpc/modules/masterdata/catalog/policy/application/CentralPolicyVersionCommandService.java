@@ -117,7 +117,7 @@ public class CentralPolicyVersionCommandService {
                         preparedDocuments,
                         DocumentLinkTargetType.CENTRAL_POLICY_VERSION,
                         saved.getId(),
-                        "CENTRAL_POLICY_CREATE"));
+                        "MD_GOVERNANCE_MANAGE"));
                 return completed(context, saved, RevisionOperationType.CREATE, null, null);
               });
       return support.aggregateResponse(result, finalizedDocuments.get());
@@ -175,7 +175,7 @@ public class CentralPolicyVersionCommandService {
                       preparedDocuments,
                       DocumentLinkTargetType.CENTRAL_POLICY_VERSION,
                       target.getId(),
-                      "CENTRAL_POLICY_UPDATE"));
+                      "MD_GOVERNANCE_MANAGE"));
               return completed(
                   context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
             });

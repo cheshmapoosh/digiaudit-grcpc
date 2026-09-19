@@ -1,3 +1,4 @@
+import type { CreateUserInput, AssignGlobalRoleInput } from "../domain/usermanagement.model";
 import i18n from "@/i18n/i18n";
 import { httpClient } from "@/shared/infra/http.client.ts";
 import type { UserManagementRepo } from "./usermanagement.repo";
@@ -36,6 +37,15 @@ function toErrorMessage(error: unknown, fallback: string): string {
 }
 
 export class UserManagementApiRepo implements UserManagementRepo {
+    async createUser(input: CreateUserInput): Promise<string> {
+        const response = await httpClient.post<{ id: string }>(USERS_BASE_URL, input);
+        return response.id;
+    }
+
+    async assignRole(userId: string, input: AssignGlobalRoleInput): Promise<void> {
+        await httpClient.post<void>(`${USERS_BASE_URL}/${userId}/roles`, input);
+    }
+
     async listUsers(): Promise<UserSummary[]> {
         const response = await httpClient.get<unknown>(USERS_BASE_URL);
         return userSummaryListSchema.parse(response);

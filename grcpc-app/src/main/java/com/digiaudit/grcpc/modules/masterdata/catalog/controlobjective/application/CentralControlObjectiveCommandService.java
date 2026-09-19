@@ -152,7 +152,7 @@ public class CentralControlObjectiveCommandService {
                         prepared,
                         DocumentLinkTargetType.CENTRAL_CONTROL_OBJECTIVE,
                         saved.getId(),
-                        "CENTRAL_CONTROL_OBJECTIVE_CREATE"));
+                        "MD_CONTROL_MANAGE"));
                 CentralControlObjectiveAccountGroupAggregateService.ApplyResult
                     classificationResult = accountGroupClassifications.apply(
                         preparedClassifications, saved);
@@ -232,7 +232,7 @@ public class CentralControlObjectiveCommandService {
                       prepared,
                       DocumentLinkTargetType.CENTRAL_CONTROL_OBJECTIVE,
                       saved.getId(),
-                      "CENTRAL_CONTROL_OBJECTIVE_UPDATE"));
+                      "MD_CONTROL_MANAGE"));
               CentralControlObjectiveAccountGroupAggregateService.ApplyResult
                   classificationResult = accountGroupClassifications.apply(
                       preparedClassifications, saved);

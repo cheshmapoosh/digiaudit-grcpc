@@ -27,13 +27,13 @@ public class DocumentTemporaryUploadController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentTemporaryUploadResponse upload(@RequestPart("file") @NotNull MultipartFile file) {
         return service.upload(file);
     }
 
     @GetMapping("/{tempUploadId}")
-    @PreAuthorize("hasAuthority('DOCUMENT_VIEW') or hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentTemporaryUploadResponse get(@PathVariable UUID tempUploadId) {
         return service.get(tempUploadId);
     }

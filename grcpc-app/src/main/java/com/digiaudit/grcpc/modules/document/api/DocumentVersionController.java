@@ -34,13 +34,13 @@ public class DocumentVersionController {
     }
 
     @GetMapping("/{documentVersionId}")
-    @PreAuthorize("hasAuthority('DOCUMENT_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canViewAny()")
     public DocumentVersionResponse get(@PathVariable UUID documentVersionId) {
         return readService.getDocumentVersion(documentVersionId);
     }
 
     @PostMapping("/{documentVersionId}/links")
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse link(
             @PathVariable UUID documentVersionId,
             @Valid @RequestBody DocumentLinkCreateRequest request
@@ -53,7 +53,7 @@ public class DocumentVersionController {
     }
 
     @PostMapping("/{documentVersionId}/download")
-    @PreAuthorize("hasAuthority('DOCUMENT_DOWNLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canViewAny()")
     public DocumentDownloadResponse download(@PathVariable UUID documentVersionId) {
         return readService.createDownload(documentVersionId);
     }

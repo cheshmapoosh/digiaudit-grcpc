@@ -135,7 +135,7 @@ public class CentralPolicyGroupCommandService {
                         prepared,
                         DocumentLinkTargetType.CENTRAL_POLICY_GROUP,
                         saved.getId(),
-                        "CENTRAL_POLICY_CREATE"));
+                        "MD_GOVERNANCE_MANAGE"));
                 return completed(c, saved, op, expected, before);
               });
       return support.aggregateResponse(result, docs.get());
@@ -178,7 +178,7 @@ public class CentralPolicyGroupCommandService {
                       prepared,
                       DocumentLinkTargetType.CENTRAL_POLICY_GROUP,
                       id,
-                      "CENTRAL_POLICY_UPDATE"));
+                      "MD_GOVERNANCE_MANAGE"));
               return completed(c, saved, RevisionOperationType.UPDATE, expected, before);
             });
     return support.aggregateResponse(result, docs.get());

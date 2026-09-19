@@ -1,10 +1,9 @@
 package com.digiaudit.grcpc.modules.masterdata.scope.risk.application;
 
 import com.digiaudit.grcpc.common.exception.ConflictException;
-import com.digiaudit.grcpc.common.exception.ForbiddenException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
-import com.digiaudit.grcpc.common.security.CurrentUser;
+import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
 import com.digiaudit.grcpc.modules.masterdata.catalog.risk.domain.entity.CentralRiskTemplateEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.risk.domain.repository.CentralRiskTemplateRepository;
@@ -49,6 +48,7 @@ public class CentralSubprocessRiskScopeAggregateService {
   private final CentralRiskTemplateRepository riskTemplates;
   private final CentralSubprocessRiskScopeMapper mapper;
   private final MasterDataStructuralDependencyChecker dependencyChecker;
+  private final MasterDataAuthorizationService authorization;
   private final CurrentUserProvider currentUserProvider;
   private final ObjectMapper objectMapper;
   private final Clock clock;
@@ -58,6 +58,7 @@ public class CentralSubprocessRiskScopeAggregateService {
       CentralRiskTemplateRepository riskTemplates,
       CentralSubprocessRiskScopeMapper mapper,
       MasterDataStructuralDependencyChecker dependencyChecker,
+      MasterDataAuthorizationService authorization,
       CurrentUserProvider currentUserProvider,
       ObjectMapper objectMapper,
       @Qualifier("masterDataRevisionClock") Clock clock) {
@@ -65,6 +66,7 @@ public class CentralSubprocessRiskScopeAggregateService {
     this.riskTemplates = riskTemplates;
     this.mapper = mapper;
     this.dependencyChecker = dependencyChecker;
+    this.authorization = authorization;
     this.currentUserProvider = currentUserProvider;
     this.objectMapper = objectMapper;
     this.clock = clock;
@@ -89,6 +91,7 @@ public class CentralSubprocessRiskScopeAggregateService {
     if (changes.isEmpty()) {
       return new PreparedChanges(endpoint.id(), List.of());
     }
+    requireScopeAccess();
 
     List<UUID> riskTemplateIds = collectUniqueRiskTemplateIds(changes);
     changes =
@@ -127,6 +130,7 @@ public class CentralSubprocessRiskScopeAggregateService {
 
   public List<CentralSubprocessRiskScopeResponse> canonicalRows(
       CentralSubprocessEntity subprocess) {
+    if (!authorization.canView("PROCESS") || !authorization.canView("RISK")) return List.of();
     List<CentralSubprocessRiskScopeEntity> rows =
         scopes.findBySubprocessIdAndStatusNot(subprocess.getId(), DELETED);
     Map<UUID, CentralRiskTemplateEntity> riskTemplatesById =
@@ -165,14 +169,14 @@ public class CentralSubprocessRiskScopeAggregateService {
       case UPDATE -> {
         CentralSubprocessRiskScopeEntity scope =
             requireExisting(existing, change.riskTemplateId());
-        requireAuthority("CENTRAL_RISK_SCOPE_UPDATE");
+
         requireNotDeleted(scope);
         long expectedVersion = requireAndAssertVersion(scope, change.version());
         validateValidityWithinEndpoints(fields, subprocess, riskTemplate);
         MasterDataLifecycleStatus requestedStatus =
             normalizeUpdateStatus(change.requestedStatus(), scope);
         if (requestedStatus != scope.getStatus()) {
-          requireAuthority("CENTRAL_RISK_SCOPE_LIFECYCLE");
+
           RevisionOperationType lifecycle =
               requestedStatus == MasterDataLifecycleStatus.ACTIVE
                   ? RevisionOperationType.ACTIVATE
@@ -210,7 +214,7 @@ public class CentralSubprocessRiskScopeAggregateService {
     validateActiveEndpoints(subprocess, riskTemplate);
     validateValidityWithinEndpoints(fields, subprocess, riskTemplate);
     if (existing == null) {
-      requireAuthority("CENTRAL_RISK_SCOPE_CREATE");
+
       CentralSubprocessRiskScopeEntity created =
           CentralSubprocessRiskScopeEntity.create(
               UUID.randomUUID(),
@@ -235,10 +239,7 @@ public class CentralSubprocessRiskScopeAggregateService {
         existing.getStatus() == DELETED
             ? RevisionOperationType.RESTORE
             : RevisionOperationType.ACTIVATE;
-    requireAuthority(
-        operation == RevisionOperationType.RESTORE
-            ? "CENTRAL_RISK_SCOPE_RESTORE"
-            : "CENTRAL_RISK_SCOPE_LIFECYCLE");
+
     return new PreparedMutation(
         existing,
         operation,
@@ -256,10 +257,7 @@ public class CentralSubprocessRiskScopeAggregateService {
       RevisionOperationType operation) {
     CentralSubprocessRiskScopeEntity scope =
         requireExisting(existing, change.riskTemplateId());
-    requireAuthority(
-        operation == RevisionOperationType.DELETE
-            ? "CENTRAL_RISK_SCOPE_DELETE"
-            : "CENTRAL_RISK_SCOPE_LIFECYCLE");
+
     long expectedVersion = requireAndAssertVersion(scope, change.version());
     validateLifecycle(scope, operation);
     if (operation == RevisionOperationType.ACTIVATE) {
@@ -495,22 +493,8 @@ public class CentralSubprocessRiskScopeAggregateService {
     }
   }
 
-  private void requireAuthority(String authority) {
-    CurrentUser user = currentUserProvider.getCurrentPrincipal();
-    boolean allowed =
-        user.isRootUser()
-            || user.getAuthorities().stream()
-                .anyMatch(
-                    granted ->
-                        granted.getAuthority().equals("ROLE_ROOT_ADMIN")
-                            || granted.getAuthority().equals(authority));
-    if (!allowed) {
-      throw new ForbiddenException(
-          "FORBIDDEN",
-          "error.security.forbidden",
-          "Missing required authority: " + authority,
-          authority);
-    }
+  private void requireScopeAccess() {
+    authorization.requireManageWithReference("PROCESS", "RISK");
   }
 
   private void requireProcessGuard(RevisionExecutionContext context) {

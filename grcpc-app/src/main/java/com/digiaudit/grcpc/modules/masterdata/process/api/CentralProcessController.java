@@ -33,13 +33,13 @@ public class CentralProcessController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('PROCESS')")
     public MasterDataAggregateMutationResponse create(@Valid @RequestBody CreateCentralProcessRequest request) {
         return processService.createProcess(request);
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canView('PROCESS')")
     public List<CentralProcessResponse> findAll(
             @RequestParam(required = false) String lifecycleStatus
     ) {
@@ -47,13 +47,13 @@ public class CentralProcessController {
     }
 
     @GetMapping("/{processId}")
-    @PreAuthorize("hasAuthority('PROCESS_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canView('PROCESS')")
     public CentralProcessResponse findById(@PathVariable UUID processId) {
         return processService.getProcess(processId);
     }
 
     @PatchMapping("/{processId}")
-    @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('PROCESS')")
     public MasterDataAggregateMutationResponse update(
             @PathVariable UUID processId,
             @Valid @RequestBody UpdateCentralProcessRequest request
@@ -62,7 +62,7 @@ public class CentralProcessController {
     }
 
     @PostMapping("/{processId}/move")
-    @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('PROCESS')")
     public MasterDataRevisionMutationResponse move(
             @PathVariable UUID processId,
             @Valid @RequestBody MoveCentralProcessRequest request
@@ -71,7 +71,7 @@ public class CentralProcessController {
     }
 
     @PostMapping("/{processId}/activate")
-    @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('PROCESS')")
     public MasterDataRevisionMutationResponse activate(
             @PathVariable UUID processId,
             @Valid @RequestBody CentralProcessLifecycleCommandRequest request
@@ -80,7 +80,7 @@ public class CentralProcessController {
     }
 
     @PostMapping("/{processId}/inactivate")
-    @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('PROCESS')")
     public MasterDataRevisionMutationResponse inactivate(
             @PathVariable UUID processId,
             @Valid @RequestBody CentralProcessLifecycleCommandRequest request
@@ -89,7 +89,7 @@ public class CentralProcessController {
     }
 
     @PostMapping("/{processId}/delete")
-    @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('PROCESS')")
     public MasterDataRevisionMutationResponse delete(
             @PathVariable UUID processId,
             @Valid @RequestBody CentralProcessLifecycleCommandRequest request
@@ -98,7 +98,7 @@ public class CentralProcessController {
     }
 
     @PostMapping("/{processId}/restore")
-    @PreAuthorize("hasAuthority('PROCESS_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('PROCESS')")
     public MasterDataRevisionMutationResponse restore(
             @PathVariable UUID processId,
             @Valid @RequestBody CentralProcessLifecycleCommandRequest request

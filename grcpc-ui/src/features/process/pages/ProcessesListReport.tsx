@@ -1,3 +1,4 @@
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { useMemo, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -49,6 +50,7 @@ export default function ProcessesListReport({
     onSelect,
 }: ProcessesListReportProps) {
     const { t } = useTranslation();
+    const { manage } = useMasterDataAccess("PROCESS");
 
     const actionButtonStyle = useMemo<CSSProperties>(
         () => ({
@@ -88,12 +90,12 @@ export default function ProcessesListReport({
                 }
                 endContent={
                     <div style={actionGroupStyle}>
-                        <ProcessCreateMenu
+                        {manage ? <ProcessCreateMenu
                             disabled={busy}
                             style={actionButtonStyle}
                             nodeTypes={enabledCreateOptions}
                             onCreate={onCreate}
-                        />
+                        /> : null}
 
                         <Button
                             design="Emphasized"
@@ -106,6 +108,7 @@ export default function ProcessesListReport({
 
                         <Button
                             design="Negative"
+                            hidden={!manage}
                             disabled={!selectedId || busy}
                             style={actionButtonStyle}
                             onClick={() => selectedId && onDelete(selectedId)}

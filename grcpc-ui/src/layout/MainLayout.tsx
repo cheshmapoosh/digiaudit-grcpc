@@ -1,3 +1,4 @@
+import { MASTER_DATA_AREAS, canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
 import {useMemo, useState} from "react";
 import {Outlet, useLocation, useNavigate} from "react-router-dom";
 import {useTranslation} from "react-i18next";
@@ -53,6 +54,7 @@ const MASTER_DATA_PATH_PREFIXES = [
     "/master-data",
     "/organizations",
     "/processes",
+    "/controls",
     "/control-objectives",
     "/regulations",
     "/risks",
@@ -222,7 +224,7 @@ export default function MainLayout() {
                             {collapsed ? t("app.title") : t("app.platformTitle")}
                         </div>
 
-                        {mainItems.map((item) => (
+                        {mainItems.filter((item) => item.key !== "masterData" || MASTER_DATA_AREAS.some((area) => canAccessMasterData(me, area))).map((item) => (
                             <SideNavigationItem
                                 key={item.key}
                                 text={item.text}

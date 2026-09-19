@@ -21,7 +21,7 @@ public class CentralSubprocessControlObjectiveScopeController {
       CentralSubprocessControlObjectiveScopeQueryService queries) { this.queries = queries; }
 
   @GetMapping
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_SCOPE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('CONTROL')")
   public List<CentralSubprocessControlObjectiveScopeResponse> list(
       @PathVariable UUID subprocessId,
       @RequestParam(required = false) MasterDataLifecycleStatus status,
@@ -30,7 +30,7 @@ public class CentralSubprocessControlObjectiveScopeController {
   }
 
   @GetMapping("/{scopeId}")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_SCOPE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('CONTROL')")
   public CentralSubprocessControlObjectiveScopeResponse detail(
       @PathVariable UUID subprocessId, @PathVariable UUID scopeId) {
     return queries.detail(subprocessId, scopeId);

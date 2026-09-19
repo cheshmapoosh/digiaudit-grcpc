@@ -1,0 +1,161 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-09-19 05:32:14.500 [background-preinit] INFO  o.h.validator.internal.util.Version [requestId=] - HV000001: Hibernate Validator 8.0.3.Final
+2026-09-19 05:32:14.640 [main] INFO  c.d.grcpc.GrcpcApiApplication [requestId=] - Starting GrcpcApiApplication v1.4.0 using Java 21.0.11 with PID 2836 (D:\GRC\digiaudit-grcpc\grcpc-app\target\grcpc-app-1.4.0.jar started by cheshmapoush.a in D:\GRC\digiaudit-grcpc)
+2026-09-19 05:32:14.644 [main] INFO  c.d.grcpc.GrcpcApiApplication [requestId=] - No active profile set, falling back to 1 default profile: "default"
+2026-09-19 05:32:16.884 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate [requestId=] - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-19 05:32:17.270 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate [requestId=] - Finished Spring Data repository scanning in 366 ms. Found 42 JPA repository interfaces.
+2026-09-19 05:32:20.223 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer [requestId=] - Tomcat initialized with port 18087 (http)
+2026-09-19 05:32:20.250 [main] INFO  o.a.coyote.http11.Http11NioProtocol [requestId=] - Initializing ProtocolHandler ["http-nio-18087"]
+2026-09-19 05:32:20.257 [main] INFO  o.a.catalina.core.StandardService [requestId=] - Starting service [Tomcat]
+2026-09-19 05:32:20.257 [main] INFO  o.a.catalina.core.StandardEngine [requestId=] - Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-09-19 05:32:20.330 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] [requestId=] - Initializing Spring embedded WebApplicationContext
+2026-09-19 05:32:20.331 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext [requestId=] - Root WebApplicationContext: initialization completed in 5555 ms
+2026-09-19 05:32:21.489 [main] INFO  com.zaxxer.hikari.HikariDataSource [requestId=] - HikariPool-1 - Starting...
+2026-09-19 05:32:23.594 [main] INFO  com.zaxxer.hikari.pool.HikariPool [requestId=] - HikariPool-1 - Added connection oracle.jdbc.driver.T4CConnection@7157413e
+2026-09-19 05:32:23.599 [main] INFO  com.zaxxer.hikari.HikariDataSource [requestId=] - HikariPool-1 - Start completed.
+2026-09-19 05:32:23.675 [main] INFO  org.flywaydb.core.FlywayExecutor [requestId=] - Database: jdbc:oracle:thin:@//localhost:1521/FREEPDB1 (Oracle 23.26)
+2026-09-19 05:32:25.261 [main] WARN  o.f.c.i.database.base.Database [requestId=] - Flyway upgrade recommended: Oracle 23.26 is newer than this version of Flyway and support has not been tested. The latest supported version of Oracle is 21.3.
+2026-09-19 05:32:25.712 [main] INFO  o.f.c.i.s.JdbcTableSchemaHistory [requestId=] - Schema history table "CODEX_MD_AUTH_20260919"."flyway_schema_history" does not exist yet
+2026-09-19 05:32:25.720 [main] INFO  o.f.core.internal.command.DbValidate [requestId=] - Successfully validated 41 migrations (execution time 00:00.392s)
+2026-09-19 05:32:26.912 [main] INFO  org.flywaydb.core.Flyway [requestId=] - All configured schemas are empty; baseline operation skipped. A baseline or migration script with a lower version than the baseline version may execute if available. Check the Schemas parameter if this is not intended.
+2026-09-19 05:32:26.929 [main] INFO  o.f.c.i.s.JdbcTableSchemaHistory [requestId=] - Creating Schema History table "CODEX_MD_AUTH_20260919"."flyway_schema_history" ...
+2026-09-19 05:32:27.457 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Current version of schema "CODEX_MD_AUTH_20260919": << Empty Schema >>
+2026-09-19 05:32:27.477 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "0010 - create system setup table"
+2026-09-19 05:32:27.637 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "0020 - create usermanagement core tables"
+2026-09-19 05:32:27.803 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "0030 - create usermanagement i18n tables"
+2026-09-19 05:32:28.021 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "0040 - create usermanagement assignment tables"
+2026-09-19 05:32:28.194 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "0050 - create usermanagement delegation tables"
+2026-09-19 05:32:28.358 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "0060 - create audit tables"
+2026-09-19 05:32:28.417 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "0070 - seed base roles"
+2026-09-19 05:32:28.477 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "0080 - create indexes and constraints"
+2026-09-19 05:32:28.814 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1000 - seed system permissions"
+2026-09-19 05:32:29.040 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1010 - seed system permissions i18n"
+2026-09-19 05:32:29.894 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1020 - seed business permissions core"
+2026-09-19 05:32:30.003 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1030 - seed business permissions core i18n"
+2026-09-19 05:32:30.128 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1040 - seed root admin role i18n"
+2026-09-19 05:32:30.216 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1050 - seed root admin role permissions"
+2026-09-19 05:32:30.495 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1060 - seed root admin role business permissions"
+2026-09-19 05:32:30.587 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1070 - seed master data business permissions"
+2026-09-19 05:32:30.810 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1080 - create master data security document tables"
+2026-09-19 05:32:30.932 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1090 - seed regulation and organization business permissions"
+2026-09-19 05:32:31.073 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1100 - drop resource acl entry"
+2026-09-19 05:32:31.399 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1110 - remove acl business permission"
+2026-09-19 05:32:31.469 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1120 - recreate resource acl entry"
+2026-09-19 05:32:31.550 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1130 - restore acl business permission"
+2026-09-19 05:32:31.608 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1162 - master data v2 structural and central definitions"
+2026-09-19 05:32:32.717 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1163 - master data v2 central scope policy and coverage"
+2026-09-19 05:32:33.297 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1164 - master data v2 local context scope policy and coverage"
+2026-09-19 05:32:34.759 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1165 - master data v2 document family"
+2026-09-19 05:32:35.226 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1166 - master data v2 business revision"
+2026-09-19 05:32:35.415 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1167 - master data v2 hierarchy guard"
+2026-09-19 05:32:35.562 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1168 - seed central catalog v2 permissions"
+2026-09-19 05:32:36.430 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1169 - add central policy type"
+2026-09-19 05:32:36.595 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1170 - add central policy metadata"
+2026-09-19 05:32:36.685 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1171 - enhance central control catalog"
+2026-09-19 05:32:37.255 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1172 - add central control event description"
+2026-09-19 05:32:37.411 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1173 - drop central policy communication timing"
+2026-09-19 05:32:38.509 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1174 - seed central control scope permissions"
+2026-09-19 05:32:38.686 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1175 - seed central risk scope permissions"
+2026-09-19 05:32:38.877 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1176 - seed central control objective scope permissions"
+2026-09-19 05:32:39.090 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1177 - seed central requirement scope permissions"
+2026-09-19 05:32:39.255 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1178 - seed central control account group permissions"
+2026-09-19 05:32:39.432 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1179 - seed central control objective account group permissions"
+2026-09-19 05:32:39.593 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Migrating schema "CODEX_MD_AUTH_20260919" to version "1180 - seed master data area authorization"
+2026-09-19 05:32:39.962 [main] INFO  o.f.core.internal.command.DbMigrate [requestId=] - Successfully applied 41 migrations to schema "CODEX_MD_AUTH_20260919", now at version v1180 (execution time 00:10.245s)
+2026-09-19 05:32:40.452 [main] INFO  o.h.jpa.internal.util.LogHelper [requestId=] - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-09-19 05:32:40.675 [main] INFO  org.hibernate.Version [requestId=] - HHH000412: Hibernate ORM core version 6.6.39.Final
+2026-09-19 05:32:40.804 [main] INFO  o.h.c.i.RegionFactoryInitiator [requestId=] - HHH000026: Second-level cache disabled
+2026-09-19 05:32:41.834 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo [requestId=] - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-19 05:32:42.167 [main] INFO  o.hibernate.orm.connections.pooling [requestId=] - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 23.26
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-09-19 05:32:42.224 [main] WARN  org.hibernate.orm.incubating [requestId=] - HHH90006001: Encountered incubating setting [hibernate.type.preferred_uuid_jdbc_type].  See javadoc on corresponding `org.hibernate.cfg.AvailableSettings` constant for details.
+2026-09-19 05:32:43.261 [main] WARN  org.hibernate.orm.incubating [requestId=] - HHH90006001: Encountered incubating setting [hibernate.type.preferred_uuid_jdbc_type].  See javadoc on corresponding `org.hibernate.cfg.AvailableSettings` constant for details.
+2026-09-19 05:32:46.590 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator [requestId=] - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-09-19 05:32:50.142 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean [requestId=] - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-19 05:32:50.798 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory [requestId=] - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-09-19 05:32:52.606 [main] INFO  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer [requestId=] - Global AuthenticationManager configured with UserDetailsService bean with name databaseUserDetailsService
+2026-09-19 05:32:58.203 [main] INFO  c.d.g.common.security.SecurityConfig [requestId=] - Configuring Spring Security filter chain
+2026-09-19 05:32:58.348 [main] INFO  o.s.b.a.w.s.WelcomePageHandlerMapping [requestId=] - Adding welcome page: class path resource [static/index.html]
+2026-09-19 05:33:00.192 [main] INFO  o.a.coyote.http11.Http11NioProtocol [requestId=] - Starting ProtocolHandler ["http-nio-18087"]
+2026-09-19 05:33:00.317 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext [requestId=] - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'
+2026-09-19 05:33:00.347 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean [requestId=] - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-09-19 05:33:00.356 [main] INFO  com.zaxxer.hikari.HikariDataSource [requestId=] - HikariPool-1 - Shutdown initiated...
+2026-09-19 05:33:00.468 [main] INFO  com.zaxxer.hikari.HikariDataSource [requestId=] - HikariPool-1 - Shutdown completed.
+2026-09-19 05:33:00.526 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLogger [requestId=] - 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-09-19 05:33:00.618 [main] ERROR o.s.boot.SpringApplication [requestId=] - Application run failed
+org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'
+	at org.springframework.context.support.DefaultLifecycleProcessor.doStart(DefaultLifecycleProcessor.java:408)
+	at org.springframework.context.support.DefaultLifecycleProcessor.doStart(DefaultLifecycleProcessor.java:394)
+	at org.springframework.context.support.DefaultLifecycleProcessor$LifecycleGroup.start(DefaultLifecycleProcessor.java:586)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at org.springframework.context.support.DefaultLifecycleProcessor.startBeans(DefaultLifecycleProcessor.java:364)
+	at org.springframework.context.support.DefaultLifecycleProcessor.onRefresh(DefaultLifecycleProcessor.java:310)
+	at org.springframework.context.support.AbstractApplicationContext.finishRefresh(AbstractApplicationContext.java:1009)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:630)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at com.digiaudit.grcpc.GrcpcApiApplication.main(GrcpcApiApplication.java:30)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:106)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:64)
+	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:40)
+Caused by: org.springframework.boot.web.server.WebServerException: Unable to start embedded Tomcat server
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.start(TomcatWebServer.java:251)
+	at org.springframework.boot.web.servlet.context.WebServerStartStopLifecycle.start(WebServerStartStopLifecycle.java:44)
+	at org.springframework.context.support.DefaultLifecycleProcessor.doStart(DefaultLifecycleProcessor.java:405)
+	... 19 common frames omitted
+Caused by: java.lang.IllegalArgumentException: standardService.connector.startFailed
+	at org.apache.catalina.core.StandardService.addConnector(StandardService.java:220)
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.addPreviouslyRemovedConnectors(TomcatWebServer.java:310)
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.start(TomcatWebServer.java:236)
+	... 21 common frames omitted
+Caused by: org.apache.catalina.LifecycleException: Protocol handler start failed
+	at org.apache.catalina.connector.Connector.startInternal(Connector.java:1115)
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164)
+	at org.apache.catalina.core.StandardService.addConnector(StandardService.java:217)
+	... 23 common frames omitted
+Caused by: java.io.IOException: Unable to establish loopback connection
+	at java.base/sun.nio.ch.PipeImpl$Initializer.run(PipeImpl.java:103)
+	at java.base/sun.nio.ch.PipeImpl$Initializer.run(PipeImpl.java:67)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:571)
+	at java.base/sun.nio.ch.PipeImpl.<init>(PipeImpl.java:197)
+	at java.base/sun.nio.ch.WEPollSelectorImpl.<init>(WEPollSelectorImpl.java:79)
+	at java.base/sun.nio.ch.WEPollSelectorProvider.openSelector(WEPollSelectorProvider.java:33)
+	at java.base/java.nio.channels.Selector.open(Selector.java:295)
+	at org.apache.tomcat.util.net.NioEndpoint$Poller.<init>(NioEndpoint.java:626)
+	at org.apache.tomcat.util.net.NioEndpoint.startInternal(NioEndpoint.java:300)
+	at org.apache.tomcat.util.net.AbstractEndpoint.start(AbstractEndpoint.java:1517)
+	at org.apache.coyote.AbstractProtocol.start(AbstractProtocol.java:644)
+	at org.apache.catalina.connector.Connector.startInternal(Connector.java:1112)
+	... 25 common frames omitted
+Caused by: java.net.SocketException: Invalid argument: connect
+	at java.base/sun.nio.ch.UnixDomainSockets.connect0(Native Method)
+	at java.base/sun.nio.ch.UnixDomainSockets.connect(UnixDomainSockets.java:154)
+	at java.base/sun.nio.ch.UnixDomainSockets.connect(UnixDomainSockets.java:150)
+	at java.base/sun.nio.ch.SocketChannelImpl.connect(SocketChannelImpl.java:878)
+	at java.base/java.nio.channels.SocketChannel.open(SocketChannel.java:285)
+	at java.base/sun.nio.ch.PipeImpl$Initializer$LoopbackConnector.run(PipeImpl.java:132)
+	at java.base/sun.nio.ch.PipeImpl$Initializer.run(PipeImpl.java:85)
+	... 36 common frames omitted

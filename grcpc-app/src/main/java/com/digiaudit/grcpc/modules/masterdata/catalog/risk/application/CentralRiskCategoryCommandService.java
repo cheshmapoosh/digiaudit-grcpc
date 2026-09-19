@@ -160,7 +160,7 @@ public class CentralRiskCategoryCommandService {
                         prepared,
                         DocumentLinkTargetType.CENTRAL_RISK_CATEGORY,
                         saved.getId(),
-                        "CENTRAL_RISK_CREATE"));
+                        "MD_RISK_MANAGE"));
                 return completed(context, saved, operationType, expectedVersion, before);
               });
       return support.aggregateResponse(result, finalized.get());
@@ -201,7 +201,7 @@ public class CentralRiskCategoryCommandService {
                       prepared,
                       DocumentLinkTargetType.CENTRAL_RISK_CATEGORY,
                       id,
-                      "CENTRAL_RISK_UPDATE"));
+                      "MD_RISK_MANAGE"));
               return completed(
                   context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
             });

@@ -24,8 +24,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -93,6 +93,10 @@ public class UserManagementService {
         UUID actorUserId = currentUserProvider.getCurrentUserIdOrNull();
         log.info("Updating user. actorUserId={}, userId={}", actorUserId, userId);
 
+        if (user.isRootUser() && (Boolean.FALSE.equals(request.enabled()) || Boolean.TRUE.equals(request.locked()) || request.defaultOrgUnitId() != null)) {
+            throw new ConflictException("Root user cannot be disabled, locked or organization-restricted");
+        }
+
         user.setFirstName(request.firstName().trim());
         user.setLastName(request.lastName().trim());
         user.setMobile(blankToNull(request.mobile()));
@@ -139,6 +143,10 @@ public class UserManagementService {
                 .orElseThrow(() -> new NotFoundException("Role was not found"));
 
         validateScope(request.scopeType(), request.scopeOrgUnitId());
+        if (!role.isEnabled()) throw new ConflictException("Disabled role cannot be assigned");
+        if (request.validFrom() != null && request.validTo() != null && request.validTo().isBefore(request.validFrom())) {
+            throw new ConflictException("validTo must not precede validFrom");
+        }
 
         boolean exists = userRoleAssignmentRepository.existsByUser_IdAndRole_IdAndScopeTypeAndScopeOrgUnitIdAndActiveTrue(
                 user.getId(),
@@ -167,6 +175,10 @@ public class UserManagementService {
                 .build();
 
         userRoleAssignmentRepository.save(entity);
+        Map<String, Object> auditDetails = new LinkedHashMap<>();
+        auditDetails.put("roleCode", role.getCode());
+        auditDetails.put("scopeType", request.scopeType().name());
+        auditDetails.put("scopeOrgUnitId", request.scopeOrgUnitId());
 
         auditService.log(
                 AuditEventType.USER_ROLE_ASSIGNED,
@@ -175,7 +187,7 @@ public class UserManagementService {
                 ActionResult.SUCCESS,
                 actorUserId,
                 httpServletRequest,
-                Map.of("roleCode", role.getCode(), "scopeType", request.scopeType().name(), "scopeOrgUnitId", request.scopeOrgUnitId())
+                auditDetails
         );
     }
 
@@ -184,6 +196,7 @@ public class UserManagementService {
         AppUserEntity user = appUserRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User was not found"));
         UUID actorUserId = currentUserProvider.getCurrentUserIdOrNull();
+        if (user.isRootUser() && !enabled) throw new ConflictException("Root user cannot be disabled");
         user.setEnabled(enabled);
         user.setUpdatedBy(actorUserId);
         appUserRepository.save(user);
@@ -201,12 +214,8 @@ public class UserManagementService {
     }
 
     private void validateScope(ScopeType scopeType, UUID scopeOrgUnitId) {
-        boolean orgScope = scopeType == ScopeType.ORG_UNIT || scopeType == ScopeType.ORG_SUBTREE;
-        if (orgScope && scopeOrgUnitId == null) {
-            throw new ConflictException("scopeOrgUnitId is required for ORG_UNIT and ORG_SUBTREE");
-        }
-        if (!orgScope && scopeOrgUnitId != null) {
-            throw new ConflictException("scopeOrgUnitId must be null for GLOBAL and SELF");
+        if (scopeType != ScopeType.GLOBAL || scopeOrgUnitId != null) {
+            throw new ConflictException("Only GLOBAL assignments with no organization are supported in this phase");
         }
     }
 

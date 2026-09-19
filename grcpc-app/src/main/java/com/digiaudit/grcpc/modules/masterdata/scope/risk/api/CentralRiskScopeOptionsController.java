@@ -22,7 +22,7 @@ public class CentralRiskScopeOptionsController {
   }
 
   @GetMapping("/options")
-  @PreAuthorize("hasAuthority('CENTRAL_RISK_SCOPE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('RISK')")
   public CentralRiskScopeSelectionOptionsResponse options() {
     return new CentralRiskScopeSelectionOptionsResponse(
         riskTemplates.list(null), riskCategories.list());

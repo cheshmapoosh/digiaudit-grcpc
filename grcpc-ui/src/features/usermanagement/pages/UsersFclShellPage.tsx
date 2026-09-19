@@ -4,6 +4,9 @@ import { useTranslation } from "react-i18next";
 import { BusyIndicator, MessageStrip } from "@ui5/webcomponents-react";
 
 import { useUserManagementState } from "@/features/usermanagement";
+import { useAuthState } from "@/features/auth/state/auth.state";
+import CreateUserDialog from "../components/CreateUserDialog";
+import AssignGlobalRoleDialog from "../components/AssignGlobalRoleDialog";
 import UsersListReport from "./UsersListReport";
 import UserObjectPage from "./UserObjectPage";
 
@@ -29,6 +32,9 @@ export default function UsersFclShellPage() {
     const refreshUsers = useUserManagementState((state) => state.refreshUsers);
     const reset = useUserManagementState((state) => state.reset);
 
+    const isRoot = useAuthState((state) => Boolean(state.me?.rootUser));
+    const [createOpen, setCreateOpen] = useState(false);
+    const [assignOpen, setAssignOpen] = useState(false);
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
 
@@ -41,6 +47,7 @@ export default function UsersFclShellPage() {
     );
 
     const showDetailPane = Boolean(userId);
+    const visibleUser = selectedUser?.id === userId ? selectedUser : null;
 
     useEffect(() => {
         void loadUsers().catch((error: unknown) => {
@@ -103,6 +110,9 @@ export default function UsersFclShellPage() {
     }, [navigate]);
 
     return (
+        <>
+        {createOpen && isRoot ? <CreateUserDialog onClose={() => setCreateOpen(false)} onCreated={(id) => { setCreateOpen(false); navigate(`/access-control/users/${id}`); void refreshUsers().catch(() => setPageError(t("usermanagement.errors.refresh"))); }} /> : null}
+        {assignOpen && isRoot && userId ? <AssignGlobalRoleDialog userId={userId} onClose={() => setAssignOpen(false)} onAssigned={() => { setAssignOpen(false); void loadUser(userId).catch(() => setPageError(t("usermanagement.errors.loadDetail"))); }} /> : null}
         <div
             style={{
                 display: "grid",
@@ -132,6 +142,7 @@ export default function UsersFclShellPage() {
                     busy={loading}
                     error={pageError}
                     onSearchTextChange={setSearchText}
+                    onCreate={isRoot ? () => setCreateOpen(true) : undefined}
                     onRefresh={handleRefresh}
                     onSelect={handleSelect}
                 />
@@ -149,14 +160,15 @@ export default function UsersFclShellPage() {
                         background: "var(--sapGroup_ContentBackground)",
                     }}
                 >
-                    {loading && !selectedUser ? (
+                    {loading && !visibleUser ? (
                         <BusyIndicator active />
-                    ) : selectedUser ? (
+                    ) : visibleUser ? (
                         <UserObjectPage
-                            key={selectedUser.id}
-                            value={selectedUser}
+                            key={visibleUser.id}
+                            value={visibleUser}
                             busy={loading}
                             error={pageError}
+                            onAssignRole={isRoot ? () => setAssignOpen(true) : undefined}
                             onCancel={handleClose}
                         />
                     ) : (
@@ -169,5 +181,6 @@ export default function UsersFclShellPage() {
                 </section>
             ) : null}
         </div>
+        </>
     );
 }

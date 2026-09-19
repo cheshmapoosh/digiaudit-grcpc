@@ -1,3 +1,4 @@
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Bar, Button, Label, MessageStrip, ObjectStatus, Title } from "@ui5/webcomponents-react";
@@ -40,6 +41,7 @@ export default function OrganizationSummaryPanel({
     onCancel,
 }: OrganizationSummaryPanelProps) {
     const { t } = useTranslation();
+    const { manage } = useMasterDataAccess("REFERENCE");
 
     const actionButtonStyle = useMemo(
         () => ({
@@ -181,7 +183,7 @@ export default function OrganizationSummaryPanel({
                             design="Emphasized"
                             disabled={!value || busy}
                             style={actionButtonStyle}
-                            onClick={() => value && onEdit?.(value.id)}
+                            hidden={!manage} onClick={() => value && onEdit?.(value.id)}
                         >
                             {t("common.edit", { defaultValue: "ویرایش" })}
                         </Button>

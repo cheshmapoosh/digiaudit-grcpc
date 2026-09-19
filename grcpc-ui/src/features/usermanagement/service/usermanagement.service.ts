@@ -1,3 +1,4 @@
+import type { CreateUserInput, AssignGlobalRoleInput } from "../domain/usermanagement.model";
 import type { UserManagementRepo } from "../infra/usermanagement.repo";
 import { createUserManagementRepo } from "../infra/usermanagement.factory";
 import type {
@@ -8,6 +9,8 @@ import type {
 } from "@/features/usermanagement";
 
 export interface UserManagementService {
+    createUser(input: CreateUserInput): Promise<string>;
+    assignRole(userId: string, input: AssignGlobalRoleInput): Promise<void>;
     listUsers(): Promise<UserSummary[]>;
     getUserById(id: string): Promise<UserDetail>;
     listRoles(): Promise<RoleSummary[]>;
@@ -24,6 +27,8 @@ function sortRoles(items: RoleSummary[]): RoleSummary[] {
 
 export function createUserManagementService(repo: UserManagementRepo): UserManagementService {
     return {
+        createUser: (input) => repo.createUser(input),
+        assignRole: (userId, input) => repo.assignRole(userId, input),
         async listUsers() {
             const items = await repo.listUsers();
             return sortUsers(items);

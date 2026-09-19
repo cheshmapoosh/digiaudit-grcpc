@@ -27,7 +27,6 @@ import com.digiaudit.grcpc.modules.document.infrastructure.persistence.InternalD
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.InternalDocumentLinkJpaRepository;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.InternalDocumentTempUploadJpaRepository;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.InternalDocumentVersionJpaRepository;
-import com.digiaudit.grcpc.modules.securityacl.application.ResourceAuthorizationService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,7 +54,7 @@ public class DocumentCommandService {
     private final InternalDocumentLinkJpaRepository linkRepository;
     private final InternalDocumentTempUploadJpaRepository tempUploadRepository;
     private final DocumentTargetContextResolver targetContextResolver;
-    private final ResourceAuthorizationService authorizationService;
+    private final DocumentAuthorizationService authorizationService;
     private final CurrentUserProvider currentUserProvider;
     private final DocumentStoragePort storagePort;
     private final DocumentObjectKeyService objectKeyService;
@@ -70,7 +69,7 @@ public class DocumentCommandService {
             InternalDocumentLinkJpaRepository linkRepository,
             InternalDocumentTempUploadJpaRepository tempUploadRepository,
             DocumentTargetContextResolver targetContextResolver,
-            ResourceAuthorizationService authorizationService,
+            DocumentAuthorizationService authorizationService,
             CurrentUserProvider currentUserProvider,
             DocumentStoragePort storagePort,
             DocumentObjectKeyService objectKeyService,
@@ -595,6 +594,7 @@ public class DocumentCommandService {
         DocumentEntity document = lockDocument(command.documentId());
         requireVersion(document.getVersion(), command.expectedDocumentVersion());
         document.requireNotDeleted();
+        requireActiveDocumentLink(document.getId(), targetContext);
 
         UUID documentVersionId = UUID.randomUUID();
         UUID documentLinkId = UUID.randomUUID();
@@ -698,6 +698,7 @@ public class DocumentCommandService {
     @Transactional
     public DocumentCommandResponse linkExistingVersion(LinkExistingVersion command) {
         DocumentTargetContext targetContext = resolveAndAuthorize(command.targetType(), command.targetId(), UPLOAD_PERMISSION);
+        requireReadableSourceVersion(command.documentVersionId());
         UUID actorId = actorId();
         Instant now = Instant.now(clock);
         DocumentVersionEntity version = versionRepository.findById(command.documentVersionId())
@@ -748,6 +749,18 @@ public class DocumentCommandService {
 
         DocumentLinkSummaryResponse summary = responseMapper.toLinkSummary(document, version, link);
         return responseMapper.toCommandResponse(link.getId(), document, version, link, summary);
+    }
+
+    private void requireReadableSourceVersion(UUID versionId) {
+        if (currentUserProvider.getCurrentPrincipal().isRootUser()) return;
+        boolean readable = linkRepository.findActiveLinksForVersion(versionId, DocumentLifecycleStatus.ACTIVE)
+                .stream()
+                .filter(link -> link.getTargetType().isPublicSelectable())
+                .anyMatch(link -> authorizationService.canAccess(
+                        link.getTargetType().wireValue(), link.getTargetId(), "DOCUMENT_VIEW"));
+        if (!readable) {
+            throw DocumentFailures.forbidden("DOCUMENT_ACCESS_DENIED", "Source document version is not accessible");
+        }
     }
 
     private DocumentTargetContext resolveAndAuthorize(DocumentLinkTargetType targetType, UUID targetId, String permission) {

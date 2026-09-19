@@ -36,7 +36,7 @@ public class DocumentLinkController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('DOCUMENT_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canViewAny()")
     public List<DocumentLinkSummaryResponse> list(
             @RequestParam @NotBlank @Size(max = 32) String targetType,
             @RequestParam @NotNull UUID targetId
@@ -45,25 +45,25 @@ public class DocumentLinkController {
     }
 
     @PostMapping("/{documentLinkId}/activate")
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse activate(@PathVariable UUID documentLinkId, @Valid @RequestBody DocumentLinkLifecycleCommandRequest request) {
         return lifecycle(documentLinkId, request, DocumentCommands.LifecycleAction.ACTIVATE);
     }
 
     @PostMapping("/{documentLinkId}/inactivate")
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse inactivate(@PathVariable UUID documentLinkId, @Valid @RequestBody DocumentLinkLifecycleCommandRequest request) {
         return lifecycle(documentLinkId, request, DocumentCommands.LifecycleAction.INACTIVATE);
     }
 
     @PostMapping("/{documentLinkId}/delete")
-    @PreAuthorize("hasAuthority('DOCUMENT_DELETE') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse delete(@PathVariable UUID documentLinkId, @Valid @RequestBody DocumentLinkLifecycleCommandRequest request) {
         return lifecycle(documentLinkId, request, DocumentCommands.LifecycleAction.DELETE);
     }
 
     @PostMapping("/{documentLinkId}/restore")
-    @PreAuthorize("hasAuthority('DOCUMENT_UPLOAD') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManageAny()")
     public DocumentCommandResponse restore(@PathVariable UUID documentLinkId, @Valid @RequestBody DocumentLinkLifecycleCommandRequest request) {
         return lifecycle(documentLinkId, request, DocumentCommands.LifecycleAction.RESTORE);
     }

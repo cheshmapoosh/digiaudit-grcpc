@@ -193,7 +193,7 @@ public class CentralControlCommandService {
                         prepared,
                         DocumentLinkTargetType.CENTRAL_CONTROL,
                         saved.getId(),
-                        "CENTRAL_CONTROL_CREATE"));
+                        "MD_CONTROL_MANAGE"));
                 CentralControlAccountGroupAggregateService.ApplyResult classificationResult =
                     accountGroupClassifications.apply(preparedClassifications, saved);
                 canonicalClassifications.set(classificationResult.canonicalRows());
@@ -271,7 +271,7 @@ public class CentralControlCommandService {
                       prepared,
                       DocumentLinkTargetType.CENTRAL_CONTROL,
                       saved.getId(),
-                      "CENTRAL_CONTROL_UPDATE"));
+                      "MD_CONTROL_MANAGE"));
               CentralControlAccountGroupAggregateService.ApplyResult classificationResult =
                   accountGroupClassifications.apply(preparedClassifications, saved);
               canonicalClassifications.set(classificationResult.canonicalRows());

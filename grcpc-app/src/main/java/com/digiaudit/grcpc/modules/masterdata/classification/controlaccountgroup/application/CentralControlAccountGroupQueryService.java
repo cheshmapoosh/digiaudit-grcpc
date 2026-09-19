@@ -1,8 +1,7 @@
 package com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.application;
 
 import com.digiaudit.grcpc.common.exception.NotFoundException;
-import com.digiaudit.grcpc.common.security.CurrentUser;
-import com.digiaudit.grcpc.common.security.CurrentUserProvider;
+import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.repository.CentralAccountGroupRepository;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.CentralControlEntity;
@@ -39,7 +38,7 @@ public class CentralControlAccountGroupQueryService {
   private final CentralControlObjectiveAccountGroupRepository controlObjectiveClassifications;
   private final CentralControlObjectiveRepository controlObjectives;
   private final CentralSubprocessControlObjectiveScopeRepository controlObjectiveScopes;
-  private final CurrentUserProvider users;
+  private final MasterDataAuthorizationService users;
   private final CentralControlAccountGroupMapper mapper;
 
   public CentralControlAccountGroupQueryService(CentralControlAccountGroupRepository classifications,
@@ -48,7 +47,7 @@ public class CentralControlAccountGroupQueryService {
       CentralControlObjectiveAccountGroupRepository controlObjectiveClassifications,
       CentralControlObjectiveRepository controlObjectives,
       CentralSubprocessControlObjectiveScopeRepository controlObjectiveScopes,
-      CurrentUserProvider users,
+      MasterDataAuthorizationService users,
       CentralControlAccountGroupMapper mapper) {
     this.classifications = classifications; this.controls = controls; this.accountGroups = accountGroups;
     this.subprocesses = subprocesses; this.controlScopes = controlScopes; this.mapper = mapper;
@@ -93,10 +92,8 @@ public class CentralControlAccountGroupQueryService {
   public List<DerivedSubprocessAccountGroupResponse> forSubprocess(UUID subprocessId) {
     CentralSubprocessEntity subprocess = subprocesses.findById(subprocessId).orElseThrow(() -> endpointNotFound("Subprocess", subprocessId));
     if (subprocess.getStatus() == DELETED) throw endpointNotFound("Subprocess", subprocessId);
-    boolean allowControlPath = hasAuthority("CENTRAL_CONTROL_SCOPE_VIEW")
-        && hasAuthority("CENTRAL_CONTROL_ACCOUNT_GROUP_VIEW");
-    boolean allowControlObjectivePath = hasAuthority("CENTRAL_CONTROL_OBJECTIVE_SCOPE_VIEW")
-        && hasAuthority("CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_VIEW");
+    boolean allowControlPath = users.canView("PROCESS") && users.canView("CONTROL") && users.canView("REFERENCE");
+    boolean allowControlObjectivePath = allowControlPath;
 
     Map<UUID, List<DerivedSubprocessAccountGroupResponse.ControlContribution>> controlContributions =
         allowControlPath ? controlContributions(subprocessId) : Map.of();
@@ -196,12 +193,7 @@ public class CentralControlAccountGroupQueryService {
     return result;
   }
 
-  private boolean hasAuthority(String authority) {
-    CurrentUser user = users.getCurrentPrincipal();
-    return user.isRootUser() || user.getAuthorities().stream().anyMatch(granted ->
-        granted.getAuthority().equals("ROLE_ROOT_ADMIN")
-            || granted.getAuthority().equals(authority));
-  }
+
 
   private Map<UUID, CentralAccountGroupEntity> indexGroups(List<CentralControlAccountGroupEntity> rows) { return accountGroups.findAllById(rows.stream().map(CentralControlAccountGroupEntity::getAccountGroupId).distinct().toList()).stream().collect(Collectors.toMap(CentralAccountGroupEntity::getId, Function.identity())); }
   private CentralControlEntity requireControl(UUID id) { return controls.findById(id).orElseThrow(() -> endpointNotFound("Control", id)); }

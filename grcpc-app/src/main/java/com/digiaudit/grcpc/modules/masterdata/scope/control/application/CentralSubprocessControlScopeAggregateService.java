@@ -1,10 +1,9 @@
 package com.digiaudit.grcpc.modules.masterdata.scope.control.application;
 
 import com.digiaudit.grcpc.common.exception.ConflictException;
-import com.digiaudit.grcpc.common.exception.ForbiddenException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
-import com.digiaudit.grcpc.common.security.CurrentUser;
+import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.CentralControlEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.enums.CentralControlAutomationType;
@@ -55,6 +54,7 @@ public class CentralSubprocessControlScopeAggregateService {
   private final CentralControlRepository controls;
   private final CentralSubprocessControlScopeMapper mapper;
   private final MasterDataStructuralDependencyChecker dependencyChecker;
+  private final MasterDataAuthorizationService authorization;
   private final CurrentUserProvider currentUserProvider;
   private final ObjectMapper objectMapper;
   private final Clock clock;
@@ -64,6 +64,7 @@ public class CentralSubprocessControlScopeAggregateService {
       CentralControlRepository controls,
       CentralSubprocessControlScopeMapper mapper,
       MasterDataStructuralDependencyChecker dependencyChecker,
+      MasterDataAuthorizationService authorization,
       CurrentUserProvider currentUserProvider,
       ObjectMapper objectMapper,
       @Qualifier("masterDataRevisionClock") Clock clock) {
@@ -71,6 +72,7 @@ public class CentralSubprocessControlScopeAggregateService {
     this.controls = controls;
     this.mapper = mapper;
     this.dependencyChecker = dependencyChecker;
+    this.authorization = authorization;
     this.currentUserProvider = currentUserProvider;
     this.objectMapper = objectMapper;
     this.clock = clock;
@@ -92,6 +94,7 @@ public class CentralSubprocessControlScopeAggregateService {
     if (changes.isEmpty()) {
       return new PreparedChanges(endpoint.id(), List.of());
     }
+    requireScopeAccess();
 
     List<UUID> controlIds = collectUniqueControlIds(changes);
     changes = changes.stream()
@@ -135,6 +138,7 @@ public class CentralSubprocessControlScopeAggregateService {
 
   public List<CentralSubprocessControlScopeResponse> canonicalRows(
       CentralSubprocessEntity subprocess) {
+    if (!authorization.canView("PROCESS") || !authorization.canView("CONTROL")) return List.of();
     List<CentralSubprocessControlScopeEntity> rows =
         scopes.findBySubprocessIdAndStatusNot(subprocess.getId(), DELETED);
     Map<UUID, CentralControlEntity> controlsById =
@@ -174,13 +178,13 @@ public class CentralSubprocessControlScopeAggregateService {
       case CREATE_OR_RESTORE -> prepareCreateOrRestore(subprocess, control, existing, fields);
       case UPDATE -> {
         CentralSubprocessControlScopeEntity scope = requireExisting(existing, change.controlId());
-        requireAuthority("CENTRAL_CONTROL_SCOPE_UPDATE");
+
         requireNotDeleted(scope);
         long expectedVersion = requireAndAssertVersion(scope, change.version());
         validateValidityWithinEndpoints(fields, subprocess, control);
         MasterDataLifecycleStatus requestedStatus = normalizeUpdateStatus(change.requestedStatus(), scope);
         if (requestedStatus != scope.getStatus()) {
-          requireAuthority("CENTRAL_CONTROL_SCOPE_LIFECYCLE");
+
           RevisionOperationType lifecycle = requestedStatus == MasterDataLifecycleStatus.ACTIVE
               ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE;
           validateLifecycle(scope, lifecycle);
@@ -205,7 +209,7 @@ public class CentralSubprocessControlScopeAggregateService {
     validateActiveEndpoints(subprocess, control);
     validateValidityWithinEndpoints(fields, subprocess, control);
     if (existing == null) {
-      requireAuthority("CENTRAL_CONTROL_SCOPE_CREATE");
+
       CentralSubprocessControlScopeEntity created = CentralSubprocessControlScopeEntity.create(
           UUID.randomUUID(), subprocess.id(), control.getId(), fields.frequency(),
           fields.executionMethod(), fields.testMethod(), fields.validFrom(), fields.validTo(),
@@ -218,9 +222,7 @@ public class CentralSubprocessControlScopeAggregateService {
     RevisionOperationType operation = existing.getStatus() == DELETED
         ? RevisionOperationType.RESTORE
         : RevisionOperationType.ACTIVATE;
-    requireAuthority(operation == RevisionOperationType.RESTORE
-        ? "CENTRAL_CONTROL_SCOPE_RESTORE"
-        : "CENTRAL_CONTROL_SCOPE_LIFECYCLE");
+
     return new PreparedMutation(existing, operation, existing.getVersion(), snapshot(existing), fields, MasterDataLifecycleStatus.ACTIVE);
   }
 
@@ -231,9 +233,7 @@ public class CentralSubprocessControlScopeAggregateService {
       CentralControlScopeChangeRequest change,
       RevisionOperationType operation) {
     CentralSubprocessControlScopeEntity scope = requireExisting(existing, change.controlId());
-    requireAuthority(operation == RevisionOperationType.DELETE
-        ? "CENTRAL_CONTROL_SCOPE_DELETE"
-        : "CENTRAL_CONTROL_SCOPE_LIFECYCLE");
+
     long expectedVersion = requireAndAssertVersion(scope, change.version());
     validateLifecycle(scope, operation);
     if (operation == RevisionOperationType.ACTIVATE) {
@@ -464,15 +464,8 @@ public class CentralSubprocessControlScopeAggregateService {
     }
   }
 
-  private void requireAuthority(String authority) {
-    CurrentUser user = currentUserProvider.getCurrentPrincipal();
-    boolean allowed = user.isRootUser() || user.getAuthorities().stream()
-        .anyMatch(granted -> granted.getAuthority().equals("ROLE_ROOT_ADMIN")
-            || granted.getAuthority().equals(authority));
-    if (!allowed) {
-      throw new ForbiddenException(
-          "FORBIDDEN", "error.security.forbidden", "Missing required authority: " + authority, authority);
-    }
+  private void requireScopeAccess() {
+    authorization.requireManageWithReference("PROCESS", "CONTROL");
   }
 
   private void requireProcessGuard(RevisionExecutionContext context) {

@@ -222,3 +222,13 @@
         transition: none;
     }
 }
+
+.masterDataTileCard {
+    min-width: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.masterDataTileCard ui5-card-header {
+    min-height: 7.75rem;
+}

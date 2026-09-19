@@ -21,34 +21,34 @@ public class CentralPolicyVersionController {
   }
 
   @GetMapping("/{id}")
-  @PreAuthorize("hasAuthority('CENTRAL_POLICY_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('GOVERNANCE')")
   public CentralPolicyDtos.VersionDetail detail(@PathVariable UUID id) {
     return queries.detail(id);
   }
 
   @PatchMapping("/{id}")
-  @PreAuthorize("hasAuthority('CENTRAL_POLICY_UPDATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataAggregateMutationResponse update(
       @PathVariable UUID id, @Valid @RequestBody CentralPolicyDtos.UpdateVersion r) {
     return commands.update(id, r);
   }
 
   @PostMapping("/{id}/publish")
-  @PreAuthorize("hasAuthority('CENTRAL_POLICY_PUBLISH') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataRevisionMutationResponse publish(
       @PathVariable UUID id, @Valid @RequestBody CentralPolicyDtos.VersionCommand r) {
     return commands.publish(id, r.version());
   }
 
   @PostMapping("/{id}/delete")
-  @PreAuthorize("hasAuthority('CENTRAL_POLICY_DELETE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataRevisionMutationResponse delete(
       @PathVariable UUID id, @Valid @RequestBody CentralPolicyDtos.VersionCommand r) {
     return commands.delete(id, r.version());
   }
 
   @PostMapping("/{id}/restore")
-  @PreAuthorize("hasAuthority('CENTRAL_POLICY_RESTORE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataRevisionMutationResponse restore(
       @PathVariable UUID id, @Valid @RequestBody CentralPolicyDtos.VersionCommand r) {
     return commands.restore(id, r.version());

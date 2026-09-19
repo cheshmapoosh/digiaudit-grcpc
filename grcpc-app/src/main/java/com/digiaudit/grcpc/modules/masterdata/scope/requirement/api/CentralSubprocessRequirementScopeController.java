@@ -21,7 +21,7 @@ public class CentralSubprocessRequirementScopeController {
       CentralSubprocessRequirementScopeQueryService queries) { this.queries = queries; }
 
   @GetMapping
-  @PreAuthorize("hasAuthority('CENTRAL_REQUIREMENT_SCOPE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('GOVERNANCE')")
   public List<CentralSubprocessRequirementScopeResponse> list(
       @PathVariable UUID subprocessId,
       @RequestParam(required = false) MasterDataLifecycleStatus status,
@@ -30,7 +30,7 @@ public class CentralSubprocessRequirementScopeController {
   }
 
   @GetMapping("/{scopeId}")
-  @PreAuthorize("hasAuthority('CENTRAL_REQUIREMENT_SCOPE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('GOVERNANCE')")
   public CentralSubprocessRequirementScopeResponse detail(
       @PathVariable UUID subprocessId, @PathVariable UUID scopeId) {
     return queries.detail(subprocessId, scopeId);

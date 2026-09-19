@@ -1,10 +1,9 @@
 package com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.application;
 
 import com.digiaudit.grcpc.common.exception.ConflictException;
-import com.digiaudit.grcpc.common.exception.ForbiddenException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
-import com.digiaudit.grcpc.common.security.CurrentUser;
+import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.repository.CentralAccountGroupRepository;
@@ -36,22 +35,25 @@ public class CentralControlAccountGroupAggregateService {
   private final CentralAccountGroupRepository accountGroups;
   private final CentralControlAccountGroupMapper mapper;
   private final RevisionMutationGuard guard;
+  private final MasterDataAuthorizationService authorization;
   private final CurrentUserProvider users;
   private final ObjectMapper objectMapper;
   private final Clock clock;
 
   public CentralControlAccountGroupAggregateService(CentralControlAccountGroupRepository classifications,
       CentralAccountGroupRepository accountGroups, CentralControlAccountGroupMapper mapper,
-      RevisionMutationGuard guard, CurrentUserProvider users, ObjectMapper objectMapper,
+      RevisionMutationGuard guard, MasterDataAuthorizationService authorization, CurrentUserProvider users, ObjectMapper objectMapper,
       @Qualifier("masterDataRevisionClock") Clock clock) {
     this.classifications = classifications; this.accountGroups = accountGroups; this.mapper = mapper;
-    this.guard = guard; this.users = users; this.objectMapper = objectMapper; this.clock = clock;
+    this.guard = guard; this.authorization = authorization;
+    this.users = users; this.objectMapper = objectMapper; this.clock = clock;
   }
 
   public PreparedChanges prepare(RevisionExecutionContext context, CentralControlEntity control,
       MasterDataLifecycleStatus finalControlStatus, List<CentralControlAccountGroupChangeRequest> requestedChanges) {
     List<CentralControlAccountGroupChangeRequest> changes = requestedChanges == null ? List.of() : List.copyOf(requestedChanges);
     if (changes.isEmpty()) return new PreparedChanges(control.getId(), List.of());
+    requireScopeAccess();
     guard.requireHierarchyGuard(context, MasterDataHierarchyKey.ACCOUNT_GROUP);
     guard.requireHierarchyGuard(context, MasterDataHierarchyKey.CONTROL);
     List<UUID> accountGroupIds = uniqueIds(changes);
@@ -94,11 +96,11 @@ public class CentralControlAccountGroupAggregateService {
       case CREATE_OR_RESTORE -> createOrRestore(control, group, existing, change.validFrom(), change.validTo());
       case UPDATE -> {
         CentralControlAccountGroupEntity row = requireExisting(existing, change.accountGroupId());
-        requireAuthority("CENTRAL_CONTROL_ACCOUNT_GROUP_UPDATE"); requireNotDeleted(row); assertVersion(row, change.version());
+        requireScopeAccess(); requireNotDeleted(row); assertVersion(row, change.version());
         validateDates(change.validFrom(), change.validTo());
         MasterDataLifecycleStatus requested = change.requestedStatus() == null ? row.getStatus() : editableStatus(change.requestedStatus());
         if (requested != row.getStatus()) {
-          requireAuthority("CENTRAL_CONTROL_ACCOUNT_GROUP_LIFECYCLE");
+
           RevisionOperationType lifecycle = requested == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE;
           validateLifecycle(row, lifecycle); if (lifecycle == RevisionOperationType.ACTIVATE) requireActiveEndpoints(control, group);
         }
@@ -115,24 +117,20 @@ public class CentralControlAccountGroupAggregateService {
       CentralControlAccountGroupEntity existing, LocalDate from, LocalDate to) {
     requireActiveEndpoints(control, group); validateDates(from, to);
     if (existing == null) {
-      requireAuthority("CENTRAL_CONTROL_ACCOUNT_GROUP_CREATE");
+
       return new PreparedMutation(CentralControlAccountGroupEntity.create(UUID.randomUUID(), control.id, group.getId(), from, to,
           users.getCurrentPrincipal().getUserId(), Instant.now(clock)), RevisionOperationType.CREATE, null, null, from, to, MasterDataLifecycleStatus.ACTIVE);
     }
     if (existing.getStatus() == MasterDataLifecycleStatus.ACTIVE) throw duplicate(control.id, group.getId());
     RevisionOperationType operation = existing.getStatus() == DELETED ? RevisionOperationType.RESTORE : RevisionOperationType.ACTIVATE;
-    requireAuthority(operation == RevisionOperationType.RESTORE ? "CENTRAL_CONTROL_ACCOUNT_GROUP_RESTORE" : "CENTRAL_CONTROL_ACCOUNT_GROUP_LIFECYCLE");
+
     return new PreparedMutation(existing, operation, existing.getVersion(), snapshot(existing), from, to, MasterDataLifecycleStatus.ACTIVE);
   }
 
   private PreparedMutation lifecycle(ControlEndpoint control, CentralAccountGroupEntity group,
       CentralControlAccountGroupEntity existing, CentralControlAccountGroupChangeRequest change, RevisionOperationType operation) {
     CentralControlAccountGroupEntity row = requireExisting(existing, change.accountGroupId()); assertVersion(row, change.version()); validateLifecycle(row, operation);
-    requireAuthority(switch (operation) {
-      case DELETE -> "CENTRAL_CONTROL_ACCOUNT_GROUP_DELETE";
-      case RESTORE -> "CENTRAL_CONTROL_ACCOUNT_GROUP_RESTORE";
-      default -> "CENTRAL_CONTROL_ACCOUNT_GROUP_LIFECYCLE";
-    });
+
     if (operation == RevisionOperationType.ACTIVATE || operation == RevisionOperationType.RESTORE) requireActiveEndpoints(control, group);
     return new PreparedMutation(row, operation, row.getVersion(), snapshot(row), row.getValidFrom(), row.getValidTo(), row.getStatus());
   }
@@ -191,9 +189,10 @@ public class CentralControlAccountGroupAggregateService {
   private CentralControlAccountGroupEntity requireExisting(CentralControlAccountGroupEntity row, UUID id) { if (row == null) throw classificationNotFound(id); return row; }
   private CentralAccountGroupEntity requireGroup(Map<UUID, CentralAccountGroupEntity> values, UUID id) { CentralAccountGroupEntity value = values.get(id); if (value == null) throw endpointNotFound("Account Group", id); return value; }
 
-  public boolean canView() { return hasAuthority("CENTRAL_CONTROL_ACCOUNT_GROUP_VIEW"); }
-  private boolean hasAuthority(String authority) { CurrentUser user = users.getCurrentPrincipal(); return user.isRootUser() || user.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ROOT_ADMIN") || a.getAuthority().equals(authority)); }
-  private void requireAuthority(String authority) { if (!hasAuthority(authority)) throw new ForbiddenException("FORBIDDEN", "error.security.forbidden", "Missing required authority: " + authority, authority); }
+  public boolean canView() { return authorization.canView("CONTROL") && authorization.canView("REFERENCE"); }
+  private void requireScopeAccess() {
+    authorization.requireManageWithReference("CONTROL", "REFERENCE");
+  }
   private JsonNode snapshot(CentralControlAccountGroupEntity row) { Map<String,Object> v = new LinkedHashMap<>(); v.put("id", row.getId()); v.put("controlId", row.getControlId()); v.put("accountGroupId", row.getAccountGroupId()); v.put("status", row.getStatus().wireValue()); v.put("validFrom", row.getValidFrom()); v.put("validTo", row.getValidTo()); v.put("version", row.getVersion()); v.put("createdAt", row.getCreatedAt()); v.put("createdBy", row.getCreatedBy()); v.put("updatedAt", row.getUpdatedAt()); v.put("updatedBy", row.getUpdatedBy()); v.put("deletedAt", row.getDeletedAt()); v.put("deletedBy", row.getDeletedBy()); return objectMapper.valueToTree(v); }
   private ConflictException duplicate(UUID c, UUID g) { return new ConflictException("DUPLICATE_RELATION", "error.masterdata.controlAccountGroup.duplicate", "The Control is already classified to the Account Group", c, g); }
   private NotFoundException classificationNotFound(UUID id) { return new NotFoundException("CENTRAL_CONTROL_ACCOUNT_GROUP_NOT_FOUND", "error.masterdata.controlAccountGroup.notFound", "Control Account Group classification not found", id); }

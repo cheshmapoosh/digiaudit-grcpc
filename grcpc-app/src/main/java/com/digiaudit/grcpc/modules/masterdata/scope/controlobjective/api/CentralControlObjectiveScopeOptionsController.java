@@ -17,7 +17,7 @@ public class CentralControlObjectiveScopeOptionsController {
   }
 
   @GetMapping("/options")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_SCOPE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('CONTROL')")
   public CentralControlObjectiveScopeSelectionOptionsResponse options() {
     return new CentralControlObjectiveScopeSelectionOptionsResponse(objectives.list());
   }

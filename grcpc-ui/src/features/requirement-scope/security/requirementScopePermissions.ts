@@ -1,3 +1,4 @@
+import { canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
 import { useMemo } from "react";
 import { useAuthState } from "@/features/auth/state/auth.state";
 import type { RequirementScopePermissions } from "../domain/requirementScope.model";
@@ -5,9 +6,9 @@ import type { RequirementScopePermissions } from "../domain/requirementScope.mod
 export function useRequirementScopePermissions(): RequirementScopePermissions {
   const me = useAuthState((state) => state.me);
   return useMemo(() => {
-    const authorities = new Set(me?.authorities ?? []);
-    const root = Boolean(me?.rootUser || authorities.has("ROLE_ROOT_ADMIN"));
-    const has = (suffix: string) => root || authorities.has(`CENTRAL_REQUIREMENT_SCOPE_${suffix}`);
+
+
+    const has = (suffix: string) => canAccessMasterData(me, "PROCESS", suffix !== "VIEW") && canAccessMasterData(me, "GOVERNANCE");
     return {
       view: has("VIEW"),
       create: has("CREATE"),
@@ -15,7 +16,7 @@ export function useRequirementScopePermissions(): RequirementScopePermissions {
       lifecycle: has("LIFECYCLE"),
       delete: has("DELETE"),
       restore: has("RESTORE"),
-      requirementView: root || authorities.has("CENTRAL_REGULATION_VIEW"),
+      requirementView: canAccessMasterData(me, "GOVERNANCE"),
     };
   }, [me]);
 }

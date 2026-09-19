@@ -1,3 +1,4 @@
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -42,6 +43,7 @@ export default function OrganizationsListReport({
                                                     onSelect,
                                                 }: OrganizationsListReportProps) {
     const { t } = useTranslation();
+    const { manage } = useMasterDataAccess("REFERENCE");
 
     const actionButtonStyle = useMemo(
         () => ({
@@ -72,6 +74,7 @@ export default function OrganizationsListReport({
                             design="Emphasized"
                             disabled={busy}
                             style={actionButtonStyle}
+                            hidden={!manage}
                             onClick={onCreate}
                         >
                             {t("common.create", { defaultValue: "ایجاد" })}
@@ -88,6 +91,7 @@ export default function OrganizationsListReport({
 
                         <Button
                             design="Negative"
+                            hidden={!manage}
                             disabled={!selectedId || busy}
                             style={{
                                 ...actionButtonStyle,

@@ -22,6 +22,7 @@ type UsersListReportProps = {
     busy?: boolean;
     error?: string | null;
     onSearchTextChange: (value: string) => void;
+    onCreate?: () => void;
     onRefresh: () => void;
     onSelect: (id: string) => void;
 };
@@ -43,6 +44,7 @@ export default function UsersListReport({
                                             error = null,
                                             onSearchTextChange,
                                             onRefresh,
+                                            onCreate,
                                             onSelect,
                                         }: UsersListReportProps) {
     const { t } = useTranslation();
@@ -80,9 +82,12 @@ export default function UsersListReport({
                     </Title>
                 }
                 endContent={
+                    <>
+                    {onCreate ? <Button design="Emphasized" icon="add" onClick={onCreate}>{t("usermanagement.demo.createUser")}</Button> : null}
                     <Button design="Transparent" icon="refresh" onClick={onRefresh}>
                         {t("common.refresh", { defaultValue: "بازآوری" })}
                     </Button>
+                    </>
                 }
             />
 
@@ -133,10 +138,8 @@ export default function UsersListReport({
                         const fullName = buildFullName(item);
 
                         return (
-                            <ListItemCustom key={item.id}>
-                                <button
-                                    type="button"
-                                    onClick={() => onSelect(item.id)}
+                            <ListItemCustom key={item.id} type="Active" onClick={() => onSelect(item.id)}>
+                                <div
                                     style={{
                                         width: "100%",
                                         textAlign: "right",
@@ -215,7 +218,7 @@ export default function UsersListReport({
                                             ) : null}
                                         </div>
                                     </div>
-                                </button>
+                                </div>
                             </ListItemCustom>
                         );
                     })

@@ -22,73 +22,73 @@ public class CentralRegulationGroupController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('GOVERNANCE')")
   public List<CentralRegulationDtos.GroupSummary> list() {
     return queries.list();
   }
 
   @GetMapping("/deleted")
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('GOVERNANCE')")
   public List<CentralRegulationDtos.GroupSummary> deleted() {
     return queries.deleted();
   }
 
   @GetMapping("/tree")
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('GOVERNANCE')")
   public List<CentralRegulationDtos.GroupTree> tree() {
     return queries.tree();
   }
 
   @GetMapping("/{id}")
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('GOVERNANCE')")
   public CentralRegulationDtos.GroupDetail detail(@PathVariable UUID id) {
     return queries.detail(id);
   }
 
   @PostMapping
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_CREATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataAggregateMutationResponse create(
       @Valid @RequestBody CentralRegulationDtos.CreateGroup r) {
     return commands.create(r);
   }
 
   @PatchMapping("/{id}")
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_UPDATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataAggregateMutationResponse update(
       @PathVariable UUID id, @Valid @RequestBody CentralRegulationDtos.UpdateGroup r) {
     return commands.update(id, r);
   }
 
   @PostMapping("/{id}/move")
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_MOVE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataRevisionMutationResponse move(
       @PathVariable UUID id, @Valid @RequestBody CentralRegulationDtos.MoveGroup r) {
     return commands.move(id, r);
   }
 
   @PostMapping("/{id}/activate")
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataRevisionMutationResponse activate(
       @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest r) {
     return commands.activate(id, r.version());
   }
 
   @PostMapping("/{id}/inactivate")
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_LIFECYCLE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataRevisionMutationResponse inactivate(
       @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest r) {
     return commands.inactivate(id, r.version());
   }
 
   @PostMapping("/{id}/delete")
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_DELETE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataRevisionMutationResponse delete(
       @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest r) {
     return commands.delete(id, r.version());
   }
 
   @PostMapping("/{id}/restore")
-  @PreAuthorize("hasAuthority('CENTRAL_REGULATION_RESTORE') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
   public MasterDataRevisionMutationResponse restore(
       @PathVariable UUID id, @Valid @RequestBody CatalogLifecycleCommandRequest r) {
     return commands.restore(id, r.version());

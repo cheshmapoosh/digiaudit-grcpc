@@ -1,6 +1,16 @@
 package com.digiaudit.grcpc.modules.usermanagement.domain.enums;
 
 public enum BusinessPermissionCode {
+    MD_PROCESS_VIEW,
+    MD_PROCESS_MANAGE,
+    MD_RISK_VIEW,
+    MD_RISK_MANAGE,
+    MD_CONTROL_VIEW,
+    MD_CONTROL_MANAGE,
+    MD_GOVERNANCE_VIEW,
+    MD_GOVERNANCE_MANAGE,
+    MD_REFERENCE_VIEW,
+    MD_REFERENCE_MANAGE,
     ORGANIZATION_VIEW,
     ORGANIZATION_CREATE,
     ORGANIZATION_EDIT,

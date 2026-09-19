@@ -156,7 +156,7 @@ public class CentralAccountGroupCommandService {
                         prepared,
                         DocumentLinkTargetType.CENTRAL_ACCOUNT_GROUP,
                         saved.getId(),
-                        "CENTRAL_ACCOUNT_GROUP_CREATE"));
+                        "MD_REFERENCE_MANAGE"));
                 return completed(context, saved, operation, expected, before);
               });
       return support.aggregateResponse(result, finalized.get());
@@ -205,7 +205,7 @@ public class CentralAccountGroupCommandService {
                       prepared,
                       DocumentLinkTargetType.CENTRAL_ACCOUNT_GROUP,
                       id,
-                      "CENTRAL_ACCOUNT_GROUP_UPDATE"));
+                      "MD_REFERENCE_MANAGE"));
               return completed(context, saved, RevisionOperationType.UPDATE, expected, before);
             });
     return support.aggregateResponse(result, finalized.get());

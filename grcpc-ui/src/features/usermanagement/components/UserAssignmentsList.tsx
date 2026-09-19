@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { List, ListItemCustom, Text, Title } from "@ui5/webcomponents-react";
+import { List, ListItemCustom, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 import type { UserRoleAssignment } from "@/features/usermanagement";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 
@@ -31,6 +31,7 @@ export default function UserAssignmentsList({ items }: UserAssignmentsListProps)
                     <div style={{ display: "grid", gap: ".35rem", width: "100%" }}>
                         <Title level="H6">{assignment.roleTitle || assignment.roleCode}</Title>
                         <Text>{assignment.roleCode}</Text>
+                        <ObjectStatus state={assignment.active ? "Positive" : "None"}>{t(`usermanagement.demo.${assignment.active ? "active" : "inactive"}`)}</ObjectStatus>
                         <Text>
                             {t("usermanagement.users.assignment.scope", {
                                 defaultValue: "دامنه",

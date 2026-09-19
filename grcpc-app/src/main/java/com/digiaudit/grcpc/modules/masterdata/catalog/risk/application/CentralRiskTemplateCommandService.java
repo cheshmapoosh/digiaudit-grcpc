@@ -159,7 +159,7 @@ public class CentralRiskTemplateCommandService {
                         prepared,
                         DocumentLinkTargetType.CENTRAL_RISK_TEMPLATE,
                         saved.getId(),
-                        "CENTRAL_RISK_CREATE"));
+                        "MD_RISK_MANAGE"));
                 return completed(context, saved, operationType, expectedVersion, before);
               });
       return support.aggregateResponse(result, finalized.get());
@@ -201,7 +201,7 @@ public class CentralRiskTemplateCommandService {
                       prepared,
                       DocumentLinkTargetType.CENTRAL_RISK_TEMPLATE,
                       id,
-                      "CENTRAL_RISK_UPDATE"));
+                      "MD_RISK_MANAGE"));
               return completed(
                   context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
             });

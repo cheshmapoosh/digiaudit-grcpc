@@ -17,7 +17,7 @@ public class CentralRequirementScopeOptionsController {
   }
 
   @GetMapping("/options")
-  @PreAuthorize("hasAuthority('CENTRAL_REQUIREMENT_SCOPE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('GOVERNANCE')")
   public CentralRequirementScopeSelectionOptionsResponse options() {
     return new CentralRequirementScopeSelectionOptionsResponse(
         regulations.groups(), regulations.regulations(null), regulations.requirements(null));

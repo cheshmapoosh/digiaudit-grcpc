@@ -34,13 +34,13 @@ public class OrganizationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('ORGANIZATION_CREATE') or hasAuthority('ORGANIZATION_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
     public MasterDataAggregateMutationResponse create(@Valid @RequestBody CreateOrganizationRequest request) {
         return organizationService.create(request);
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('ORGANIZATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
     public List<OrganizationResponse> findAll(
             @RequestParam(required = false) String lifecycleStatus
     ) {
@@ -48,19 +48,19 @@ public class OrganizationController {
     }
 
     @GetMapping("/tree")
-    @PreAuthorize("hasAuthority('ORGANIZATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
     public List<OrganizationTreeNodeResponse> findTree() {
         return organizationService.findTree();
     }
 
     @GetMapping("/{organizationId}")
-    @PreAuthorize("hasAuthority('ORGANIZATION_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
     public OrganizationResponse findById(@PathVariable UUID organizationId) {
         return organizationService.findById(organizationId);
     }
 
     @PatchMapping("/{organizationId}")
-    @PreAuthorize("hasAuthority('ORGANIZATION_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
     public MasterDataAggregateMutationResponse update(
             @PathVariable UUID organizationId,
             @Valid @RequestBody UpdateOrganizationRequest request
@@ -69,7 +69,7 @@ public class OrganizationController {
     }
 
     @PostMapping("/{organizationId}/move")
-    @PreAuthorize("hasAuthority('ORGANIZATION_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
     public MasterDataRevisionMutationResponse move(
             @PathVariable UUID organizationId,
             @Valid @RequestBody MoveOrganizationRequest request
@@ -78,7 +78,7 @@ public class OrganizationController {
     }
 
     @PostMapping("/{organizationId}/activate")
-    @PreAuthorize("hasAuthority('ORGANIZATION_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
     public MasterDataRevisionMutationResponse activate(
             @PathVariable UUID organizationId,
             @Valid @RequestBody OrganizationLifecycleCommandRequest request
@@ -87,7 +87,7 @@ public class OrganizationController {
     }
 
     @PostMapping("/{organizationId}/inactivate")
-    @PreAuthorize("hasAuthority('ORGANIZATION_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
     public MasterDataRevisionMutationResponse inactivate(
             @PathVariable UUID organizationId,
             @Valid @RequestBody OrganizationLifecycleCommandRequest request
@@ -96,7 +96,7 @@ public class OrganizationController {
     }
 
     @PostMapping("/{organizationId}/delete")
-    @PreAuthorize("hasAuthority('ORGANIZATION_DELETE') or hasAuthority('ORGANIZATION_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
     public MasterDataRevisionMutationResponse delete(
             @PathVariable UUID organizationId,
             @Valid @RequestBody OrganizationLifecycleCommandRequest request
@@ -105,7 +105,7 @@ public class OrganizationController {
     }
 
     @PostMapping("/{organizationId}/restore")
-    @PreAuthorize("hasAuthority('ORGANIZATION_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
     public MasterDataRevisionMutationResponse restore(
             @PathVariable UUID organizationId,
             @Valid @RequestBody OrganizationLifecycleCommandRequest request

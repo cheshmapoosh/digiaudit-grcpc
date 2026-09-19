@@ -1,10 +1,9 @@
 package com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveaccountgroup.application;
 
 import com.digiaudit.grcpc.common.exception.ConflictException;
-import com.digiaudit.grcpc.common.exception.ForbiddenException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
-import com.digiaudit.grcpc.common.security.CurrentUser;
+import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.repository.CentralAccountGroupRepository;
@@ -51,6 +50,7 @@ public class CentralControlObjectiveAccountGroupAggregateService {
   private final CentralAccountGroupRepository accountGroups;
   private final CentralControlObjectiveAccountGroupMapper mapper;
   private final RevisionMutationGuard guard;
+  private final MasterDataAuthorizationService authorization;
   private final CurrentUserProvider users;
   private final ObjectMapper objectMapper;
   private final Clock clock;
@@ -60,6 +60,7 @@ public class CentralControlObjectiveAccountGroupAggregateService {
       CentralAccountGroupRepository accountGroups,
       CentralControlObjectiveAccountGroupMapper mapper,
       RevisionMutationGuard guard,
+      MasterDataAuthorizationService authorization,
       CurrentUserProvider users,
       ObjectMapper objectMapper,
       @Qualifier("masterDataRevisionClock") Clock clock) {
@@ -67,6 +68,7 @@ public class CentralControlObjectiveAccountGroupAggregateService {
     this.accountGroups = accountGroups;
     this.mapper = mapper;
     this.guard = guard;
+    this.authorization = authorization;
     this.users = users;
     this.objectMapper = objectMapper;
     this.clock = clock;
@@ -80,6 +82,7 @@ public class CentralControlObjectiveAccountGroupAggregateService {
     List<CentralControlObjectiveAccountGroupChangeRequest> changes =
         requestedChanges == null ? List.of() : new ArrayList<>(requestedChanges);
     if (changes.isEmpty()) return new PreparedChanges(controlObjective.getId(), List.of());
+    requireScopeAccess();
 
     guard.requireHierarchyGuard(context, MasterDataHierarchyKey.ACCOUNT_GROUP);
     List<UUID> accountGroupIds = uniqueIds(changes);
@@ -153,14 +156,14 @@ public class CentralControlObjectiveAccountGroupAggregateService {
       case UPDATE -> {
         CentralControlObjectiveAccountGroupEntity row =
             requireExisting(existing, change.accountGroupId());
-        requireAuthority("CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_UPDATE");
+
         requireNotDeleted(row);
         assertVersion(row, change.version());
         validateDates(change.validFrom(), change.validTo());
         MasterDataLifecycleStatus requested = change.requestedStatus() == null
             ? row.getStatus() : editableStatus(change.requestedStatus());
         if (requested != row.getStatus()) {
-          requireAuthority("CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_LIFECYCLE");
+
           RevisionOperationType lifecycle = requested == MasterDataLifecycleStatus.ACTIVE
               ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE;
           validateLifecycle(row, lifecycle);
@@ -192,7 +195,7 @@ public class CentralControlObjectiveAccountGroupAggregateService {
     requireActiveEndpoints(controlObjective, group);
     validateDates(validFrom, validTo);
     if (existing == null) {
-      requireAuthority("CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_CREATE");
+
       return new PreparedMutation(
           CentralControlObjectiveAccountGroupEntity.create(
               UUID.randomUUID(), controlObjective.id, group.getId(), validFrom, validTo,
@@ -205,9 +208,7 @@ public class CentralControlObjectiveAccountGroupAggregateService {
     }
     RevisionOperationType operation = existing.getStatus() == DELETED
         ? RevisionOperationType.RESTORE : RevisionOperationType.ACTIVATE;
-    requireAuthority(operation == RevisionOperationType.RESTORE
-        ? "CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_RESTORE"
-        : "CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_LIFECYCLE");
+
     return new PreparedMutation(
         existing, operation, existing.getVersion(), snapshot(existing),
         validFrom, validTo, MasterDataLifecycleStatus.ACTIVE);
@@ -223,11 +224,7 @@ public class CentralControlObjectiveAccountGroupAggregateService {
         requireExisting(existing, change.accountGroupId());
     assertVersion(row, change.version());
     validateLifecycle(row, operation);
-    requireAuthority(switch (operation) {
-      case DELETE -> "CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_DELETE";
-      case RESTORE -> "CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_RESTORE";
-      default -> "CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_LIFECYCLE";
-    });
+
     if (operation == RevisionOperationType.ACTIVATE
         || operation == RevisionOperationType.RESTORE) {
       requireActiveEndpoints(controlObjective, group);
@@ -388,22 +385,12 @@ public class CentralControlObjectiveAccountGroupAggregateService {
   }
 
   public boolean canView() {
-    return hasAuthority("CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_VIEW");
+    return authorization.canView("CONTROL") && authorization.canView("REFERENCE");
   }
 
-  private boolean hasAuthority(String authority) {
-    CurrentUser user = users.getCurrentPrincipal();
-    return user.isRootUser() || user.getAuthorities().stream().anyMatch(granted ->
-        granted.getAuthority().equals("ROLE_ROOT_ADMIN")
-            || granted.getAuthority().equals(authority));
-  }
 
-  private void requireAuthority(String authority) {
-    if (!hasAuthority(authority)) {
-      throw new ForbiddenException(
-          "FORBIDDEN", "error.security.forbidden",
-          "Missing required authority: " + authority, authority);
-    }
+  private void requireScopeAccess() {
+    authorization.requireManageWithReference("CONTROL", "REFERENCE");
   }
 
   private JsonNode snapshot(CentralControlObjectiveAccountGroupEntity row) {

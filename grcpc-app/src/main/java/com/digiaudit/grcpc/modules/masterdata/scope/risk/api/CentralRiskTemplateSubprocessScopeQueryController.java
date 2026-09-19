@@ -23,7 +23,7 @@ public class CentralRiskTemplateSubprocessScopeQueryController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAuthority('CENTRAL_RISK_SCOPE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('RISK')")
   public List<CentralSubprocessRiskScopeResponse> list(
       @PathVariable UUID riskTemplateId,
       @RequestParam(required = false) MasterDataLifecycleStatus status,

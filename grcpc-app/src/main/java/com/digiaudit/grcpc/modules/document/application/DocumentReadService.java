@@ -14,7 +14,6 @@ import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentV
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.InternalDocumentJpaRepository;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.InternalDocumentLinkJpaRepository;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.InternalDocumentVersionJpaRepository;
-import com.digiaudit.grcpc.modules.securityacl.application.ResourceAuthorizationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +32,7 @@ public class DocumentReadService {
     private final InternalDocumentVersionJpaRepository versionRepository;
     private final InternalDocumentLinkJpaRepository linkRepository;
     private final DocumentTargetContextResolver targetContextResolver;
-    private final ResourceAuthorizationService authorizationService;
+    private final DocumentAuthorizationService authorizationService;
     private final DocumentStoragePort storagePort;
     private final DocumentResponseMapper responseMapper;
 
@@ -42,7 +41,7 @@ public class DocumentReadService {
             InternalDocumentVersionJpaRepository versionRepository,
             InternalDocumentLinkJpaRepository linkRepository,
             DocumentTargetContextResolver targetContextResolver,
-            ResourceAuthorizationService authorizationService,
+            DocumentAuthorizationService authorizationService,
             DocumentStoragePort storagePort,
             DocumentResponseMapper responseMapper
     ) {

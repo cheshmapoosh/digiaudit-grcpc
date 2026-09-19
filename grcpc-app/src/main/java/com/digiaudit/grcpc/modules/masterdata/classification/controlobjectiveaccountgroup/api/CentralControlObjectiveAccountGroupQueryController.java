@@ -20,28 +20,28 @@ public class CentralControlObjectiveAccountGroupQueryController {
   }
 
   @GetMapping("/api/master-data/central/control-objectives/{controlObjectiveId}/account-groups")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('CONTROL') and @masterDataAuthorization.canView('REFERENCE')")
   public List<CentralControlObjectiveAccountGroupResponse> forControlObjective(
       @PathVariable UUID controlObjectiveId) {
     return queries.forControlObjective(controlObjectiveId, false);
   }
 
   @GetMapping("/api/master-data/central/control-objectives/{controlObjectiveId}/account-groups/deleted")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('CONTROL') and @masterDataAuthorization.canView('REFERENCE')")
   public List<CentralControlObjectiveAccountGroupResponse> deletedForControlObjective(
       @PathVariable UUID controlObjectiveId) {
     return queries.forControlObjective(controlObjectiveId, true);
   }
 
   @GetMapping("/api/master-data/central/account-groups/{accountGroupId}/control-objectives")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('CONTROL') and @masterDataAuthorization.canView('REFERENCE')")
   public List<CentralControlObjectiveAccountGroupResponse> forAccountGroup(
       @PathVariable UUID accountGroupId) {
     return queries.forAccountGroup(accountGroupId);
   }
 
   @GetMapping("/api/master-data/central/control-objective-account-group-options")
-  @PreAuthorize("hasAuthority('CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+  @PreAuthorize("@masterDataAuthorization.canView('CONTROL') and @masterDataAuthorization.canView('REFERENCE')")
   public CentralControlObjectiveAccountGroupOptionsResponse options() {
     return queries.options();
   }

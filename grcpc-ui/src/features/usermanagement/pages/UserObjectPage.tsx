@@ -8,6 +8,7 @@ export interface UserObjectPageProps {
     value: UserDetail | null;
     busy?: boolean;
     error?: string | null;
+    onAssignRole?: () => void;
     onCancel: () => void;
 }
 
@@ -15,7 +16,7 @@ function formatDate(value?: string | null): string {
     return formatPersianDateTime(value);
 }
 
-export default function UserObjectPage({ value, busy = false, error, onCancel }: UserObjectPageProps) {
+export default function UserObjectPage({ value, busy = false, error, onCancel, onAssignRole }: UserObjectPageProps) {
     const { t } = useTranslation();
 
     if (!value) {
@@ -93,6 +94,7 @@ export default function UserObjectPage({ value, busy = false, error, onCancel }:
                 }
             >
                 <div style={{ padding: "1rem" }}>
+                    {onAssignRole ? <Button design="Emphasized" onClick={onAssignRole}>{t("usermanagement.demo.assignRole")}</Button> : null}
                     <UserAssignmentsList items={value.assignments} />
                 </div>
             </Card>

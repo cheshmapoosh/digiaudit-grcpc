@@ -136,7 +136,7 @@ public class CentralRegulationGroupCommandService {
                         prepared,
                         DocumentLinkTargetType.CENTRAL_REGULATION_GROUP,
                         saved.getId(),
-                        "CENTRAL_REGULATION_CREATE"));
+                        "MD_GOVERNANCE_MANAGE"));
                 return completed(c, saved, op, expected, before);
               });
       return support.aggregateResponse(result, docs.get());
@@ -179,7 +179,7 @@ public class CentralRegulationGroupCommandService {
                       prepared,
                       DocumentLinkTargetType.CENTRAL_REGULATION_GROUP,
                       id,
-                      "CENTRAL_REGULATION_UPDATE"));
+                      "MD_GOVERNANCE_MANAGE"));
               return completed(c, saved, RevisionOperationType.UPDATE, expected, before);
             });
     return support.aggregateResponse(result, docs.get());

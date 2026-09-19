@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Icon, Title } from "@ui5/webcomponents-react";
+import { useAuthState } from "@/features/auth/state/auth.state";
+import { areaForPath, canAccessMasterData } from "../security/masterDataAccess";
+import { Card, CardHeader, Icon, Title } from "@ui5/webcomponents-react";
 
 import "./master-data.css";
 
@@ -111,17 +113,18 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
 export default function MasterDataFeaturePage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const me = useAuthState((state) => state.me);
 
     const items = useMemo(
         () =>
-            MASTER_DATA_ITEMS.map((item) => ({
+            MASTER_DATA_ITEMS.filter((item) => { const area = areaForPath(item.route); return area && canAccessMasterData(me, area); }).map((item) => ({
                 ...item,
                 title: t(item.titleKey, { defaultValue: item.defaultTitle }),
                 description: t(item.descriptionKey, {
                     defaultValue: item.defaultDescription,
                 }),
             })),
-        [t],
+        [t, me],
     );
 
     const groups = useMemo(
@@ -163,7 +166,7 @@ export default function MasterDataFeaturePage() {
             </header>
 
             <div className="masterDataSections">
-                {groups.map((group) => (
+                {groups.filter((group) => group.items.length > 0).map((group) => (
                     <section key={group.key} className="masterDataSection">
                         <div className="masterDataSectionHeader">
                             <Title level="H4" size="H4">{group.title}</Title>
@@ -171,24 +174,11 @@ export default function MasterDataFeaturePage() {
 
                         <div className="masterDataTileGrid">
                             {group.items.map((item) => (
-                                <button
-                                    key={item.key}
-                                    type="button"
-                                    className="masterDataTile"
-                                    onClick={() => navigate(item.route)}
-                                    aria-label={`${item.title} — ${item.description}`}
-                                >
-                                    <span
-                                        className={`masterDataTileIcon masterDataTileIconTone${item.iconTone}`}
-                                        aria-hidden="true"
-                                    >
-                                        <Icon name={item.icon} />
-                                    </span>
-                                    <span className="masterDataTileBody">
-                                        <span className="masterDataTileTitle">{item.title}</span>
-                                        <span className="masterDataTileDescription">{item.description}</span>
-                                    </span>
-                                </button>
+                                <Card key={item.key} className="masterDataTileCard" header={
+                                    <CardHeader interactive titleText={item.title} subtitleText={item.description}
+                                        onClick={() => navigate(item.route)}
+                                        avatar={<span className={`masterDataTileIcon masterDataTileIconTone${item.iconTone}`} aria-hidden="true"><Icon name={item.icon} /></span>} />
+                                } />
                             ))}
                         </div>
                     </section>

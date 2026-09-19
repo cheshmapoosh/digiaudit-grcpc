@@ -1,3 +1,4 @@
+import { canAccessMasterData, type MasterDataArea } from "@/features/master-data/security/masterDataAccess";
 import { useMemo } from "react";
 
 import { useAuthState } from "@/features/auth";
@@ -27,20 +28,21 @@ export function useCatalogActionPermissions(
   const me = useAuthState((state) => state.me);
 
   return useMemo(() => {
-    const authorities = new Set(me?.authorities ?? []);
-    const root = Boolean(me?.rootUser || authorities.has("ROLE_ROOT_ADMIN"));
-    const has = (suffix: string) =>
-      root || authorities.has(`${prefix}_${suffix}`);
+    const areas: Record<CatalogPermissionPrefix, MasterDataArea> = {
+      CENTRAL_CONTROL: "CONTROL", CENTRAL_CONTROL_OBJECTIVE: "CONTROL", CENTRAL_RISK: "RISK",
+      CENTRAL_ACCOUNT_GROUP: "REFERENCE", CENTRAL_REGULATION: "GOVERNANCE", CENTRAL_POLICY: "GOVERNANCE",
+    };
+    const manage = canAccessMasterData(me, areas[prefix], true);
 
     return {
-      create: has("CREATE"),
-      update: has("UPDATE"),
-      move: has("MOVE"),
-      lifecycle: has("LIFECYCLE"),
-      delete: has("DELETE"),
-      restore: has("RESTORE"),
-      publish: has("PUBLISH"),
-      documentUpload: root || authorities.has("DOCUMENT_UPLOAD"),
+      create: manage,
+      update: manage,
+      move: manage,
+      lifecycle: manage,
+      delete: manage,
+      restore: manage,
+      publish: manage,
+      documentUpload: manage,
     };
   }, [me, prefix]);
 }
