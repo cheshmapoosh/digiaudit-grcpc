@@ -4,6 +4,7 @@ import { Bar, Button, Dialog, FlexBox, Input, Label, MessageStrip, Text } from "
 import type { UserDetail } from "../domain/usermanagement.model";
 import { userManagementService } from "../service/usermanagement.service";
 import { isValidPassword } from "@/features/auth/domain/passwordPolicy";
+import { HttpError } from "@/shared/infra/http.client";
 import "./user-management-forms.css";
 
 export default function UserSecurityDialog({ user, mode, onClose, onSaved }: {
@@ -18,7 +19,8 @@ export default function UserSecurityDialog({ user, mode, onClose, onSaved }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const saving = useRef(false);
-  const valid = mode === "status" || (isValidPassword(password) && confirmation === password);
+  const requiresPassword = mode === "password" || !user.enabled;
+  const valid = !requiresPassword || (isValidPassword(password) && confirmation === password);
   const title = t(mode === "password" ? "usermanagement.security.resetPassword"
     : user.enabled ? "usermanagement.security.disable" : "usermanagement.security.enable");
 
@@ -29,12 +31,13 @@ export default function UserSecurityDialog({ user, mode, onClose, onSaved }: {
     setError(null);
     try {
       if (mode === "password") await userManagementService.resetPassword(user.id, password);
-      else await userManagementService.setEnabled(user.id, !user.enabled);
+      else if (user.enabled) await userManagementService.disableUser(user.id);
+      else await userManagementService.enableUser(user.id, password);
       setPassword("");
       setConfirmation("");
       onSaved();
-    } catch {
-      setError(t("usermanagement.demo.saveError"));
+    } catch (cause) {
+      setError(t(cause instanceof HttpError && cause.code === "PASSWORD_UNCHANGED" ? "auth.password.different" : "usermanagement.demo.saveError"));
     } finally {
       saving.current = false;
       setBusy(false);
@@ -48,7 +51,7 @@ export default function UserSecurityDialog({ user, mode, onClose, onSaved }: {
       {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
       <MessageStrip design="Information" hideCloseButton>{t(mode === "password" ? "usermanagement.security.temporaryPasswordHint"
         : user.enabled ? "usermanagement.security.disableHint" : "usermanagement.security.enableHint")}</MessageStrip>
-      {mode === "password" ? <>
+      {requiresPassword ? <>
         <Label for="reset-user-password" required>{t("usermanagement.demo.password")}</Label>
         <Input id="reset-user-password" type="Password" value={password} maxlength={72} disabled={busy} onInput={(event) => setPassword(event.target.value)} />
         <Label for="reset-user-password-confirm" required>{t("auth.password.confirm")}</Label>

@@ -18,6 +18,8 @@ type Props = {
     initials?: string;
     onLogout?: () => void;
     onOpenProfile?: () => void;
+    onChangeUsername: () => void;
+    onChangePassword: () => void;
 };
 
 export default function UserProfileMenu({
@@ -26,6 +28,8 @@ export default function UserProfileMenu({
                                             initials,
                                             onLogout,
                                             onOpenProfile,
+                                            onChangeUsername,
+                                            onChangePassword,
                                         }: Props) {
     const { t } = useTranslation();
 
@@ -123,6 +127,13 @@ export default function UserProfileMenu({
                             }}
                         >
                             {t("user.profile")}
+                        </ListItemStandard>
+
+                        <ListItemStandard type="Active" onClick={() => { closeMenu(); onChangeUsername(); }}>
+                            {t("user.changeUsername")}
+                        </ListItemStandard>
+                        <ListItemStandard type="Active" onClick={() => { closeMenu(); onChangePassword(); }}>
+                            {t("user.changePassword")}
                         </ListItemStandard>
 
                         <ListItemStandard onClick={closeMenu}>

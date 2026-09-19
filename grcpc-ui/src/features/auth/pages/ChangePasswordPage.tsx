@@ -13,6 +13,7 @@ export default function ChangePasswordPage() {
   useInitialAppReady();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const required = useAuthState((state) => Boolean(state.me?.passwordChangeRequired));
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -63,7 +64,7 @@ export default function ChangePasswordPage() {
 
   return <FlexBox direction="Column" className="changePasswordPage">
     <Title level="H2">{t("auth.password.title")}</Title>
-    <MessageStrip design={saved ? "Positive" : "Information"} hideCloseButton>{t(saved ? "auth.password.saved" : "auth.password.required")}</MessageStrip>
+    <MessageStrip design={saved ? "Positive" : "Information"} hideCloseButton>{t(saved ? "auth.password.saved" : required ? "auth.password.required" : "auth.password.voluntary")}</MessageStrip>
     {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
     {!saved ? <>
       <Label for="current-password" required>{t("auth.password.current")}</Label>
@@ -76,6 +77,7 @@ export default function ChangePasswordPage() {
       {confirmation && confirmation !== newPassword ? <MessageStrip design="Negative" hideCloseButton>{t("auth.password.mismatch")}</MessageStrip> : null}
       <Button design="Emphasized" disabled={busy || !valid} onClick={() => void save()}>{t("common.save")}</Button>
     </> : null}
+    {!saved && !required ? <Button disabled={busy} onClick={() => navigate("/dashboard", { replace: true })}>{t("auth.credentials.back")}</Button> : null}
     <Button disabled={busy} onClick={() => void exit()}>{t(saved ? "auth.password.login" : "auth.password.logout")}</Button>
   </FlexBox>;
 }

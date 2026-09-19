@@ -10,7 +10,8 @@ import type {
 
 export interface UserManagementService {
     resetPassword(userId: string, password: string): Promise<void>;
-    setEnabled(userId: string, enabled: boolean): Promise<void>;
+    enableUser(userId: string, password: string): Promise<void>;
+    disableUser(userId: string): Promise<void>;
     createUser(input: CreateUserInput): Promise<string>;
     assignRole(userId: string, input: AssignGlobalRoleInput): Promise<void>;
     listUsers(): Promise<UserSummary[]>;
@@ -30,7 +31,8 @@ function sortRoles(items: RoleSummary[]): RoleSummary[] {
 export function createUserManagementService(repo: UserManagementRepo): UserManagementService {
     return {
         resetPassword: (userId, password) => repo.resetPassword(userId, password),
-        setEnabled: (userId, enabled) => repo.setEnabled(userId, enabled),
+        enableUser: (userId, password) => repo.enableUser(userId, password),
+        disableUser: (userId) => repo.disableUser(userId),
         createUser: (input) => repo.createUser(input),
         assignRole: (userId, input) => repo.assignRole(userId, input),
         async listUsers() {

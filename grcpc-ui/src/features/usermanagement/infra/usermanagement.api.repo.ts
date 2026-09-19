@@ -41,8 +41,12 @@ export class UserManagementApiRepo implements UserManagementRepo {
         await httpClient.post<void>(USERS_BASE_URL + "/" + userId + "/reset-password", { password });
     }
 
-    async setEnabled(userId: string, enabled: boolean): Promise<void> {
-        await httpClient.patch<void>(USERS_BASE_URL + "/" + userId + (enabled ? "/enable" : "/disable"));
+    async enableUser(userId: string, password: string): Promise<void> {
+        await httpClient.patch<void>(USERS_BASE_URL + "/" + userId + "/enable", { password });
+    }
+
+    async disableUser(userId: string): Promise<void> {
+        await httpClient.patch<void>(USERS_BASE_URL + "/" + userId + "/disable");
     }
 
     async createUser(input: CreateUserInput): Promise<string> {

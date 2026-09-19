@@ -1,6 +1,7 @@
 package com.digiaudit.grcpc.modules.usermanagement.api;
 
 import com.digiaudit.grcpc.modules.usermanagement.api.dto.ResetPasswordRequest;
+import com.digiaudit.grcpc.modules.usermanagement.api.dto.EnableUserRequest;
 import com.digiaudit.grcpc.modules.usermanagement.api.dto.AssignRoleRequest;
 import com.digiaudit.grcpc.modules.usermanagement.api.dto.CreateUserRequest;
 import com.digiaudit.grcpc.modules.usermanagement.api.dto.IdResponse;
@@ -80,9 +81,9 @@ public class UserController {
     @PatchMapping("/{userId}/enable")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('USER_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
-    public void enableUser(@PathVariable UUID userId, HttpServletRequest httpServletRequest) {
+    public void enableUser(@PathVariable UUID userId, @Valid @RequestBody EnableUserRequest request, HttpServletRequest httpServletRequest) {
         log.debug("HTTP PATCH /api/usermanagement/users/{}/enable", userId);
-        userManagementService.enableUser(userId, httpServletRequest);
+        userManagementService.enableUser(userId, request.password(), httpServletRequest);
     }
 
     @PatchMapping("/{userId}/disable")

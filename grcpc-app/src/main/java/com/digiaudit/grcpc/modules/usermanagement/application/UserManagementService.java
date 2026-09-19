@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
-import java.util.Locale;
+import com.digiaudit.grcpc.common.security.UsernamePolicy;
 import java.util.Map;
 import java.util.UUID;
 
@@ -47,11 +47,8 @@ public class UserManagementService {
     public UUID createUser(CreateUserRequest request, HttpServletRequest httpServletRequest) {
         currentUserProvider.assertCurrentUserIsRoot();
 
-        if (request.username() == null || !request.username().matches("[A-Za-z0-9]{1,100}")) {
-            throw new ConflictException("INVALID_USERNAME", "security.username.invalid", "Username must contain only ASCII letters and digits");
-        }
+        String normalizedUsername = UsernamePolicy.normalize(request.username());
         PasswordPolicy.validate(request.password());
-        String normalizedUsername = request.username().toLowerCase(Locale.ROOT);
         if (appUserRepository.existsByUsername(normalizedUsername)) {
             throw new ConflictException("Username already exists");
         }
@@ -103,6 +100,11 @@ public class UserManagementService {
             throw new ConflictException("Root user cannot be disabled, locked or organization-restricted");
         }
 
+        if (!user.isEnabled() && Boolean.TRUE.equals(request.enabled())) {
+            throw new ConflictException("REACTIVATION_PASSWORD_REQUIRED", "security.user.reactivationPasswordRequired",
+                    "Use the enable operation with a new password to reactivate this account");
+        }
+
         user.setFirstName(request.firstName().trim());
         user.setLastName(request.lastName().trim());
         user.setMobile(blankToNull(request.mobile()));
@@ -131,8 +133,26 @@ public class UserManagementService {
     }
 
     @Transactional
-    public void enableUser(UUID userId, HttpServletRequest httpServletRequest) {
-        updateEnabledFlag(userId, true, httpServletRequest);
+    public void enableUser(UUID userId, String password, HttpServletRequest httpServletRequest) {
+        currentUserProvider.assertCurrentUserIsRoot();
+        PasswordPolicy.validate(password);
+        AppUserEntity user = appUserRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new NotFoundException("User was not found"));
+        if (user.isEnabled()) {
+            throw new ConflictException("USER_ALREADY_ENABLED", "security.user.alreadyEnabled", "User is already enabled");
+        }
+        if (passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw new ConflictException("PASSWORD_UNCHANGED", "security.password.unchanged", "Reactivation requires a different password");
+        }
+        UUID actorUserId = currentUserProvider.getCurrentUserIdOrNull();
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setEnabled(true);
+        user.setPasswordChangeRequired(true);
+        user.setCredentialVersion(user.getCredentialVersion() + 1);
+        user.setUpdatedBy(actorUserId);
+        auditService.log(AuditEventType.USER_UPDATED, AuditTargetType.USER, userId.toString(),
+                ActionResult.SUCCESS, actorUserId, httpServletRequest,
+                Map.of("operation", "USER_REACTIVATED", "enabled", true, "passwordChangeRequired", true));
     }
 
     @Transactional

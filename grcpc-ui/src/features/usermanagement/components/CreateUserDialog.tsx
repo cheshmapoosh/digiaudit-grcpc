@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Bar, Button, Dialog, FlexBox, Input, Label, MessageStrip, Text } from "@ui5/webcomponents-react";
 import { userManagementService } from "../service/usermanagement.service";
 import "./user-management-forms.css";
+import { isValidUsername } from "@/features/auth/domain/usernamePolicy";
 import { isValidPassword } from "@/features/auth/domain/passwordPolicy";
 
 export default function CreateUserDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
@@ -11,7 +12,7 @@ export default function CreateUserDialog({ onClose, onCreated }: { onClose: () =
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  const validUsername = /^[A-Za-z0-9]{1,100}$/.test(form.username);
+  const validUsername = isValidUsername(form.username);
   const valid = validUsername && form.firstName.trim() && form.lastName.trim() && isValidPassword(form.password);
 
   async function save() {

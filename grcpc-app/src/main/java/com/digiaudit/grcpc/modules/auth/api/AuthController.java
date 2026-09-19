@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import com.digiaudit.grcpc.modules.auth.api.dto.ChangePasswordRequest;
 import com.digiaudit.grcpc.modules.auth.application.PasswordService;
+import com.digiaudit.grcpc.modules.auth.application.UsernameService;
+import com.digiaudit.grcpc.modules.auth.api.dto.ChangeUsernameRequest;
 import com.digiaudit.grcpc.common.security.CurrentUser;
 import com.digiaudit.grcpc.modules.auth.api.dto.AuthMeResponse;
 import com.digiaudit.grcpc.modules.usermanagement.domain.repository.AppUserRepository;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     private final AppUserRepository users;
     private final PasswordService passwordService;
+    private final UsernameService usernameService;
 
     @PostMapping("/change-password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -42,6 +45,14 @@ public class AuthController {
         passwordService.changePassword(request, httpRequest);
         new SecurityContextLogoutHandler()
                 .logout(httpRequest, httpResponse, authentication);
+    }
+
+    @PostMapping("/change-username")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changeUsername(@Valid @RequestBody ChangeUsernameRequest request,
+            HttpServletRequest httpRequest, HttpServletResponse httpResponse, Authentication authentication) {
+        usernameService.changeUsername(request, httpRequest);
+        new SecurityContextLogoutHandler().logout(httpRequest, httpResponse, authentication);
     }
 
     @GetMapping("/me")

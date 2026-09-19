@@ -8,7 +8,8 @@ import type {
 
 export interface UserManagementRepo {
     resetPassword(userId: string, password: string): Promise<void>;
-    setEnabled(userId: string, enabled: boolean): Promise<void>;
+    enableUser(userId: string, password: string): Promise<void>;
+    disableUser(userId: string): Promise<void>;
     createUser(input: CreateUserInput): Promise<string>;
     assignRole(userId: string, input: AssignGlobalRoleInput): Promise<void>;
     listUsers(): Promise<UserSummary[]>;

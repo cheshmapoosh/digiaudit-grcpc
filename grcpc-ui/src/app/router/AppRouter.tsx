@@ -5,6 +5,7 @@ import PublicLayout from "../../layout/components/PublicLayout";
 
 import SetupGuard from "../guards/SetupGuard";
 import BusinessAccessGuard from "../guards/BusinessAccessGuard";
+import ChangeUsernamePage from "@/features/auth/pages/ChangeUsernamePage";
 import ChangePasswordPage from "@/features/auth/pages/ChangePasswordPage";
 import AuthGuard from "../guards/AuthGuard";
 
@@ -28,6 +29,7 @@ export const appRouter = createBrowserRouter(
             <Route element={<PublicLayout />}>
                 {setupRoutes}
                 {loginRoutes}
+                <Route path="/change-username" element={<AuthGuard><ChangeUsernamePage /></AuthGuard>} />
                 <Route path="/change-password" element={<AuthGuard><ChangePasswordPage /></AuthGuard>} />
             </Route>
 

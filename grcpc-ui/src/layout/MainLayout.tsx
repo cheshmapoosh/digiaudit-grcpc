@@ -207,6 +207,8 @@ export default function MainLayout() {
                     fullName={fullName}
                     email={undefined}
                     onOpenProfile={() => navigate("/profile")}
+                    onChangeUsername={() => navigate("/change-username")}
+                    onChangePassword={() => navigate("/change-password")}
                     onLogout={() => void handleLogout()}
                 />
             </ShellBar>
