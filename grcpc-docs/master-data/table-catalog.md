@@ -2,11 +2,11 @@
 
 ## Catalog authority and count rule
 
-This catalog is rebuilt from the Final Logical Model, §5, §6–§14, the Physical Design Reference, §4–§20, the Prompt 3.3 project-owner Document scope correction, and ADR-0001. The corrections govern the exact Document and hierarchy Guard physical scope for implementation. The active catalog contains 45 business-table names and relationships plus two technical tables.
+This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md). It has 45 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables: 48 physical Master Data tables.
 
 Authoritative source files: `GRC_Master_Data_Logical_Model_Final_FA.docx` and `GRC_Master_Data_Physical_Design_Reference_FA.docx`; business meaning is cross-checked against `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`.
 
-No table below is inferred merely to satisfy a count. The business list is exactly the 14 + 13 + 13 + 3 + 2 active implementation structures. The two technical tables are outside that count.
+No table is inferred merely to satisfy a count. The new Central Organization relation replaces Policy Version in the active business set; historical storage remains physically present.
 
 Document non-invention rule: there is no Retention Policy table, no Hold table, and no purge-state persistence model in Master Data V2. No future implementation prompt may recreate these concepts without a new explicit approved design decision.
 
@@ -47,7 +47,7 @@ Stored codes are stable uppercase ASCII values stored in `VARCHAR2(32 BYTE)`. Ev
 
 ### Revision Entity Type stored-code vocabulary
 
-`masterdata_revision_content.entity_type` uses exactly these 43 values. This is the only Revision Content entity-type vocabulary.
+`masterdata_revision_content.entity_type` accepts 45 values, including the retained `CENTRAL_POLICY_VERSION` historical decoder and the new `CENTRAL_POLICY_ORG`.
 
 | Stored code | Exact catalog table | Permitted Revision domain |
 | --- | --- | --- |
@@ -64,14 +64,15 @@ Stored codes are stable uppercase ASCII values stored in `VARCHAR2(32 BYTE)`. Ev
 | `CENTRAL_REQUIREMENT` | `central_regulation_requirement` | `CENTRAL` |
 | `CENTRAL_POLICY_GROUP` | `central_policy_group` | `CENTRAL` |
 | `CENTRAL_POLICY` | `central_policy` | `CENTRAL` |
-| `CENTRAL_POLICY_VERSION` | `central_policy_version` | `CENTRAL` |
+| `CENTRAL_POLICY_VERSION` | `central_policy_version` (immutable historical reads only) | `CENTRAL` |
 | `CENTRAL_CONTROL_SCOPE` | `central_subprocess_control_scope` | `CENTRAL` |
 | `CENTRAL_RISK_SCOPE` | `central_subprocess_risk_scope` | `CENTRAL` |
 | `CENTRAL_OBJECTIVE_SCOPE` | `central_subprocess_control_objective_scope` | `CENTRAL` |
 | `CENTRAL_REQUIREMENT_SCOPE` | `central_subprocess_requirement_scope` | `CENTRAL` |
-| `CENTRAL_POLICY_SUBPROCESS` | `central_policy_version_subprocess_scope` | `CENTRAL` |
-| `CENTRAL_POLICY_CONTROL` | `central_policy_version_control_scope` | `CENTRAL` |
-| `CENTRAL_POLICY_REQUIREMENT` | `central_policy_version_requirement_scope` | `CENTRAL` |
+| `CENTRAL_POLICY_SUBPROCESS` | `central_policy_subprocess_scope` | `CENTRAL` |
+| `CENTRAL_POLICY_ORG` | `central_policy_organization_scope` | `CENTRAL` |
+| `CENTRAL_POLICY_CONTROL` | `central_policy_control_scope` | `CENTRAL` |
+| `CENTRAL_POLICY_REQUIREMENT` | `central_policy_requirement_scope` | `CENTRAL` |
 | `CENTRAL_CONTROL_ACCOUNT_GROUP` | `central_control_account_group` | `CENTRAL` |
 | `CENTRAL_OBJECTIVE_ACCOUNT_GROUP` | `central_control_objective_account_group` | `CENTRAL` |
 | `CENTRAL_RISK_CONTROL_COV` | `central_subprocess_risk_control_coverage` | `CENTRAL` |
@@ -109,7 +110,7 @@ Revision Entity Type rules:
 
 `document_link.target_type` uses a separate vocabulary from `RevisionEntityType`. Reusing the same stored code for the same logical table does not make the two domain types interchangeable.
 
-`document_link.target_type` uses exactly these 41 values.
+`document_link.target_type` accepts 41 values after version links are migrated to Policy and Central Organization Scope is added.
 
 | Stored code | Exact target table | Target class |
 | --- | --- | --- |
@@ -126,14 +127,14 @@ Revision Entity Type rules:
 | `CENTRAL_REQUIREMENT` | `central_regulation_requirement` | Normal Master Data |
 | `CENTRAL_POLICY_GROUP` | `central_policy_group` | Normal Master Data |
 | `CENTRAL_POLICY` | `central_policy` | Normal Master Data |
-| `CENTRAL_POLICY_VERSION` | `central_policy_version` | Normal Master Data |
 | `CENTRAL_CONTROL_SCOPE` | `central_subprocess_control_scope` | Normal Master Data |
 | `CENTRAL_RISK_SCOPE` | `central_subprocess_risk_scope` | Normal Master Data |
 | `CENTRAL_OBJECTIVE_SCOPE` | `central_subprocess_control_objective_scope` | Normal Master Data |
 | `CENTRAL_REQUIREMENT_SCOPE` | `central_subprocess_requirement_scope` | Normal Master Data |
-| `CENTRAL_POLICY_SUBPROCESS` | `central_policy_version_subprocess_scope` | Normal Master Data |
-| `CENTRAL_POLICY_CONTROL` | `central_policy_version_control_scope` | Normal Master Data |
-| `CENTRAL_POLICY_REQUIREMENT` | `central_policy_version_requirement_scope` | Normal Master Data |
+| `CENTRAL_POLICY_SUBPROCESS` | `central_policy_subprocess_scope` | Normal Master Data |
+| `CENTRAL_POLICY_ORG` | `central_policy_organization_scope` | Normal Master Data |
+| `CENTRAL_POLICY_CONTROL` | `central_policy_control_scope` | Normal Master Data |
+| `CENTRAL_POLICY_REQUIREMENT` | `central_policy_requirement_scope` | Normal Master Data |
 | `CENTRAL_CONTROL_ACCOUNT_GROUP` | `central_control_account_group` | Normal Master Data |
 | `CENTRAL_OBJECTIVE_ACCOUNT_GROUP` | `central_control_objective_account_group` | Normal Master Data |
 | `CENTRAL_RISK_CONTROL_COV` | `central_subprocess_risk_control_coverage` | Normal Master Data |
@@ -381,39 +382,39 @@ Document Link Target Type rules:
 
 ### 13. `central_policy`
 
-**Purpose and family.** Stable Central Policy identity; official policy content belongs to a Policy Version.
+**Purpose and family.** Central Policy is the live aggregate owner of nullable CLOB content, metadata, lifecycle, validity, documents, and four typed relation collections.
 
-**Fields.** `ID`; `policy_group_id RAW(16) NOT NULL`; normal definition lifecycle `L+V`.
+**Fields.** `ID`; `policy_group_id RAW(16) NOT NULL`; nullable `content CLOB`; normal definition lifecycle `L+V`.
 
-**Keys and relationships.** PK: `id`. Detailed policy business-key attributes are not enumerated. FK: `policy_group_id -> central_policy_group(id)`. Policy Versions point to this identity.
+**Keys and relationships.** PK: `id`; unique code. FK: `policy_group_id -> central_policy_group(id)`. Four Central and four Local typed policy relation tables point to Policy. Historical Version rows retain their Policy FK.
 
 **Composite FKs.** None.
 
-**Lifecycle, validity, and lock.** `L+V`; `version` supports mutation of the stable identity only.
+**Lifecycle, validity, and lock.** `L+V`; technical `version` protects the whole aggregate, including relation-only and document-only saves.
 
-**Constraints and indexes.** Indexed group FK; shared checks. Content must not be stored as mutable policy-identity text.
+**Constraints and indexes.** Indexed group FK; shared checks; nullable content without a publication requirement.
 
-**Mutability and Revision.** Central-only via Central revision. Version creation is the path for content change.
+**Mutability and Revision.** Policy Create/Edit owns content, group, status, validity, documents, and four typed change lists in one Central Business Revision.
 
-**Authority / non-invention note.** Final Logical Model §5-1 and §6-2; Conceptual Model Policy identity/version separation.
+**Authority / non-invention note.** Approved Policy simplification supersedes the earlier Conceptual Model Policy/version separation.
 
 ### 14. `central_policy_version`
 
-**Purpose and family.** Official, referencable version of a Central Policy and the parent used by all Central and Local Policy Scope tables.
+**Purpose and family.** Retained unmapped historical storage. No active entity mapping, repository, mutation route, baseline creation, or document target uses it.
 
-**Fields.** `ID`; `policy_id RAW(16) NOT NULL`; domain `version_status VARCHAR2(32 BYTE) NOT NULL` with `DRAFT`, `PUBLISHED`, or `SUPERSEDED`; official content represented through approved version content/document integration; normal lifecycle/validity/audit as compatible with the version lifecycle; optimistic `version`.
+**Fields.** `ID`; `policy_id RAW(16) NOT NULL`; `version_status VARCHAR2(32 BYTE) NOT NULL` with `DRAFT`, `PUBLISHED`, or `SUPERSEDED`; historical CLOB content, publication metadata, lifecycle, validity, audit, and optimistic `version`.
 
-**Keys and relationships.** PK: `id`. The Logical Model documents the `policy_id` parent and version status; it does not prescribe a separate version-number column name. FK: `policy_id -> central_policy(id)`. It is referenced by all three Central and all four Local Policy Scope tables.
+**Keys and relationships.** PK: `id`; FK: `policy_id -> central_policy(id)`. Active scope tables no longer reference it.
 
 **Composite FKs.** None on this table.
 
-**Lifecycle, validity, and lock.** Published content is immutable. `version_status` is distinct from the generic lifecycle status; `version` is the optimistic lock.
+**Lifecycle, validity, and lock.** All historical content, status, validity, publication metadata, audit values, and version numbers are preserved.
 
-**Constraints and indexes.** Check controlled version status; indexed `policy_id`; validity controls all attached policy-scope intervals. Workflow publication is external and does not authorize Workflow tables here.
+**Constraints and indexes.** Historical checks and indexed Policy FK remain; active relationship validity is checked against Policy and typed endpoints.
 
-**Mutability and Revision.** Central revision controls allowed Master Data changes. Published content changes create a new Policy Version; policy-scope changes are separately revision-controlled.
+**Mutability and Revision.** No new rows or mutations. Applied historical Revision Content remains unchanged.
 
-**Authority / non-invention note.** Final Logical Model §5-1, §6-2, §12-2; Physical Design Appendix A. Detailed content-column representation is deliberately not invented beyond the approved CLOB/document rules.
+**Authority / non-invention note.** Retained for lossless migration history under the approved Policy simplification; see the migration runbook.
 
 ## 2. Central Scope, Classification, Policy Scope, and Coverage — 13 business tables
 
@@ -489,35 +490,35 @@ Document Link Target Type rules:
 
 **Authority / non-invention note.** Final Logical Model §5-2, §6-2, §6-3, §7; Requirement is the approved atomic compliance endpoint.
 
-### 19. `central_policy_version_subprocess_scope`
+### 19. `central_policy_subprocess_scope`
 
-**Purpose and family.** Typed Central Policy Scope that provides the baseline inclusion of a Policy Version for a Central Subprocess.
+**Purpose and family.** Typed Central Policy–Subprocess relation.
 
-**Fields.** `ID`; `policy_version_id RAW(16) NOT NULL`; `subprocess_id RAW(16) NOT NULL`; `L+V`.
+**Fields.** `ID`; `policy_id RAW(16) NOT NULL`; `subprocess_id RAW(16) NOT NULL`; `L+V`.
 
-**Keys and relationships.** PK: `id`. Business key: unique `(policy_version_id, subprocess_id)`. FKs: `policy_version_id -> central_policy_version(id)` and `subprocess_id -> central_subprocess(id)`.
+**Keys and relationships.** PK: `id`. Business key: unique `(policy_id, subprocess_id)` across all lifecycle states. FKs: `policy_id -> central_policy(id)` and `subprocess_id -> central_subprocess(id)`.
 
 **Composite FKs.** None required by the approved model.
 
-**Lifecycle, validity, and lock.** `L+V`; the interval must be valid against the referenced Policy Version; `version` is mandatory for mutation.
+**Lifecycle, validity, and lock.** `L+V`; interval contained within Policy and Subprocess; `version` is mandatory for existing-row mutations.
 
-**Constraints and indexes.** Unique tuple; policy-version and subprocess FK indexes; shared checks. Its documented semantic is Central baseline `INCLUDE`; it is not a generic policy-scope table.
+**Constraints and indexes.** Unique tuple; Policy and Subprocess FK indexes; shared checks. This is a concrete relation, not a generic policy-scope table.
 
-**Mutability and Revision.** Central-only through a Central revision. It contributes to read-only Policy Applicability and never materializes Local rows.
+**Mutability and Revision.** Changed only through Policy Create/Edit and included with the Policy content record in one Central revision.
 
 **Authority / non-invention note.** Final Logical Model §5-2 and §12-2; Conceptual Model Central Policy Scope rule.
 
-### 20. `central_policy_version_control_scope`
+### 20. `central_policy_control_scope`
 
 **Purpose and family.** Typed Central Policy Scope for an exact Central Control Scope, retaining its Subprocess context.
 
-**Fields.** `ID`; `policy_version_id RAW(16) NOT NULL`; `central_control_scope_id RAW(16) NOT NULL`; `L+V`.
+**Fields.** `ID`; `policy_id RAW(16) NOT NULL`; `central_control_scope_id RAW(16) NOT NULL`; `L+V`.
 
-**Keys and relationships.** PK: `id`. Business key: unique `(policy_version_id, central_control_scope_id)`. FKs: `policy_version_id -> central_policy_version(id)` and `central_control_scope_id -> central_subprocess_control_scope(id)`.
+**Keys and relationships.** PK: `id`. Business key: unique `(policy_id, central_control_scope_id)` across all lifecycle states. FKs: `policy_id -> central_policy(id)` and `central_control_scope_id -> central_subprocess_control_scope(id)`.
 
 **Composite FKs.** No raw `control_id` relation is allowed; the exact scope FK carries the context.
 
-**Lifecycle, validity, and lock.** `L+V`; validity must be compatible with the Policy Version; `version` is the lock field.
+**Lifecycle, validity, and lock.** `L+V`; validity is contained within Policy and exact Control Scope; `version` is the lock field.
 
 **Constraints and indexes.** Unique tuple, indexed policy/scope FKs, shared checks. It cannot target a Central Control definition directly.
 
@@ -525,23 +526,33 @@ Document Link Target Type rules:
 
 **Authority / non-invention note.** Final Logical Model §5-2, §12-2, and final correction F-01.
 
-### 21. `central_policy_version_requirement_scope`
+### 21. `central_policy_requirement_scope`
 
 **Purpose and family.** Typed Central Policy Scope for an exact Central Requirement Scope, retaining its Subprocess context.
 
-**Fields.** `ID`; `policy_version_id RAW(16) NOT NULL`; `central_requirement_scope_id RAW(16) NOT NULL`; `L+V`.
+**Fields.** `ID`; `policy_id RAW(16) NOT NULL`; `central_requirement_scope_id RAW(16) NOT NULL`; `L+V`.
 
-**Keys and relationships.** PK: `id`. Business key: unique `(policy_version_id, central_requirement_scope_id)`. FKs: `policy_version_id -> central_policy_version(id)` and `central_requirement_scope_id -> central_subprocess_requirement_scope(id)`.
+**Keys and relationships.** PK: `id`. Business key: unique `(policy_id, central_requirement_scope_id)` across all lifecycle states. FKs: `policy_id -> central_policy(id)` and `central_requirement_scope_id -> central_subprocess_requirement_scope(id)`.
 
 **Composite FKs.** No raw `requirement_id` relationship is permitted because it would lose Subprocess context.
 
-**Lifecycle, validity, and lock.** `L+V`; validity must be compatible with the Policy Version; `version` controls updates.
+**Lifecycle, validity, and lock.** `L+V`; validity is contained within Policy and exact Requirement Scope; `version` controls updates.
 
 **Constraints and indexes.** Unique tuple; indexed foreign keys; shared checks. It cannot target Regulation or a raw Requirement definition directly.
 
 **Mutability and Revision.** Central-only via Central revision; contributes a read-only policy baseline.
 
 **Authority / non-invention note.** Final Logical Model §5-2, §12-2, and F-01.
+
+### 21a. `central_policy_organization_scope`
+
+**Purpose and family.** Explicit Central Policy–Organization relation, separate from Local Organization decisions and Policy responsible-organization text.
+
+**Fields.** `ID`; `policy_id RAW(16) NOT NULL`; `organization_id RAW(16) NOT NULL`; `L+V`.
+
+**Keys and relationships.** Unique `(policy_id, organization_id)` across every lifecycle state; FKs to `central_policy(id)` and `organization(id)`.
+
+**Lifecycle, validity, and lock.** Shared nullable validity, soft deletion, audit, and optimistic-version rules. Changed only by Policy Create/Edit under `ORGANIZATION` and `POLICY` Guards.
 
 ### 22. `central_control_account_group`
 
@@ -819,13 +830,13 @@ Document Link Target Type rules:
 
 **Purpose and family.** Local Policy decision at the Organization level, including hierarchical propagation behavior.
 
-**Fields.** `ID`; `organization_id RAW(16) NOT NULL`; `policy_version_id RAW(16) NOT NULL`; `scope_action VARCHAR2(32 BYTE) NOT NULL` (`INCLUDE` or `EXCLUDE`); `propagation_mode VARCHAR2(32 BYTE) NOT NULL` (`DIRECT_ONLY` or `INCLUDE_DESCENDANTS`); `L+V`.
+**Fields.** `ID`; `organization_id RAW(16) NOT NULL`; `policy_id RAW(16) NOT NULL`; `scope_action VARCHAR2(32 BYTE) NOT NULL` (`INCLUDE` or `EXCLUDE`); `propagation_mode VARCHAR2(32 BYTE) NOT NULL` (`DIRECT_ONLY` or `INCLUDE_DESCENDANTS`); `L+V`.
 
-**Keys and relationships.** PK: `id`. Business key: unique `(organization_id, policy_version_id)` at the documented target granularity. FKs: `organization_id -> organization(id)` and `policy_version_id -> central_policy_version(id)`.
+**Keys and relationships.** PK: `id`. Business key: unique `(organization_id, policy_id)` at the documented target granularity. FKs: `organization_id -> organization(id)` and `policy_id -> central_policy(id)`.
 
 **Composite FKs.** None.
 
-**Lifecycle, validity, and lock.** `L+V`; policy-scope interval must overlap and be contained as required by the Policy Version at command time; `version` locks mutation.
+**Lifecycle, validity, and lock.** `L+V`; the relation interval is constrained by the Policy interval and Organization endpoint interval; `version` locks mutation.
 
 **Constraints and indexes.** Controlled action/mode checks; unique target pair; policy/org FK indexes; shared checks. Direct Organization decision wins over ancestor and closest applicable ancestor wins among inherited organization decisions.
 
@@ -837,13 +848,13 @@ Document Link Target Type rules:
 
 **Purpose and family.** Local Policy decision for a specific Local Organization–Subprocess Context.
 
-**Fields.** `ID`; `organization_subprocess_scope_id RAW(16) NOT NULL`; `policy_version_id RAW(16) NOT NULL`; the documented local policy decision/action fields; `L+V`. `propagation_mode` is not the hierarchy-propagation control for this table.
+**Fields.** `ID`; `organization_subprocess_scope_id RAW(16) NOT NULL`; `policy_id RAW(16) NOT NULL`; the documented local policy decision/action fields; `L+V`. `propagation_mode` is not the hierarchy-propagation control for this table.
 
-**Keys and relationships.** PK: `id`. Business key: unique `(organization_subprocess_scope_id, policy_version_id)`. FKs: `organization_subprocess_scope_id -> local_organization_subprocess_scope(id)` and `policy_version_id -> central_policy_version(id)`.
+**Keys and relationships.** PK: `id`. Business key: unique `(organization_subprocess_scope_id, policy_id)`. FKs: `organization_subprocess_scope_id -> local_organization_subprocess_scope(id)` and `policy_id -> central_policy(id)`.
 
 **Composite FKs.** None.
 
-**Lifecycle, validity, and lock.** `L+V`; policy-version compatibility validation; `version` is the optimistic lock.
+**Lifecycle, validity, and lock.** `L+V`; the Policy interval is the owner validity boundary; `version` is the optimistic lock.
 
 **Constraints and indexes.** Unique target pair, valid policy decision enum, policy/context FK indexes, and shared checks. The decision is more specific than Organization scope and may propagate only to Control and Requirement in the same Local Context.
 
@@ -855,13 +866,13 @@ Document Link Target Type rules:
 
 **Purpose and family.** Exact-target Local Policy decision for one Local Control Scope.
 
-**Fields.** `ID`; `local_control_scope_id RAW(16) NOT NULL`; `policy_version_id RAW(16) NOT NULL`; documented local policy decision/action fields; `L+V`.
+**Fields.** `ID`; `local_control_scope_id RAW(16) NOT NULL`; `policy_id RAW(16) NOT NULL`; documented local policy decision/action fields; `L+V`.
 
-**Keys and relationships.** PK: `id`. Business key: unique `(local_control_scope_id, policy_version_id)`. FKs: `local_control_scope_id -> local_subprocess_control_scope(id)` and `policy_version_id -> central_policy_version(id)`.
+**Keys and relationships.** PK: `id`. Business key: unique `(local_control_scope_id, policy_id)`. FKs: `local_control_scope_id -> local_subprocess_control_scope(id)` and `policy_id -> central_policy(id)`.
 
 **Composite FKs.** None; the Local Control Scope supplies the exact Local Context.
 
-**Lifecycle, validity, and lock.** `L+V`; scope validity is checked against Policy Version validity; `version` guards mutation.
+**Lifecycle, validity, and lock.** `L+V`; scope validity is checked against Policy validity; `version` guards mutation.
 
 **Constraints and indexes.** Unique exact target; FK indexes; valid policy decision check. It outranks Local Subprocess and Organization decisions in Policy Applicability.
 
@@ -873,13 +884,13 @@ Document Link Target Type rules:
 
 **Purpose and family.** Exact-target Local Policy decision for one Local Requirement Scope.
 
-**Fields.** `ID`; `local_requirement_scope_id RAW(16) NOT NULL`; `policy_version_id RAW(16) NOT NULL`; documented local policy decision/action fields; `L+V`.
+**Fields.** `ID`; `local_requirement_scope_id RAW(16) NOT NULL`; `policy_id RAW(16) NOT NULL`; documented local policy decision/action fields; `L+V`.
 
-**Keys and relationships.** PK: `id`. Business key: unique `(local_requirement_scope_id, policy_version_id)`. FKs: `local_requirement_scope_id -> local_subprocess_requirement_scope(id)` and `policy_version_id -> central_policy_version(id)`.
+**Keys and relationships.** PK: `id`. Business key: unique `(local_requirement_scope_id, policy_id)`. FKs: `local_requirement_scope_id -> local_subprocess_requirement_scope(id)` and `policy_id -> central_policy(id)`.
 
 **Composite FKs.** None; context is supplied by the Local Requirement Scope.
 
-**Lifecycle, validity, and lock.** `L+V`; Policy Version interval compatibility is validated; `version` is required.
+**Lifecycle, validity, and lock.** `L+V`; Policy interval compatibility is validated; `version` is required.
 
 **Constraints and indexes.** Unique target pair, policy/scope FK indexes, valid policy decision check, and shared checks. It is an exact target and does not create a direct Regulation relationship.
 

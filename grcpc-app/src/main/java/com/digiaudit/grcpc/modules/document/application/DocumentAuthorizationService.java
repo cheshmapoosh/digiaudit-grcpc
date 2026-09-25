@@ -20,7 +20,7 @@ public class DocumentAuthorizationService {
             case "CENTRAL_CONTROL", "CENTRAL_CONTROL_OBJECTIVE_DEF" -> "CONTROL";
             case "CENTRAL_RISK_CATEGORY", "CENTRAL_RISK_TEMPLATE" -> "RISK";
             case "CENTRAL_REGULATION_GROUP", "CENTRAL_REGULATION", "CENTRAL_REQUIREMENT",
-                    "CENTRAL_POLICY_GROUP", "CENTRAL_POLICY", "CENTRAL_POLICY_VERSION" -> "GOVERNANCE";
+                    "CENTRAL_POLICY_GROUP", "CENTRAL_POLICY" -> "GOVERNANCE";
             default -> null;
         };
         if (area == null) return false;

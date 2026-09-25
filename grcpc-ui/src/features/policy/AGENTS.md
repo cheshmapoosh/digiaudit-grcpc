@@ -10,7 +10,7 @@ Policies are tree-based master data with policy groups and policy leaf nodes.
 - `policyGroup` can contain child `policyGroup` nodes and `policy` nodes.
 - `policy` is a leaf and must not expose child creation.
 - When a `policy` leaf is selected, the main Create action remains enabled and uses that policy's parent `policyGroup` as the creation context; valid sibling children of that parent (`policyGroup` or `policy`) may be created with the parent preselected in the modal.
-- Policy Version is currently a hidden technical concept and is not a structural tree node or visible modal tab.
+- Policy owns editable content, lifecycle, validity, documents, and four typed relationship collections. Historical Policy Version rows are not an active business concept.
 
 ## Rules
 - Follow the Process/Regulation tree/FCL pattern.
@@ -22,9 +22,8 @@ Policies are tree-based master data with policy groups and policy leaf nodes.
 - Policy Group parent changes are performed through Edit/parent selection; do not add a separate Move button.
 - The Policy Documents tab is the ordinary parent-save document surface for the Policy itself, using target `CENTRAL_POLICY`. It must support temporary file selection during Create and parent-save finalization on Save, and the same document-management UX during Edit. Do not require selecting or creating a Policy Version before Policy documents can be managed.
 - Policy Group documents use target `CENTRAL_POLICY_GROUP` with the same parent-save UX.
-- The backend guarantees one live technical Policy Version when a Policy is created/reactivated without one. That baseline is version 1 for a new Policy and is created as `PUBLISHED`/`ACTIVE` so future typed relationships can target an official version without exposing version workflow to the customer.
-- Do not expose the Policy Version tab or mount `PolicyVersionEditor` until version management is explicitly brought back into scope.
-- Scope/Control/Requirement relationship tabs remain visible but disabled until their typed V2 flows are implemented.
+- Do not create a technical Policy Version baseline or expose version selection/publication.
+- Keep Subprocess, Organization, Control, and Requirement relation drafts in the Policy Create/Edit modal and submit them with one Policy Save. Control and Requirement selections use exact Central Scope IDs.
 
 ## Verification
 - Run `npm run lint` and `npm run build` from `grcpc-ui` when an execution environment is available.

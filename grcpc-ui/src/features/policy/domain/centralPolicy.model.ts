@@ -15,7 +15,6 @@ export type CentralPolicyCommunicationMethod =
   | "ANNOUNCEMENT"
   | "QUESTIONNAIRE"
   | "SURVEY";
-export type PolicyVersionStatus = "DRAFT" | "PUBLISHED" | "SUPERSEDED";
 
 interface DefinitionAuditFields {
   createdAt: string;
@@ -50,22 +49,8 @@ export interface CentralPolicyDetail
   communicationMethod: CentralPolicyCommunicationMethod | null;
   nextReviewDate: string | null;
   objective: string | null;
-  description: string | null;
-}
-
-export interface CentralPolicyVersionDetail extends DefinitionDetailFields {
-  policyId: string;
-  versionNumber: number;
   content: string | null;
-  versionStatus: PolicyVersionStatus;
-  publishedAt: string | null;
-  publishedBy: string | null;
-  createdAt: string;
-  createdBy: string | null;
-  updatedAt: string;
-  updatedBy: string | null;
-  deletedAt?: string | null;
-  deletedBy?: string | null;
+  description: string | null;
 }
 
 export type CentralPolicyAnyDetail = CentralPolicyGroupDetail | CentralPolicyDetail;
@@ -95,6 +80,7 @@ interface PolicyMetadata {
   communicationMethod: CentralPolicyCommunicationMethod | null;
   nextReviewDate: string | null;
   objective: string | null;
+  content: string | null;
 }
 
 export interface CreateCentralPolicyGroupCommand extends CreateBase {
@@ -111,9 +97,22 @@ export interface MoveCentralPolicyGroupCommand {
 
 export interface CreateCentralPolicyCommand extends CreateBase, PolicyMetadata {
   policyGroupId: string;
+  status: "ACTIVE" | "INACTIVE";
+  subprocessScopeChanges: PolicySubprocessScopeChange[];
+  organizationScopeChanges: PolicyOrganizationScopeChange[];
+  controlScopeChanges: PolicyControlScopeChange[];
+  requirementScopeChanges: PolicyRequirementScopeChange[];
 }
 
-export interface UpdateCentralPolicyCommand extends UpdateBase, PolicyMetadata {}
+export interface UpdateCentralPolicyCommand extends UpdateBase, PolicyMetadata {
+  policyGroupId: string;
+  sortOrder: number;
+  status: "ACTIVE" | "INACTIVE";
+  subprocessScopeChanges: PolicySubprocessScopeChange[];
+  organizationScopeChanges: PolicyOrganizationScopeChange[];
+  controlScopeChanges: PolicyControlScopeChange[];
+  requirementScopeChanges: PolicyRequirementScopeChange[];
+}
 
 export interface MoveCentralPolicyCommand {
   version: number;
@@ -121,17 +120,73 @@ export interface MoveCentralPolicyCommand {
   sortOrder: number;
 }
 
-export interface CreateCentralPolicyVersionCommand {
-  content: string | null;
+export type PolicyScopeOperation = "CREATE_OR_RESTORE" | "UPDATE" | "ACTIVATE" | "INACTIVATE" | "DELETE" | "RESTORE";
+interface PolicyScopeChangeBase {
+  operation: PolicyScopeOperation;
+  relationId: string | null;
+  version: number | null;
   validFrom: string | null;
   validTo: string | null;
-  documents: DocumentAggregateRequest;
+  requestedStatus: "ACTIVE" | "INACTIVE" | null;
 }
+export interface PolicySubprocessScopeChange extends PolicyScopeChangeBase { subprocessId: string; }
+export interface PolicyOrganizationScopeChange extends PolicyScopeChangeBase { organizationId: string; }
+export interface PolicyControlScopeChange extends PolicyScopeChangeBase { centralControlScopeId: string; }
+export interface PolicyRequirementScopeChange extends PolicyScopeChangeBase { centralRequirementScopeId: string; }
 
-export interface UpdateCentralPolicyVersionCommand
-  extends CreateCentralPolicyVersionCommand {
+interface PolicyScopeRowBase {
+  id: string;
+  policyId: string;
+  status: "ACTIVE" | "INACTIVE" | "DELETED";
+  validFrom: string | null;
+  validTo: string | null;
   version: number;
 }
-
+export interface PolicySubprocessScopeRow extends PolicyScopeRowBase {
+  subprocessId: string; subprocessCode: string; subprocessTitle: string; processId: string;
+  processCode: string; processTitle: string;
+}
+export interface PolicyOrganizationScopeRow extends PolicyScopeRowBase {
+  organizationId: string; organizationCode: string; organizationTitle: string; parentOrganizationId: string | null;
+  parentOrganizationCode: string | null; parentOrganizationTitle: string | null;
+}
+export interface PolicyControlScopeRow extends PolicyScopeRowBase {
+  centralControlScopeId: string; subprocessId: string; subprocessCode: string; subprocessTitle: string;
+  controlId: string; controlCode: string; controlTitle: string;
+  controlGroupCode: string | null; controlGroupTitle: string | null;
+}
+export interface PolicyRequirementScopeRow extends PolicyScopeRowBase {
+  centralRequirementScopeId: string; subprocessId: string; subprocessCode: string; subprocessTitle: string;
+  requirementId: string; requirementCode: string; requirementTitle: string;
+  regulationCode: string; regulationTitle: string;
+}
+export interface PolicySubprocessOption {
+  subprocessId: string; code: string; title: string; processId: string; status: string;
+  processCode: string; processTitle: string;
+  validFrom: string | null; validTo: string | null;
+}
+export interface PolicyOrganizationOption {
+  organizationId: string; code: string; title: string; parentOrganizationId: string | null; status: string;
+  parentOrganizationCode: string | null; parentOrganizationTitle: string | null;
+  validFrom: string | null; validTo: string | null;
+}
+export interface PolicyControlOption {
+  centralControlScopeId: string; subprocessId: string; subprocessCode: string; subprocessTitle: string;
+  controlId: string; controlCode: string; controlTitle: string;
+  controlGroupCode: string | null; controlGroupTitle: string | null; status: string;
+  validFrom: string | null; validTo: string | null;
+}
+export interface PolicyRequirementOption {
+  centralRequirementScopeId: string; subprocessId: string; subprocessCode: string; subprocessTitle: string;
+  requirementId: string; requirementCode: string; requirementTitle: string;
+  regulationCode: string; regulationTitle: string; status: string;
+  validFrom: string | null; validTo: string | null;
+}
+export interface CentralPolicyAggregateResponse extends MutationResponse {
+  subprocessScopes: PolicySubprocessScopeRow[];
+  organizationScopes: PolicyOrganizationScopeRow[];
+  controlScopes: PolicyControlScopeRow[];
+  requirementScopes: PolicyRequirementScopeRow[];
+}
 export type CentralPolicyMutationResponse = MutationResponse;
 export type CentralPolicyRevisionResponse = RevisionMutationResponse;

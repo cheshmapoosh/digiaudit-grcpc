@@ -224,7 +224,7 @@ The following route shapes are conventions, not table-oriented generic CRUD cont
 | Risk Category/Template | typed category/tree and template commands | hierarchy/template query | Scope accepts Risk Template only. |
 | Account Group | typed hierarchy commands | tree/value-help query | Classifications use separate typed commands. |
 | Regulation Group/Regulation/Requirement | typed hierarchy commands | hierarchy/requirement query | Requirement is the scope/coverage endpoint. |
-| Policy Group/Policy/Policy Version | typed group/policy/version commands | hierarchy/version query | Published content is immutable; publication workflow is external. |
+| Policy Group/Policy | typed group/Policy aggregate commands | hierarchy and four typed relation reads | Policy owns editable content, lifecycle, validity, documents, and relations. |
 
 Update, inactivate, delete, and restore paths can use command-style suffixes such as `/inactivate`, `/delete`, and `/restore` where that better expresses the UI use case.
 
@@ -278,15 +278,25 @@ union of authorized Control and Control Objective source paths, preserving separ
 from complete source paths for which they hold both Scope VIEW and classification VIEW; hidden
 source existence and counts are not exposed.
 
-Central Policy Scope commands are type-specific.
+Policy `POST` and `PATCH /{id}` each own nullable
+`subprocessScopeChanges`, `organizationScopeChanges`,
+`controlScopeChanges`, and `requirementScopeChanges`. Null or empty lists
+mean no changes. One Save finalizes documents and produces one Business
+Revision; it returns the Policy version and authorized canonical relation
+arrays. Policy Version mutation routes are retired.
 
 ```text
-POST /api/master-data/central/policy-versions/{policyVersionId}/subprocess-scopes
-POST /api/master-data/central/policy-versions/{policyVersionId}/control-scope-links
-POST /api/master-data/central/policy-versions/{policyVersionId}/requirement-scope-links
+GET /api/master-data/central/policies/{policyId}/subprocess-scopes
+GET /api/master-data/central/policies/{policyId}/organization-scopes
+GET /api/master-data/central/policies/{policyId}/control-scopes
+GET /api/master-data/central/policies/{policyId}/requirement-scopes
+GET /api/master-data/central/policies/scope-options/{subprocesses|organizations|controls|requirements}
 ```
 
-The final two routes accept an exact Central Scope ID, never a raw Control or Requirement ID.
+Each relation has typed list/detail/deleted reads. Control and Requirement
+changes and options use exact Central Scope IDs and include Subprocess context,
+never raw Control or Requirement IDs. Central Organization Scope is separate
+from Local Organization applicability.
 
 Central Coverage commands are type-specific.
 
@@ -366,7 +376,8 @@ POST /api/master-data/local/requirement-scopes/{localRequirementScopeId}/policy-
 
 The organization command carries `scopeAction` and `propagationMode`.
 
-All Local Policy Scope commands reference exact `policyVersionId` values.
+Local Policy Scope storage references Policy IDs after the dependency migration;
+Local API ownership remains outside this slice.
 
 No Local Policy Scope API targets Risk or Control Objective.
 
@@ -479,7 +490,7 @@ The client refreshes the typed Read DTO and lets the user resolve the conflict; 
 
 Create commands use approved business-key uniqueness plus explicit inactive reactivation/deleted restore behavior for safe duplicate handling.
 
-Structural Organization commands use the `ORGANIZATION` Guard; Process and Subprocess share `PROCESS`; Risk Category and Risk Template share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group, Regulation, and Requirement share `REGULATION`; Policy Group, Policy, and Policy Version share `POLICY`. Acquisition precedes business-key lookup, revision allocation, hierarchy/dependency reads, parent validation, and mutation. Policy Version allocation and publication then lock the owning Policy followed by its Version rows.
+Structural Organization commands use the `ORGANIZATION` Guard; Process and Subprocess share `PROCESS`; Risk Category and Risk Template share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group, Regulation, and Requirement share `REGULATION`; Policy Group and Policy share `POLICY`. Policy aggregate Update acquires `POLICY` even when its submitted group is unchanged. Typed relation changes add `PROCESS`, `ORGANIZATION`, `CONTROL`, or `REGULATION` Guards as required, acquired in lexical order before hierarchy and endpoint reads.
 
 Guard acquisition applies the configured JPA lock-timeout hint. Recognized lock acquisition/timeout failures return `HIERARCHY_BUSY` and are not retried automatically. A missing configured Guard row returns `HIERARCHY_GUARD_NOT_CONFIGURED` and fails the operation before source or Revision persistence.
 
@@ -545,7 +556,7 @@ Do not disclose raw database constraint or table names, SQL, Oracle errors, lock
 | `INVALID_TEMP_UPLOAD` | 422 | The temporary upload is not authorized, has an invalid object/checksum, or is not valid for the command. |
 | `TEMPORARY_UPLOAD_NOT_FOUND` | 404 | The temporary upload row does not exist, including replay after successful finalization. |
 | `TEMPORARY_UPLOAD_EXPIRED` | 410 | The temporary upload has passed `expiresAt`. |
-| `POLICY_SCOPE_VALIDITY_CONFLICT` | 422 | A Policy Scope interval is incompatible with its Policy Version. |
+| `POLICY_RELATION_INVALID` | 422 | A Policy relation command, endpoint, lifecycle, or validity interval is invalid. |
 | `FORBIDDEN` | 403 | The authenticated user lacks the feature or resource permission. |
 | `NOT_FOUND` | 404 | The requested authorized resource is absent. |
 

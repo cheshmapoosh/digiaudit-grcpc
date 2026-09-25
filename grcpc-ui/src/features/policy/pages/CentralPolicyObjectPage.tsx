@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { useAuthState } from "@/features/auth";
+import { canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
 import {
   Button,
   Input,
@@ -29,6 +31,7 @@ import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.ut
 import PolicyParentValueHelpDialog, {
   type PolicyParentCandidate,
 } from "../components/PolicyParentValueHelpDialog";
+import PolicyRelationTab, { type PolicyRelationDraft, type PolicyRelationKind } from "../components/PolicyRelationTab";
 import type {
   CentralPolicyAnyDetail,
   CentralPolicyCommunicationMethod,
@@ -40,7 +43,8 @@ import type {
 export type CentralPolicyObjectMode = "create" | "edit" | "view";
 export type CentralPolicyTabKey =
   | "general"
-  | "scope"
+  | "subprocess"
+  | "organization"
   | "controls"
   | "requirements"
   | "documents";
@@ -55,11 +59,16 @@ export interface CentralPolicyObjectDraft {
   communicationMethod: CentralPolicyCommunicationMethod | null;
   nextReviewDate: string | null;
   objective: string | null;
+  content: string | null;
   description: string | null;
   validFrom: string | null;
   validTo: string | null;
   documents: ReturnType<typeof toDocumentAggregateRequest>;
   documentsDirty: boolean;
+  subprocessScopeChanges: PolicyRelationDraft[];
+  organizationScopeChanges: PolicyRelationDraft[];
+  controlScopeChanges: PolicyRelationDraft[];
+  requirementScopeChanges: PolicyRelationDraft[];
 }
 
 interface Props {
@@ -158,6 +167,13 @@ export default function CentralPolicyObjectPage({
   onDirtyChange,
 }: Props) {
   const { t } = useTranslation();
+  const me = useAuthState((state) => state.me);
+  const relationAccess = {
+    subprocess: canAccessMasterData(me, "PROCESS"),
+    organization: canAccessMasterData(me, "REFERENCE"),
+    control: canAccessMasterData(me, "PROCESS") && canAccessMasterData(me, "CONTROL"),
+    requirement: canAccessMasterData(me, "PROCESS"),
+  };
   const readOnly = mode === "view";
   const policyValue: CentralPolicyDetail | null =
     nodeType === "POLICY" && value && "policyType" in value ? value : null;
@@ -176,6 +192,13 @@ export default function CentralPolicyObjectPage({
   );
   const [nextReviewDate, setNextReviewDate] = useState(policyValue?.nextReviewDate ?? "");
   const [objective, setObjective] = useState(policyValue?.objective ?? "");
+  const [content, setContent] = useState(policyValue?.content ?? "");
+  const [relationChanges, setRelationChanges] = useState<Record<PolicyRelationKind, PolicyRelationDraft[]>>({
+    subprocess: [], organization: [], control: [], requirement: [],
+  });
+  const [relationInvalid, setRelationInvalid] = useState<Record<PolicyRelationKind, boolean>>({
+    subprocess: false, organization: false, control: false, requirement: false,
+  });
   const [description, setDescription] = useState(value?.description ?? "");
   const [validFrom, setValidFrom] = useState(value?.validFrom ?? "");
   const [validTo, setValidTo] = useState(value?.validTo ?? "");
@@ -202,6 +225,7 @@ export default function CentralPolicyObjectPage({
         communicationMethod: policyValue?.communicationMethod ?? "",
         nextReviewDate: policyValue?.nextReviewDate ?? "",
         objective: policyValue?.objective ?? "",
+        content: policyValue?.content ?? "",
         description: value?.description ?? "",
         validFrom: value?.validFrom ?? "",
         validTo: value?.validTo ?? "",
@@ -224,6 +248,7 @@ export default function CentralPolicyObjectPage({
       communicationMethod,
       nextReviewDate,
       objective,
+      content,
       description,
       validFrom,
       validTo,
@@ -233,8 +258,10 @@ export default function CentralPolicyObjectPage({
     (nodeType === "POLICY" && dateDrafts.nextReviewDate.dirty);
   const documentsBusy = documentDraft.uploading;
   const documentsInvalid = !documentDraft.ready || documentDraft.invalid || documentDraft.uploading;
-  const dirty = generalDirty || documentDraft.dirty || documentDraft.uploading;
-  const canChangeStatus = mode === "edit" && permissions.lifecycle;
+  const relationsDirty = Object.values(relationChanges).some((changes) => changes.length > 0);
+  const relationsInvalid = Object.values(relationInvalid).some(Boolean);
+  const dirty = generalDirty || relationsDirty || relationsInvalid || documentDraft.dirty || documentDraft.uploading;
+  const canChangeStatus = mode === "create" || (mode === "edit" && permissions.lifecycle);
   const canChangeParent = !readOnly && (mode === "create" || permissions.move);
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -274,6 +301,10 @@ export default function CentralPolicyObjectPage({
       setValidationError(t("policy.validation.invalidValidityRange", { defaultValue: "بازه اعتبار نامعتبر است." }));
       return false;
     }
+    if (relationsInvalid) {
+      setValidationError(t("policy.relations.invalidDate"));
+      return false;
+    }
     if (documentsInvalid) {
       setValidationError(t("document.errors.finalize", { defaultValue: "مستندات برای ذخیره آماده نیستند." }));
       onActiveTabChange("documents");
@@ -295,11 +326,16 @@ export default function CentralPolicyObjectPage({
       communicationMethod: nodeType === "POLICY" && communicationMethod ? communicationMethod : null,
       nextReviewDate: nodeType === "POLICY" ? nextReviewDate || null : null,
       objective: nodeType === "POLICY" ? objective.trim() || null : null,
+      content: nodeType === "POLICY" ? content : null,
       description: description.trim() || null,
       validFrom: validFrom || null,
       validTo: validTo || null,
       documents: toDocumentAggregateRequest(documentDraft),
       documentsDirty: documentDraft.dirty,
+      subprocessScopeChanges: relationChanges.subprocess,
+      organizationScopeChanges: relationChanges.organization,
+      controlScopeChanges: relationChanges.control,
+      requirementScopeChanges: relationChanges.requirement,
     });
   };
 
@@ -311,9 +347,10 @@ export default function CentralPolicyObjectPage({
         ]
       : [
           { key: "general", label: t("policy.tabs.general", { defaultValue: "اطلاعات کلی" }) },
-          { key: "scope", label: t("policy.tabs.scope", { defaultValue: "دامنه سیاست" }), disabled: true },
-          { key: "controls", label: t("policy.tabs.controls", { defaultValue: "کنترل‌ها" }), disabled: true },
-          { key: "requirements", label: t("policy.tabs.requirements", { defaultValue: "الزامات" }), disabled: true },
+          { key: "subprocess", label: t("policy.tabs.subprocess") },
+          { key: "organization", label: t("policy.tabs.organization") },
+          { key: "controls", label: t("policy.tabs.controls") },
+          { key: "requirements", label: t("policy.tabs.requirements") },
           { key: "documents", label: t("policy.tabs.documents", { defaultValue: "مستندات" }) },
         ];
   const saveDisabled =
@@ -321,7 +358,8 @@ export default function CentralPolicyObjectPage({
     invalidDate ||
     documentsBusy ||
     documentsInvalid ||
-    (mode === "edit" && !generalDirty && !documentDraft.dirty);
+    relationsInvalid ||
+    (mode === "edit" && !generalDirty && !relationsDirty && !documentDraft.dirty);
 
   return (
     <div className="policyObjectPage">
@@ -512,6 +550,13 @@ export default function CentralPolicyObjectPage({
               </FormField>
             ) : null}
 
+            {nodeType === "POLICY" ? (
+              <FormField label={t("policy.fields.content")} fullWidth>
+                <TextArea rows={10} value={content} readonly={readOnly} disabled={busy}
+                  onInput={(event) => setContent(readValue(event))} />
+              </FormField>
+            ) : null}
+
             <FormField label={t("policy.fields.description", { defaultValue: "شرح" })} fullWidth>
               <TextArea
                 rows={5}
@@ -523,6 +568,23 @@ export default function CentralPolicyObjectPage({
             </FormField>
           </div>
         </div>
+
+        {nodeType === "POLICY" ? ([
+          ["subprocess", "subprocess"],
+          ["organization", "organization"],
+          ["controls", "control"],
+          ["requirements", "requirement"],
+        ] as const).map(([tab, kind]) => (
+          <div key={tab} style={{ display: activeTab === tab ? "block" : "none" }}>
+            <PolicyRelationTab kind={kind} policyId={value?.id ?? null}
+              policyValidFrom={validFrom || null} policyValidTo={validTo || null} readOnly={readOnly}
+              canView={relationAccess[kind]} canManage={permissions.update && relationAccess[kind]}
+              busy={busy}
+              onChanges={(changes) => setRelationChanges((current) => ({ ...current, [kind]: changes }))}
+              onInvalid={(invalid) => setRelationInvalid((current) => current[kind] === invalid
+                ? current : { ...current, [kind]: invalid })} />
+          </div>
+        )) : null}
 
         <div style={{ display: activeTab === "documents" ? "block" : "none" }}>
           <DocumentManager

@@ -40,6 +40,7 @@ export interface DocumentManagerProps {
     targetType: DocumentLinkTargetType;
     targetId: string | null;
     readOnly?: boolean;
+    /** Controls mutation actions; existing authorized links remain downloadable. */
     showActions?: boolean;
     busy?: boolean;
     title?: string;
@@ -987,10 +988,22 @@ export default function DocumentManager({
     const handleDownload = useCallback(
         async (row: DocumentLinkSummary) => {
             setActionMessage(null);
+            const downloadWindow = window.open("about:blank", "_blank");
+            if (!downloadWindow) {
+                setActionMessage({
+                    design: "Negative",
+                    text: t("document.errors.download", {
+                        defaultValue: "Failed to prepare document download",
+                    }),
+                });
+                return;
+            }
+            downloadWindow.opener = null;
             try {
                 const response = await createDownloadAccess(row.documentVersionId);
-                window.open(response.downloadUrl, "_blank", "noopener,noreferrer");
+                downloadWindow.location.replace(response.downloadUrl);
             } catch (error) {
+                downloadWindow.close();
                 setActionMessage({
                     design: "Negative",
                     text:
@@ -1065,10 +1078,6 @@ export default function DocumentManager({
     };
 
     const renderRowActions = (row: DocumentLinkSummary) => {
-        if (!showActions) {
-            return null;
-        }
-
         const savingTitle = savingMetadataIds.has(row.documentId);
         const versioning = stagedVersionDocumentIds.has(row.documentId);
         const saveTitleDisabled =
@@ -1080,7 +1089,7 @@ export default function DocumentManager({
 
         return (
             <div style={ACTIONS_STYLE}>
-                {!readOnly && !parentSaveMode ? (
+                {!readOnly && showActions && !parentSaveMode ? (
                     <Button
                         design="Transparent"
                         icon="save"
@@ -1096,13 +1105,14 @@ export default function DocumentManager({
                     design="Transparent"
                     icon="download"
                     tooltip={t("document.actions.download", { defaultValue: "Download" })}
-                    disabled={busy}
+                    accessibleName={t("document.actions.download", { defaultValue: "Download" })}
+                    disabled={busy || row.documentStatus !== "ACTIVE" || row.versionStatus !== "ACTIVE" || row.linkStatus !== "ACTIVE"}
                     onClick={() => {
                         void handleDownload(row);
                     }}
                 />
 
-                {!readOnly ? (
+                {!readOnly && showActions ? (
                     <FileUploader
                         hideInput
                         disabled={busy || versioning}
@@ -1119,7 +1129,7 @@ export default function DocumentManager({
                     </FileUploader>
                 ) : null}
 
-                {!readOnly ? (
+                {!readOnly && showActions ? (
                     <Button
                         design="Transparent"
                         icon="delete"
@@ -1434,8 +1444,8 @@ export default function DocumentManager({
             {actionMessage ? (
                 <MessageStrip
                     design={actionMessage.design}
-                    hideCloseButton={!showActions}
-                    onClose={showActions ? () => setActionMessage(null) : undefined}
+                    hideCloseButton={false}
+                    onClose={() => setActionMessage(null)}
                 >
                     {actionMessage.text}
                 </MessageStrip>
@@ -1469,7 +1479,7 @@ export default function DocumentManager({
                         <TableHeaderCell width="10rem">
                             {t("document.fields.uploadedAt", { defaultValue: "Uploaded At" })}
                         </TableHeaderCell>
-                        {showActions ? (
+                        {targetId || showActions ? (
                             <TableHeaderCell width="10rem">
                                 {t("document.fields.actions", { defaultValue: "Actions" })}
                             </TableHeaderCell>
@@ -1492,14 +1502,14 @@ export default function DocumentManager({
                         <TableCell>
                             {row.uploadedAt ? formatPersianDate(row.uploadedAt) : NONE_TEXT}
                         </TableCell>
-                        {showActions ? (
+                        {targetId || showActions ? (
                             <TableCell>{renderRowActions(row)}</TableCell>
                         ) : null}
                     </TableRow>
                 ))}
             </Table>
 
-            {showActions ? (
+            {!readOnly && showActions ? (
                 <DeleteConfirmDialog
                     open={Boolean(deleteCandidate)}
                     title={t("document.delete.title", { defaultValue: "Delete Document" })}

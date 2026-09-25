@@ -93,18 +93,14 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
               targetType,
               targetId,
               "select id from central_policy where id = ? and status <> 'DELETED'");
-      case CENTRAL_POLICY_VERSION ->
-          central(
-              targetType,
-              targetId,
-              "select id from central_policy_version where id = ? and status <> 'DELETED'");
       case CENTRAL_SUBPROCESS_CONTROL_SCOPE,
               CENTRAL_SUBPROCESS_RISK_SCOPE,
               CENTRAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE,
               CENTRAL_SUBPROCESS_REQUIREMENT_SCOPE,
-              CENTRAL_POLICY_VERSION_SUBPROCESS_SCOPE,
-              CENTRAL_POLICY_VERSION_CONTROL_SCOPE,
-              CENTRAL_POLICY_VERSION_REQUIREMENT_SCOPE,
+              CENTRAL_POLICY_SUBPROCESS_SCOPE,
+              CENTRAL_POLICY_ORGANIZATION_SCOPE,
+              CENTRAL_POLICY_CONTROL_SCOPE,
+              CENTRAL_POLICY_REQUIREMENT_SCOPE,
               CENTRAL_CONTROL_ACCOUNT_GROUP,
               CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP,
               CENTRAL_SUBPROCESS_RISK_CONTROL_COVERAGE,
@@ -134,10 +130,6 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
 
   @Override
   public void assertMutable(DocumentLinkTargetType targetType, UUID targetId) {
-    if (targetType == DocumentLinkTargetType.CENTRAL_POLICY_VERSION) {
-      assertMutablePolicyVersion(targetId);
-      return;
-    }
     String sql =
         switch (targetType) {
           case ORGANIZATION ->
@@ -172,14 +164,14 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
               "select id from central_policy_group where id = ? and status <> 'DELETED' for update";
           case CENTRAL_POLICY ->
               "select id from central_policy where id = ? and status <> 'DELETED' for update";
-          case CENTRAL_POLICY_VERSION -> throw new IllegalStateException("Handled above");
           case CENTRAL_SUBPROCESS_CONTROL_SCOPE,
                   CENTRAL_SUBPROCESS_RISK_SCOPE,
                   CENTRAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE,
                   CENTRAL_SUBPROCESS_REQUIREMENT_SCOPE,
-                  CENTRAL_POLICY_VERSION_SUBPROCESS_SCOPE,
-                  CENTRAL_POLICY_VERSION_CONTROL_SCOPE,
-                  CENTRAL_POLICY_VERSION_REQUIREMENT_SCOPE,
+                  CENTRAL_POLICY_SUBPROCESS_SCOPE,
+                  CENTRAL_POLICY_ORGANIZATION_SCOPE,
+                  CENTRAL_POLICY_CONTROL_SCOPE,
+                  CENTRAL_POLICY_REQUIREMENT_SCOPE,
                   CENTRAL_CONTROL_ACCOUNT_GROUP,
                   CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP,
                   CENTRAL_SUBPROCESS_RISK_CONTROL_COVERAGE,
@@ -211,49 +203,6 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
     throw DocumentFailures.notFound("TARGET_NOT_FOUND", "Document link target was not found");
   }
 
-  private void assertMutablePolicyVersion(UUID targetId) {
-    lockPolicyGuard();
-    UUID policyId =
-        queryUuid("select policy_id from central_policy_version where id = ?", targetId)
-            .orElseThrow(
-                () ->
-                    DocumentFailures.notFound(
-                        "TARGET_NOT_FOUND", "Policy Version target was not found"));
-    if (queryUuid(
-            "select id from central_policy where id = ? and status = 'ACTIVE' for update", policyId)
-        .isEmpty()) {
-      throw DocumentFailures.invalid(
-          "INVALID_PARENT", "Policy Version documents require an active Policy");
-    }
-    if (queryUuid(
-            "select id from central_policy_version where id = ? and status = 'ACTIVE' and"
-                + " version_status = 'DRAFT' for update",
-            targetId)
-        .isPresent()) {
-      return;
-    }
-    Optional<PolicyVersionTargetState> state = queryPolicyVersionState(targetId);
-    if (state.isEmpty()) {
-      throw DocumentFailures.notFound("TARGET_NOT_FOUND", "Policy Version target was not found");
-    }
-    if ("DELETED".equals(state.get().status())) {
-      throw DocumentFailures.invalid("TARGET_DELETED", "Policy Version target is deleted");
-    }
-    throw DocumentFailures.invalid(
-        "IMMUTABLE_POLICY_VERSION",
-        "Published and superseded policy version documents are immutable");
-  }
-
-  private void lockPolicyGuard() {
-    Integer locked =
-        jdbcTemplate.query(
-            "select 1 from masterdata_hierarchy_guard where hierarchy_key = 'POLICY' for update",
-            resultSet -> resultSet.next() ? resultSet.getInt(1) : null);
-    if (locked == null) {
-      throw DocumentFailures.invalid(
-          "HIERARCHY_GUARD_NOT_CONFIGURED", "POLICY hierarchy guard is not configured");
-    }
-  }
 
   private DocumentTargetContext central(
       DocumentLinkTargetType targetType, UUID targetId, String sql) {
@@ -290,26 +239,10 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
         });
   }
 
-  private Optional<PolicyVersionTargetState> queryPolicyVersionState(UUID id) {
-    return jdbcTemplate.query(
-        connection -> {
-          PreparedStatement statement =
-              connection.prepareStatement(
-                  "select status, version_status from central_policy_version where id = ?");
-          statement.setBytes(1, OracleRawUuid.toBytes(id));
-          return statement;
-        },
-        resultSet ->
-            resultSet.next()
-                ? Optional.of(
-                    new PolicyVersionTargetState(resultSet.getString(1), resultSet.getString(2)))
-                : Optional.empty());
-  }
 
   private RuntimeException targetNotAvailable() {
     return DocumentFailures.invalid(
         "TARGET_NOT_AVAILABLE", "Document target runtime is not available yet");
   }
 
-  private record PolicyVersionTargetState(String status, String versionStatus) {}
 }

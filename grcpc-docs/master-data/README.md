@@ -1,5 +1,13 @@
 # Master Data V2 — Phase 1 Reference Pack
 
+**Approved Policy correction (2026-09-25):** The historical planning inventory
+below predates Policy simplification. The current active schema has 45 business
+tables, plus retained unmapped `central_policy_version` history and two
+technical tables: 48 physical Master Data tables. Policy owns content and four
+typed Central relationships, including Organization. Use the current
+[table catalog](table-catalog.md), [API conventions](api-conventions.md), and
+[migration runbook](policy-simplification-migration.md) for implementation.
+
 ## Purpose
 
 This directory is the implementation-planning baseline for the greenfield Master Data V2 redesign in `cheshmapoosh/digiaudit-grcpc`.
@@ -185,7 +193,7 @@ Several customer filenames contain the phrase `Master Data` and two contain doub
 
 Master Data V2 does not add KPI, KRI, risk-assessment results, likelihood, impact, risk scores, control-test results, control-effectiveness results, policy approval workflow, monitoring, jobs, scheduler, cache, outbox, or generic Audit tables.
 
-Policy approval is an external workflow dependency for publishing a policy version; it is not a Master Data table family or implementation feature in this redesign.
+Policy publication/version workflow is no longer an active Master Data business concept. Historical publication metadata remains preserved in unmapped storage.
 
 ## Change-scope confirmation
 

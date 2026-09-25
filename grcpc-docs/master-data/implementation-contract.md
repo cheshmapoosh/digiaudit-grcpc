@@ -39,21 +39,21 @@ There is no dual write.
 
 There is no table-preserving adapter for old generic assignment or attachment structures.
 
-The implementation does not attempt to make an existing populated Master Data database conform in place.
+The Policy simplification correction supports both a fresh installation and a populated V2 schema through the forward-only migration and verified-backup procedure in [policy-simplification-migration.md](policy-simplification-migration.md). This does not migrate Legacy data.
 
 Other module migrations remain outside the Master Data V2 rewrite unless an explicitly authorized later task says otherwise.
 
 ## 3. Fixed scope and count
 
-The final business-table count is exactly 45.
+The active business-table count after Policy simplification is 45. The unmapped historical `central_policy_version` table is retained physically.
 
 The two technical tables are `document_temp_upload` and `masterdata_hierarchy_guard`.
 
-The total physical table count inside this redesign scope is exactly 47.
+The total physical Master Data table count after this correction is 48.
 
-The 45 business tables are the exact list in [table-catalog.md](table-catalog.md).
+The active business structures are the original catalog with Policy Version removed from active use and Central Policy–Organization Scope added.
 
-The Document business-table count is exactly 3, and the final physical contract is `45 business tables + 2 technical tables = 47 physical tables`.
+The Document business-table count remains 3. The physical contract is `45 active business tables + 1 retained historical table + 2 technical tables = 48 physical tables`.
 
 No additional Master Data table is authorized merely to simplify implementation.
 
@@ -177,7 +177,7 @@ Organization General Information consists of `code`, `name`, `organizationType`,
 
 Organization, Process, and Subprocess General Information Update may request only `ACTIVE` or `INACTIVE` and atomically applies status, descriptive fields, the typed parent/owner field, and staged Document mutations through one hierarchy Guard and one Oracle transaction. The parent receives one Business Revision and one `UPDATE` Revision Content; Document entities remain outside Revision Content. Update rejects `DELETED`, and code remains immutable.
 
-Structural Organization commands acquire the `ORGANIZATION` database Guard row. Structural Process and Subprocess commands share the `PROCESS` row. Prompt 6 Risk Category and Risk Template share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group, Regulation, and Regulation Requirement share `REGULATION`; Policy Group, Policy, and Policy Version share `POLICY`. Guarded operations include Create (including reactivate/restore by matching code), structural aggregate Update, Move/re-parent, Delete, Restore, and lifecycle changes that affect structural eligibility. Policy Version allocation and publication additionally lock the owning Policy and then all Version rows in deterministic order.
+Structural Organization commands acquire the `ORGANIZATION` database Guard row. Structural Process and Subprocess commands share the `PROCESS` row. Risk Category and Risk Template share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group, Regulation, and Regulation Requirement share `REGULATION`; Policy Group and Policy share `POLICY`. Guarded operations include Create (including reactivate/restore by matching code), structural aggregate Update, Move/re-parent, Delete, Restore, and lifecycle changes that affect structural eligibility. Policy relation commands acquire the sorted union of `POLICY` and the referenced `PROCESS`, `ORGANIZATION`, `CONTROL`, or `REGULATION` boundaries.
 
 Guard acquisition uses `PESSIMISTIC_WRITE` with the configured JPA lock-timeout hint and precedes revision-number allocation, hierarchy reads, validation, source mutation, and Revision persistence. Fresh normal business-table reads occur only after acquisition. A recognized lock acquisition/timeout failure returns `HIERARCHY_BUSY` with HTTP 409 and is not retried. A missing configured Guard row fails closed with `HIERARCHY_GUARD_NOT_CONFIGURED` and HTTP 500.
 
@@ -225,11 +225,7 @@ Full hierarchy-cycle detection happens in the Backend before a revision is appli
 
 Only `central_risk_template` is a valid risk Scope endpoint.
 
-`central_policy` and `central_policy_version` are separate structures.
-
-Published policy content is immutable.
-
-A policy content change creates a new Policy Version.
+`central_policy` owns editable nullable CLOB content, lifecycle, validity, and documents. `central_policy_version` remains unmapped historical storage. Document Versions retain their separate immutable file semantics.
 
 `central_control` and `central_control_objective` are independent definitions.
 
@@ -276,7 +272,7 @@ Generic CRUD for core Scope and Coverage is prohibited.
 
 The four Central Scope tables are Control, Risk Template, Control Objective, and Regulation Requirement scope.
 
-The three Central Policy Scope tables point from Policy Version to Subprocess, exact Central Control Scope, or exact Central Requirement Scope.
+The four Central Policy Scope tables point from Policy to Subprocess, Organization, exact Central Control Scope, or exact Central Requirement Scope.
 
 The two Account Group classifications are direct Control–Account Group and Control Objective–Account Group relationships.
 
@@ -342,13 +338,13 @@ Central changes may affect Effective, Diagnostic, or impact-analysis results onl
 
 ## 10. Policy Scope and applicability rules
 
-All Central and Local Policy Scope tables reference `central_policy_version`.
+All active Central and Local Policy Scope tables reference `central_policy`. Local decisions preserve their own context, action, and propagation semantics.
 
 Central Subprocess Policy Scope is the documented baseline inclusion.
 
 Central Control and Requirement Policy Scope use exact Central Scope rows, never raw definitions.
 
-There is no Central Organization Policy Scope.
+Central Organization Policy Scope is an explicit relation separate from Local Organization applicability and the Policy's responsible-organization text.
 
 There is no Policy-to-Risk Scope.
 
@@ -360,7 +356,7 @@ Subprocess policy can apply to Control and Requirement in that Local Context.
 
 Subprocess policy does not apply to Risk or Control Objective.
 
-Policy Scope validity must be compatible with Policy Version validity when it is saved.
+Policy Scope validity must be contained within Policy and exact referenced endpoint validity when it is saved. Policy Create/Edit owns all four typed change lists in one revision.
 
 Policy Applicability is computed and read-only.
 

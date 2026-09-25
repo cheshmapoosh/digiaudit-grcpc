@@ -40,6 +40,10 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
   @Column(name = "objective", columnDefinition = "CLOB")
   private String objective;
 
+  @Lob
+  @Column(name = "content", columnDefinition = "CLOB")
+  private String content;
+
   @Column(name = "sort_order", nullable = false)
   private int sortOrder;
 
@@ -55,6 +59,7 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       PolicyCommunicationMethod communicationMethod,
       LocalDate nextReviewDate,
       String objective,
+      String content,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -68,6 +73,7 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
     this.communicationMethod = communicationMethod;
     this.nextReviewDate = nextReviewDate;
     this.objective = objective;
+    this.content = content;
     this.sortOrder = sortOrder;
   }
 
@@ -81,6 +87,7 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       PolicyCommunicationMethod communicationMethod,
       LocalDate nextReviewDate,
       String objective,
+      String content,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -97,6 +104,7 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
         communicationMethod,
         nextReviewDate,
         objective,
+        content,
         description,
         sortOrder,
         validFrom,
@@ -112,6 +120,7 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       PolicyCommunicationMethod communicationMethod,
       LocalDate nextReviewDate,
       String objective,
+      String content,
       String description,
       LocalDate validFrom,
       LocalDate validTo,
@@ -123,6 +132,7 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
     this.communicationMethod = communicationMethod;
     this.nextReviewDate = nextReviewDate;
     this.objective = objective;
+    this.content = content;
   }
 
   public void move(UUID policyGroupId, int sortOrder, UUID actorId, Instant now) {
@@ -140,6 +150,7 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       PolicyCommunicationMethod communicationMethod,
       LocalDate nextReviewDate,
       String objective,
+      String content,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -152,6 +163,7 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
     this.communicationMethod = communicationMethod;
     this.nextReviewDate = nextReviewDate;
     this.objective = objective;
+    this.content = content;
     this.sortOrder = sortOrder;
     restoreDefinition(title, description, validFrom, validTo, actorId, now);
   }
@@ -164,6 +176,7 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
       PolicyCommunicationMethod communicationMethod,
       LocalDate nextReviewDate,
       String objective,
+      String content,
       String description,
       int sortOrder,
       LocalDate validFrom,
@@ -176,6 +189,7 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
     this.communicationMethod = communicationMethod;
     this.nextReviewDate = nextReviewDate;
     this.objective = objective;
+    this.content = content;
     this.sortOrder = sortOrder;
     reactivateDefinition(title, description, validFrom, validTo, actorId, now);
   }
@@ -202,6 +216,10 @@ public class CentralPolicyEntity extends CentralDefinitionEntity {
 
   public String getObjective() {
     return objective;
+  }
+
+  public String getContent() {
+    return content;
   }
 
   public int getSortOrder() {

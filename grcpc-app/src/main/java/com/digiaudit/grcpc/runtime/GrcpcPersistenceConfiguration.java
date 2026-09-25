@@ -18,7 +18,10 @@ import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup
 import com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveaccountgroup.domain.entity.CentralControlObjectiveAccountGroupEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyGroupEntity;
-import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyVersionEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicySubprocessScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyOrganizationScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyControlScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyRequirementScopeEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.entity.CentralRegulationEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.entity.CentralRegulationGroupEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.entity.CentralRegulationRequirementEntity;
@@ -87,7 +90,10 @@ public class GrcpcPersistenceConfiguration {
                 CentralRegulationRequirementEntity.class.getName(),
                 CentralPolicyGroupEntity.class.getName(),
                 CentralPolicyEntity.class.getName(),
-                CentralPolicyVersionEntity.class.getName(),
+                CentralPolicySubprocessScopeEntity.class.getName(),
+                CentralPolicyOrganizationScopeEntity.class.getName(),
+                CentralPolicyControlScopeEntity.class.getName(),
+                CentralPolicyRequirementScopeEntity.class.getName(),
                 CentralProcessEntity.class.getName(),
                 CentralSubprocessEntity.class.getName(),
                 CentralSubprocessControlScopeEntity.class.getName(),

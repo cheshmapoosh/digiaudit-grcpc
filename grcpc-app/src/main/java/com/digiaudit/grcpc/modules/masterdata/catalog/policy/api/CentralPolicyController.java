@@ -14,18 +14,12 @@ import org.springframework.web.bind.annotation.*;
 public class CentralPolicyController {
   private final CentralPolicyCommandService commands;
   private final CentralPolicyQueryService queries;
-  private final CentralPolicyVersionCommandService versionCommands;
-  private final CentralPolicyVersionQueryService versionQueries;
 
   public CentralPolicyController(
       CentralPolicyCommandService c,
-      CentralPolicyQueryService q,
-      CentralPolicyVersionCommandService vc,
-      CentralPolicyVersionQueryService vq) {
+      CentralPolicyQueryService q) {
     commands = c;
     queries = q;
-    versionCommands = vc;
-    versionQueries = vq;
   }
 
   @GetMapping
@@ -48,14 +42,14 @@ public class CentralPolicyController {
 
   @PostMapping
   @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
-  public MasterDataAggregateMutationResponse create(
+  public CentralPolicyDtos.PolicyAggregateResponse create(
       @Valid @RequestBody CentralPolicyDtos.CreatePolicy r) {
     return commands.create(r);
   }
 
   @PatchMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
-  public MasterDataAggregateMutationResponse update(
+  public CentralPolicyDtos.PolicyAggregateResponse update(
       @PathVariable UUID id, @Valid @RequestBody CentralPolicyDtos.UpdatePolicy r) {
     return commands.update(id, r);
   }
@@ -95,22 +89,4 @@ public class CentralPolicyController {
     return commands.restore(id, r.version());
   }
 
-  @GetMapping("/{policyId}/versions")
-  @PreAuthorize("@masterDataAuthorization.canView('GOVERNANCE')")
-  public List<CentralPolicyDtos.VersionDetail> versions(@PathVariable UUID policyId) {
-    return versionQueries.list(policyId);
-  }
-
-  @GetMapping("/{policyId}/versions/deleted")
-  @PreAuthorize("@masterDataAuthorization.canView('GOVERNANCE')")
-  public List<CentralPolicyDtos.VersionDetail> deletedVersions(@PathVariable UUID policyId) {
-    return versionQueries.deleted(policyId);
-  }
-
-  @PostMapping("/{policyId}/versions")
-  @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
-  public MasterDataAggregateMutationResponse createVersion(
-      @PathVariable UUID policyId, @Valid @RequestBody CentralPolicyDtos.CreateVersion r) {
-    return versionCommands.create(policyId, r);
-  }
 }

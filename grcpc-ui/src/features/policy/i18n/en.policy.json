@@ -26,8 +26,7 @@
       "createdAt": "Created At",
       "updatedAt": "Updated At",
       "description": "Description",
-      "versionNumber": "Version Number",
-      "versionContent": "Policy Version Content"
+      "content": "Content"
     },
     "policyType": {
       "policy": "Policy",
@@ -47,8 +46,8 @@
     },
     "tabs": {
       "general": "General Information",
-      "versions": "Versions",
-      "scope": "Policy Scope",
+      "subprocess": "Subprocesses",
+      "organization": "Organizations",
       "controls": "Controls",
       "requirements": "Requirements",
       "documents": "Documents"
@@ -62,28 +61,30 @@
       "title": "Delete Policy Item",
       "confirm": "Are you sure you want to delete “{{title}}”?"
     },
-    "versionStatus": {
-      "draft": "Draft",
-      "published": "Published",
-      "superseded": "Superseded"
-    },
-    "version": {
-      "new": "Create New Version",
-      "label": "Version {{number}} — {{status}}",
-      "publish": "Publish",
-      "empty": "No version has been registered for this policy yet."
-    },
-    "documents": {
-      "versionHint": "Documents belong to the selected policy version.",
-      "selectVersion": "Create or select a version on the Versions tab first.",
-      "savePolicyFirst": "Save the policy first, then create or select a version before adding documents."
+    "relations": {
+      "noAccess": "You do not have access to this reference area.",
+      "search": "Search references",
+      "all": "All",
+      "select": "Select references",
+      "reference": "Reference",
+      "context": "Context",
+      "empty": "No relationships are recorded.",
+      "loadError": "Could not load the relationships.",
+      "ungrouped": "Other",
+      "edit": "Edit relationship",
+      "pending": "Pending",
+      "undo": "Undo draft",
+      "activate": "Activate",
+      "inactivate": "Inactivate",
+      "remove": "Remove",
+      "invalidDate": "A relationship date is invalid.",
+      "status": { "ACTIVE": "Active", "INACTIVE": "Inactive", "DELETED": "Removed" }
     },
     "validation": {
       "codeRequired": "Identifier is required.",
       "titleRequired": "Name is required.",
       "groupRequired": "Policy group is required.",
-      "invalidValidityRange": "Valid To must not be earlier than Valid From.",
-      "outdatedVersion": "A version older than the official publication history cannot be published."
+      "invalidValidityRange": "Valid To must not be earlier than Valid From."
     },
     "errors": {
       "loadList": "Failed to load the policy structure.",
@@ -95,7 +96,12 @@
       "notFound": "The requested item or its parent was not found.",
       "versionConflict": "The data was changed concurrently. Refresh and try again.",
       "invalidParent": "The selected parent is invalid.",
-      "dependencies": "The item cannot be deleted because active children or dependencies exist."
+      "dependencies": "The item cannot be deleted because active children or dependencies exist.",
+      "duplicateRelation": "This relationship already exists.",
+      "relationNotFound": "The selected relationship or referenced item is no longer available.",
+      "invalidRelation": "The relationship is invalid for the selected status or date range.",
+      "accessDenied": "You do not have access to the selected relationship area.",
+      "hierarchyBusy": "Another change is in progress. Try again shortly."
     }
   }
 }

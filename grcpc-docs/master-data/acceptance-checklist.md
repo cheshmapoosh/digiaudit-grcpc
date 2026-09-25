@@ -73,7 +73,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Hibernate is configured for `ddl-auto=validate`.
 - [ ] Hibernate does not generate DDL.
 - [ ] Flyway creates Organization, Process, and Subprocess before relation families.
-- [ ] Flyway creates Central definitions and Policy Version before Central scopes/coverage.
+- [ ] Flyway creates Policy and its historical-version table before the forward-only Policy relation retargeting; new Policy relationships point to Policy.
 - [ ] Flyway creates Central Scope, Classification, Policy Scope, and Coverage before Local relations.
 - [ ] Flyway creates Local Context before Local Scope, Coverage, and Local Policy Scope.
 - [ ] Flyway creates Document, Version, and Link before dependent document actions.
@@ -148,9 +148,9 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Only a Risk Template is accepted as a Risk Scope endpoint.
 - [ ] `central_regulation_group`, `central_regulation`, and `central_regulation_requirement` exist separately.
 - [ ] Only a Regulation Requirement is accepted as the regulation-side Scope/Coverage endpoint.
-- [ ] `central_policy_group`, `central_policy`, and `central_policy_version` exist separately.
-- [ ] Policy content is owned by Policy Version, not mutable Policy identity fields.
-- [ ] Published Policy Version content is immutable.
+- [ ] `central_policy_group` and `central_policy` are live; `central_policy_version` remains unmapped historical storage.
+- [ ] Policy owns nullable CLOB content and edits it through the aggregate Save.
+- [ ] Historical version rows, content, publication metadata, and audit values remain unchanged.
 - [ ] `central_control` exists separately from `central_control_objective`.
 - [ ] No generic Objective entity remains in Master Data V2.
 - [ ] Control has no duplicate generic objective text field.
@@ -173,9 +173,9 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] `central_control_objective_account_group` exists as a direct typed classification.
 - [ ] No Process/Subprocess-to-Account Group Scope table exists.
 - [ ] No JSON-based Account Group relationship replaces a typed classification.
-- [ ] Central Policy Version Subprocess Scope is available as a typed relation.
-- [ ] Central Policy Version Control Scope references an exact Central Control Scope.
-- [ ] Central Policy Version Requirement Scope references an exact Central Requirement Scope.
+- [ ] Central Policy–Subprocess and Policy–Organization Scopes are available as typed relations.
+- [ ] Central Policy–Control Scope references an exact Central Control Scope.
+- [ ] Central Policy–Requirement Scope references an exact Central Requirement Scope.
 - [ ] Central Policy Scope never targets a raw Control or Requirement definition when the model requires an exact Scope.
 - [ ] No Central Organization Policy Scope exists.
 - [ ] No Policy-to-Risk Scope exists.
@@ -252,10 +252,10 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 
 ## 11. Policy Scope and Policy Applicability acceptance
 
-- [ ] All Central and Local Policy Scope records reference `central_policy_version`.
-- [ ] `central_policy_version_subprocess_scope` provides Central baseline inclusion.
-- [ ] `central_policy_version_control_scope` uses exact Central Control Scope IDs.
-- [ ] `central_policy_version_requirement_scope` uses exact Central Requirement Scope IDs.
+- [ ] All active Central and Local Policy Scope records reference `central_policy`; Local decisions retain action and propagation values.
+- [ ] `central_policy_subprocess_scope` and `central_policy_organization_scope` use direct typed endpoints.
+- [ ] `central_policy_control_scope` uses exact Central Control Scope IDs.
+- [ ] `central_policy_requirement_scope` uses exact Central Requirement Scope IDs.
 - [ ] `local_policy_organization_scope` exists.
 - [ ] `local_policy_subprocess_scope` exists.
 - [ ] `local_policy_control_scope` exists.
@@ -265,7 +265,7 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Local Subprocess Policy applies only in its exact Local Context.
 - [ ] Local Subprocess Policy can affect Control and Requirement, not Risk or Control Objective.
 - [ ] Local Control and Requirement Policy Scope target exact Local Scope records.
-- [ ] Policy Scope validity is checked against Policy Version validity.
+- [ ] Policy Scope validity is checked against final Policy and typed endpoint validity.
 - [ ] Policy Applicability is read-only.
 - [ ] Policy Applicability is not stored as a business table.
 - [ ] Policy Applicability is not materialized or cached.
@@ -538,7 +538,9 @@ An unchecked item blocks acceptance of its owning slice unless the item is expli
 - [ ] Local Coverage rejects cross-context endpoints at both validation and database constraint levels.
 - [ ] Central changes do not create or mutate Local rows.
 - [ ] A Central impact is visible through impact analysis/diagnostics without automatic Local remediation.
-- [ ] A Policy Version publish/content change follows immutable-version rules without creating workflow tables.
+- [ ] Policy Save updates content, metadata, parent, lifecycle, document drafts, and four typed relation collections atomically with one Business Revision.
+- [ ] No Policy Version APIs, baseline-generation path, active JPA mapping, or browser version wording remain.
+- [ ] The [Policy migration runbook](policy-simplification-migration.md) backup, collision, content, document, revision, and postcondition evidence is completed before a populated schema is upgraded.
 - [ ] Document upload finalization deletes a valid temporary upload row once and produces immutable version metadata.
 - [ ] A repeat temporary-upload finalization attempt is safe and does not produce a second Document Version.
 - [ ] An authorized user can obtain a secure Document Version download without a permanent MinIO URL.

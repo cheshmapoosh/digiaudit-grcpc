@@ -125,6 +125,18 @@ export default function CentralPoliciesPage() {
         return t("policy.errors.invalidParent", { defaultValue: "والد انتخاب‌شده معتبر نیست." });
       case "DEPENDENCY_EXISTS":
         return t("policy.errors.dependencies", { defaultValue: "به دلیل وجود زیرمجموعه یا وابستگی، حذف مجاز نیست." });
+      case "DUPLICATE_RELATION":
+        return t("policy.errors.duplicateRelation");
+      case "POLICY_ENDPOINT_NOT_FOUND":
+      case "POLICY_RELATION_NOT_FOUND":
+        return t("policy.errors.relationNotFound");
+      case "POLICY_RELATION_INVALID":
+      case "INVALID_LIFECYCLE_TRANSITION":
+        return t("policy.errors.invalidRelation");
+      case "MASTER_DATA_ACCESS_DENIED":
+        return t("policy.errors.accessDenied");
+      case "HIERARCHY_BUSY":
+        return t("policy.errors.hierarchyBusy");
       default:
         return fallback;
     }
@@ -309,55 +321,62 @@ export default function CentralPoliciesPage() {
             code: draft.code,
             title: draft.title,
             policyGroupId: draft.parentId,
+            status: draft.status,
             policyType: draft.policyType,
             responsibleOrganization: draft.responsibleOrganization,
             communicationMethod: draft.communicationMethod,
             nextReviewDate: draft.nextReviewDate,
             objective: draft.objective,
+            content: draft.content,
             description: draft.description,
             sortOrder: 0,
             validFrom: draft.validFrom,
             validTo: draft.validTo,
+            subprocessScopeChanges: draft.subprocessScopeChanges.map(({ endpointId, ...change }) => ({ ...change, subprocessId: endpointId })),
+            organizationScopeChanges: draft.organizationScopeChanges.map(({ endpointId, ...change }) => ({ ...change, organizationId: endpointId })),
+            controlScopeChanges: draft.controlScopeChanges.map(({ endpointId, ...change }) => ({ ...change, centralControlScopeId: endpointId })),
+            requirementScopeChanges: draft.requirementScopeChanges.map(({ endpointId, ...change }) => ({ ...change, centralRequirementScopeId: endpointId })),
             documents: draft.documents,
           });
           entityId = result.entityId;
         }
       } else {
         const current = modalValue!;
+        if (modalType === "POLICY") {
+          if (!draft.parentId) throw new Error("PARENT_NOT_FOUND");
+          await centralPolicyApi.updatePolicy(current.id, {
+            version: current.version,
+            title: draft.title,
+            policyGroupId: draft.parentId,
+            sortOrder: current.sortOrder,
+            status: draft.status,
+            policyType: draft.policyType,
+            responsibleOrganization: draft.responsibleOrganization,
+            communicationMethod: draft.communicationMethod,
+            nextReviewDate: draft.nextReviewDate,
+            objective: draft.objective,
+            content: draft.content,
+            description: draft.description,
+            validFrom: draft.validFrom,
+            validTo: draft.validTo,
+            subprocessScopeChanges: draft.subprocessScopeChanges.map(({ endpointId, ...change }) => ({ ...change, subprocessId: endpointId })),
+            organizationScopeChanges: draft.organizationScopeChanges.map(({ endpointId, ...change }) => ({ ...change, organizationId: endpointId })),
+            controlScopeChanges: draft.controlScopeChanges.map(({ endpointId, ...change }) => ({ ...change, centralControlScopeId: endpointId })),
+            requirementScopeChanges: draft.requirementScopeChanges.map(({ endpointId, ...change }) => ({ ...change, centralRequirementScopeId: endpointId })),
+            documents: draft.documents,
+          });
+        } else {
         let version = current.version;
-        const currentPolicy = modalType === "POLICY" ? current as CentralPolicyDetail : null;
-        const policyMetadataChanged = currentPolicy !== null && (
-          currentPolicy.policyType !== draft.policyType ||
-          (currentPolicy.responsibleOrganization ?? null) !== draft.responsibleOrganization ||
-          (currentPolicy.communicationMethod ?? null) !== draft.communicationMethod ||
-          (currentPolicy.nextReviewDate ?? null) !== draft.nextReviewDate ||
-          (currentPolicy.objective ?? null) !== draft.objective
-        );
         const definitionChanged =
           current.title !== draft.title ||
-          policyMetadataChanged ||
           (current.description ?? null) !== draft.description ||
           (current.validFrom ?? null) !== draft.validFrom ||
           (current.validTo ?? null) !== draft.validTo ||
           draft.documentsDirty;
         if (definitionChanged) {
-          const result = modalType === "GROUP"
-            ? await centralPolicyApi.updateGroup(current.id, {
+          const result = await centralPolicyApi.updateGroup(current.id, {
                 version,
                 title: draft.title,
-                description: draft.description,
-                validFrom: draft.validFrom,
-                validTo: draft.validTo,
-                documents: draft.documents,
-              })
-            : await centralPolicyApi.updatePolicy(current.id, {
-                version,
-                title: draft.title,
-                policyType: draft.policyType,
-                responsibleOrganization: draft.responsibleOrganization,
-                communicationMethod: draft.communicationMethod,
-                nextReviewDate: draft.nextReviewDate,
-                objective: draft.objective,
                 description: draft.description,
                 validFrom: draft.validFrom,
                 validTo: draft.validTo,
@@ -366,32 +385,21 @@ export default function CentralPoliciesPage() {
           version = result.version;
         }
 
-        const currentParentId = detailParentId(modalType, current);
+        const currentParentId = detailParentId("GROUP", current);
         if (currentParentId !== draft.parentId) {
-          if (modalType === "GROUP") {
             const result = await centralPolicyApi.moveGroup(current.id, {
               version,
               parentGroupId: draft.parentId,
               sortOrder: current.sortOrder,
             });
             version = result.version;
-          } else {
-            if (!draft.parentId) throw new Error("PARENT_NOT_FOUND");
-            const result = await centralPolicyApi.movePolicy(current.id, {
-              version,
-              policyGroupId: draft.parentId,
-              sortOrder: current.sortOrder,
-            });
-            version = result.version;
-          }
         }
 
         if (current.status !== draft.status) {
           const action = draft.status === "ACTIVE" ? "activate" : "inactivate";
-          const result = modalType === "GROUP"
-            ? await centralPolicyApi.groupLifecycle(current.id, action, version)
-            : await centralPolicyApi.policyLifecycle(current.id, action, version);
+          const result = await centralPolicyApi.groupLifecycle(current.id, action, version);
           version = result.version;
+        }
         }
         entityId = current.id;
       }

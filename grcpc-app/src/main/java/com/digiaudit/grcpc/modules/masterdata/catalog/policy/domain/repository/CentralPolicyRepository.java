@@ -32,16 +32,4 @@ public interface CentralPolicyRepository extends JpaRepository<CentralPolicyEnti
   @Query("select e from CentralPolicyEntity e where e.id = :id")
   Optional<CentralPolicyEntity> lockById(@Param("id") UUID id);
 
-  @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query(
-      """
-      select policy
-        from CentralPolicyEntity policy
-       where policy.id = (
-             select version.policyId
-               from CentralPolicyVersionEntity version
-              where version.id = :versionId
-       )
-      """)
-  Optional<CentralPolicyEntity> lockByVersionId(@Param("versionId") UUID versionId);
 }

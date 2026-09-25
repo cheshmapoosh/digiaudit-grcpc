@@ -14,17 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class CentralPolicyQueryService {
   private final CentralPolicyGroupRepository groups;
   private final CentralPolicyRepository policies;
-  private final CentralPolicyVersionRepository versions;
   private final CentralPolicyMapper mapper;
 
   public CentralPolicyQueryService(
       CentralPolicyGroupRepository g,
       CentralPolicyRepository p,
-      CentralPolicyVersionRepository v,
       CentralPolicyMapper m) {
     groups = g;
     policies = p;
-    versions = v;
     mapper = m;
   }
 
@@ -82,33 +79,6 @@ public class CentralPolicyQueryService {
         .orElseThrow(() -> notFound("Policy", id));
   }
 
-  @Transactional(readOnly = true)
-  public List<CentralPolicyDtos.VersionDetail> versions(UUID policyId) {
-    return versions
-        .findByPolicyIdAndStatusNotOrderByVersionNumberDesc(
-            policyId, MasterDataLifecycleStatus.DELETED)
-        .stream()
-        .map(mapper::detail)
-        .toList();
-  }
-
-  @Transactional(readOnly = true)
-  public List<CentralPolicyDtos.VersionDetail> deletedVersions(UUID policyId) {
-    return versions
-        .findByPolicyIdAndStatusOrderByVersionNumberDesc(
-            policyId, MasterDataLifecycleStatus.DELETED)
-        .stream()
-        .map(mapper::detail)
-        .toList();
-  }
-
-  @Transactional(readOnly = true)
-  public CentralPolicyDtos.VersionDetail version(UUID id) {
-    return versions
-        .findByIdAndStatusNot(id, MasterDataLifecycleStatus.DELETED)
-        .map(mapper::detail)
-        .orElseThrow(() -> notFound("Policy Version", id));
-  }
 
   @Transactional(readOnly = true)
   public List<CentralPolicyDtos.GroupTree> tree() {

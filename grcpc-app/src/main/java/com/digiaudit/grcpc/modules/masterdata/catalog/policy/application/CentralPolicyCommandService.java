@@ -13,6 +13,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
+import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.*;
 import java.util.*;
@@ -25,39 +26,63 @@ import org.springframework.stereotype.Service;
 public class CentralPolicyCommandService {
   private final CentralPolicyRepository repository;
   private final CentralPolicyGroupRepository groups;
-  private final CentralPolicyVersionRepository versions;
   private final MasterDataRevisionCoordinator revisions;
   private final MasterDataRevisionActorProvider actors;
   private final RevisionMutationGuard guard;
   private final DocumentCommandService documents;
   private final CatalogCommandSupport support;
   private final MasterDataStructuralDependencyChecker dependencyChecker;
+  private final CentralPolicySubprocessScopeAggregateService subprocessScopes;
+  private final CentralPolicyOrganizationScopeAggregateService organizationScopes;
+  private final CentralPolicyControlScopeAggregateService controlScopes;
+  private final CentralPolicyRequirementScopeAggregateService requirementScopes;
+  private final CentralPolicySubprocessScopeQueryService subprocessQueries;
+  private final CentralPolicyOrganizationScopeQueryService organizationQueries;
+  private final CentralPolicyControlScopeQueryService controlQueries;
+  private final CentralPolicyRequirementScopeQueryService requirementQueries;
+  private final MasterDataAuthorizationService authorization;
   private final Clock clock;
 
   public CentralPolicyCommandService(
       CentralPolicyRepository r,
       CentralPolicyGroupRepository g,
-      CentralPolicyVersionRepository v,
       MasterDataRevisionCoordinator rev,
       MasterDataRevisionActorProvider a,
       RevisionMutationGuard gu,
       DocumentCommandService d,
       CatalogCommandSupport s,
       MasterDataStructuralDependencyChecker dc,
+      CentralPolicySubprocessScopeAggregateService subprocessScopes,
+      CentralPolicyOrganizationScopeAggregateService organizationScopes,
+      CentralPolicyControlScopeAggregateService controlScopes,
+      CentralPolicyRequirementScopeAggregateService requirementScopes,
+      CentralPolicySubprocessScopeQueryService subprocessQueries,
+      CentralPolicyOrganizationScopeQueryService organizationQueries,
+      CentralPolicyControlScopeQueryService controlQueries,
+      CentralPolicyRequirementScopeQueryService requirementQueries,
+      MasterDataAuthorizationService authorization,
       @Qualifier("masterDataRevisionClock") Clock c) {
     repository = r;
     groups = g;
-    versions = v;
     revisions = rev;
     actors = a;
     guard = gu;
     documents = d;
     support = s;
     dependencyChecker = dc;
+    this.subprocessScopes = subprocessScopes;
+    this.organizationScopes = organizationScopes;
+    this.controlScopes = controlScopes;
+    this.requirementScopes = requirementScopes;
+    this.subprocessQueries = subprocessQueries;
+    this.organizationQueries = organizationQueries;
+    this.controlQueries = controlQueries;
+    this.requirementQueries = requirementQueries;
+    this.authorization = authorization;
     clock = c;
   }
 
-  public MasterDataAggregateMutationResponse create(CentralPolicyDtos.CreatePolicy r) {
+  public CentralPolicyDtos.PolicyAggregateResponse create(CentralPolicyDtos.CreatePolicy r) {
     String code = support.normalizeCode(r.code()),
         title = support.normalizeTitle(r.title()),
         responsibleOrganization = normalizeShortText(r.responsibleOrganization(), "responsibleOrganization"),
@@ -65,16 +90,22 @@ public class CentralPolicyCommandService {
         description = support.normalizeDescription(r.description());
     int sort = support.normalizeSortOrder(r.sortOrder());
     support.validateValidity(r.validFrom(), r.validTo());
+    if (r.status() == MasterDataLifecycleStatus.DELETED)
+      throw new UnprocessableEntityException("INVALID_LIFECYCLE_TRANSITION",
+          "error.masterdata.v2.invalidLifecycleTransition",
+          "Delete uses the Policy lifecycle command");
+    MasterDataLifecycleStatus finalStatus = r.status() == null
+        ? MasterDataLifecycleStatus.ACTIVE : r.status();
     AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
     try {
       var result =
           revisions.executeStructural(
-              MasterDataHierarchyKey.POLICY,
+              guardKeys(r.subprocessScopeChanges(), r.organizationScopeChanges(),
+                  r.controlScopeChanges(), r.requirementScopeChanges()),
               RevisionRequest.central("Create policy " + code, "Policy structural create", null),
               c -> {
                 requireGuard(c);
                 requireGroup(r.policyGroupId());
-                var prepared = documents.prepareAggregate(r.documents());
                 var e = repository.findByCode(code).orElse(null);
                 RevisionOperationType op;
                 Long expected;
@@ -93,6 +124,7 @@ public class CentralPolicyCommandService {
                           r.communicationMethod(),
                           r.nextReviewDate(),
                           objective,
+                          r.content(),
                           description,
                           sort,
                           r.validFrom(),
@@ -109,56 +141,52 @@ public class CentralPolicyCommandService {
                   expected = e.getVersion();
                   before = snapshot(e);
                   if (e.getStatus() == MasterDataLifecycleStatus.DELETED) {
-                    e.restoreFromCreate(
-                        title,
-                        r.policyGroupId(),
-                        r.policyType(),
-                        responsibleOrganization,
-                        r.communicationMethod(),
-                        r.nextReviewDate(),
-                        objective,
-                        description,
-                        sort,
-                        r.validFrom(),
-                        r.validTo(),
-                        actor,
-                        now);
                     op = RevisionOperationType.RESTORE;
                   } else {
-                    e.reactivateFromCreate(
-                        title,
-                        r.policyGroupId(),
-                        r.policyType(),
-                        responsibleOrganization,
-                        r.communicationMethod(),
-                        r.nextReviewDate(),
-                        objective,
-                        description,
-                        sort,
-                        r.validFrom(),
-                        r.validTo(),
-                        actor,
-                        now);
-                    op = RevisionOperationType.ACTIVATE;
+                    op = finalStatus == MasterDataLifecycleStatus.ACTIVE
+                        ? RevisionOperationType.ACTIVATE : RevisionOperationType.UPDATE;
                   }
                 }
+                var prepared = documents.prepareAggregate(r.documents());
+                var preparedSubprocess = subprocessScopes.prepare(c, e.getId(),
+                    finalStatus, r.validFrom(), r.validTo(), r.subprocessScopeChanges());
+                var preparedOrganization = organizationScopes.prepare(c, e.getId(),
+                    finalStatus, r.validFrom(), r.validTo(), r.organizationScopeChanges());
+                var preparedControl = controlScopes.prepare(c, e.getId(),
+                    finalStatus, r.validFrom(), r.validTo(), r.controlScopeChanges());
+                var preparedRequirement = requirementScopes.prepare(c, e.getId(),
+                    finalStatus, r.validFrom(), r.validTo(), r.requirementScopeChanges());
+                if (op == RevisionOperationType.RESTORE) {
+                  e.restoreFromCreate(title, r.policyGroupId(), r.policyType(),
+                      responsibleOrganization, r.communicationMethod(), r.nextReviewDate(),
+                      objective, r.content(), description, sort, r.validFrom(), r.validTo(), actor, now);
+                } else if (op == RevisionOperationType.ACTIVATE || op == RevisionOperationType.UPDATE) {
+                  e.reactivateFromCreate(title, r.policyGroupId(), r.policyType(),
+                      responsibleOrganization, r.communicationMethod(), r.nextReviewDate(),
+                      objective, r.content(), description, sort, r.validFrom(), r.validTo(), actor, now);
+                }
+                if (finalStatus == MasterDataLifecycleStatus.INACTIVE)
+                  e.inactivate(actor, now);
                 var saved = repository.saveAndFlush(e);
-                ensurePublishedBaselineVersion(saved, actor, now);
                 docs.set(
                     documents.finalizePreparedAggregate(
                         prepared,
                         DocumentLinkTargetType.CENTRAL_POLICY,
                         saved.getId(),
                         "MD_GOVERNANCE_MANAGE"));
-                return completed(c, saved, op, expected, before);
+                return combine(c, completed(c, saved, op, expected, before),
+                    subprocessScopes.apply(preparedSubprocess, saved.getId()),
+                    organizationScopes.apply(preparedOrganization, saved.getId()),
+                    controlScopes.apply(preparedControl, saved.getId()),
+                    requirementScopes.apply(preparedRequirement, saved.getId()));
               });
-      return support.aggregateResponse(result, docs.get());
+      return policyResponse(result, docs.get());
     } catch (DataIntegrityViolationException e) {
       throw support.translateBusinessKeyViolation(e, "UK_CENTRAL_POLICY_CODE", code);
     }
   }
 
-  public MasterDataAggregateMutationResponse update(UUID id, CentralPolicyDtos.UpdatePolicy r) {
+  public CentralPolicyDtos.PolicyAggregateResponse update(UUID id, CentralPolicyDtos.UpdatePolicy r) {
     long expected = support.requireVersion(r.version());
     String title = support.normalizeTitle(r.title()),
         responsibleOrganization = normalizeShortText(r.responsibleOrganization(), "responsibleOrganization"),
@@ -167,10 +195,14 @@ public class CentralPolicyCommandService {
     support.validateValidity(r.validFrom(), r.validTo());
     AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
     var result =
-        revisions.execute(
+        revisions.executeStructural(
+            Set.of(MasterDataHierarchyKey.CONTROL, MasterDataHierarchyKey.ORGANIZATION,
+                MasterDataHierarchyKey.POLICY, MasterDataHierarchyKey.PROCESS,
+                MasterDataHierarchyKey.REGULATION),
             RevisionRequest.central("Update policy " + id, "Policy aggregate update", null),
             c -> {
-              var prepared = documents.prepareAggregate(r.documents());
+              requireGuard(c);
+              requireGroup(r.policyGroupId());
               var e = lock(id);
               support.assertVersion(e, expected);
               if (e.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
@@ -180,10 +212,33 @@ public class CentralPolicyCommandService {
                   && e.getCommunicationMethod() == r.communicationMethod()
                   && Objects.equals(e.getNextReviewDate(), r.nextReviewDate())
                   && Objects.equals(e.getObjective(), objective)
+                  && Objects.equals(e.getContent(), r.content())
                   && Objects.equals(e.getDescription(), description)
+                  && Objects.equals(e.getPolicyGroupId(), r.policyGroupId())
+                  && e.getSortOrder() == support.normalizeSortOrder(r.sortOrder())
+                  && (r.status() == null || e.getStatus() == r.status())
                   && Objects.equals(e.getValidFrom(), r.validFrom())
                   && Objects.equals(e.getValidTo(), r.validTo())
-                  && empty(r.documents())) throw noChange();
+                  && empty(r.documents())
+                  && (r.subprocessScopeChanges() == null || r.subprocessScopeChanges().isEmpty())
+                  && (r.organizationScopeChanges() == null || r.organizationScopeChanges().isEmpty())
+                  && (r.controlScopeChanges() == null || r.controlScopeChanges().isEmpty())
+                  && (r.requirementScopeChanges() == null || r.requirementScopeChanges().isEmpty()))
+                throw noChange();
+              if (r.status() == MasterDataLifecycleStatus.DELETED)
+                throw new UnprocessableEntityException("INVALID_LIFECYCLE_TRANSITION",
+                    "error.masterdata.v2.invalidLifecycleTransition",
+                    "Delete uses the Policy lifecycle command");
+              var finalStatus = r.status() == null ? e.getStatus() : r.status();
+              var prepared = documents.prepareAggregate(r.documents());
+              var preparedSubprocess = subprocessScopes.prepare(c, id, finalStatus,
+                  r.validFrom(), r.validTo(), r.subprocessScopeChanges());
+              var preparedOrganization = organizationScopes.prepare(c, id, finalStatus,
+                  r.validFrom(), r.validTo(), r.organizationScopeChanges());
+              var preparedControl = controlScopes.prepare(c, id, finalStatus,
+                  r.validFrom(), r.validTo(), r.controlScopeChanges());
+              var preparedRequirement = requirementScopes.prepare(c, id, finalStatus,
+                  r.validFrom(), r.validTo(), r.requirementScopeChanges());
               JsonNode before = snapshot(e);
               e.update(
                   title,
@@ -192,11 +247,20 @@ public class CentralPolicyCommandService {
                   r.communicationMethod(),
                   r.nextReviewDate(),
                   objective,
+                  r.content(),
                   description,
                   r.validFrom(),
                   r.validTo(),
                   actors.currentActorId(),
                   Instant.now(clock));
+              e.move(r.policyGroupId(), support.normalizeSortOrder(r.sortOrder()),
+                  actors.currentActorId(), Instant.now(clock));
+              if (r.status() == MasterDataLifecycleStatus.INACTIVE
+                  && e.getStatus() == MasterDataLifecycleStatus.ACTIVE)
+                e.inactivate(actors.currentActorId(), Instant.now(clock));
+              else if (r.status() == MasterDataLifecycleStatus.ACTIVE
+                  && e.getStatus() == MasterDataLifecycleStatus.INACTIVE)
+                e.activate(actors.currentActorId(), Instant.now(clock));
               var saved = repository.saveAndFlush(e);
               docs.set(
                   documents.finalizePreparedAggregate(
@@ -204,9 +268,13 @@ public class CentralPolicyCommandService {
                       DocumentLinkTargetType.CENTRAL_POLICY,
                       id,
                       "MD_GOVERNANCE_MANAGE"));
-              return completed(c, saved, RevisionOperationType.UPDATE, expected, before);
+              return combine(c, completed(c, saved, RevisionOperationType.UPDATE, expected, before),
+                  subprocessScopes.apply(preparedSubprocess, id),
+                  organizationScopes.apply(preparedOrganization, id),
+                  controlScopes.apply(preparedControl, id),
+                  requirementScopes.apply(preparedRequirement, id));
             });
-    return support.aggregateResponse(result, docs.get());
+    return policyResponse(result, docs.get());
   }
 
   public MasterDataRevisionMutationResponse move(UUID id, CentralPolicyDtos.MovePolicy r) {
@@ -261,16 +329,11 @@ public class CentralPolicyCommandService {
               support.assertVersion(e, expected);
               support.validateLifecycle(e, op);
               if (op == RevisionOperationType.DELETE
-                  && versions.lockAllByPolicyId(id).stream()
-                      .filter(v -> v.getStatus() != MasterDataLifecycleStatus.DELETED)
-                      .anyMatch(
-                          v ->
-                              dependencyChecker.centralPolicyVersionHasApprovedDependencies(
-                                  v.getId())))
+                  && dependencyChecker.centralPolicyHasApprovedDependencies(id))
                 throw new ConflictException(
                     "DEPENDENCY_EXISTS",
                     "error.masterdata.v2.dependencyExists",
-                    "Policy Version has approved scope dependencies",
+                    "Policy has approved scope dependencies",
                     id);
               if (op == RevisionOperationType.ACTIVATE || op == RevisionOperationType.RESTORE)
                 requireGroup(e.getPolicyGroupId());
@@ -287,25 +350,6 @@ public class CentralPolicyCommandService {
               return completed(c, repository.saveAndFlush(e), op, expected, before);
             });
     return MasterDataRevisionMutationResponse.from(result.primaryResult());
-  }
-
-  private void ensurePublishedBaselineVersion(
-      CentralPolicyEntity policy, UUID actorId, Instant now) {
-    List<CentralPolicyVersionEntity> existing = versions.lockAllByPolicyId(policy.getId());
-    boolean hasLiveVersion =
-        existing.stream().anyMatch(v -> v.getStatus() != MasterDataLifecycleStatus.DELETED);
-    if (hasLiveVersion) return;
-    int versionNumber =
-        existing.stream().mapToInt(CentralPolicyVersionEntity::getVersionNumber).max().orElse(0) + 1;
-    versions.saveAndFlush(
-        CentralPolicyVersionEntity.createPublishedBaseline(
-            UUID.randomUUID(),
-            policy.getId(),
-            versionNumber,
-            policy.getValidFrom(),
-            policy.getValidTo(),
-            actorId,
-            now));
   }
 
   private void requireGroup(UUID id) {
@@ -380,6 +424,7 @@ public class CentralPolicyCommandService {
     fields.put("communicationMethod", e.getCommunicationMethod());
     fields.put("nextReviewDate", e.getNextReviewDate());
     fields.put("objective", e.getObjective());
+    fields.put("content", e.getContent());
     fields.put("sortOrder", e.getSortOrder());
     return fields;
   }
@@ -395,6 +440,44 @@ public class CentralPolicyCommandService {
       Long v,
       JsonNode b) {
     return support.completed(c, e, RevisionEntityType.CENTRAL_POLICY, o, v, b, typed(e));
+  }
+
+  private Set<MasterDataHierarchyKey> guardKeys(
+      List<?> subprocess, List<?> organization, List<?> control, List<?> requirement) {
+    EnumSet<MasterDataHierarchyKey> keys = EnumSet.of(MasterDataHierarchyKey.POLICY);
+    if (subprocess != null && !subprocess.isEmpty()) keys.add(MasterDataHierarchyKey.PROCESS);
+    if (organization != null && !organization.isEmpty()) keys.add(MasterDataHierarchyKey.ORGANIZATION);
+    if (control != null && !control.isEmpty()) {
+      keys.add(MasterDataHierarchyKey.CONTROL);
+      keys.add(MasterDataHierarchyKey.PROCESS);
+    }
+    if (requirement != null && !requirement.isEmpty()) {
+      keys.add(MasterDataHierarchyKey.PROCESS);
+      keys.add(MasterDataHierarchyKey.REGULATION);
+    }
+    return keys;
+  }
+
+  @SafeVarargs
+  private final RevisionOperationResult combine(
+      RevisionExecutionContext c, RevisionOperationResult owner,
+      List<RevisionContentResult>... relationContents) {
+    List<RevisionContentResult> all = new ArrayList<>(owner.contentResults());
+    for (var contents : relationContents) all.addAll(contents);
+    return RevisionOperationResult.completed(c, owner.primaryResult(), all);
+  }
+
+  private CentralPolicyDtos.PolicyAggregateResponse policyResponse(
+      RevisionExecutionResult result, List<DocumentCommandResponse> finalized) {
+    var primary = result.primaryResult();
+    UUID id = primary.entityId();
+    return new CentralPolicyDtos.PolicyAggregateResponse(
+        id, primary.revisionId(), primary.version(), finalized,
+        authorization.canView("PROCESS") ? subprocessQueries.list(id, null, null) : List.of(),
+        authorization.canView("REFERENCE") ? organizationQueries.list(id, null, null) : List.of(),
+        authorization.canView("PROCESS") && authorization.canView("CONTROL")
+            ? controlQueries.list(id, null, null) : List.of(),
+        authorization.canView("PROCESS") ? requirementQueries.list(id, null, null) : List.of());
   }
 
   private boolean empty(DocumentAggregateBatchRequest r) {

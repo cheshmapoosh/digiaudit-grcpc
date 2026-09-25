@@ -10,7 +10,7 @@ Security Scope remains separate from Central/Local, business Scope and Coverage.
 | PROCESS | `masterdata.process`: Central Process and Subprocess | `/processes` |
 | RISK | `masterdata.catalog.risk`: Risk Category and Risk Template | `/risks` |
 | CONTROL | `masterdata.catalog.control`, `controlobjective`: Control Group, Control, Control Objective | `/controls`, `/control-objectives` |
-| GOVERNANCE | `masterdata.catalog.regulation`, `policy`: groups, definitions, requirements and policy versions | `/regulations`, `/policies` |
+| GOVERNANCE | `masterdata.catalog.regulation`, `policy`: groups, requirements, Policy content and typed relationships | `/regulations`, `/policies` |
 | REFERENCE | `organization`, `masterdata.catalog.accountgroup` | `/organizations`, `/account-groups` |
 
 Organization is reference data here; placing its maintenance under REFERENCE does
@@ -99,7 +99,7 @@ revision allocation, mutation ordering or persistence.
 | RISK | Risk Category/Template structural and lifecycle commands |
 | ACCOUNT_GROUP | Account Group structural/lifecycle commands and Control Objective classification Save |
 | REGULATION | Regulation Group, Regulation and Requirement structural/lifecycle commands |
-| POLICY | Policy Group/Policy structural/lifecycle commands and existing Policy Version allocation/publication locking |
+| POLICY | Policy Group/Policy structural and aggregate commands; relation changes add referenced-area Guards |
 
 The existing revision coordinator retains Guard acquisition, hierarchy validation,
 source mutation and Business Revision persistence in the same transaction. Document

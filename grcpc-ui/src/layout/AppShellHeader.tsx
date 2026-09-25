@@ -72,8 +72,11 @@ export default function AppShellHeader({
                     fullName={fullName}
                     email={email}
                     onOpenProfile={onOpenProfile}
-                    onLogout={onLogout}
-                />
+                    onLogout={onLogout} onChangeUsername={function (): void {
+                    throw new Error("Function not implemented.");
+                }} onChangePassword={function (): void {
+                    throw new Error("Function not implemented.");
+                }}                />
             ) : null}
         </ShellBar>
     );

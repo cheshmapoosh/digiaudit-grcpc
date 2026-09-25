@@ -77,7 +77,7 @@ Current API/storage evidence: `/api/organizations`, generic organization-process
 | Organization-to-risk tab | `organization_process_risk_assignment` and generic UI | Typed Local Risk Scope/Coverage under `local_organization_subprocess_scope` | `REMAP` | Expose risk as a typed Local Scope or Coverage view, not a direct Organization–Risk relation. |
 | Organization-to-control tab | Generic reference/assignment UI | Local Control Scope and Local Coverage | `REMAP` | Render approved context-bound control data after Local Context exists. |
 | Organization-to-regulation tab | Generic reference/assignment UI | Local Requirement Scope and Requirement–Control Coverage | `REMAP` | Replace Regulation target with atomic Requirement relationships only. |
-| Organization-to-policy tab | Generic reference assignment | `local_policy_organization_scope` | `REMAP` | Provide include/exclude and propagation mode UI for Policy Version applicability. |
+| Organization-to-policy tab | Generic reference assignment | `local_policy_organization_scope` | `REMAP` | Provide include/exclude and propagation mode UI for Policy applicability. |
 | Organization-to-objective tab | Generic objective assignment | Local Control Objective Scope | `REMAP` | Rename/remap only for genuine Control Objectives; remove generic objective vocabulary. |
 | Organization owner display | Current basic assignment display | Local Control Scope actual owner where execution ownership is intended | `REMAP` | Do not create an organization-level generic owner relationship; show execution owner in Local Control Scope. |
 | Organization document tab | Generic document attachment manager | Version-specific `document_link` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain document panel visual flow; target an approved document-link target and exact version. |
@@ -182,7 +182,7 @@ Current API/storage evidence: `/api/regulations` and combined `regulation` persi
 | Regulation/Requirement documents | Generic attachments | V2 Document Link | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Preserve panel visual treatment with exact version links. |
 | Requirement search/value help | Current regulation query | Typed Requirement Value Help | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Preserve search/select patterns, scoped by authorized Central catalog. |
 
-## 9. Policy Group, Policy, and Policy Version comparison
+## 9. Policy Group and Policy comparison
 
 Customer source: `سیاست- فرم ایجاد اطلاعات پایه- Master Data  .docx`.
 
@@ -193,15 +193,14 @@ Current API/storage evidence: `/api/policies` and combined `policy_node` persist
 | Customer field, tab, action, or relationship | Current UI/API/storage | Approved target entity or use case | Status | Future action and rationale |
 | --- | --- | --- | --- | --- |
 | Policy Group tree | Current policy tree | `central_policy_group` | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain tree navigation and hierarchy search. |
-| Policy stable identity form | Combined policy node | `central_policy` | `REMAP` | Separate identity fields from version content in the UI. |
-| Policy Version tab | Current mutable version/status behavior | `central_policy_version` | `REPLACE` | Present Version as a first-class immutable content item after publish. |
-| Draft Policy Version editing | Current policy form | DRAFT Policy Version | `REMAP` | Allow typed content metadata editing only while the domain status permits; publish workflow itself remains external. |
-| Published content editing | Current UI may allow mutable node edits | New Policy Version | `REMOVE` | Replace edit-in-place with create-next-version UX. |
+| Policy form | Combined policy node | `central_policy` | `REMAP` | Edit content directly with metadata, lifecycle, validity, and parent in one Save. |
+| Policy Version tab | Previous version UI | Historical `central_policy_version` | `REMOVE` | No version selection, publication, or baseline creation in active UI. |
 | Approval/review workflow | Customer mock-up tabs/actions | None in Master Data V2 | `DEFER_OUT_OF_SCOPE` | Do not build approval task, queue, or workflow UI in this domain. |
 | Policy documents | Generic attachment UI | Document Version/Link; primary-document semantics | `KEEP_VISUAL_REPLACE_DATA_FLOW` | Retain document panel but bind to immutable versions and exact links. |
-| Policy-to-Subprocess Scope | Customer generic scope section | `central_policy_version_subprocess_scope` | `ADD` | Add Central baseline policy-scope page/dialog. |
-| Policy-to-Control Scope | Customer generic target selection | `central_policy_version_control_scope` | `ADD` | Add exact Central Control Scope selector; never select raw Control. |
-| Policy-to-Requirement Scope | Customer generic target selection | `central_policy_version_requirement_scope` | `ADD` | Add exact Central Requirement Scope selector; never select raw Requirement/Regulation. |
+| Policy-to-Subprocess Scope | Customer generic scope section | `central_policy_subprocess_scope` | `ADD` | Typed Subprocess selection in Policy Save. |
+| Policy-to-Organization Scope | Customer organization reference | `central_policy_organization_scope` | `ADD` | Explicit Central Organization selection, separate from Local applicability. |
+| Policy-to-Control Scope | Customer generic target selection | `central_policy_control_scope` | `ADD` | Select exact Central Control Scope with Subprocess context. |
+| Policy-to-Requirement Scope | Customer generic target selection | `central_policy_requirement_scope` | `ADD` | Select exact Central Requirement Scope with Subprocess context. |
 | Policy-to-Risk Scope | Customer scope expectation | None | `REMOVE` | The approved model has no Policy-to-Risk scope. |
 | Organization policy applicability | Customer organization policy tab | `local_policy_organization_scope` | `ADD` | Add Include/Exclude and Direct/Descendant behavior with target explanation. |
 | Local Subprocess Policy | Customer scope/workflow | `local_policy_subprocess_scope` | `ADD` | Add Local Context policy decision UI. |
@@ -262,7 +261,7 @@ These approved capabilities are not implemented in the current UI and must be cl
 | Central Risk–Control Objective Coverage | No equivalent | `central_subprocess_risk_control_objective_coverage` | `ADD` | Typed Scope-pair dialog, no generated relation. |
 | Central Control–Control Objective Coverage | No exact contextual equivalent | `central_subprocess_control_control_objective_coverage` | `ADD` | Direct typed coverage list/dialog independent of Risk path. |
 | Central Requirement–Control Coverage | Legacy direct link lacks context | `central_subprocess_requirement_control_coverage` | `ADD` | Typed requirement/control Scope-pair dialog. |
-| Central Policy Scope | No approved model equivalent | Three `central_policy_version_*_scope` tables | `ADD` | Policy Version scope tab with type-specific selectors and baseline explanation. |
+| Central Policy relationships | No approved model equivalent | Four typed Policy-owned tables | `ADD` | Four relation tabs and one Policy Save. |
 | Local Organization–Subprocess Context | Generic organization-process assignment only | `local_organization_subprocess_scope` | `ADD` | Organization Object Page Local Context tab with exact Subprocess selection and validity. |
 | Local Control/Risk/Objective/Requirement Scope | Generic local/reference assignments only | Four `local_subprocess_*_scope` tables | `ADD` | Context-scoped typed tabs, source type, inherited reference indication, and validity checks. |
 | Local Coverage | Generic links/assignments only | Four `local_subprocess_*_coverage` tables | `ADD` | Context-scoped typed Coverage dialogs that select only same-context Scope endpoints. |
@@ -295,7 +294,7 @@ Document target selection uses the closed `DocumentLinkTargetType` vocabulary de
 | `/api/objectives` generic objective API | `REMOVE` | Replace with Control Objective API only. |
 | `/api/risks` combined risk nodes | `REPLACE` | Separate Category and Template endpoints. |
 | `/api/regulations` combined hierarchy | `REPLACE` | Separate Group/Regulation/Requirement endpoint families. |
-| `/api/policies` combined hierarchy/version/workflow | `REPLACE` | Separate Group/Policy/Policy Version and typed policy scope APIs. |
+| `/api/policies` combined hierarchy/version/workflow | `REPLACE` | Separate Group/Policy, four typed read/option APIs, and one Policy aggregate Save. |
 | `/api/account-groups` JSON relationship behavior | `REPLACE` | Hierarchy plus only two approved direct classifications. |
 | `/api/control-assignments/**` legacy tab APIs | `REMOVE` | Replace individual approved relation interactions with typed Scope/Coverage commands. |
 | `/api/organization-process-assignments` | `REMOVE` | Replace with Local Organization–Subprocess Scope command/query. |

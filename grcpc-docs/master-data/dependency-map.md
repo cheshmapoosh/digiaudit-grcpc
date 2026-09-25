@@ -22,7 +22,7 @@ The map is a delivery dependency map; it does not add any table, cache, outbox, 
 - A Central reference is validated before an inherited Local Scope or Coverage can be applied.
 - Document Version is created from a confirmed Temporary Upload before a Document Link is created, and successful finalization deletes the temporary row.
 - A Business Revision header exists before Backend-created Revision Content is persisted and applied.
-- Structural families acquire their seeded Guard before revision allocation or structural reads: Organization uses `ORGANIZATION`; Process/Subprocess share `PROCESS`; Risk Category/Template share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group/Regulation/Requirement share `REGULATION`; Policy Group/Policy/Version share `POLICY`.
+- Structural families acquire their seeded Guard before revision allocation or structural reads: Organization uses `ORGANIZATION`; Process/Subprocess share `PROCESS`; Risk Category/Template share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group/Regulation/Requirement share `REGULATION`; Policy Group/Policy share `POLICY`.
 - Prompt 6 structural families use `RISK`, `ACCOUNT_GROUP`, `REGULATION`, and `POLICY`; each family acquires its Guard before business-key lookup, hierarchy/dependency reads, or Revision allocation.
 - Read models depend on source tables and never become source-table dependencies.
 - Central changes can affect read results and impact analysis; they never create physical Local mutations.
@@ -34,7 +34,7 @@ flowchart TD
     Org[organization]
     Proc[central_process]
     Sub[central_subprocess]
-    Defs[Central definitions<br/>control, objective, risk template,<br/>account group, regulation requirement,<br/>policy version]
+    Defs[Central definitions<br/>control, objective, risk template,<br/>account group, regulation requirement,<br/>policy]
     CS[Typed Central Subprocess Scopes]
     CC[Typed Central Coverages]
     CPS[Typed Central Policy Scopes]
@@ -102,7 +102,7 @@ The dotted arrows identify inherited-reference validation and Effective dependen
 | A10 | `central_regulation_requirement` | `central_regulation` | Requirement is the atomic compliance child. |
 | A11 | `central_policy_group` | Oracle common conventions | Policy-group parent-tree FK. |
 | A12 | `central_policy` | `central_policy_group` | Policy belongs to a group. |
-| A13 | `central_policy_version` | `central_policy` | Policy Version belongs to its stable Policy identity. |
+| A13 | `central_policy_version` | `central_policy` | Retained historical rows; no active mutation or scope dependency. |
 
 ### B. Central Scope, Classification, Policy Scope, and Coverage
 
@@ -114,9 +114,10 @@ The dotted arrows identify inherited-reference validation and Effective dependen
 | B4 | `central_subprocess_requirement_scope` | Subprocess + Regulation Requirement | Establishes Requirement contextual membership. |
 | B5 | `central_control_account_group` | Control + Account Group | Direct classification relation. |
 | B6 | `central_control_objective_account_group` | Control Objective + Account Group | Direct classification relation. |
-| B7 | `central_policy_version_subprocess_scope` | Policy Version + Subprocess | Baseline policy inclusion. |
-| B8 | `central_policy_version_control_scope` | Policy Version + Central Control Scope | Exact-context policy decision. |
-| B9 | `central_policy_version_requirement_scope` | Policy Version + Central Requirement Scope | Exact-context policy decision. |
+| B7 | `central_policy_subprocess_scope` | Policy + Subprocess | Baseline policy inclusion. |
+| B7a | `central_policy_organization_scope` | Policy + Organization | Explicit Central Organization relation, distinct from Local applicability. |
+| B8 | `central_policy_control_scope` | Policy + Central Control Scope | Exact-context policy decision. |
+| B9 | `central_policy_requirement_scope` | Policy + Central Requirement Scope | Exact-context policy decision. |
 | B10 | `central_subprocess_risk_control_coverage` | Central Risk Scope + Central Control Scope | Requires same-subprocess composite FKs. |
 | B11 | `central_subprocess_risk_control_objective_coverage` | Central Risk Scope + Central Control Objective Scope | Requires same-subprocess composite FKs. |
 | B12 | `central_subprocess_control_control_objective_coverage` | Central Control Scope + Central Control Objective Scope | Requires same-subprocess composite FKs. |
@@ -135,10 +136,10 @@ The dotted arrows identify inherited-reference validation and Effective dependen
 | C7 | `local_subprocess_risk_control_objective_coverage` | Parent Context + Local Risk Scope + Local Objective Scope; optional Central Coverage | Same-context Local Coverage. |
 | C8 | `local_subprocess_control_control_objective_coverage` | Parent Context + Local Control Scope + Local Objective Scope; optional Central Coverage | Same-context Local Coverage. |
 | C9 | `local_subprocess_requirement_control_coverage` | Parent Context + Local Requirement Scope + Local Control Scope; optional Central Coverage | Same-context Local Coverage. |
-| C10 | `local_policy_organization_scope` | Organization + Policy Version | Organization applicability/propagation decision. |
-| C11 | `local_policy_subprocess_scope` | Local Context + Policy Version | Subprocess-level local policy decision. |
-| C12 | `local_policy_control_scope` | Local Control Scope + Policy Version | Exact Control policy decision. |
-| C13 | `local_policy_requirement_scope` | Local Requirement Scope + Policy Version | Exact Requirement policy decision. |
+| C10 | `local_policy_organization_scope` | Organization + Policy | Local applicability/propagation decision retained with action and mode. |
+| C11 | `local_policy_subprocess_scope` | Local Context + Policy | Subprocess-level local policy decision. |
+| C12 | `local_policy_control_scope` | Local Control Scope + Policy | Exact Control policy decision. |
+| C13 | `local_policy_requirement_scope` | Local Requirement Scope + Policy | Exact Requirement policy decision. |
 
 ### D. Document and Revision
 
@@ -178,7 +179,7 @@ The Physical Design Reference §16-1 provides the migration sequence.
 
 1. Create Oracle conventions, common checks, and helper constraints.
 2. Create `organization`, `central_process`, and `central_subprocess`.
-3. Create the remaining Central definitions and `central_policy_version`.
+3. Create the remaining Central definitions and historical `central_policy_version` storage; apply the forward Policy simplification migrations to reach the active Policy-owned model.
 4. Create Central Scope, Classification, Central Policy Scope, and Central Coverage tables.
 5. Create Local Context, Local Scope, Local Coverage, and Local Policy Scope tables.
 6. Create `document`, `document_version`, and `document_link`.
@@ -283,7 +284,7 @@ Successful finalization deletes the temporary MinIO object after the database tr
 | Effective | Central definitions, Central Scope/Coverage, Local Context/Scope/Coverage, stored status, validity, one evaluation date | One primary effective status and source; read-only. |
 | Diagnostic | Effective dependencies plus all blocker branches and validation/impact facts | Multiple simultaneous blocker rows; read-only and permission-bound. |
 | Roll-up | Organization hierarchy, Process hierarchy, Subprocess source records, Effective results | Child-to-parent visibility and counts while preserving source IDs; read-only. |
-| Policy Applicability | Policy Version, Central Policy Scope, Local Policy Scope, Organization hierarchy, Local Context, one evaluation date | Highest-priority applicable decision or `NOT_APPLICABLE`; read-only. |
+| Policy Applicability | Policy, Central Policy Scope, Local Policy Scope, Organization hierarchy, Local Context, one evaluation date | Highest-priority applicable decision or `NOT_APPLICABLE`; read-only. |
 
 No source-table command depends on a computed read result being materialized.
 
@@ -293,7 +294,7 @@ No read model emits a Business Revision merely because a calculation changes.
 
 1. Preserve the Master Data hub, UI5, FCL, List Report, Object Page, tree, search, selection, expanded-state, RTL, and i18n building blocks.
 2. Rewire Organization and Process/Subprocess tree data to the separate approved structural tables.
-3. Replace generic catalog forms with Central Control Objective, Risk Category/Template, Regulation hierarchy, Policy/Version, and Account Group forms.
+3. Replace generic catalog forms with Central Control Objective, Risk Category/Template, Regulation hierarchy, Policy, and Account Group forms.
 4. Add Central Scope, Classification, Central Policy Scope, and Central Coverage screens/dialogs after the central relation APIs exist.
 5. Add Local Organization–Subprocess Context before Local Scope, Local Coverage, and Local Policy Scope workflows.
 6. Replace generic document attachment UI with temporary upload, immutable versions, exact links, and secure download presentation.
@@ -307,7 +308,7 @@ No read model emits a Business Revision merely because a calculation changes.
 | --- | --- | --- |
 | Foundation | Oracle conventions, UUID/RAW mapping, lifecycle, revision framework | V2-incompatible master-data migration assumptions and UUID-VARCHAR mapping. |
 | Organization and process tree | `organization`, `central_process`, `central_subprocess` | Combined process/subprocess persistence and organization-process assignment flow. |
-| Central catalog | Central definitions and Policy Version | Combined risk, regulation, policy, generic objective, and account-group JSON structures. |
+| Central catalog | Central definitions and Policy | Combined risk, regulation, policy, generic objective, and account-group JSON structures. |
 | Central relation | Central Scope, Classification, Policy Scope, Coverage | Generic process/reference/control relationship tables and direct Control–Regulation links. |
 | Local relation | Local Context, Local Scope/Coverage/Policy Scope | Generic organization-reference and organization-process-risk relationships. |
 | Document and revision | Document/version/link, temporary upload, and separate revision framework | Generic attachment, direct final upload, session-based upload/commit, legacy document tables. |

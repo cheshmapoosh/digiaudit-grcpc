@@ -16,6 +16,7 @@ Document is the shared Master Data V2 UI for:
 - The shared component receives one approved `DocumentLinkTargetType` and a target ID or null from the owning feature.
 - In `PARENT_SAVE` mode, temporary upload remains immediate, while finalization and metadata/version drafts are declarative input to the owning parent Save; no target ID is nested in those drafts.
 - `Document Version` rows are immutable; adding a file creates a new version and link.
+- Existing active links remain downloadable in View/read-only mode. `showActions` gates mutation controls, not Download; the server still checks target VIEW access.
 - Deleting from a target panel deletes the `Document Link`, not the document identity, version, or permanent object.
 - `MASTERDATA_REVISION` is backend-only and must not be selectable or rendered as a normal browser target.
 - Do not expose storage keys, bucket names, endpoints, permanent URLs, Revision Content, or object metadata in UI models.

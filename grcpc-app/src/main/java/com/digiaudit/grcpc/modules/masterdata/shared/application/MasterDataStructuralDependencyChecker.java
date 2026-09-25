@@ -13,7 +13,8 @@ public class MasterDataStructuralDependencyChecker {
   private static final List<String> ORGANIZATION_DEPENDENCY_QUERIES =
       List.of(
           "select count(*) from local_organization_subprocess_scope where organization_id = ?",
-          "select count(*) from local_policy_organization_scope where organization_id = ?");
+          "select count(*) from local_policy_organization_scope where organization_id = ?",
+          "select count(*) from central_policy_organization_scope where organization_id = ? and status <> 'DELETED'");
   private static final List<String> CENTRAL_PROCESS_DEPENDENCY_QUERIES =
       List.of(
           "select count(*) from central_process where parent_process_id = ? and status <>"
@@ -25,7 +26,7 @@ public class MasterDataStructuralDependencyChecker {
           "select count(*) from central_subprocess_risk_scope where subprocess_id = ?",
           "select count(*) from central_subprocess_control_objective_scope where subprocess_id = ?",
           "select count(*) from central_subprocess_requirement_scope where subprocess_id = ?",
-          "select count(*) from central_policy_version_subprocess_scope where subprocess_id = ?",
+          "select count(*) from central_policy_subprocess_scope where subprocess_id = ?",
           "select count(*) from local_organization_subprocess_scope where subprocess_id = ?");
   private static final List<String> CENTRAL_CONTROL_DEPENDENCY_QUERIES =
       List.of(
@@ -53,20 +54,21 @@ public class MasterDataStructuralDependencyChecker {
       List.of(
           "select count(*) from central_subprocess_requirement_scope where requirement_id = ?",
           "select count(*) from local_subprocess_requirement_scope where requirement_id = ?");
-  private static final List<String> CENTRAL_POLICY_VERSION_DEPENDENCY_QUERIES =
+  private static final List<String> CENTRAL_POLICY_DEPENDENCY_QUERIES =
       List.of(
-          "select count(*) from central_policy_version_subprocess_scope where policy_version_id ="
+          "select count(*) from central_policy_subprocess_scope where policy_id ="
               + " ?",
-          "select count(*) from central_policy_version_control_scope where policy_version_id = ?",
-          "select count(*) from central_policy_version_requirement_scope where policy_version_id ="
+          "select count(*) from central_policy_organization_scope where policy_id = ?",
+          "select count(*) from central_policy_control_scope where policy_id = ?",
+          "select count(*) from central_policy_requirement_scope where policy_id ="
               + " ?",
-          "select count(*) from local_policy_organization_scope where policy_version_id = ?",
-          "select count(*) from local_policy_subprocess_scope where policy_version_id = ?",
-          "select count(*) from local_policy_control_scope where policy_version_id = ?",
-          "select count(*) from local_policy_requirement_scope where policy_version_id = ?");
+          "select count(*) from local_policy_organization_scope where policy_id = ?",
+          "select count(*) from local_policy_subprocess_scope where policy_id = ?",
+          "select count(*) from local_policy_control_scope where policy_id = ?",
+          "select count(*) from local_policy_requirement_scope where policy_id = ?");
   private static final List<String> CENTRAL_CONTROL_SCOPE_DEPENDENCY_QUERIES =
       List.of(
-          "select count(*) from central_policy_version_control_scope where central_control_scope_id"
+          "select count(*) from central_policy_control_scope where central_control_scope_id"
               + " = ? and status <> 'DELETED'",
           "select count(*) from central_subprocess_risk_control_coverage where control_scope_id = ?"
               + " and status <> 'DELETED'",
@@ -94,7 +96,7 @@ public class MasterDataStructuralDependencyChecker {
               + " central_control_objective_scope_id = ? and status <> 'DELETED'");
   private static final List<String> CENTRAL_REQUIREMENT_SCOPE_DEPENDENCY_QUERIES =
       List.of(
-          "select count(*) from central_policy_version_requirement_scope where"
+          "select count(*) from central_policy_requirement_scope where"
               + " central_requirement_scope_id = ? and status <> 'DELETED'",
           "select count(*) from central_subprocess_requirement_control_coverage where"
               + " requirement_scope_id = ? and status <> 'DELETED'",
@@ -139,8 +141,8 @@ public class MasterDataStructuralDependencyChecker {
     return anyExists(CENTRAL_REQUIREMENT_DEPENDENCY_QUERIES, requirementId);
   }
 
-  public boolean centralPolicyVersionHasApprovedDependencies(UUID policyVersionId) {
-    return anyExists(CENTRAL_POLICY_VERSION_DEPENDENCY_QUERIES, policyVersionId);
+  public boolean centralPolicyHasApprovedDependencies(UUID policyId) {
+    return anyExists(CENTRAL_POLICY_DEPENDENCY_QUERIES, policyId);
   }
 
   public boolean centralControlScopeHasLiveDependencies(UUID scopeId) {

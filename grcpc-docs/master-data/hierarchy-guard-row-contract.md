@@ -56,7 +56,7 @@ The table has one row per approved independent hierarchy, not one row per busine
 | `RISK` | `central_risk_category`, `central_risk_template` | Category and Template structural mutations share this Guard. |
 | `ACCOUNT_GROUP` | `central_account_group` | All Account Group structural mutations share this Guard. |
 | `REGULATION` | `central_regulation_group`, `central_regulation`, `central_regulation_requirement` | The complete Regulation family shares this Guard. |
-| `POLICY` | `central_policy_group`, `central_policy` | Policy Group and Policy structural mutations share this Guard; Policy Version allocation/publication additionally lock the owning Policy row. |
+| `POLICY` | `central_policy_group`, `central_policy` | Policy Group and Policy structural mutations share this Guard; Policy aggregate Update acquires it even if the submitted group is unchanged. Four typed Policy relation collections add their referenced hierarchy Guards. |
 
 Future feature procedure:
 
