@@ -13,7 +13,7 @@ Account groups are hierarchical Master Data V2 definitions backed by `CentralAcc
 - Keep tree expansion and selection stable when creating, editing, deleting, moving, or viewing nodes.
 - General Information contains code, title, parent, status, importance, reasonable assurance, validity dates, and description.
 - `Documents` is active through `CENTRAL_ACCOUNT_GROUP` with Parent-Save behavior.
-- `Risks` is visible but disabled until the approved relationship scope is implemented.
+- `Risks` remains visible and disabled: there is no approved direct Risk–Account Group relationship, and Coverage must not be projected as one.
 - Prompt 7.5 adds a read-only `Controls` inverse tab for the exact Account Group node. Account Group Save never owns Control classification mutations.
 - Prompt 7.6 adds a separate read-only `Control Objectives` inverse tab for the exact Account Group node. Account Group Save never owns Control Objective classification mutations.
 - Do not restore legacy assertions, objectives, account ranges, or risk relationship persistence in this feature.

@@ -92,6 +92,39 @@ const requirementScopeChangeSchema = z.object({
     requestedStatus: processEditableStatusSchema.nullable().optional(),
 });
 
+const coverageChangeBase = {
+    operation: z.enum(["CREATE_OR_RESTORE", "UPDATE", "ACTIVATE", "INACTIVATE", "DELETE", "RESTORE"]),
+    coverageId: z.string().trim().min(1).optional(),
+    version: z.number().int().min(0).optional(),
+    validFrom: optionalDateSchema,
+    validTo: optionalDateSchema,
+    requestedStatus: processEditableStatusSchema.optional(),
+};
+
+const riskControlCoverageChangeSchema = z.object({
+    ...coverageChangeBase,
+    riskScopeId: z.string().trim().min(1),
+    controlScopeId: z.string().trim().min(1),
+});
+
+const riskControlObjectiveCoverageChangeSchema = z.object({
+    ...coverageChangeBase,
+    riskScopeId: z.string().trim().min(1),
+    controlObjectiveScopeId: z.string().trim().min(1),
+});
+
+const controlControlObjectiveCoverageChangeSchema = z.object({
+    ...coverageChangeBase,
+    controlScopeId: z.string().trim().min(1),
+    controlObjectiveScopeId: z.string().trim().min(1),
+});
+
+const requirementControlCoverageChangeSchema = z.object({
+    ...coverageChangeBase,
+    requirementScopeId: z.string().trim().min(1),
+    controlScopeId: z.string().trim().min(1),
+});
+
 const baseProcessPayloadSchema = validitySchema.extend({
     code: z
         .string()
@@ -149,6 +182,10 @@ export const processUpdateSchema = validitySchema.extend({
     riskScopeChanges: z.array(riskScopeChangeSchema),
     controlObjectiveScopeChanges: z.array(controlObjectiveScopeChangeSchema),
     requirementScopeChanges: z.array(requirementScopeChangeSchema),
+    riskControlCoverageChanges: z.array(riskControlCoverageChangeSchema),
+    riskControlObjectiveCoverageChanges: z.array(riskControlObjectiveCoverageChangeSchema),
+    controlControlObjectiveCoverageChanges: z.array(controlControlObjectiveCoverageChangeSchema),
+    requirementControlCoverageChanges: z.array(requirementControlCoverageChangeSchema),
 });
 
 export const processLifecycleSchema = z.object({

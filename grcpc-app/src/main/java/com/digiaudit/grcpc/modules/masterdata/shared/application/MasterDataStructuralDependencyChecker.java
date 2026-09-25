@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -102,6 +103,14 @@ public class MasterDataStructuralDependencyChecker {
               + " requirement_scope_id = ? and status <> 'DELETED'",
           "select count(*) from local_subprocess_requirement_scope where"
               + " central_requirement_scope_id = ? and status <> 'DELETED'");
+  private static final String CENTRAL_RISK_CONTROL_COVERAGE_DEPENDENCY_QUERY =
+      "select count(*) from local_subprocess_risk_control_coverage where central_risk_control_coverage_id = ? and status <> 'DELETED'";
+  private static final String CENTRAL_RISK_CONTROL_OBJECTIVE_COVERAGE_DEPENDENCY_QUERY =
+      "select count(*) from local_subprocess_risk_control_objective_coverage where central_risk_control_objective_coverage_id = ? and status <> 'DELETED'";
+  private static final String CENTRAL_CONTROL_CONTROL_OBJECTIVE_COVERAGE_DEPENDENCY_QUERY =
+      "select count(*) from local_subprocess_control_control_objective_coverage where central_control_control_objective_coverage_id = ? and status <> 'DELETED'";
+  private static final String CENTRAL_REQUIREMENT_CONTROL_COVERAGE_DEPENDENCY_QUERY =
+      "select count(*) from local_subprocess_requirement_control_coverage where central_requirement_control_coverage_id = ? and status <> 'DELETED'";
 
   private final JdbcTemplate jdbcTemplate;
 
@@ -149,16 +158,62 @@ public class MasterDataStructuralDependencyChecker {
     return anyExists(CENTRAL_CONTROL_SCOPE_DEPENDENCY_QUERIES, scopeId);
   }
 
+  public boolean centralControlScopeHasLiveDependencies(
+      UUID scopeId, CoverageDeletionExclusions exclusions) {
+    return exists("select count(*) from central_policy_control_scope where central_control_scope_id = ? and status <> 'DELETED'", scopeId)
+        || existsExcluding("central_subprocess_risk_control_coverage", "control_scope_id", scopeId, exclusions.riskControlIds())
+        || existsExcluding("central_subprocess_control_control_objective_coverage", "control_scope_id", scopeId, exclusions.controlControlObjectiveIds())
+        || existsExcluding("central_subprocess_requirement_control_coverage", "control_scope_id", scopeId, exclusions.requirementControlIds())
+        || exists("select count(*) from local_subprocess_control_scope where central_control_scope_id = ? and status <> 'DELETED'", scopeId);
+  }
+
   public boolean centralRiskScopeHasLiveDependencies(UUID scopeId) {
     return anyExists(CENTRAL_RISK_SCOPE_DEPENDENCY_QUERIES, scopeId);
+  }
+
+  public boolean centralRiskScopeHasLiveDependencies(
+      UUID scopeId, CoverageDeletionExclusions exclusions) {
+    return existsExcluding("central_subprocess_risk_control_coverage", "risk_scope_id", scopeId, exclusions.riskControlIds())
+        || existsExcluding("central_subprocess_risk_control_objective_coverage", "risk_scope_id", scopeId, exclusions.riskControlObjectiveIds())
+        || exists("select count(*) from local_subprocess_risk_scope where central_risk_scope_id = ? and status <> 'DELETED'", scopeId);
   }
 
   public boolean centralControlObjectiveScopeHasLiveDependencies(UUID scopeId) {
     return anyExists(CENTRAL_CONTROL_OBJECTIVE_SCOPE_DEPENDENCY_QUERIES, scopeId);
   }
 
+  public boolean centralControlObjectiveScopeHasLiveDependencies(
+      UUID scopeId, CoverageDeletionExclusions exclusions) {
+    return existsExcluding("central_subprocess_risk_control_objective_coverage", "control_objective_scope_id", scopeId, exclusions.riskControlObjectiveIds())
+        || existsExcluding("central_subprocess_control_control_objective_coverage", "control_objective_scope_id", scopeId, exclusions.controlControlObjectiveIds())
+        || exists("select count(*) from local_subprocess_control_objective_scope where central_control_objective_scope_id = ? and status <> 'DELETED'", scopeId);
+  }
+
   public boolean centralRequirementScopeHasLiveDependencies(UUID scopeId) {
     return anyExists(CENTRAL_REQUIREMENT_SCOPE_DEPENDENCY_QUERIES, scopeId);
+  }
+
+  public boolean centralRequirementScopeHasLiveDependencies(
+      UUID scopeId, CoverageDeletionExclusions exclusions) {
+    return exists("select count(*) from central_policy_requirement_scope where central_requirement_scope_id = ? and status <> 'DELETED'", scopeId)
+        || existsExcluding("central_subprocess_requirement_control_coverage", "requirement_scope_id", scopeId, exclusions.requirementControlIds())
+        || exists("select count(*) from local_subprocess_requirement_scope where central_requirement_scope_id = ? and status <> 'DELETED'", scopeId);
+  }
+
+  public boolean centralRiskControlCoverageHasLiveDependencies(UUID coverageId) {
+    return exists(CENTRAL_RISK_CONTROL_COVERAGE_DEPENDENCY_QUERY, coverageId);
+  }
+
+  public boolean centralRiskControlObjectiveCoverageHasLiveDependencies(UUID coverageId) {
+    return exists(CENTRAL_RISK_CONTROL_OBJECTIVE_COVERAGE_DEPENDENCY_QUERY, coverageId);
+  }
+
+  public boolean centralControlControlObjectiveCoverageHasLiveDependencies(UUID coverageId) {
+    return exists(CENTRAL_CONTROL_CONTROL_OBJECTIVE_COVERAGE_DEPENDENCY_QUERY, coverageId);
+  }
+
+  public boolean centralRequirementControlCoverageHasLiveDependencies(UUID coverageId) {
+    return exists(CENTRAL_REQUIREMENT_CONTROL_COVERAGE_DEPENDENCY_QUERY, coverageId);
   }
 
   private boolean anyExists(List<String> queries, UUID id) {
@@ -179,6 +234,42 @@ public class MasterDataStructuralDependencyChecker {
               return statement;
             },
             resultSet -> resultSet.next() && resultSet.getLong(1) > 0L));
+  }
+
+  private boolean existsExcluding(
+      String table, String foreignKey, UUID endpointId, Set<UUID> excludedIds) {
+    StringBuilder sql = new StringBuilder("select count(*) from ")
+        .append(table).append(" where ").append(foreignKey)
+        .append(" = ? and status <> 'DELETED'");
+    if (!excludedIds.isEmpty()) {
+      sql.append(" and id not in (")
+          .append(String.join(",", java.util.Collections.nCopies(excludedIds.size(), "?")))
+          .append(')');
+    }
+    List<UUID> ordered = excludedIds.stream().sorted().toList();
+    return Boolean.TRUE.equals(jdbcTemplate.query(connection -> {
+      PreparedStatement statement = connection.prepareStatement(sql.toString());
+      statement.setBytes(1, toBytes(endpointId));
+      for (int index = 0; index < ordered.size(); index++) {
+        statement.setBytes(index + 2, toBytes(ordered.get(index)));
+      }
+      return statement;
+    }, resultSet -> resultSet.next() && resultSet.getLong(1) > 0L));
+  }
+
+  public record CoverageDeletionExclusions(
+      Set<UUID> riskControlIds,
+      Set<UUID> riskControlObjectiveIds,
+      Set<UUID> controlControlObjectiveIds,
+      Set<UUID> requirementControlIds) {
+    public static final CoverageDeletionExclusions NONE =
+        new CoverageDeletionExclusions(Set.of(), Set.of(), Set.of(), Set.of());
+    public CoverageDeletionExclusions {
+      riskControlIds = riskControlIds == null ? Set.of() : Set.copyOf(riskControlIds);
+      riskControlObjectiveIds = riskControlObjectiveIds == null ? Set.of() : Set.copyOf(riskControlObjectiveIds);
+      controlControlObjectiveIds = controlControlObjectiveIds == null ? Set.of() : Set.copyOf(controlControlObjectiveIds);
+      requirementControlIds = requirementControlIds == null ? Set.of() : Set.copyOf(requirementControlIds);
+    }
   }
 
   private static byte[] toBytes(UUID uuid) {

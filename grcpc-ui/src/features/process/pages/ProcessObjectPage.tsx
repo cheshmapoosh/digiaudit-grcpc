@@ -9,6 +9,10 @@ import { EMPTY_RISK_SCOPE_DRAFT_STATE, SubprocessRiskScopesTab, useRiskScopePerm
 import { EMPTY_CONTROL_OBJECTIVE_SCOPE_DRAFT_STATE, SubprocessControlObjectiveScopesTab, useControlObjectiveScopePermissions, type ControlObjectiveScopeDraftState } from "@/features/control-objective-scope";
 import { EMPTY_REQUIREMENT_SCOPE_DRAFT_STATE, SubprocessRequirementScopesTab, useRequirementScopePermissions, type RequirementScopeDraftState } from "@/features/requirement-scope";
 import { SubprocessAccountGroupsTab, useControlAccountGroupPermissions } from "@/features/control-account-group";
+import { EMPTY_RISK_CONTROL_COVERAGE_DRAFT_STATE, RiskControlCoverageSection, useRiskControlCoveragePermissions, type RiskControlCoverageDraftState } from "@/features/risk-control-coverage";
+import { EMPTY_RISK_CONTROL_OBJECTIVE_COVERAGE_DRAFT_STATE, RiskControlObjectiveCoverageSection, useRiskControlObjectiveCoveragePermissions, type RiskControlObjectiveCoverageDraftState } from "@/features/risk-control-objective-coverage";
+import { EMPTY_CONTROL_CONTROL_OBJECTIVE_COVERAGE_DRAFT_STATE, ControlControlObjectiveCoverageSection, useControlControlObjectiveCoveragePermissions, type ControlControlObjectiveCoverageDraftState } from "@/features/control-control-objective-coverage";
+import { EMPTY_REQUIREMENT_CONTROL_COVERAGE_DRAFT_STATE, RequirementControlCoverageSection, useRequirementControlCoveragePermissions, type RequirementControlCoverageDraftState } from "@/features/requirement-control-coverage";
 import { useControlObjectiveAccountGroupPermissions } from "@/features/control-objective-account-group";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
@@ -106,6 +110,10 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const riskScopePermissions = useRiskScopePermissions();
     const controlObjectiveScopePermissions = useControlObjectiveScopePermissions();
     const requirementScopePermissions = useRequirementScopePermissions();
+    const riskControlCoveragePermissions = useRiskControlCoveragePermissions();
+    const riskControlObjectiveCoveragePermissions = useRiskControlObjectiveCoveragePermissions();
+    const controlControlObjectiveCoveragePermissions = useControlControlObjectiveCoveragePermissions();
+    const requirementControlCoveragePermissions = useRequirementControlCoveragePermissions();
     const initial = toFormState(value, parent, requestedNodeType);
     const [form, setForm] = useState(initial);
     const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(initial, mode)));
@@ -117,6 +125,10 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const [riskScopeDraft, setRiskScopeDraft] = useState<RiskScopeDraftState>(EMPTY_RISK_SCOPE_DRAFT_STATE);
     const [controlObjectiveScopeDraft, setControlObjectiveScopeDraft] = useState<ControlObjectiveScopeDraftState>(EMPTY_CONTROL_OBJECTIVE_SCOPE_DRAFT_STATE);
     const [requirementScopeDraft, setRequirementScopeDraft] = useState<RequirementScopeDraftState>(EMPTY_REQUIREMENT_SCOPE_DRAFT_STATE);
+    const [riskControlCoverageDraft, setRiskControlCoverageDraft] = useState<RiskControlCoverageDraftState>(EMPTY_RISK_CONTROL_COVERAGE_DRAFT_STATE);
+    const [riskControlObjectiveCoverageDraft, setRiskControlObjectiveCoverageDraft] = useState<RiskControlObjectiveCoverageDraftState>(EMPTY_RISK_CONTROL_OBJECTIVE_COVERAGE_DRAFT_STATE);
+    const [controlControlObjectiveCoverageDraft, setControlControlObjectiveCoverageDraft] = useState<ControlControlObjectiveCoverageDraftState>(EMPTY_CONTROL_CONTROL_OBJECTIVE_COVERAGE_DRAFT_STATE);
+    const [requirementControlCoverageDraft, setRequirementControlCoverageDraft] = useState<RequirementControlCoverageDraftState>(EMPTY_REQUIREMENT_CONTROL_COVERAGE_DRAFT_STATE);
     const [dateDrafts, setDateDrafts] = useState<Record<"validFrom" | "validTo", PersianDateDraftState>>({
         validFrom: { draftValue: "", valid: true, dirty: false },
         validTo: { draftValue: "", valid: true, dirty: false },
@@ -125,7 +137,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const scopeRef = useRef(scope);
     const generalInformationDirty = JSON.stringify(normalized(form, mode)) !== baseline;
     const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
-    const dirty = generalInformationDirty || invalidDateDraft || documentDraft.dirty || controlScopeDraft.dirty || riskScopeDraft.dirty || controlObjectiveScopeDraft.dirty || requirementScopeDraft.dirty;
+    const dirty = generalInformationDirty || invalidDateDraft || documentDraft.dirty || controlScopeDraft.dirty || riskScopeDraft.dirty || controlObjectiveScopeDraft.dirty || requirementScopeDraft.dirty || riskControlCoverageDraft.dirty || riskControlObjectiveCoverageDraft.dirty || controlControlObjectiveCoverageDraft.dirty || requirementControlCoverageDraft.dirty;
     const activeTab = controlledTab ?? internalTab;
     const readOnly = mode === "view";
 
@@ -167,6 +179,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
         if (form.nodeType === "SUBPROCESS" && (!riskScopeDraft.ready || riskScopeDraft.invalid)) return setValidationError(t("riskScope.validation.notReady")), false;
         if (form.nodeType === "SUBPROCESS" && (!controlObjectiveScopeDraft.ready || controlObjectiveScopeDraft.invalid)) return setValidationError(t("controlObjectiveScope.validation.notReady")), false;
         if (form.nodeType === "SUBPROCESS" && (!requirementScopeDraft.ready || requirementScopeDraft.invalid)) return setValidationError(t("requirementScope.validation.notReady")), false;
+        if (form.nodeType === "SUBPROCESS" && (!riskControlCoverageDraft.ready || riskControlCoverageDraft.invalid || !riskControlObjectiveCoverageDraft.ready || riskControlObjectiveCoverageDraft.invalid || !controlControlObjectiveCoverageDraft.ready || controlControlObjectiveCoverageDraft.invalid || !requirementControlCoverageDraft.ready || requirementControlCoverageDraft.invalid)) return setValidationError(t("coverage.validation.notReady")), false;
         setValidationError(null); return true;
     };
 
@@ -175,11 +188,11 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
         const common = { title: form.title.trim(), sortOrder: parseSortOrder(form.sortOrder) ?? 0, description: optional(form.description), validFrom: optional(form.validFrom), validTo: optional(form.validTo), documents: toDocumentAggregateRequest(documentDraft), controlScopeChanges: form.nodeType === "SUBPROCESS" ? controlScopeDraft.changes : [], riskScopeChanges: form.nodeType === "SUBPROCESS" ? riskScopeDraft.changes : [], controlObjectiveScopeChanges: form.nodeType === "SUBPROCESS" ? controlObjectiveScopeDraft.changes : [], requirementScopeChanges: form.nodeType === "SUBPROCESS" ? requirementScopeDraft.changes : [] };
         const payload = mode === "create"
             ? { ...common, nodeType: form.nodeType, code: form.code.trim(), parentId: form.parentId } satisfies ProcessNodeCreate
-            : { ...common, version: value?.version ?? 0, status: form.status, parentId: form.parentId } satisfies ProcessNodeUpdate;
+            : { ...common, version: value?.version ?? 0, status: form.status, parentId: form.parentId, riskControlCoverageChanges: form.nodeType === "SUBPROCESS" ? riskControlCoverageDraft.changes : [], riskControlObjectiveCoverageChanges: form.nodeType === "SUBPROCESS" ? riskControlObjectiveCoverageDraft.changes : [], controlControlObjectiveCoverageChanges: form.nodeType === "SUBPROCESS" ? controlControlObjectiveCoverageDraft.changes : [], requirementControlCoverageChanges: form.nodeType === "SUBPROCESS" ? requirementControlCoverageDraft.changes : [] } satisfies ProcessNodeUpdate;
         if (await onSubmit(payload)) { setBaseline(JSON.stringify(normalized(form, mode))); onDirtyChange?.(false); }
     };
 
-    const saveDisabled = busy || invalidDateDraft || documentDraft.uploading || documentDraft.invalid || !documentDraft.ready || (form.nodeType === "SUBPROCESS" && (!controlScopeDraft.ready || controlScopeDraft.invalid || !riskScopeDraft.ready || riskScopeDraft.invalid || !controlObjectiveScopeDraft.ready || controlObjectiveScopeDraft.invalid || !requirementScopeDraft.ready || requirementScopeDraft.invalid)) || (!generalInformationDirty && !documentDraft.dirty && !controlScopeDraft.dirty && !riskScopeDraft.dirty && !controlObjectiveScopeDraft.dirty && !requirementScopeDraft.dirty);
+    const saveDisabled = busy || invalidDateDraft || documentDraft.uploading || documentDraft.invalid || !documentDraft.ready || (form.nodeType === "SUBPROCESS" && (!controlScopeDraft.ready || controlScopeDraft.invalid || !riskScopeDraft.ready || riskScopeDraft.invalid || !controlObjectiveScopeDraft.ready || controlObjectiveScopeDraft.invalid || !requirementScopeDraft.ready || requirementScopeDraft.invalid || !riskControlCoverageDraft.ready || riskControlCoverageDraft.invalid || !riskControlObjectiveCoverageDraft.ready || riskControlObjectiveCoverageDraft.invalid || !controlControlObjectiveCoverageDraft.ready || controlControlObjectiveCoverageDraft.invalid || !requirementControlCoverageDraft.ready || requirementControlCoverageDraft.invalid)) || (!generalInformationDirty && !documentDraft.dirty && !controlScopeDraft.dirty && !riskScopeDraft.dirty && !controlObjectiveScopeDraft.dirty && !requirementScopeDraft.dirty && !riskControlCoverageDraft.dirty && !riskControlObjectiveCoverageDraft.dirty && !controlControlObjectiveCoverageDraft.dirty && !requirementControlCoverageDraft.dirty);
 
     return (
         <>
@@ -236,16 +249,16 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                         <FormField label={t("process.fields.description", { defaultValue: "Description" })} fullWidth><TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", readValue(e))} /></FormField>
                     </div></div>
                     <div style={{ display: activeTab === "controls" ? "block" : "none" }}>
-                        {form.nodeType === "SUBPROCESS" ? <SubprocessControlScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlScopeDraft} /> : null}
+                        {form.nodeType === "SUBPROCESS" ? <><SubprocessControlScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlScopeDraft} />{controlControlObjectiveCoveragePermissions.view ? <ControlControlObjectiveCoverageSection subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlControlObjectiveCoverageDraft} /> : null}</> : null}
                     </div>
                     <div style={{ display: activeTab === "riskTemplates" ? "block" : "none" }}>
-                        {form.nodeType === "SUBPROCESS" ? <SubprocessRiskScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskScopeDraft} /> : null}
+                        {form.nodeType === "SUBPROCESS" ? <><SubprocessRiskScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskScopeDraft} />{riskControlCoveragePermissions.view ? <RiskControlCoverageSection subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskControlCoverageDraft} /> : null}{riskControlObjectiveCoveragePermissions.view ? <RiskControlObjectiveCoverageSection subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskControlObjectiveCoverageDraft} /> : null}</> : null}
                     </div>
                     <div style={{ display: activeTab === "controlObjectives" ? "block" : "none" }}>
                         {form.nodeType === "SUBPROCESS" ? <SubprocessControlObjectiveScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlObjectiveScopeDraft} /> : null}
                     </div>
                     <div style={{ display: activeTab === "requirements" ? "block" : "none" }}>
-                        {form.nodeType === "SUBPROCESS" ? <SubprocessRequirementScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRequirementScopeDraft} /> : null}
+                        {form.nodeType === "SUBPROCESS" ? <><SubprocessRequirementScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRequirementScopeDraft} />{requirementControlCoveragePermissions.view ? <RequirementControlCoverageSection subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRequirementControlCoverageDraft} /> : null}</> : null}
                     </div>
                     <div style={{ display: activeTab === "accountGroups" ? "block" : "none" }}>
                         {form.nodeType === "SUBPROCESS" && value?.id ? <SubprocessAccountGroupsTab subprocessId={value.id} /> : null}

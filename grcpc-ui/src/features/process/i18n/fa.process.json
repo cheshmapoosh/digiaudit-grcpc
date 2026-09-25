@@ -119,5 +119,19 @@
       "invalidDate": "تاریخ باید با قالب yyyy-MM-dd باشد",
       "invalidValidityRange": "بازه اعتبار معتبر نیست"
     }
+  },
+  "coverage": {
+    "riskControl": { "title": "پوشش ریسک–کنترل" },
+    "riskControlObjective": { "title": "پوشش ریسک–هدف کنترلی" },
+    "controlControlObjective": { "title": "پوشش کنترل–هدف کنترلی" },
+    "requirementControl": { "title": "پوشش الزام–کنترل" },
+    "empty": "هیچ رابطه پوششی انتخاب نشده است.",
+    "savedScopesFirst": "ابتدا زیرفرآیند و قلمروهای آن را ذخیره کنید. قلمرو ذخیره‌نشده برای پوشش قابل انتخاب نیست.",
+    "actions": { "add": "انتخاب پوشش", "edit": "ویرایش", "remove": "حذف", "undo": "واگرد", "activate": "فعال‌سازی", "inactivate": "غیرفعال‌سازی", "restore": "بازگردانی" },
+    "fields": { "risk": "قلمرو ریسک", "control": "قلمرو کنترل", "controlObjective": "قلمرو هدف کنترلی", "requirement": "قلمرو الزام", "lifecycle": "چرخه حیات پوشش", "validFrom": "اعتبار پوشش از", "validTo": "اعتبار پوشش تا" },
+    "status": { "ACTIVE": "فعال", "INACTIVE": "غیرفعال", "DELETED": "در انتظار حذف", "DRAFT": "تغییر پیش‌نویس" },
+    "inverse": { "subprocess": "بافت زیرفرآیند", "related": "شیء مرتبط", "validity": "اعتبار پوشش", "endpointState": "چرخه حیات نقاط پایانی" },
+    "errors": { "duplicate": "این جفت قلمرو قبلاً انتخاب شده است.", "load": "بارگذاری روابط پوششی ناموفق بود." },
+    "validation": { "notReady": "پیش از ذخیره، خطای قابل مشاهده پوشش را برطرف کنید." }
   }
 }

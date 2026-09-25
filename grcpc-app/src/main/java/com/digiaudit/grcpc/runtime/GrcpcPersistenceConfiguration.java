@@ -16,6 +16,10 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.Cent
 import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.domain.entity.CentralControlObjectiveEntity;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.domain.entity.CentralControlAccountGroupEntity;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveaccountgroup.domain.entity.CentralControlObjectiveAccountGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.coverage.controlcontrolobjective.domain.entity.CentralSubprocessControlControlObjectiveCoverageEntity;
+import com.digiaudit.grcpc.modules.masterdata.coverage.requirementcontrol.domain.entity.CentralSubprocessRequirementControlCoverageEntity;
+import com.digiaudit.grcpc.modules.masterdata.coverage.riskcontrol.domain.entity.CentralSubprocessRiskControlCoverageEntity;
+import com.digiaudit.grcpc.modules.masterdata.coverage.riskcontrolobjective.domain.entity.CentralSubprocessRiskControlObjectiveCoverageEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyGroupEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicySubprocessScopeEntity;
@@ -82,6 +86,10 @@ public class GrcpcPersistenceConfiguration {
                 CentralControlObjectiveEntity.class.getName(),
                 CentralControlAccountGroupEntity.class.getName(),
                 CentralControlObjectiveAccountGroupEntity.class.getName(),
+                CentralSubprocessRiskControlCoverageEntity.class.getName(),
+                CentralSubprocessRiskControlObjectiveCoverageEntity.class.getName(),
+                CentralSubprocessControlControlObjectiveCoverageEntity.class.getName(),
+                CentralSubprocessRequirementControlCoverageEntity.class.getName(),
                 CentralRiskCategoryEntity.class.getName(),
                 CentralRiskTemplateEntity.class.getName(),
                 CentralAccountGroupEntity.class.getName(),

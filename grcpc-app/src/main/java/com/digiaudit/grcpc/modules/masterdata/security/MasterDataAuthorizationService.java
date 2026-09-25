@@ -38,6 +38,14 @@ public class MasterDataAuthorizationService {
         }
     }
 
+    public void requireManageWithReferences(String ownerArea, String... referenceAreas) {
+        if (!canManage(ownerArea)
+                || java.util.Arrays.stream(referenceAreas).anyMatch(area -> !canView(area))) {
+            throw new ForbiddenException("MASTER_DATA_ACCESS_DENIED", "error.security.forbidden",
+                    "Master Data aggregate access denied");
+        }
+    }
+
     private boolean allowed(String area, boolean manage) {
         if (!AREAS.contains(area)) return false;
         return currentUserProvider.getCurrentPrincipalOptional().map(principal -> {

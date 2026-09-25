@@ -4,7 +4,7 @@ import { ActionSheet, BusyIndicator, Button, Dialog, Icon, Input, Label, Link, M
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import type { CentralControlDetail, CentralControlGroupSummary, CentralControlSummary } from "@/features/control/domain/centralControl.model";
 import { centralControlApi } from "@/features/control/infra/centralControl.api.repo";
-import CentralControlObjectPage from "@/features/control/pages/CentralControlObjectPage";
+import CentralControlObjectPage, { type CentralControlTabKey } from "@/features/control/pages/CentralControlObjectPage";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import type { CentralSubprocessControlScope, ControlScopeChange, ControlScopeDraftRow, ControlScopeDraftState, ControlScopeDraftValues, ControlScopeOptions, ControlScopeStatusFilter } from "../domain/controlScope.model";
@@ -106,7 +106,7 @@ export default function SubprocessControlScopesTab({ subprocessId, readOnly, bus
   const [viewControl, setViewControl] = useState<CentralControlDetail | null>(null);
   const [viewControlBusy, setViewControlBusy] = useState(false);
   const [viewControlError, setViewControlError] = useState<string | null>(null);
-  const [viewControlTab, setViewControlTab] = useState<"general" | "subprocesses" | "regulations" | "requirements" | "risks" | "accountGroups" | "documents">("general");
+  const [viewControlTab, setViewControlTab] = useState<CentralControlTabKey>("general");
   const generationRef = useRef(0);
   const viewGenerationRef = useRef(0);
 

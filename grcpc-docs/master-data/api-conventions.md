@@ -298,20 +298,38 @@ changes and options use exact Central Scope IDs and include Subprocess context,
 never raw Control or Requirement IDs. Central Organization Scope is separate
 from Local Organization applicability.
 
-Central Coverage commands are type-specific.
+Central Coverage reads and Subprocess-owned change sets are type-specific. Mutation ownership is
+exclusively the existing Subprocess aggregate update:
 
 ```text
-POST /api/master-data/central/subprocesses/{subprocessId}/risk-control-coverages
-POST /api/master-data/central/subprocesses/{subprocessId}/risk-control-objective-coverages
-POST /api/master-data/central/subprocesses/{subprocessId}/control-control-objective-coverages
-POST /api/master-data/central/subprocesses/{subprocessId}/requirement-control-coverages
+PATCH /api/master-data/central/subprocesses/{subprocessId}
+
+riskControlCoverageChanges[]
+riskControlObjectiveCoverageChanges[]
+controlControlObjectiveCoverageChanges[]
+requirementControlCoverageChanges[]
 ```
 
-Each coverage command names exactly the two typed Scope IDs expected by its endpoint.
+Each change names exactly the two typed Scope IDs expected by its family. Omitted, null, or empty
+arrays mean no changes. Supported operations are `CREATE_OR_RESTORE`, `UPDATE`, `ACTIVATE`,
+`INACTIVATE`, `DELETE`, and `RESTORE`. Subprocess Create has no Coverage fields.
+
+Typed list, detail, deleted, and option GETs live under:
+
+```text
+/api/master-data/central/subprocesses/{subprocessId}/risk-control-coverages
+/api/master-data/central/subprocesses/{subprocessId}/risk-control-objective-coverages
+/api/master-data/central/subprocesses/{subprocessId}/control-control-objective-coverages
+/api/master-data/central/subprocesses/{subprocessId}/requirement-control-coverages
+```
+
+Catalog routes expose contextual inverse GETs only. Control, Control Objective, Risk Template, and
+Requirement Saves never own Coverage changes, and the former standalone POST examples are not an
+implemented contract.
 
 The Backend verifies that each referenced scope belongs to `{subprocessId}`.
 
-No generic `/relations` endpoint replaces these commands.
+No generic `/relations` endpoint replaces these typed reads/change sets.
 
 No direct `/controls/{id}/regulations/{id}` endpoint exists.
 

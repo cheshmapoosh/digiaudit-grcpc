@@ -1,0 +1,5 @@
+import { httpClient } from "@/shared/infra/http.client";
+import type { CentralRiskControlObjectiveCoverage,RiskControlObjectiveCoverageOptions } from "../domain/riskControlObjectiveCoverage.model";
+const base=(id:string)=>`/api/master-data/central/subprocesses/${id}/risk-control-objective-coverages`;
+export const riskControlObjectiveCoverageApi={list:(id:string,signal?:AbortSignal)=>httpClient.get<CentralRiskControlObjectiveCoverage[]>(base(id),{signal}),deleted:(id:string,signal?:AbortSignal)=>httpClient.get<CentralRiskControlObjectiveCoverage[]>(`${base(id)}/deleted`,{signal}),options:(id:string,signal?:AbortSignal)=>httpClient.get<RiskControlObjectiveCoverageOptions>(`${base(id)}/options`,{signal}),forControlObjective:(id:string,signal?:AbortSignal)=>httpClient.get<CentralRiskControlObjectiveCoverage[]>(`/api/master-data/central/control-objectives/${id}/risk-coverages`,{signal}),forRisk:(id:string,signal?:AbortSignal)=>httpClient.get<CentralRiskControlObjectiveCoverage[]>(`/api/master-data/central/risk-templates/${id}/control-objective-coverages`,{signal})};
+

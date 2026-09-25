@@ -79,6 +79,19 @@ public class CentralSubprocessRequirementScopeAggregateService {
       LocalDate requestedSubprocessValidFrom,
       LocalDate requestedSubprocessValidTo,
       List<CentralRequirementScopeChangeRequest> requestedChanges) {
+    return prepare(context, subprocess, requestedSubprocessStatus, requestedSubprocessValidFrom,
+        requestedSubprocessValidTo, requestedChanges,
+        MasterDataStructuralDependencyChecker.CoverageDeletionExclusions.NONE);
+  }
+
+  public PreparedChanges prepare(
+      RevisionExecutionContext context,
+      CentralSubprocessEntity subprocess,
+      MasterDataLifecycleStatus requestedSubprocessStatus,
+      LocalDate requestedSubprocessValidFrom,
+      LocalDate requestedSubprocessValidTo,
+      List<CentralRequirementScopeChangeRequest> requestedChanges,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     requireProcessGuard(context);
     SubprocessEndpoint endpoint = new SubprocessEndpoint(
         subprocess.getId(), requestedSubprocessStatus,
@@ -101,7 +114,8 @@ public class CentralSubprocessRequirementScopeAggregateService {
           endpoint,
           requirementsById.get(change.requirementId()),
           scopesByRequirementId.get(change.requirementId()),
-          change));
+          change,
+          exclusions));
     }
     return new PreparedChanges(endpoint.id(), prepared);
   }
@@ -142,7 +156,8 @@ public class CentralSubprocessRequirementScopeAggregateService {
       SubprocessEndpoint subprocess,
       CentralRegulationRequirementEntity requirement,
       CentralSubprocessRequirementScopeEntity existing,
-      CentralRequirementScopeChangeRequest change) {
+      CentralRequirementScopeChangeRequest change,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     if (requirement == null) throw endpointNotFound("Requirement", change.requirementId());
     validateScopeIdentity(change, existing);
     if (change.requestedStatus() == DELETED) {
@@ -168,9 +183,9 @@ public class CentralSubprocessRequirementScopeAggregateService {
         yield new PreparedMutation(
             scope, RevisionOperationType.UPDATE, expectedVersion, snapshot(scope), fields, requestedStatus);
       }
-      case ACTIVATE -> prepareLifecycle(subprocess, requirement, existing, change, RevisionOperationType.ACTIVATE);
-      case INACTIVATE -> prepareLifecycle(subprocess, requirement, existing, change, RevisionOperationType.INACTIVATE);
-      case DELETE -> prepareLifecycle(subprocess, requirement, existing, change, RevisionOperationType.DELETE);
+      case ACTIVATE -> prepareLifecycle(subprocess, requirement, existing, change, RevisionOperationType.ACTIVATE, exclusions);
+      case INACTIVATE -> prepareLifecycle(subprocess, requirement, existing, change, RevisionOperationType.INACTIVATE, exclusions);
+      case DELETE -> prepareLifecycle(subprocess, requirement, existing, change, RevisionOperationType.DELETE, exclusions);
     };
   }
 
@@ -204,7 +219,8 @@ public class CentralSubprocessRequirementScopeAggregateService {
       CentralRegulationRequirementEntity requirement,
       CentralSubprocessRequirementScopeEntity existing,
       CentralRequirementScopeChangeRequest change,
-      RevisionOperationType operation) {
+      RevisionOperationType operation,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     CentralSubprocessRequirementScopeEntity scope = requireExisting(existing, change.requirementId());
 
     long expectedVersion = requireAndAssertVersion(scope, change.version());
@@ -214,7 +230,7 @@ public class CentralSubprocessRequirementScopeAggregateService {
       validateValidityWithinEndpoints(currentFields(scope), subprocess, requirement);
     }
     if (operation == RevisionOperationType.DELETE
-        && dependencyChecker.centralRequirementScopeHasLiveDependencies(scope.getId())) {
+        && dependencyChecker.centralRequirementScopeHasLiveDependencies(scope.getId(), exclusions)) {
       throw new ConflictException(
           "REQUIREMENT_SCOPE_DEPENDENCY_CONFLICT",
           "error.masterdata.requirementScope.dependencyConflict",
@@ -490,7 +506,23 @@ public class CentralSubprocessRequirementScopeAggregateService {
 
     private UUID subprocessId() { return subprocessId; }
     private List<PreparedMutation> mutations() { return mutations; }
+    public PreparedEndpointState finalState(UUID scopeId) {
+      for (PreparedMutation mutation : mutations) {
+        if (!mutation.scope().getId().equals(scopeId)) continue;
+        MasterDataLifecycleStatus status = switch (mutation.operation()) {
+          case CREATE, ACTIVATE, RESTORE -> MasterDataLifecycleStatus.ACTIVE;
+          case INACTIVATE -> MasterDataLifecycleStatus.INACTIVE;
+          case DELETE -> MasterDataLifecycleStatus.DELETED;
+          case UPDATE -> mutation.requestedStatus();
+        };
+        return new PreparedEndpointState(scopeId, status, mutation.fields().validFrom(), mutation.fields().validTo());
+      }
+      return null;
+    }
   }
+
+  public record PreparedEndpointState(
+      UUID scopeId, MasterDataLifecycleStatus status, LocalDate validFrom, LocalDate validTo) {}
 
   public record ApplyResult(
       List<RevisionContentResult> revisionContents,

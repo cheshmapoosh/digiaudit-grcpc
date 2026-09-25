@@ -1,0 +1,4 @@
+import { httpClient } from "@/shared/infra/http.client";
+import type { CentralRiskControlCoverage,RiskControlCoverageOptions } from "../domain/riskControlCoverage.model";
+const base=(id:string)=>`/api/master-data/central/subprocesses/${id}/risk-control-coverages`;
+export const riskControlCoverageApi={list:(id:string,signal?:AbortSignal)=>httpClient.get<CentralRiskControlCoverage[]>(base(id),{signal}),deleted:(id:string,signal?:AbortSignal)=>httpClient.get<CentralRiskControlCoverage[]>(`${base(id)}/deleted`,{signal}),options:(id:string,signal?:AbortSignal)=>httpClient.get<RiskControlCoverageOptions>(`${base(id)}/options`,{signal}),forControl:(id:string,signal?:AbortSignal)=>httpClient.get<CentralRiskControlCoverage[]>(`/api/master-data/central/controls/${id}/risk-coverages`,{signal}),forRisk:(id:string,signal?:AbortSignal)=>httpClient.get<CentralRiskControlCoverage[]>(`/api/master-data/central/risk-templates/${id}/control-coverages`,{signal})};

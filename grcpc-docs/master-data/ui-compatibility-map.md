@@ -257,10 +257,10 @@ These approved capabilities are not implemented in the current UI and must be cl
 | Central Risk Scope | No typed screen | `central_subprocess_risk_scope` | `ADD` | Selected Subprocess tab/dialog with Risk Template Value Help and validity. |
 | Central Control Objective Scope | No typed screen | `central_subprocess_control_objective_scope` | `ADD` | Selected Subprocess Scope list/dialog. |
 | Central Requirement Scope | No typed screen | `central_subprocess_requirement_scope` | `ADD` | Selected Subprocess Requirement Scope list/dialog. |
-| Central Risk–Control Coverage | Generic risk/control link only | `central_subprocess_risk_control_coverage` | `ADD` | Scope-picker dialog that exposes only scopes in the selected Subprocess. |
-| Central Risk–Control Objective Coverage | No equivalent | `central_subprocess_risk_control_objective_coverage` | `ADD` | Typed Scope-pair dialog, no generated relation. |
-| Central Control–Control Objective Coverage | No exact contextual equivalent | `central_subprocess_control_control_objective_coverage` | `ADD` | Direct typed coverage list/dialog independent of Risk path. |
-| Central Requirement–Control Coverage | Legacy direct link lacks context | `central_subprocess_requirement_control_coverage` | `ADD` | Typed requirement/control Scope-pair dialog. |
+| Central Risk–Control Coverage | Generic risk/control link only | `central_subprocess_risk_control_coverage` | `REMAP_COMPLETE` | Subprocess-owned draft section plus contextual Control/Risk inverse reads. |
+| Central Risk–Control Objective Coverage | No equivalent | `central_subprocess_risk_control_objective_coverage` | `ADD_COMPLETE` | Subprocess-owned typed Scope-pair draft section and contextual inverse reads; no generated relation. |
+| Central Control–Control Objective Coverage | No exact contextual equivalent | `central_subprocess_control_control_objective_coverage` | `ADD_COMPLETE` | Subprocess-owned direct typed coverage section and read-only Control/Objective inverse tabs. |
+| Central Requirement–Control Coverage | Legacy direct link lacks context | `central_subprocess_requirement_control_coverage` | `REMAP_COMPLETE` | Subprocess-owned requirement/control Scope-pair section and Requirement/Control inverse tabs. |
 | Central Policy relationships | No approved model equivalent | Four typed Policy-owned tables | `ADD` | Four relation tabs and one Policy Save. |
 | Local Organization–Subprocess Context | Generic organization-process assignment only | `local_organization_subprocess_scope` | `ADD` | Organization Object Page Local Context tab with exact Subprocess selection and validity. |
 | Local Control/Risk/Objective/Requirement Scope | Generic local/reference assignments only | Four `local_subprocess_*_scope` tables | `ADD` | Context-scoped typed tabs, source type, inherited reference indication, and validity checks. |

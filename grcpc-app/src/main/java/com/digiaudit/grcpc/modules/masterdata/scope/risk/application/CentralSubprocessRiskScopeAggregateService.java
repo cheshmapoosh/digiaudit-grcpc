@@ -79,6 +79,19 @@ public class CentralSubprocessRiskScopeAggregateService {
       LocalDate requestedSubprocessValidFrom,
       LocalDate requestedSubprocessValidTo,
       List<CentralRiskScopeChangeRequest> requestedChanges) {
+    return prepare(context, subprocess, requestedSubprocessStatus, requestedSubprocessValidFrom,
+        requestedSubprocessValidTo, requestedChanges,
+        MasterDataStructuralDependencyChecker.CoverageDeletionExclusions.NONE);
+  }
+
+  public PreparedChanges prepare(
+      RevisionExecutionContext context,
+      CentralSubprocessEntity subprocess,
+      MasterDataLifecycleStatus requestedSubprocessStatus,
+      LocalDate requestedSubprocessValidFrom,
+      LocalDate requestedSubprocessValidTo,
+      List<CentralRiskScopeChangeRequest> requestedChanges,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     requireProcessGuard(context);
     SubprocessEndpoint endpoint =
         new SubprocessEndpoint(
@@ -108,7 +121,8 @@ public class CentralSubprocessRiskScopeAggregateService {
               endpoint,
               riskTemplatesById.get(change.riskTemplateId()),
               scopesByRiskTemplateId.get(change.riskTemplateId()),
-              change));
+              change,
+              exclusions));
     }
     return new PreparedChanges(endpoint.id(), prepared);
   }
@@ -157,7 +171,8 @@ public class CentralSubprocessRiskScopeAggregateService {
       SubprocessEndpoint subprocess,
       CentralRiskTemplateEntity riskTemplate,
       CentralSubprocessRiskScopeEntity existing,
-      CentralRiskScopeChangeRequest change) {
+      CentralRiskScopeChangeRequest change,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     if (riskTemplate == null) {
       throw endpointNotFound("Risk Template", change.riskTemplateId());
     }
@@ -196,13 +211,13 @@ public class CentralSubprocessRiskScopeAggregateService {
       }
       case ACTIVATE ->
           prepareLifecycle(
-              subprocess, riskTemplate, existing, change, RevisionOperationType.ACTIVATE);
+              subprocess, riskTemplate, existing, change, RevisionOperationType.ACTIVATE, exclusions);
       case INACTIVATE ->
           prepareLifecycle(
-              subprocess, riskTemplate, existing, change, RevisionOperationType.INACTIVATE);
+              subprocess, riskTemplate, existing, change, RevisionOperationType.INACTIVATE, exclusions);
       case DELETE ->
           prepareLifecycle(
-              subprocess, riskTemplate, existing, change, RevisionOperationType.DELETE);
+              subprocess, riskTemplate, existing, change, RevisionOperationType.DELETE, exclusions);
     };
   }
 
@@ -254,7 +269,8 @@ public class CentralSubprocessRiskScopeAggregateService {
       CentralRiskTemplateEntity riskTemplate,
       CentralSubprocessRiskScopeEntity existing,
       CentralRiskScopeChangeRequest change,
-      RevisionOperationType operation) {
+      RevisionOperationType operation,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     CentralSubprocessRiskScopeEntity scope =
         requireExisting(existing, change.riskTemplateId());
 
@@ -265,7 +281,7 @@ public class CentralSubprocessRiskScopeAggregateService {
       validateValidityWithinEndpoints(currentFields(scope), subprocess, riskTemplate);
     }
     if (operation == RevisionOperationType.DELETE
-        && dependencyChecker.centralRiskScopeHasLiveDependencies(scope.getId())) {
+        && dependencyChecker.centralRiskScopeHasLiveDependencies(scope.getId(), exclusions)) {
       throw new ConflictException(
           "RISK_SCOPE_DEPENDENCY_CONFLICT",
           "error.masterdata.riskScope.dependencyConflict",
@@ -604,7 +620,23 @@ public class CentralSubprocessRiskScopeAggregateService {
 
     private UUID subprocessId() { return subprocessId; }
     private List<PreparedMutation> mutations() { return mutations; }
+    public PreparedEndpointState finalState(UUID scopeId) {
+      for (PreparedMutation mutation : mutations) {
+        if (!mutation.scope().getId().equals(scopeId)) continue;
+        MasterDataLifecycleStatus status = switch (mutation.operation()) {
+          case CREATE, ACTIVATE, RESTORE -> MasterDataLifecycleStatus.ACTIVE;
+          case INACTIVATE -> MasterDataLifecycleStatus.INACTIVE;
+          case DELETE -> MasterDataLifecycleStatus.DELETED;
+          case UPDATE -> mutation.requestedStatus();
+        };
+        return new PreparedEndpointState(scopeId, status, mutation.fields().validFrom(), mutation.fields().validTo());
+      }
+      return null;
+    }
   }
+
+  public record PreparedEndpointState(
+      UUID scopeId, MasterDataLifecycleStatus status, LocalDate validFrom, LocalDate validTo) {}
 
   public record ApplyResult(
       List<RevisionContentResult> revisionContents,

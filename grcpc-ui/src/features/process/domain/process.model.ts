@@ -4,6 +4,10 @@ import type { CentralSubprocessControlScope, ControlScopeChange } from "@/featur
 import type { CentralSubprocessRiskScope, RiskScopeChange } from "@/features/risk-scope";
 import type { CentralSubprocessControlObjectiveScope, ControlObjectiveScopeChange } from "@/features/control-objective-scope";
 import type { CentralSubprocessRequirementScope, RequirementScopeChange } from "@/features/requirement-scope";
+import type { CentralRiskControlCoverage, RiskControlCoverageChange } from "@/features/risk-control-coverage";
+import type { CentralRiskControlObjectiveCoverage, RiskControlObjectiveCoverageChange } from "@/features/risk-control-objective-coverage";
+import type { CentralControlControlObjectiveCoverage, ControlControlObjectiveCoverageChange } from "@/features/control-control-objective-coverage";
+import type { CentralRequirementControlCoverage, RequirementControlCoverageChange } from "@/features/requirement-control-coverage";
 
 export type ProcessStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type ProcessEditableStatus = "ACTIVE" | "INACTIVE";
@@ -22,6 +26,10 @@ export interface MasterDataAggregateMutationResponse extends MasterDataRevisionM
     riskScopes?: CentralSubprocessRiskScope[];
     controlObjectiveScopes?: CentralSubprocessControlObjectiveScope[];
     requirementScopes?: CentralSubprocessRequirementScope[];
+    riskControlCoverages?: CentralRiskControlCoverage[];
+    riskControlObjectiveCoverages?: CentralRiskControlObjectiveCoverage[];
+    controlControlObjectiveCoverages?: CentralControlControlObjectiveCoverage[];
+    requirementControlCoverages?: CentralRequirementControlCoverage[];
 }
 
 export interface ProcessNode extends AuditFields {
@@ -79,6 +87,10 @@ export interface ProcessNodeUpdate {
     riskScopeChanges: RiskScopeChange[];
     controlObjectiveScopeChanges: ControlObjectiveScopeChange[];
     requirementScopeChanges: RequirementScopeChange[];
+    riskControlCoverageChanges: RiskControlCoverageChange[];
+    riskControlObjectiveCoverageChanges: RiskControlObjectiveCoverageChange[];
+    controlControlObjectiveCoverageChanges: ControlControlObjectiveCoverageChange[];
+    requirementControlCoverageChanges: RequirementControlCoverageChange[];
 }
 
 export interface ProcessLifecycleCommand {

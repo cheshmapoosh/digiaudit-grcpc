@@ -278,6 +278,14 @@ The two Account Group classifications are direct Control–Account Group and Con
 
 The four Central Coverage types are Risk–Control, Risk–Control Objective, Control–Control Objective, and Requirement–Control.
 
+Prompt 7 relationship completion makes these four existing tables runtime-owned by the Central
+Subprocess aggregate. Only `PATCH /api/master-data/central/subprocesses/{subprocessId}` accepts
+their nullable typed change sets; no standalone or catalog-owned Coverage mutation route exists.
+The Save acquires the `PROCESS` hierarchy Guard, locks the typed endpoint union in Control, Risk,
+Control Objective, and Requirement order, prepares all Scope and Coverage work before mutation,
+applies explicit Coverage deletes before Scope deletes, and appends Coverage Revision Contents
+after Scope contents in the fixed four-family order. Subprocess Create never accepts Coverage.
+
 Each Central Coverage endpoint is a Scope, never a raw definition.
 
 Both endpoints of a Central Coverage must belong to the same Central Subprocess.
@@ -289,6 +297,11 @@ No three-way Coverage exists in this version.
 No Coverage is generated transitively from other Coverage rows.
 
 No coverage stores a weight, percentage, score, or effectiveness result.
+
+Coverage validity is an independent inclusive interval. The Backend validates only its own
+`validFrom <= validTo`; it does not impose Coverage-within-Scope containment or rewrite Coverage
+when an endpoint lifecycle/date changes. Persisted Coverage lifecycle and endpoint lifecycle are
+reported separately.
 
 ## 9. Local Context and Local relation rules
 

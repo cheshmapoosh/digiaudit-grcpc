@@ -24,6 +24,19 @@ import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralProce
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralSubprocessEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.CentralProcessRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.CentralSubprocessRepository;
+import com.digiaudit.grcpc.modules.masterdata.coverage.controlcontrolobjective.api.dto.CentralControlControlObjectiveCoverageChangeRequest;
+import com.digiaudit.grcpc.modules.masterdata.coverage.application.CentralSubprocessCoverageLockCoordinator;
+import com.digiaudit.grcpc.modules.masterdata.coverage.controlcontrolobjective.api.dto.CentralSubprocessControlControlObjectiveCoverageResponse;
+import com.digiaudit.grcpc.modules.masterdata.coverage.controlcontrolobjective.application.CentralSubprocessControlControlObjectiveCoverageAggregateService;
+import com.digiaudit.grcpc.modules.masterdata.coverage.requirementcontrol.api.dto.CentralRequirementControlCoverageChangeRequest;
+import com.digiaudit.grcpc.modules.masterdata.coverage.requirementcontrol.api.dto.CentralSubprocessRequirementControlCoverageResponse;
+import com.digiaudit.grcpc.modules.masterdata.coverage.requirementcontrol.application.CentralSubprocessRequirementControlCoverageAggregateService;
+import com.digiaudit.grcpc.modules.masterdata.coverage.riskcontrol.api.dto.CentralRiskControlCoverageChangeRequest;
+import com.digiaudit.grcpc.modules.masterdata.coverage.riskcontrol.api.dto.CentralSubprocessRiskControlCoverageResponse;
+import com.digiaudit.grcpc.modules.masterdata.coverage.riskcontrol.application.CentralSubprocessRiskControlCoverageAggregateService;
+import com.digiaudit.grcpc.modules.masterdata.coverage.riskcontrolobjective.api.dto.CentralRiskControlObjectiveCoverageChangeRequest;
+import com.digiaudit.grcpc.modules.masterdata.coverage.riskcontrolobjective.api.dto.CentralSubprocessRiskControlObjectiveCoverageResponse;
+import com.digiaudit.grcpc.modules.masterdata.coverage.riskcontrolobjective.application.CentralSubprocessRiskControlObjectiveCoverageAggregateService;
 import com.digiaudit.grcpc.modules.masterdata.scope.control.api.dto.CentralSubprocessControlScopeResponse;
 import com.digiaudit.grcpc.modules.masterdata.scope.control.api.dto.CentralControlScopeChangeRequest;
 import com.digiaudit.grcpc.modules.masterdata.scope.control.application.CentralSubprocessControlScopeAggregateService;
@@ -102,6 +115,11 @@ public class ProcessService {
     private final CentralSubprocessRiskScopeAggregateService riskScopes;
     private final CentralSubprocessControlObjectiveScopeAggregateService controlObjectiveScopes;
     private final CentralSubprocessRequirementScopeAggregateService requirementScopes;
+    private final CentralSubprocessRiskControlCoverageAggregateService riskControlCoverages;
+    private final CentralSubprocessRiskControlObjectiveCoverageAggregateService riskControlObjectiveCoverages;
+    private final CentralSubprocessControlControlObjectiveCoverageAggregateService controlControlObjectiveCoverages;
+    private final CentralSubprocessRequirementControlCoverageAggregateService requirementControlCoverages;
+    private final CentralSubprocessCoverageLockCoordinator coverageLockCoordinator;
 
     public ProcessService(
             CentralProcessRepository processRepository,
@@ -116,7 +134,12 @@ public class ProcessService {
             CentralSubprocessControlScopeAggregateService controlScopes,
             CentralSubprocessRiskScopeAggregateService riskScopes,
             CentralSubprocessControlObjectiveScopeAggregateService controlObjectiveScopes,
-            CentralSubprocessRequirementScopeAggregateService requirementScopes
+            CentralSubprocessRequirementScopeAggregateService requirementScopes,
+            CentralSubprocessRiskControlCoverageAggregateService riskControlCoverages,
+            CentralSubprocessRiskControlObjectiveCoverageAggregateService riskControlObjectiveCoverages,
+            CentralSubprocessControlControlObjectiveCoverageAggregateService controlControlObjectiveCoverages,
+            CentralSubprocessRequirementControlCoverageAggregateService requirementControlCoverages,
+            CentralSubprocessCoverageLockCoordinator coverageLockCoordinator
     ) {
         this.processRepository = Objects.requireNonNull(processRepository, "processRepository is required");
         this.subprocessRepository = Objects.requireNonNull(subprocessRepository, "subprocessRepository is required");
@@ -131,6 +154,11 @@ public class ProcessService {
         this.riskScopes = Objects.requireNonNull(riskScopes, "riskScopes is required");
         this.controlObjectiveScopes = Objects.requireNonNull(controlObjectiveScopes, "controlObjectiveScopes is required");
         this.requirementScopes = Objects.requireNonNull(requirementScopes, "requirementScopes is required");
+        this.riskControlCoverages = Objects.requireNonNull(riskControlCoverages, "riskControlCoverages is required");
+        this.riskControlObjectiveCoverages = Objects.requireNonNull(riskControlObjectiveCoverages, "riskControlObjectiveCoverages is required");
+        this.controlControlObjectiveCoverages = Objects.requireNonNull(controlControlObjectiveCoverages, "controlControlObjectiveCoverages is required");
+        this.requirementControlCoverages = Objects.requireNonNull(requirementControlCoverages, "requirementControlCoverages is required");
+        this.coverageLockCoordinator = Objects.requireNonNull(coverageLockCoordinator, "coverageLockCoordinator is required");
     }
 
     @Transactional(readOnly = true)
@@ -352,7 +380,8 @@ public class ProcessService {
                 canonicalControlScopes.get(),
                 canonicalRiskScopes.get(),
                 canonicalControlObjectiveScopes.get(),
-                canonicalRequirementScopes.get());
+                canonicalRequirementScopes.get(),
+                List.of(), List.of(), List.of(), List.of());
     }
 
     public CentralSubprocessAggregateMutationResponse updateSubprocess(UUID subprocessId, UpdateCentralSubprocessRequest request) {
@@ -367,6 +396,10 @@ public class ProcessService {
         AtomicReference<List<CentralSubprocessRiskScopeResponse>> canonicalRiskScopes = new AtomicReference<>(List.of());
         AtomicReference<List<CentralSubprocessControlObjectiveScopeResponse>> canonicalControlObjectiveScopes = new AtomicReference<>(List.of());
         AtomicReference<List<CentralSubprocessRequirementScopeResponse>> canonicalRequirementScopes = new AtomicReference<>(List.of());
+        AtomicReference<List<CentralSubprocessRiskControlCoverageResponse>> canonicalRiskControlCoverages = new AtomicReference<>(List.of());
+        AtomicReference<List<CentralSubprocessRiskControlObjectiveCoverageResponse>> canonicalRiskControlObjectiveCoverages = new AtomicReference<>(List.of());
+        AtomicReference<List<CentralSubprocessControlControlObjectiveCoverageResponse>> canonicalControlControlObjectiveCoverages = new AtomicReference<>(List.of());
+        AtomicReference<List<CentralSubprocessRequirementControlCoverageResponse>> canonicalRequirementControlCoverages = new AtomicReference<>(List.of());
         RevisionExecutionResult result = revisionCoordinator.executeStructural(
                 MasterDataHierarchyKey.PROCESS,
                 RevisionRequest.central(
@@ -394,7 +427,11 @@ public class ProcessService {
                         request.controlObjectiveScopeChanges(),
                         canonicalControlObjectiveScopes,
                         request.requirementScopeChanges(),
-                        canonicalRequirementScopes
+                        canonicalRequirementScopes,
+                        request.riskControlCoverageChanges(), canonicalRiskControlCoverages,
+                        request.riskControlObjectiveCoverageChanges(), canonicalRiskControlObjectiveCoverages,
+                        request.controlControlObjectiveCoverageChanges(), canonicalControlControlObjectiveCoverages,
+                        request.requirementControlCoverageChanges(), canonicalRequirementControlCoverages
                 )
         );
         return subprocessAggregateResponse(
@@ -403,7 +440,11 @@ public class ProcessService {
                 canonicalControlScopes.get(),
                 canonicalRiskScopes.get(),
                 canonicalControlObjectiveScopes.get(),
-                canonicalRequirementScopes.get());
+                canonicalRequirementScopes.get(),
+                canonicalRiskControlCoverages.get(),
+                canonicalRiskControlObjectiveCoverages.get(),
+                canonicalControlControlObjectiveCoverages.get(),
+                canonicalRequirementControlCoverages.get());
     }
 
     public MasterDataRevisionMutationResponse moveSubprocess(UUID subprocessId, MoveCentralSubprocessRequest request) {
@@ -734,7 +775,15 @@ public class ProcessService {
             List<CentralControlObjectiveScopeChangeRequest> controlObjectiveScopeChanges,
             AtomicReference<List<CentralSubprocessControlObjectiveScopeResponse>> canonicalControlObjectiveScopes,
             List<CentralRequirementScopeChangeRequest> requirementScopeChanges,
-            AtomicReference<List<CentralSubprocessRequirementScopeResponse>> canonicalRequirementScopes
+            AtomicReference<List<CentralSubprocessRequirementScopeResponse>> canonicalRequirementScopes,
+            List<CentralRiskControlCoverageChangeRequest> riskControlCoverageChanges,
+            AtomicReference<List<CentralSubprocessRiskControlCoverageResponse>> canonicalRiskControlCoverages,
+            List<CentralRiskControlObjectiveCoverageChangeRequest> riskControlObjectiveCoverageChanges,
+            AtomicReference<List<CentralSubprocessRiskControlObjectiveCoverageResponse>> canonicalRiskControlObjectiveCoverages,
+            List<CentralControlControlObjectiveCoverageChangeRequest> controlControlObjectiveCoverageChanges,
+            AtomicReference<List<CentralSubprocessControlControlObjectiveCoverageResponse>> canonicalControlControlObjectiveCoverages,
+            List<CentralRequirementControlCoverageChangeRequest> requirementControlCoverageChanges,
+            AtomicReference<List<CentralSubprocessRequirementControlCoverageResponse>> canonicalRequirementControlCoverages
     ) {
         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
         CentralSubprocessEntity entity = lockSubprocessIncludingDeleted(subprocessId);
@@ -744,18 +793,54 @@ public class ProcessService {
                 documentCommandService.prepareAggregate(documents);
         Map<UUID, CentralProcessEntity> processById = indexProcesses(processRepository.findAllByOrderByIdAsc());
         requireSubprocessOwner(processId, processById);
+        coverageLockCoordinator.lockEndpointUnion(
+                subprocessId,
+                controlScopeChanges,
+                riskScopeChanges,
+                controlObjectiveScopeChanges,
+                requirementScopeChanges,
+                riskControlCoverageChanges,
+                riskControlObjectiveCoverageChanges,
+                controlControlObjectiveCoverageChanges,
+                requirementControlCoverageChanges);
+        MasterDataStructuralDependencyChecker.CoverageDeletionExclusions coverageDeletions =
+                new MasterDataStructuralDependencyChecker.CoverageDeletionExclusions(
+                        riskControlCoverages.validatedDeletionIds(
+                                context, entity, riskControlCoverageChanges),
+                        riskControlObjectiveCoverages.validatedDeletionIds(
+                                context, entity, riskControlObjectiveCoverageChanges),
+                        controlControlObjectiveCoverages.validatedDeletionIds(
+                                context, entity, controlControlObjectiveCoverageChanges),
+                        requirementControlCoverages.validatedDeletionIds(
+                                context, entity, requirementControlCoverageChanges));
         CentralSubprocessControlScopeAggregateService.PreparedChanges preparedControlScopes =
                 controlScopes.prepare(
-                        context, entity, status, validFrom, validTo, controlScopeChanges);
+                        context, entity, status, validFrom, validTo, controlScopeChanges, coverageDeletions);
         CentralSubprocessRiskScopeAggregateService.PreparedChanges preparedRiskScopes =
                 riskScopes.prepare(
-                        context, entity, status, validFrom, validTo, riskScopeChanges);
+                        context, entity, status, validFrom, validTo, riskScopeChanges, coverageDeletions);
         CentralSubprocessControlObjectiveScopeAggregateService.PreparedChanges preparedControlObjectiveScopes =
                 controlObjectiveScopes.prepare(
-                        context, entity, status, validFrom, validTo, controlObjectiveScopeChanges);
+                        context, entity, status, validFrom, validTo, controlObjectiveScopeChanges, coverageDeletions);
         CentralSubprocessRequirementScopeAggregateService.PreparedChanges preparedRequirementScopes =
                 requirementScopes.prepare(
-                        context, entity, status, validFrom, validTo, requirementScopeChanges);
+                        context, entity, status, validFrom, validTo, requirementScopeChanges, coverageDeletions);
+        CentralSubprocessRiskControlCoverageAggregateService.PreparedChanges preparedRiskControlCoverages =
+                riskControlCoverages.prepare(
+                        context, entity, status, preparedRiskScopes, preparedControlScopes,
+                        riskControlCoverageChanges);
+        CentralSubprocessRiskControlObjectiveCoverageAggregateService.PreparedChanges preparedRiskControlObjectiveCoverages =
+                riskControlObjectiveCoverages.prepare(
+                        context, entity, status, preparedRiskScopes, preparedControlObjectiveScopes,
+                        riskControlObjectiveCoverageChanges);
+        CentralSubprocessControlControlObjectiveCoverageAggregateService.PreparedChanges preparedControlControlObjectiveCoverages =
+                controlControlObjectiveCoverages.prepare(
+                        context, entity, status, preparedControlScopes, preparedControlObjectiveScopes,
+                        controlControlObjectiveCoverageChanges);
+        CentralSubprocessRequirementControlCoverageAggregateService.PreparedChanges preparedRequirementControlCoverages =
+                requirementControlCoverages.prepare(
+                        context, entity, status, preparedRequirementScopes, preparedControlScopes,
+                        requirementControlCoverageChanges);
         JsonNode before = subprocessSnapshot(entity);
         entity.updateDetails(
                 title,
@@ -776,6 +861,14 @@ public class ProcessService {
         ));
         RevisionOperationResult parentResult = completedSubprocess(
                 context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
+        CentralSubprocessRiskControlCoverageAggregateService.ApplyResult riskControlCoverageResult =
+                riskControlCoverages.apply(preparedRiskControlCoverages, saved);
+        CentralSubprocessRiskControlObjectiveCoverageAggregateService.ApplyResult riskControlObjectiveCoverageResult =
+                riskControlObjectiveCoverages.apply(preparedRiskControlObjectiveCoverages, saved);
+        CentralSubprocessControlControlObjectiveCoverageAggregateService.ApplyResult controlControlObjectiveCoverageResult =
+                controlControlObjectiveCoverages.apply(preparedControlControlObjectiveCoverages, saved);
+        CentralSubprocessRequirementControlCoverageAggregateService.ApplyResult requirementControlCoverageResult =
+                requirementControlCoverages.apply(preparedRequirementControlCoverages, saved);
         CentralSubprocessControlScopeAggregateService.ApplyResult controlScopeResult =
                 controlScopes.apply(preparedControlScopes, saved);
         CentralSubprocessRiskScopeAggregateService.ApplyResult riskScopeResult =
@@ -788,11 +881,19 @@ public class ProcessService {
         canonicalRiskScopes.set(riskScopeResult.canonicalRows());
         canonicalControlObjectiveScopes.set(controlObjectiveScopeResult.canonicalRows());
         canonicalRequirementScopes.set(requirementScopeResult.canonicalRows());
+        canonicalRiskControlCoverages.set(riskControlCoverages.canonicalRows(saved));
+        canonicalRiskControlObjectiveCoverages.set(riskControlObjectiveCoverages.canonicalRows(saved));
+        canonicalControlControlObjectiveCoverages.set(controlControlObjectiveCoverages.canonicalRows(saved));
+        canonicalRequirementControlCoverages.set(requirementControlCoverages.canonicalRows(saved));
         List<RevisionContentResult> relationshipContents =
                 new ArrayList<>(controlScopeResult.revisionContents());
         relationshipContents.addAll(riskScopeResult.revisionContents());
         relationshipContents.addAll(controlObjectiveScopeResult.revisionContents());
         relationshipContents.addAll(requirementScopeResult.revisionContents());
+        relationshipContents.addAll(riskControlCoverageResult.revisionContents());
+        relationshipContents.addAll(riskControlObjectiveCoverageResult.revisionContents());
+        relationshipContents.addAll(controlControlObjectiveCoverageResult.revisionContents());
+        relationshipContents.addAll(requirementControlCoverageResult.revisionContents());
         return combine(context, parentResult, relationshipContents);
     }
 
@@ -947,7 +1048,11 @@ public class ProcessService {
             List<CentralSubprocessControlScopeResponse> canonicalControlScopes,
             List<CentralSubprocessRiskScopeResponse> canonicalRiskScopes,
             List<CentralSubprocessControlObjectiveScopeResponse> canonicalControlObjectiveScopes,
-            List<CentralSubprocessRequirementScopeResponse> canonicalRequirementScopes
+            List<CentralSubprocessRequirementScopeResponse> canonicalRequirementScopes,
+            List<CentralSubprocessRiskControlCoverageResponse> canonicalRiskControlCoverages,
+            List<CentralSubprocessRiskControlObjectiveCoverageResponse> canonicalRiskControlObjectiveCoverages,
+            List<CentralSubprocessControlControlObjectiveCoverageResponse> canonicalControlControlObjectiveCoverages,
+            List<CentralSubprocessRequirementControlCoverageResponse> canonicalRequirementControlCoverages
     ) {
         MasterDataMutationResult primary = result.primaryResult();
         return new CentralSubprocessAggregateMutationResponse(
@@ -958,7 +1063,11 @@ public class ProcessService {
                 canonicalControlScopes,
                 canonicalRiskScopes,
                 canonicalControlObjectiveScopes,
-                canonicalRequirementScopes
+                canonicalRequirementScopes,
+                canonicalRiskControlCoverages,
+                canonicalRiskControlObjectiveCoverages,
+                canonicalControlControlObjectiveCoverages,
+                canonicalRequirementControlCoverages
         );
     }
 

@@ -20,6 +20,14 @@ import {
   type DocumentAggregateDraftError,
   type ParentSaveDocumentDraftState,
 } from "@/features/document";
+import {
+  RiskControlCoveragesSection,
+  useRiskControlCoveragePermissions,
+} from "@/features/risk-control-coverage";
+import {
+  RiskControlObjectiveCoveragesSection,
+  useRiskControlObjectiveCoveragePermissions,
+} from "@/features/risk-control-objective-coverage";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -172,6 +180,8 @@ export default function CentralRiskObjectPage({
   onDirtyChange,
 }: Props) {
   const { t } = useTranslation();
+  const controlCoveragePermissions = useRiskControlCoveragePermissions();
+  const objectiveCoveragePermissions = useRiskControlObjectiveCoveragePermissions();
   const [form, setForm] = useState<FormState>(() => toForm(kind, value, initialParentCategoryId));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(kind, value, initialParentCategoryId))));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -383,12 +393,16 @@ export default function CentralRiskObjectPage({
         <DetailTabContainer
           onTabSelect={(event) => {
             const key = event.detail.tab.getAttribute("data-tab-key") as CentralRiskTabKey | null;
-            if (key === "general" || key === "documents") onActiveTabChange(key);
+            if (key === "general" || key === "documents"
+              || (key === "controlCenter" && kind === "template" && mode !== "create"
+                && controlCoveragePermissions.view && objectiveCoveragePermissions.view)) {
+              onActiveTabChange(key);
+            }
           }}
         >
           <Tab text={t("risk.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
           {kind === "template" ? <Tab text={t("risk.tabs.risk")} disabled data-tab-key="risk" /> : null}
-          {kind === "template" ? <Tab text={t("risk.tabs.controlCenter")} disabled data-tab-key="controlCenter" /> : null}
+          {kind === "template" ? <Tab text={t("risk.tabs.controlCenter")} selected={activeTab === "controlCenter"} disabled={mode === "create" || !controlCoveragePermissions.view || !objectiveCoveragePermissions.view} data-tab-key="controlCenter" /> : null}
           <Tab text={t("risk.tabs.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
 
@@ -478,6 +492,15 @@ export default function CentralRiskObjectPage({
                 />
               </Field>
             </div>
+          </div>
+
+          <div className={activeTab === "controlCenter" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
+            {kind === "template" && value?.id && controlCoveragePermissions.view && objectiveCoveragePermissions.view ? (
+              <>
+                <RiskControlCoveragesSection riskTemplateId={value.id} title={t("risk.coverage.controls")} />
+                <RiskControlObjectiveCoveragesSection riskTemplateId={value.id} title={t("risk.coverage.controlObjectives")} />
+              </>
+            ) : null}
           </div>
 
           <div className={activeTab === "documents" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>

@@ -57,6 +57,14 @@ requires PROCESS VIEW. Parent Save responses filter unauthorized related rows.
 An Area manager can maintain its own definitions without being granted unrelated
 catalog access; cross-Area relationship tabs require additional explicit roles.
 
+The four Central Coverage families use these complete combinations for every list, detail,
+deleted, options, inverse, and canonical-response path: Risk–Control and Risk–Control Objective
+require PROCESS VIEW + RISK VIEW + CONTROL VIEW; Control–Control Objective requires PROCESS VIEW +
+CONTROL VIEW; Requirement–Control requires PROCESS VIEW + GOVERNANCE VIEW + CONTROL VIEW. Nonempty
+Subprocess change sets replace PROCESS VIEW with PROCESS MANAGE and retain all referenced Area VIEW
+requirements. Empty/omitted families require no unrelated Area access and unauthorized canonical
+arrays are returned empty without leaking identities, labels, or counts.
+
 Documents use the resolved typed target's Area for viewing/downloading/managing.
 The existing per-version accessible-link filtering remains in place. Linking an
 existing version additionally requires access to the source version, and adding a

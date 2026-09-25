@@ -13,6 +13,18 @@ import org.springframework.data.repository.query.Param;
 
 public interface CentralSubprocessControlObjectiveScopeRepository
     extends JpaRepository<CentralSubprocessControlObjectiveScopeEntity, UUID> {
+
+  interface EndpointIds {
+    UUID getSubprocessId();
+    UUID getControlObjectiveId();
+  }
+
+  @Query("select s.subprocessId as subprocessId, s.controlObjectiveId as controlObjectiveId from CentralSubprocessControlObjectiveScopeEntity s where s.id = :id")
+  Optional<EndpointIds> findEndpointIdsById(@Param("id") UUID id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select s from CentralSubprocessControlObjectiveScopeEntity s where s.id = :id")
+  Optional<CentralSubprocessControlObjectiveScopeEntity> lockById(@Param("id") UUID id);
   List<CentralSubprocessControlObjectiveScopeEntity> findBySubprocessIdAndStatusNot(UUID subprocessId, MasterDataLifecycleStatus status);
   List<CentralSubprocessControlObjectiveScopeEntity> findBySubprocessIdAndStatus(UUID subprocessId, MasterDataLifecycleStatus status);
   List<CentralSubprocessControlObjectiveScopeEntity> findByControlObjectiveIdAndStatusNot(UUID controlObjectiveId, MasterDataLifecycleStatus status);

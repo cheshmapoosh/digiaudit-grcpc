@@ -29,6 +29,10 @@
       "controlCenter": "Control Center",
       "documents": "Documents"
     },
+    "coverage": {
+      "controls": "Controls",
+      "controlObjectives": "Control Objectives"
+    },
     "fields": {
       "code": "Code",
       "name": "Name",

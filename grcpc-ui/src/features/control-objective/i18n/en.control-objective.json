@@ -24,6 +24,7 @@
       "general": "General Information",
       "subprocesses": "Subprocess",
       "risks": "Risks",
+      "controls": "Controls",
       "accountGroups": "Account Groups",
       "documents": "Documents"
     },

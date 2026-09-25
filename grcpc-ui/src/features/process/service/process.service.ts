@@ -65,6 +65,10 @@ function normalizeUpdatePayload(payload: ProcessNodeUpdate): ProcessNodeUpdate {
         riskScopeChanges: parsed.riskScopeChanges,
         controlObjectiveScopeChanges: parsed.controlObjectiveScopeChanges,
         requirementScopeChanges: parsed.requirementScopeChanges,
+        riskControlCoverageChanges: parsed.riskControlCoverageChanges,
+        riskControlObjectiveCoverageChanges: parsed.riskControlObjectiveCoverageChanges,
+        controlControlObjectiveCoverageChanges: parsed.controlControlObjectiveCoverageChanges,
+        requirementControlCoverageChanges: parsed.requirementControlCoverageChanges,
     };
 }
 

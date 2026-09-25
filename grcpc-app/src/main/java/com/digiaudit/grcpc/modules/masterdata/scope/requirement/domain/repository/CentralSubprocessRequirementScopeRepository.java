@@ -13,6 +13,14 @@ import org.springframework.data.repository.query.Param;
 
 public interface CentralSubprocessRequirementScopeRepository
     extends JpaRepository<CentralSubprocessRequirementScopeEntity, UUID> {
+
+  interface EndpointIds {
+    UUID getSubprocessId();
+    UUID getRequirementId();
+  }
+
+  @Query("select s.subprocessId as subprocessId, s.requirementId as requirementId from CentralSubprocessRequirementScopeEntity s where s.id = :id")
+  Optional<EndpointIds> findEndpointIdsById(@Param("id") UUID id);
   List<CentralSubprocessRequirementScopeEntity> findBySubprocessIdAndStatusNot(UUID subprocessId, MasterDataLifecycleStatus status);
   List<CentralSubprocessRequirementScopeEntity> findBySubprocessIdAndStatus(UUID subprocessId, MasterDataLifecycleStatus status);
   List<CentralSubprocessRequirementScopeEntity> findByRequirementIdAndStatusNot(UUID requirementId, MasterDataLifecycleStatus status);

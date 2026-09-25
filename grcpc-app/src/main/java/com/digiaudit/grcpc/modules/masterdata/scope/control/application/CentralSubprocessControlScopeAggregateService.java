@@ -85,6 +85,19 @@ public class CentralSubprocessControlScopeAggregateService {
       LocalDate requestedSubprocessValidFrom,
       LocalDate requestedSubprocessValidTo,
       List<CentralControlScopeChangeRequest> requestedChanges) {
+    return prepare(context, subprocess, requestedSubprocessStatus, requestedSubprocessValidFrom,
+        requestedSubprocessValidTo, requestedChanges,
+        MasterDataStructuralDependencyChecker.CoverageDeletionExclusions.NONE);
+  }
+
+  public PreparedChanges prepare(
+      RevisionExecutionContext context,
+      CentralSubprocessEntity subprocess,
+      MasterDataLifecycleStatus requestedSubprocessStatus,
+      LocalDate requestedSubprocessValidFrom,
+      LocalDate requestedSubprocessValidTo,
+      List<CentralControlScopeChangeRequest> requestedChanges,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     requireProcessGuard(context);
     SubprocessEndpoint endpoint = new SubprocessEndpoint(
         subprocess.getId(), requestedSubprocessStatus,
@@ -110,7 +123,8 @@ public class CentralSubprocessControlScopeAggregateService {
               endpoint,
               controlsById.get(change.controlId()),
               scopesByControlId.get(change.controlId()),
-              change));
+              change,
+              exclusions));
     }
 
     return new PreparedChanges(endpoint.id(), prepared);
@@ -168,7 +182,8 @@ public class CentralSubprocessControlScopeAggregateService {
       SubprocessEndpoint subprocess,
       CentralControlEntity control,
       CentralSubprocessControlScopeEntity existing,
-      CentralControlScopeChangeRequest change) {
+      CentralControlScopeChangeRequest change,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     if (control == null) {
       throw endpointNotFound("Control", change.controlId());
     }
@@ -193,11 +208,11 @@ public class CentralSubprocessControlScopeAggregateService {
         yield new PreparedMutation(scope, RevisionOperationType.UPDATE, expectedVersion, snapshot(scope), fields, requestedStatus);
       }
       case ACTIVATE -> prepareLifecycle(
-          subprocess, control, existing, change, RevisionOperationType.ACTIVATE);
+          subprocess, control, existing, change, RevisionOperationType.ACTIVATE, exclusions);
       case INACTIVATE -> prepareLifecycle(
-          subprocess, control, existing, change, RevisionOperationType.INACTIVATE);
+          subprocess, control, existing, change, RevisionOperationType.INACTIVATE, exclusions);
       case DELETE -> prepareLifecycle(
-          subprocess, control, existing, change, RevisionOperationType.DELETE);
+          subprocess, control, existing, change, RevisionOperationType.DELETE, exclusions);
     };
   }
 
@@ -231,7 +246,8 @@ public class CentralSubprocessControlScopeAggregateService {
       CentralControlEntity control,
       CentralSubprocessControlScopeEntity existing,
       CentralControlScopeChangeRequest change,
-      RevisionOperationType operation) {
+      RevisionOperationType operation,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     CentralSubprocessControlScopeEntity scope = requireExisting(existing, change.controlId());
 
     long expectedVersion = requireAndAssertVersion(scope, change.version());
@@ -241,7 +257,7 @@ public class CentralSubprocessControlScopeAggregateService {
       validateValidityWithinEndpoints(currentFields(scope), subprocess, control);
     }
     if (operation == RevisionOperationType.DELETE
-        && dependencyChecker.centralControlScopeHasLiveDependencies(scope.getId())) {
+        && dependencyChecker.centralControlScopeHasLiveDependencies(scope.getId(), exclusions)) {
       throw new ConflictException(
           "CONTROL_SCOPE_DEPENDENCY_CONFLICT",
           "error.masterdata.controlScope.dependencyConflict",
@@ -584,7 +600,23 @@ public class CentralSubprocessControlScopeAggregateService {
 
     private UUID subprocessId() { return subprocessId; }
     private List<PreparedMutation> mutations() { return mutations; }
+    public PreparedEndpointState finalState(UUID scopeId) {
+      for (PreparedMutation mutation : mutations) {
+        if (!mutation.scope().getId().equals(scopeId)) continue;
+        MasterDataLifecycleStatus status = switch (mutation.operation()) {
+          case CREATE, ACTIVATE, RESTORE -> MasterDataLifecycleStatus.ACTIVE;
+          case INACTIVATE -> MasterDataLifecycleStatus.INACTIVE;
+          case DELETE -> MasterDataLifecycleStatus.DELETED;
+          case UPDATE -> mutation.requestedStatus();
+        };
+        return new PreparedEndpointState(scopeId, status, mutation.fields().validFrom(), mutation.fields().validTo());
+      }
+      return null;
+    }
   }
+
+  public record PreparedEndpointState(
+      UUID scopeId, MasterDataLifecycleStatus status, LocalDate validFrom, LocalDate validTo) {}
 
   public record ApplyResult(
       List<RevisionContentResult> revisionContents,

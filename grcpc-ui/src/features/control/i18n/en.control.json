@@ -9,7 +9,7 @@
     "view": { "title": "View Control" },
     "edit": { "title": "Edit Control" },
     "delete": { "title": "Delete", "confirm": "Are you sure you want to delete “{{title}}”?" },
-    "tabs": { "general": "General", "subprocesses": "Subprocesses", "regulations": "Regulations", "requirements": "Requirements", "risks": "Risks", "accountGroups": "Account Groups", "documents": "Documents" },
+    "tabs": { "general": "General", "subprocesses": "Subprocesses", "regulations": "Regulations", "requirements": "Requirements", "risks": "Risks", "accountGroups": "Account Groups", "controlObjectives": "Control Objectives", "documents": "Documents" },
     "fields": {
       "code": "Code", "name": "Name", "description": "Description", "parentGroup": "Parent Group", "controlGroup": "Control Group", "controlClass": "Control Class", "importance": "Importance", "controlRisk": "Control Risk", "automationType": "Control Automation", "controlPurpose": "Purpose", "nature": "Nature", "controlRelevance": "Control Relevance", "triggerType": "Execution Trigger", "eventDescription": "Event Description", "operationFrequency": "Execution Frequency", "toBeTested": "To Be Tested", "testAutomationType": "Test Automation", "testingTechnique": "Testing Technique", "evidenceLevel": "Level of Evidence", "testPlan": "Test Plan", "status": "Status", "validity": "Validity", "validFrom": "Valid From", "validTo": "Valid To", "createdAt": "Created At", "updatedAt": "Updated At"
     },

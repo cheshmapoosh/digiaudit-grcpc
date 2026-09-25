@@ -79,6 +79,19 @@ public class CentralSubprocessControlObjectiveScopeAggregateService {
       LocalDate requestedSubprocessValidFrom,
       LocalDate requestedSubprocessValidTo,
       List<CentralControlObjectiveScopeChangeRequest> requestedChanges) {
+    return prepare(context, subprocess, requestedSubprocessStatus, requestedSubprocessValidFrom,
+        requestedSubprocessValidTo, requestedChanges,
+        MasterDataStructuralDependencyChecker.CoverageDeletionExclusions.NONE);
+  }
+
+  public PreparedChanges prepare(
+      RevisionExecutionContext context,
+      CentralSubprocessEntity subprocess,
+      MasterDataLifecycleStatus requestedSubprocessStatus,
+      LocalDate requestedSubprocessValidFrom,
+      LocalDate requestedSubprocessValidTo,
+      List<CentralControlObjectiveScopeChangeRequest> requestedChanges,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     requireProcessGuard(context);
     SubprocessEndpoint endpoint =
         new SubprocessEndpoint(
@@ -108,7 +121,8 @@ public class CentralSubprocessControlObjectiveScopeAggregateService {
               endpoint,
               controlObjectivesById.get(change.controlObjectiveId()),
               scopesByControlObjectiveId.get(change.controlObjectiveId()),
-              change));
+              change,
+              exclusions));
     }
     return new PreparedChanges(endpoint.id(), prepared);
   }
@@ -157,7 +171,8 @@ public class CentralSubprocessControlObjectiveScopeAggregateService {
       SubprocessEndpoint subprocess,
       CentralControlObjectiveEntity controlObjective,
       CentralSubprocessControlObjectiveScopeEntity existing,
-      CentralControlObjectiveScopeChangeRequest change) {
+      CentralControlObjectiveScopeChangeRequest change,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     if (controlObjective == null) {
       throw endpointNotFound("Control Objective", change.controlObjectiveId());
     }
@@ -196,13 +211,13 @@ public class CentralSubprocessControlObjectiveScopeAggregateService {
       }
       case ACTIVATE ->
           prepareLifecycle(
-              subprocess, controlObjective, existing, change, RevisionOperationType.ACTIVATE);
+              subprocess, controlObjective, existing, change, RevisionOperationType.ACTIVATE, exclusions);
       case INACTIVATE ->
           prepareLifecycle(
-              subprocess, controlObjective, existing, change, RevisionOperationType.INACTIVATE);
+              subprocess, controlObjective, existing, change, RevisionOperationType.INACTIVATE, exclusions);
       case DELETE ->
           prepareLifecycle(
-              subprocess, controlObjective, existing, change, RevisionOperationType.DELETE);
+              subprocess, controlObjective, existing, change, RevisionOperationType.DELETE, exclusions);
     };
   }
 
@@ -254,7 +269,8 @@ public class CentralSubprocessControlObjectiveScopeAggregateService {
       CentralControlObjectiveEntity controlObjective,
       CentralSubprocessControlObjectiveScopeEntity existing,
       CentralControlObjectiveScopeChangeRequest change,
-      RevisionOperationType operation) {
+      RevisionOperationType operation,
+      MasterDataStructuralDependencyChecker.CoverageDeletionExclusions exclusions) {
     CentralSubprocessControlObjectiveScopeEntity scope =
         requireExisting(existing, change.controlObjectiveId());
 
@@ -265,7 +281,7 @@ public class CentralSubprocessControlObjectiveScopeAggregateService {
       validateValidityWithinEndpoints(currentFields(scope), subprocess, controlObjective);
     }
     if (operation == RevisionOperationType.DELETE
-        && dependencyChecker.centralControlObjectiveScopeHasLiveDependencies(scope.getId())) {
+        && dependencyChecker.centralControlObjectiveScopeHasLiveDependencies(scope.getId(), exclusions)) {
       throw new ConflictException(
           "CONTROL_OBJECTIVE_SCOPE_DEPENDENCY_CONFLICT",
           "error.masterdata.controlObjectiveScope.dependencyConflict",
@@ -604,7 +620,23 @@ public class CentralSubprocessControlObjectiveScopeAggregateService {
 
     private UUID subprocessId() { return subprocessId; }
     private List<PreparedMutation> mutations() { return mutations; }
+    public PreparedEndpointState finalState(UUID scopeId) {
+      for (PreparedMutation mutation : mutations) {
+        if (!mutation.scope().getId().equals(scopeId)) continue;
+        MasterDataLifecycleStatus status = switch (mutation.operation()) {
+          case CREATE, ACTIVATE, RESTORE -> MasterDataLifecycleStatus.ACTIVE;
+          case INACTIVATE -> MasterDataLifecycleStatus.INACTIVE;
+          case DELETE -> MasterDataLifecycleStatus.DELETED;
+          case UPDATE -> mutation.requestedStatus();
+        };
+        return new PreparedEndpointState(scopeId, status, mutation.fields().validFrom(), mutation.fields().validTo());
+      }
+      return null;
+    }
   }
+
+  public record PreparedEndpointState(
+      UUID scopeId, MasterDataLifecycleStatus status, LocalDate validFrom, LocalDate validTo) {}
 
   public record ApplyResult(
       List<RevisionContentResult> revisionContents,

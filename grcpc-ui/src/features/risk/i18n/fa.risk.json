@@ -29,6 +29,10 @@
       "controlCenter": "مرکز کنترل",
       "documents": "مستندات"
     },
+    "coverage": {
+      "controls": "کنترل‌ها",
+      "controlObjectives": "اهداف کنترل"
+    },
     "fields": {
       "code": "شناسه",
       "name": "نام",

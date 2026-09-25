@@ -39,6 +39,7 @@
     },
     "tabs": {
       "general": "General Information",
+      "controls": "Controls",
       "documents": "Documents"
     },
     "actions": {

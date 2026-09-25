@@ -173,6 +173,12 @@ The direct Control–Control Objective Coverage command is separate from Risk–
 
 No API derives one Coverage from another.
 
+Central Scope deletion checks every non-DELETED row in all applicable Coverage families, including
+INACTIVE Coverage. In one Subprocess aggregate Save, the checker may disregard only exact Coverage
+IDs whose typed `DELETE` operations have already passed identity, version, authorization, lifecycle,
+and Local-dependency validation; those deletes are applied before endpoint Scope deletes. Deleting a
+Coverage is blocked by a non-DELETED row in the matching Local Coverage table.
+
 ## Required Flyway Day-Zero ordering
 
 The Physical Design Reference §16-1 provides the migration sequence.

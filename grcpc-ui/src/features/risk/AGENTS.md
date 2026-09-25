@@ -18,8 +18,8 @@ Risk manages the Master Data V2 `CentralRiskCategory` hierarchy and leaf `Centra
 - Keep category and template DTO/state types feature-specific; do not reuse the generic Central Catalog definition model.
 - Risk Template `riskType` is required and is limited to `COMPANY` and `OPERATION`.
 - Current Risk Category modal activates only General Information and Documents.
-- Current Risk Template modal activates only General Information and Documents; Risk and Control Center remain visible but disabled.
-- Do not add KRI, summary, response-pattern, trigger, effect, assessment, likelihood, impact, score, Scope, Coverage, or relationship persistence/UI in this feature without a later approved design decision.
+- Current Risk Template modal keeps Risk disabled and activates Control Center only for a saved template with complete read authority. Control Center contains separately labeled, read-only Controls and Control Objectives Coverage inverse sections with exact Subprocess context.
+- Do not add KRI, summary, response-pattern, trigger, effect, assessment, likelihood, impact, score, Scope mutation, or Risk-owned relationship persistence. Coverage mutation remains exclusively in Subprocess Save; Risk Category exposes no Coverage UI.
 
 ## UI rules
 - Use SAP UI5 components first, especially `Tree`/`TreeItemCustom` for the hierarchy and UI5 FCL/Dialog/form controls for surrounding UX.

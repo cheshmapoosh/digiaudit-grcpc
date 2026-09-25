@@ -27,6 +27,18 @@ import {
   type ControlObjectiveAccountGroupClassification,
   type ControlObjectiveClassificationDraftState,
 } from "@/features/control-objective-account-group";
+import {
+  ControlObjectiveControlsTab,
+  useControlControlObjectiveCoveragePermissions,
+} from "@/features/control-control-objective-coverage";
+import {
+  ControlObjectiveRiskCoveragesTab,
+  useRiskControlObjectiveCoveragePermissions,
+} from "@/features/risk-control-objective-coverage";
+import {
+  ControlObjectiveSubprocessScopesTab,
+  useControlObjectiveScopePermissions,
+} from "@/features/control-objective-scope";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -43,6 +55,7 @@ export type CentralControlObjectiveTabKey =
   | "general"
   | "subprocesses"
   | "risks"
+  | "controls"
   | "accountGroups"
   | "documents";
 
@@ -136,6 +149,9 @@ export default function CentralControlObjectiveObjectPage({
 }: Props) {
   const { t } = useTranslation();
   const classificationPermissions = useControlObjectiveAccountGroupPermissions();
+  const scopePermissions = useControlObjectiveScopePermissions();
+  const riskCoveragePermissions = useRiskControlObjectiveCoveragePermissions();
+  const controlCoveragePermissions = useControlControlObjectiveCoveragePermissions();
   const [form, setForm] = useState<FormState>(() => toForm(value));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value))));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -271,14 +287,18 @@ export default function CentralControlObjectiveObjectPage({
         onTabSelect={(event) => {
           const key = event.detail.tab.getAttribute("data-tab-key") as CentralControlObjectiveTabKey | null;
           if (key === "general" || key === "documents"
+            || (key === "subprocesses" && mode !== "create" && scopePermissions.view)
+            || (key === "risks" && mode !== "create" && riskCoveragePermissions.view)
+            || (key === "controls" && mode !== "create" && controlCoveragePermissions.view)
             || (key === "accountGroups" && classificationPermissions.view)) {
             onActiveTabChange(key);
           }
         }}
       >
         <Tab text={t("controlObjective.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
-        <Tab text={t("controlObjective.tabs.subprocesses")} disabled data-tab-key="subprocesses" />
-        <Tab text={t("controlObjective.tabs.risks")} disabled data-tab-key="risks" />
+        <Tab text={t("controlObjective.tabs.subprocesses")} selected={activeTab === "subprocesses"} disabled={mode === "create" || !scopePermissions.view} data-tab-key="subprocesses" />
+        <Tab text={t("controlObjective.tabs.risks")} selected={activeTab === "risks"} disabled={mode === "create" || !riskCoveragePermissions.view} data-tab-key="risks" />
+        <Tab text={t("controlObjective.tabs.controls")} selected={activeTab === "controls"} disabled={mode === "create" || !controlCoveragePermissions.view} data-tab-key="controls" />
         <Tab
           text={t("controlObjective.tabs.accountGroups")}
           selected={activeTab === "accountGroups"}
@@ -340,6 +360,18 @@ export default function CentralControlObjectiveObjectPage({
               <TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(event) => change("description", readValue(event))} />
             </Field>
           </div>
+        </div>
+
+        <div className={activeTab === "subprocesses" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
+          {value?.id && scopePermissions.view ? <ControlObjectiveSubprocessScopesTab controlObjectiveId={value.id} /> : null}
+        </div>
+
+        <div className={activeTab === "risks" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
+          {value?.id && riskCoveragePermissions.view ? <ControlObjectiveRiskCoveragesTab controlObjectiveId={value.id} /> : null}
+        </div>
+
+        <div className={activeTab === "controls" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
+          {value?.id && controlCoveragePermissions.view ? <ControlObjectiveControlsTab controlObjectiveId={value.id} /> : null}
         </div>
 
         <div className={activeTab === "accountGroups" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>

@@ -119,5 +119,19 @@
       "invalidDate": "Date must use yyyy-MM-dd",
       "invalidValidityRange": "Validity range is not valid"
     }
+  },
+  "coverage": {
+    "riskControl": { "title": "Risk–Control Coverage" },
+    "riskControlObjective": { "title": "Risk–Control Objective Coverage" },
+    "controlControlObjective": { "title": "Control–Control Objective Coverage" },
+    "requirementControl": { "title": "Requirement–Control Coverage" },
+    "empty": "No coverage relationship has been selected.",
+    "savedScopesFirst": "Save the Subprocess and its Scope rows first. Unsaved Scope rows cannot be selected for Coverage.",
+    "actions": { "add": "Select coverage", "edit": "Edit", "remove": "Delete", "undo": "Undo", "activate": "Activate", "inactivate": "Inactivate", "restore": "Restore" },
+    "fields": { "risk": "Risk Scope", "control": "Control Scope", "controlObjective": "Control Objective Scope", "requirement": "Requirement Scope", "lifecycle": "Coverage lifecycle", "validFrom": "Coverage valid from", "validTo": "Coverage valid to" },
+    "status": { "ACTIVE": "Active", "INACTIVE": "Inactive", "DELETED": "Pending deletion", "DRAFT": "Draft change" },
+    "inverse": { "subprocess": "Subprocess context", "related": "Related object", "validity": "Coverage validity", "endpointState": "Endpoint lifecycle" },
+    "errors": { "duplicate": "This exact Scope pair is already selected.", "load": "Failed to load Coverage relationships." },
+    "validation": { "notReady": "Resolve the visible Coverage validation error before saving." }
   }
 }
