@@ -1,4 +1,4 @@
-import { createElement, useEffect, useMemo, useRef, useState } from "react";
+import { createElement, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -101,7 +101,6 @@ export default function ObjectiveManagementPage() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<"create" | "view" | "edit" | null>(null);
-  const savedClose = useRef(false);
   const [activeTab, setActiveTab] = useState<"general" | "organizations" | "documents">("general");
   const [organizations, setOrganizations] = useState<ObjectiveOrganizationLink[]>([]);
   const [organizationOptions, setOrganizationOptions] = useState<ObjectiveOrganizationOption[]>([]);
@@ -164,7 +163,6 @@ export default function ObjectiveManagementPage() {
   }, [selectedId, mode]);
 
   const begin = (nextMode: "create" | "view" | "edit", preserveTab = false) => {
-    savedClose.current = false;
     setOrganizationsLoading(true);
     setOrganizationLoadFailed(false);
     if (!preserveTab) { setOrganizationSearch(""); setOrganizationStatusFilter("ALL"); }
@@ -186,7 +184,6 @@ export default function ObjectiveManagementPage() {
   };
 
   const close = () => {
-    if (savedClose.current) return;
     if (dirty) setLeaveOpen(true);
     else setMode(null);
   };
@@ -223,9 +220,8 @@ export default function ObjectiveManagementPage() {
         await update(selected.id, { ...common, version: selected.version } satisfies ObjectiveUpdate);
       }
       setDraftGeneration((value) => value + 1);
-      savedClose.current = true;
       setOrganizationsLoading(true);
-      setMode(null);
+      setMode("view");
       setError(null);
     } catch (cause) { setError(errorText(cause)); }
     finally { setBusy(false); }

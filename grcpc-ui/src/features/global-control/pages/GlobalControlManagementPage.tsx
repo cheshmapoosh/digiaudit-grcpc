@@ -1,4 +1,4 @@
-import { createElement, useEffect, useMemo, useRef, useState } from "react";
+import { createElement, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -129,7 +129,6 @@ export default function GlobalControlManagementPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [editor, setEditor] = useState<Editor>(null);
-  const savedEditorClose = useRef(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [editorTab, setEditorTab] = useState<"general" | "regulations" | "documents">("general");
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
@@ -212,7 +211,6 @@ export default function GlobalControlManagementPage() {
     setActiveTab("general");
   };
   const beginGroup = (edit: boolean, preserveTab = false) => {
-    savedEditorClose.current = false;
     setViewOpen(false);
     setEditorTab(preserveTab ? activeTab : "general");
     const next = edit && selectedGroup ? {
@@ -229,7 +227,6 @@ export default function GlobalControlManagementPage() {
     setError(null);
   };
   const beginControl = (edit: boolean, preserveTab = false) => {
-    savedEditorClose.current = false;
     setViewOpen(false);
     setEditorTab(preserveTab ? activeTab : "general");
     if (!preserveTab) { setRegulationSearch(""); setRegulationStatusFilter("ALL"); }
@@ -258,7 +255,6 @@ export default function GlobalControlManagementPage() {
     setError(null);
   };
   const closeEditor = () => {
-    if (savedEditorClose.current) return;
     if (dirty) setLeaveOpen(true);
     else setEditor(null);
   };
@@ -319,8 +315,9 @@ export default function GlobalControlManagementPage() {
           } satisfies GlobalControlUpdate);
         }
       }
-      savedEditorClose.current = true;
       if (!editor.startsWith("group")) setRelationsLoading(true);
+      setActiveTab(editorTab);
+      setViewOpen(true);
       setEditor(null);
       setDraftGeneration((value) => value + 1);
       setError(null);
@@ -571,17 +568,12 @@ export default function GlobalControlManagementPage() {
       dir: document.documentElement.dir === "ltr" ? "ltr" : "rtl",
       "disable-resizing": true, className: "globalControlFcl",
     }, startColumn, summaryColumn)}
-    <Dialog open={viewOpen && Boolean(details)} className="globalControlDialog"
-      accessibleName={details?.name || t("globalControl.title")}
-      onClose={() => setViewOpen(false)}>
-      <ModalDialogHeader title={details?.name || t("globalControl.title")}
-        onClose={() => setViewOpen(false)} />
-      {viewDetails}
-    </Dialog>
-    <Dialog open={editor !== null} className="globalControlDialog" onClose={closeEditor}
-      accessibleName={editorTitle}>
-      <ModalDialogHeader title={editorTitle} onClose={closeEditor} />
-      <div className="globalControlDialogContent">
+    <Dialog open={viewOpen || editor !== null} className="globalControlDialog"
+      accessibleName={editor ? editorTitle : details?.name || t("globalControl.title")}
+      onClose={editor ? closeEditor : () => setViewOpen(false)}>
+      <ModalDialogHeader title={editor ? editorTitle : details?.name || t("globalControl.title")}
+        onClose={editor ? closeEditor : () => setViewOpen(false)} />
+      {editor ? <div className="globalControlDialogContent">
       <MasterDataObjectHeader title={form.name || editorTitle} fields={[
         { label: t("globalControl.code"), value: form.code },
         { label: t("globalControl.name"), value: form.name },
@@ -689,7 +681,7 @@ export default function GlobalControlManagementPage() {
           onClick={() => void save()}>{t("common.save")}</Button>
         <Button design="Transparent" onClick={closeEditor}>{t("common.cancel")}</Button>
       </div>
-      </div>
+      </div> : viewDetails}
     </Dialog>
     <DeleteConfirmDialog open={Boolean(deleteCandidate)}
       title={t(deleteCandidate?.kind === "group"
