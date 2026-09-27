@@ -21,6 +21,7 @@ import UserProfileMenu from "./components/UserProfileMenu";
 import {useAuthState} from "@/features/auth";
 import {AppFooter} from "@/shared/components/AppFooter.tsx";
 import { useInitialAppReady } from "@/shared/bootstrap/useInitialAppReady";
+import DigiAuditBrand from "@/shared/components/DigiAuditBrand";
 
 type SelectionChangeDetail = {
     item?: HTMLElement;
@@ -75,7 +76,7 @@ function isPathInPrefixes(path: string, prefixes: string[]): boolean {
 export default function MainLayout() {
     useInitialAppReady();
 
-    const {t} = useTranslation();
+    const {t, i18n} = useTranslation();
 
     const [collapsed, setCollapsed] = useState(false);
 
@@ -175,20 +176,20 @@ export default function MainLayout() {
         },
         {
             key: "masterData",
-            text: t("nav.masterData", {defaultValue: "اطلاعات پایه"}),
-            icon: "database",
+            text: t("nav.governance"),
+            icon: "building",
             route: "/master-data",
             selected: isPathInPrefixes(selectedPath, MASTER_DATA_PATH_PREFIXES),
         },
+        { key: "risk", text: t("nav.riskManagement"), icon: "alert", route: "/coming-soon/risk-management", selected: selectedPath === "/coming-soon/risk-management" },
+        { key: "audit", text: t("nav.internalAudit"), icon: "search", route: "/coming-soon/internal-audit", selected: selectedPath === "/coming-soon/internal-audit" },
+        { key: "compliance", text: t("nav.compliance"), icon: "shield", route: "/coming-soon/compliance", selected: selectedPath === "/coming-soon/compliance" },
+        { key: "reports", text: t("nav.reports"), icon: "bar-chart", route: "/coming-soon/reports", selected: selectedPath === "/coming-soon/reports" },
+        { key: "settings", text: t("nav.settings"), icon: "action-settings", route: "/coming-soon/settings", selected: selectedPath === "/coming-soon/settings" },
     ];
 
     return (
-        <div className="appRoot" data-ui5-compact-size
-             style={{
-                 minHeight: "100vh",
-                 paddingBottom: "2rem",
-             }}
-        >
+        <div className="appRoot" data-ui5-compact-size>
             <ShellBar primaryTitle={t("app.title")} secondaryTitle={t("app.subtitle")}>
                 <Button
                     slot="startButton"
@@ -215,7 +216,7 @@ export default function MainLayout() {
                 />
             </ShellBar>
 
-            <div className="appBody">
+            <div className="appBody" dir={i18n.language.startsWith("fa") ? "rtl" : "ltr"}>
                 <aside
                     className="sideNav"
                     style={{
@@ -224,8 +225,8 @@ export default function MainLayout() {
                     }}
                 >
                     <SideNavigation collapsed={collapsed} onSelectionChange={onSelectionChange}>
-                        <div slot="header" style={{padding: 12, fontSize: 12, opacity: 0.8}}>
-                            {collapsed ? t("app.title") : t("app.platformTitle")}
+                        <div slot="header" className="sideNavBrand">
+                            {collapsed ? <img src="/images/digi-audit-mark-light.svg" alt="Digi Audit" /> : <DigiAuditBrand compact light />}
                         </div>
 
                         {mainItems.filter((item) => item.key !== "masterData" || MASTER_DATA_AREAS.some((area) => canAccessMasterData(me, area))).map((item) => (
@@ -241,7 +242,7 @@ export default function MainLayout() {
 
                         {showAccessControl ? (
                             <SideNavigationItem
-                                text={t("nav.accessControl")}
+                                text={t("nav.userManagement")}
                                 icon="key-user-settings"
                                 selected={selectedPath.startsWith("/access-control")}
                             >

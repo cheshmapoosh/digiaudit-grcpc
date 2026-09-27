@@ -3,6 +3,7 @@ import {useNavigate} from "react-router-dom";
 import {useTranslation} from "react-i18next";
 
 import RolesKpiCard from "../components/kpi/RolesKpiCard";
+import DashboardHero from "../components/DashboardHero";
 
 export default function DashboardFeaturePage() {
     const {t} = useTranslation();
@@ -15,6 +16,7 @@ export default function DashboardFeaturePage() {
             color: "var(--sapTextColor)",
             minHeight: "100%"
         }}>
+            <DashboardHero />
             <Title level="H3">{t("nav.dashboard")}</Title>
 
             {/* KPI SECTION - CSS Grid */}

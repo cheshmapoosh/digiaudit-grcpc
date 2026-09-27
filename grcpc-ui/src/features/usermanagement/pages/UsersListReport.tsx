@@ -7,7 +7,7 @@ import {
     Button,
     Input,
     Label,
-    Table, TableHeaderRow, TableHeaderCell, TableRow, TableCell, Link, ObjectStatus,
+    Table, TableHeaderRow, TableHeaderCell, TableRow, TableCell, ObjectStatus,
     MessageStrip,
     Title,
 } from "@ui5/webcomponents-react";
@@ -114,7 +114,13 @@ export default function UsersListReport({
 
             {busy ? <BusyIndicator active delay={0} /> : null}
 
-            <Table noDataText={t("usermanagement.users.empty")} headerRow={
+            <Table
+                noDataText={t("usermanagement.users.empty")}
+                onRowClick={(event) => {
+                    const id = event.detail.row.rowKey;
+                    if (id) onSelect(id);
+                }}
+                headerRow={
                 <TableHeaderRow>
                     <TableHeaderCell>{t("usermanagement.users.fields.fullName")}</TableHeaderCell>
                     <TableHeaderCell>{t("usermanagement.users.fields.username")}</TableHeaderCell>
@@ -122,8 +128,8 @@ export default function UsersListReport({
                 </TableHeaderRow>
             }>
                 {filteredItems.map((item) => (
-                    <TableRow key={item.id} rowKey={item.id} className={selectedId === item.id ? "userManagementSelectedRow" : undefined}>
-                        <TableCell><Link onClick={() => onSelect(item.id)}>{buildFullName(item)}</Link></TableCell>
+                    <TableRow key={item.id} rowKey={item.id} interactive navigated={selectedId === item.id} className={selectedId === item.id ? "userManagementSelectedRow" : undefined}>
+                        <TableCell>{buildFullName(item)}</TableCell>
                         <TableCell>{item.username}</TableCell>
                         <TableCell><ObjectStatus state={item.enabled ? "Positive" : "None"}>{t(item.enabled ? "usermanagement.users.status.enabled" : "usermanagement.users.status.disabled")}</ObjectStatus></TableCell>
                     </TableRow>

@@ -1,32 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import {
-    Button,
-    Card,
-    CardHeader,
-    Input,
-    Label,
-    MessageStrip,
-    Text,
-    Title,
-} from "@ui5/webcomponents-react";
-
+import { Button, CheckBox, Input, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
 import { useAuthState } from "@/features/auth";
-import PublicPageHeader from "@/shared/components/PublicPageHeader";
 import { useInitialAppReady } from "@/shared/bootstrap/useInitialAppReady";
-import {
-    resolveLoginReturnUrl,
-    type LoginRouterState,
-} from "@/features/auth/utils/returnUrl";
+import { resolveLoginReturnUrl, type LoginRouterState } from "@/features/auth/utils/returnUrl";
+import DigiAuditBrand from "@/shared/components/DigiAuditBrand";
+import { applySettings, loadSettings, saveSettings } from "@/ui/ui-settings";
+import "./login.css";
+
+const REMEMBERED_USERNAME_KEY = "grcpc.login.rememberedUsername";
+function rememberedUsername() {
+    try { return window.localStorage.getItem(REMEMBERED_USERNAME_KEY) ?? ""; }
+    catch { return ""; }
+}
 
 export default function LoginFeaturePage() {
     useInitialAppReady();
-
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
-
     const submitting = useAuthState((state) => state.submitting);
     const error = useAuthState((state) => state.error);
     const sessionExpired = useAuthState((state) => state.sessionExpired);
@@ -34,346 +27,93 @@ export default function LoginFeaturePage() {
     const clearError = useAuthState((state) => state.clearError);
     const clearSessionExpired = useAuthState((state) => state.clearSessionExpired);
     const markSessionExpired = useAuthState((state) => state.markSessionExpired);
-
-    const [username, setUsername] = useState("");
+    const [username, setUsername] = useState(rememberedUsername);
     const [password, setPassword] = useState("");
-
-    const redirectTo = useMemo(() => {
-        return resolveLoginReturnUrl(
-            location.search,
-            location.state as LoginRouterState | null,
-        );
-    }, [location.search, location.state]);
+    const [remember, setRemember] = useState(() => rememberedUsername().length > 0);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordHelp, setShowPasswordHelp] = useState(false);
+    const redirectTo = useMemo(() => resolveLoginReturnUrl(location.search, location.state as LoginRouterState | null), [location.search, location.state]);
 
     useEffect(() => {
-        const routerState = location.state as LoginRouterState | null;
-
-        if (routerState?.sessionExpired) {
-            markSessionExpired();
-        }
+        if ((location.state as LoginRouterState | null)?.sessionExpired) markSessionExpired();
     }, [location.state, markSessionExpired]);
 
-    async function handleSubmit() {
-        clearError();
-        clearSessionExpired();
-
-        try {
-            await login({
-                username: username.trim(),
-                password,
-            });
-
-            setPassword("");
-            navigate(useAuthState.getState().me?.passwordChangeRequired ? "/change-password" : redirectTo, { replace: true });
-        } catch {
-            setPassword("");
-            // خطا در store مدیریت می‌شود
-        }
+    function toggleLanguage() {
+        const nextLang = i18n.language.startsWith("fa") ? "en" : "fa";
+        const settings = { ...loadSettings(), lang: nextLang, dir: nextLang === "fa" ? "rtl" : "ltr" } as const;
+        saveSettings(settings);
+        applySettings(settings);
+        void i18n.changeLanguage(nextLang);
     }
 
-    const isSubmitDisabled = submitting || username.trim().length === 0 || password.length === 0;
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (submitting || !username.trim() || !password) return;
+        clearError();
+        clearSessionExpired();
+        try {
+            await login({ username: username.trim(), password });
+            try {
+                if (remember) window.localStorage.setItem(REMEMBERED_USERNAME_KEY, username.trim());
+                else window.localStorage.removeItem(REMEMBERED_USERNAME_KEY);
+            } catch { /* Storage may be unavailable. */ }
+            setPassword("");
+            navigate(useAuthState.getState().me?.passwordChangeRequired ? "/change-password" : redirectTo, { replace: true });
+        } catch { setPassword(""); }
+    }
 
+    const isFa = i18n.language.startsWith("fa");
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                display: "grid",
-                placeItems: "center",
-                padding: "2rem",
-                background: `
-                    radial-gradient(circle at top right, rgba(10, 132, 255, 0.12), transparent 28%),
-                    radial-gradient(circle at bottom left, rgba(0, 153, 102, 0.10), transparent 24%),
-                    linear-gradient(135deg, var(--sapBackgroundColor), var(--sapGroup_ContentBackground))
-                `,
-            }}
-        >
-            <div
-                style={{
-                    width: "100%",
-                    maxWidth: "1180px",
-                    display: "grid",
-                    gridTemplateColumns: "minmax(320px, 1.1fr) minmax(360px, 460px)",
-                    gap: "1.5rem",
-                    alignItems: "stretch",
-                }}
-            >
-                <div
-                    style={{
-                        position: "relative",
-                        overflow: "hidden",
-                        borderRadius: "1.25rem",
-                        minHeight: "620px",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        padding: "2rem",
-                        color: "var(--sapTextColor)",
-                        background: `
-                            linear-gradient(160deg, rgba(8, 57, 90, 0.92), rgba(7, 105, 81, 0.85)),
-                            url("/images/grc-login-hero.jpg") center/cover no-repeat
-                        `,
-                        boxShadow: "0 1.5rem 3rem rgba(0, 0, 0, 0.16)",
-                    }}
-                >
-                    <div
-                        style={{
-                            position: "absolute",
-                            inset: 0,
-                            background:
-                                "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.00) 35%, rgba(0,0,0,0.16))",
-                            pointerEvents: "none",
-                        }}
-                    />
-
-                    <div style={{ position: "relative", zIndex: 1, display: "grid", gap: "1rem" }}>
-                        <div
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: ".5rem",
-                                padding: ".45rem .85rem",
-                                borderRadius: "999px",
-                                width: "fit-content",
-                                background: "rgba(255,255,255,0.12)",
-                                border: "1px solid rgba(255,255,255,0.16)",
-                                backdropFilter: "blur(4px)",
-                            }}
-                        >
-                            <span
-                                style={{
-                                    width: ".6rem",
-                                    height: ".6rem",
-                                    borderRadius: "50%",
-                                    background: "#79f2c0",
-                                    display: "inline-block",
-                                }}
-                            />
-                            <Text style={{ color: "white" }}>
-                                {t("auth.login.hero.badge", {
-                                    defaultValue: "ورود امن و کنترل‌شده",
-                                })}
-                            </Text>
-                        </div>
-
-                        <div style={{ display: "grid", gap: ".75rem", maxWidth: "640px" }}>
-                            <Title
-                                level="H1"
-                                style={{
-                                    color: "white",
-                                    margin: 0,
-                                    lineHeight: 1.2,
-                                }}
-                            >
-                                {t("auth.login.hero.title", {
-                                    defaultValue: "سامانه حاکمیت، ریسک و کنترل",
-                                })}
-                            </Title>
-
-                            <Text style={{ color: "rgba(255,255,255,0.88)", fontSize: "1rem", lineHeight: 1.8 }}>
-                                {t("auth.login.hero.description", {
-                                    defaultValue:
-                                        "ورود به محیط یکپارچه GRC برای مدیریت فرآیندها، ساختار سازمانی، قوانین و کنترل دسترسی‌ها.",
-                                })}
-                            </Text>
-                        </div>
-                    </div>
-
-                    <div
-                        style={{
-                            position: "relative",
-                            zIndex: 1,
-                            display: "grid",
-                            gap: "1rem",
-                            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                        }}
-                    >
-                        <div
-                            style={{
-                                padding: "1rem",
-                                borderRadius: "1rem",
-                                background: "rgba(255,255,255,0.10)",
-                                border: "1px solid rgba(255,255,255,0.12)",
-                                backdropFilter: "blur(6px)",
-                            }}
-                        >
-                            <Title level="H5" style={{ color: "white", margin: 0 }}>
-                                {t("auth.login.hero.cards.governance.title", {
-                                    defaultValue: "حاکمیت",
-                                })}
-                            </Title>
-                            <Text style={{ color: "rgba(255,255,255,0.82)" }}>
-                                {t("auth.login.hero.cards.governance.description", {
-                                    defaultValue: "مدیریت ساختار و نقش‌ها با شفافیت و قابلیت ممیزی.",
-                                })}
-                            </Text>
-                        </div>
-
-                        <div
-                            style={{
-                                padding: "1rem",
-                                borderRadius: "1rem",
-                                background: "rgba(255,255,255,0.10)",
-                                border: "1px solid rgba(255,255,255,0.12)",
-                                backdropFilter: "blur(6px)",
-                            }}
-                        >
-                            <Title level="H5" style={{ color: "white", margin: 0 }}>
-                                {t("auth.login.hero.cards.risk.title", {
-                                    defaultValue: "ریسک",
-                                })}
-                            </Title>
-                            <Text style={{ color: "rgba(255,255,255,0.82)" }}>
-                                {t("auth.login.hero.cards.risk.description", {
-                                    defaultValue: "پایش دسترسی و کنترل ورود برای کاهش ریسک عملیاتی.",
-                                })}
-                            </Text>
-                        </div>
-
-                        <div
-                            style={{
-                                padding: "1rem",
-                                borderRadius: "1rem",
-                                background: "rgba(255,255,255,0.10)",
-                                border: "1px solid rgba(255,255,255,0.12)",
-                                backdropFilter: "blur(6px)",
-                            }}
-                        >
-                            <Title level="H5" style={{ color: "white", margin: 0 }}>
-                                {t("auth.login.hero.cards.control.title", {
-                                    defaultValue: "کنترل",
-                                })}
-                            </Title>
-                            <Text style={{ color: "rgba(255,255,255,0.82)" }}>
-                                {t("auth.login.hero.cards.control.description", {
-                                    defaultValue: "احراز هویت، ثبت وقایع و رهگیری کامل عملیات مدیریتی.",
-                                })}
-                            </Text>
-                        </div>
-                    </div>
+        <div className="loginPage" dir={isFa ? "rtl" : "ltr"}>
+            <section className="loginHero" aria-label={t("auth.login.hero.ariaLabel")}>
+                <div className="loginHeroCopy">
+                    <DigiAuditBrand light />
+                    <h1>{t("auth.login.hero.platform")}</h1>
+                    <p className="loginHeroModules">{t("auth.login.hero.modules")}</p>
+                    <p className="loginHeroTagline">{t("auth.login.hero.tagline")}</p>
                 </div>
-
-                <div
-                    style={{
-                        display: "grid",
-                        gap: "1rem",
-                        alignSelf: "center",
-                    }}
-                >
-                    <PublicPageHeader
-                        titleKey="auth.login.pageTitle"
-                        subtitleKey="auth.login.pageSubtitle"
-                        titleDefault="ورود به سامانه"
-                        subtitleDefault="احراز هویت کاربران GRC"
-                    />
-
-                    <Card
-                        style={{
-                            width: "100%",
-                            borderRadius: "1.25rem",
-                            boxShadow: "0 1rem 2.5rem rgba(0, 0, 0, 0.10)",
-                        }}
-                        header={
-                            <CardHeader
-                                titleText={t("auth.login.title", {
-                                    defaultValue: "ورود کاربر",
-                                })}
-                            />
-                        }
-                    >
-                        <div
-                            style={{
-                                padding: "1.5rem",
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "1rem",
-                            }}
-                        >
-                            {error ? (
-                                <MessageStrip design="Negative" onClose={clearError}>
-                                    {error}
-                                </MessageStrip>
-                            ) : null}
-
-                            {sessionExpired ? (
-                                <MessageStrip design="Critical" onClose={clearSessionExpired}>
-                                    {t("auth.sessionExpired", {
-                                        defaultValue: "نشست کاربری شما به پایان رسیده است. لطفاً دوباره وارد شوید.",
-                                    })}
-                                </MessageStrip>
-                            ) : null}
-
-                            <div style={{ display: "grid", gap: ".5rem" }}>
-                                <Label for="login-username">
-                                    {t("auth.login.fields.username", {
-                                        defaultValue: "نام کاربری",
-                                    })}
-                                </Label>
-                                <Input
-                                    id="login-username"
-                                    value={username}
-                                    placeholder={t("auth.login.placeholders.username", {
-                                        defaultValue: "نام کاربری را وارد کنید",
-                                    })}
-                                    onInput={(event) => setUsername(event.target.value)}
-                                />
-                            </div>
-
-                            <div style={{ display: "grid", gap: ".5rem" }}>
-                                <Label for="login-password">
-                                    {t("auth.login.fields.password", {
-                                        defaultValue: "رمز عبور",
-                                    })}
-                                </Label>
-                                <Input
-                                    id="login-password"
-                                    type="Password"
-                                    value={password}
-                                    placeholder={t("auth.login.placeholders.password", {
-                                        defaultValue: "رمز عبور را وارد کنید",
-                                    })}
-                                    onInput={(event) => setPassword(event.target.value)}
-                                    onKeyDown={(event) => {
-                                        if (event.key === "Enter") {
-                                            void handleSubmit();
-                                        }
-                                    }}
-                                />
-                            </div>
-
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    marginTop: ".25rem",
-                                }}
-                            >
-                                <Text style={{ color: "var(--sapContent_LabelColor)" }}>
-                                    {t("auth.login.helpText", {
-                                        defaultValue: "برای ورود، از حساب کاربری تخصیص‌یافته استفاده کنید.",
-                                    })}
-                                </Text>
-                            </div>
-
-                            <div style={{ display: "flex", gap: ".75rem", marginTop: ".5rem" }}>
-                                <Button
-                                    design="Emphasized"
-                                    disabled={isSubmitDisabled}
-                                    onClick={() => void handleSubmit()}
-                                >
-                                    {submitting
-                                        ? t("auth.login.actions.submitting", {
-                                            defaultValue: "در حال ورود...",
-                                        })
-                                        : t("auth.login.actions.submit", {
-                                            defaultValue: "ورود",
-                                        })}
-                                </Button>
-                            </div>
-                        </div>
-                    </Card>
+                <div className="loginHeroTraits">
+                    <span>{t("auth.login.hero.secure")}</span><span>{t("auth.login.hero.scalable")}</span>
+                    <span>{t("auth.login.hero.trusted")}</span><span>{t("auth.login.hero.efficient")}</span>
                 </div>
-            </div>
+            </section>
+            <section className="loginPanel">
+                <div className="loginLanguage"><Button design="Transparent" icon="world" onClick={toggleLanguage}>{isFa ? "فارسی" : "English"}</Button></div>
+                <div className="loginPanelContent">
+                    <DigiAuditBrand />
+                    <Title level="H2" className="loginWelcome">{t("auth.login.welcome")}</Title>
+                    <Text className="loginIntro">{t("auth.login.intro")}</Text>
+                    <form className="loginForm" onSubmit={(event) => void handleSubmit(event)}>
+                        {error && <MessageStrip design="Negative" onClose={clearError}>{error}</MessageStrip>}
+                        {sessionExpired && <MessageStrip design="Critical" onClose={clearSessionExpired}>{t("auth.sessionExpired")}</MessageStrip>}
+                        <div className="loginField">
+                            <label htmlFor="login-username">{t("auth.login.fields.username")}</label>
+                            <Input id="login-username" value={username} placeholder={t("auth.login.usernameOrEmail")} onInput={(event) => setUsername(event.target.value)} />
+                        </div>
+                        <div className="loginField">
+                            <label htmlFor="login-password">{t("auth.login.fields.password")}</label>
+                            <Input
+                                id="login-password"
+                                type={showPassword ? "Text" : "Password"}
+                                value={password}
+                                placeholder={t("auth.login.placeholders.password")}
+                                onInput={(event) => setPassword(event.target.value)}
+                                icon={<Button design="Transparent" icon={showPassword ? "hide" : "show"} accessibleName={t(showPassword ? "auth.login.hidePassword" : "auth.login.showPassword")} onClick={() => setShowPassword((value) => !value)} />}
+                            />
+                        </div>
+                        <div className="loginOptions">
+                            <CheckBox text={t("auth.login.rememberMe")} checked={remember} onChange={(event) => setRemember(event.target.checked)} />
+                            <Button design="Transparent" onClick={() => setShowPasswordHelp((value) => !value)}>{t("auth.login.forgotPassword")}</Button>
+                        </div>
+                        {showPasswordHelp && <MessageStrip design="Information" onClose={() => setShowPasswordHelp(false)}>{t("auth.login.passwordHelp")}</MessageStrip>}
+                        <Button className="loginSubmit" type="Submit" design="Emphasized" disabled={submitting || !username.trim() || !password}>
+                            {submitting ? t("auth.login.actions.submitting") : t("auth.login.actions.submit")}
+                        </Button>
+                    </form>
+                    <div className="loginTrust"><span>{t("auth.login.or")}</span><p>♢ {t("auth.login.trust")}</p></div>
+                </div>
+                <div className="loginPowered"><img src="/images/digi-audit-mark.svg" alt="" /><span>{t("auth.login.poweredBy")} <strong>Digi Audit</strong><small>{t("auth.login.hero.platform")}</small></span></div>
+            </section>
         </div>
     );
 }

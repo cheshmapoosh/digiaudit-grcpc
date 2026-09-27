@@ -1,8 +1,9 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 import { AppFooter } from "@/shared/components/AppFooter";
 
 export default function PublicLayout() {
+    const { pathname } = useLocation();
     return (
         <div
             style={{
@@ -15,13 +16,13 @@ export default function PublicLayout() {
             <main
                 style={{
                     flex: 1,
-                    paddingBlockEnd: "2rem",
+                    paddingBlockEnd: pathname === "/login" ? 0 : "2rem",
                 }}
             >
                 <Outlet />
             </main>
 
-            <AppFooter />
+            {pathname !== "/login" && <AppFooter />}
         </div>
     );
 }

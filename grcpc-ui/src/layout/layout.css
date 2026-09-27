@@ -5,10 +5,14 @@
 
 /* Root app container */
 .appRoot {
-    height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    padding-block-end: 2rem;
+    box-sizing: border-box;
+    overflow: hidden;
     background: var(--sapBackgroundColor);
     color: var(--sapTextColor);
 }
@@ -27,9 +31,48 @@
 .sideNav {
     overflow: hidden;
     transition: width 120ms ease;
-    border-inline-end: 1px solid var(--sapList_BorderColor);
-    background: var(--sapShellColor);
+    border-inline-end: 1px solid #113875;
+    background: radial-gradient(ellipse at 0 110%, #0b63c0 0, transparent 30%), linear-gradient(155deg, #031747 0%, #061f5f 70%, #073d87 100%);
+    --sapList_Background: transparent;
+    --sapList_TextColor: #f3f8ff;
+    --sapContent_IconColor: #9de7ff;
+    --sapList_SelectionBackgroundColor: #1251a6;
+    --sapList_Hover_SelectionBackground: #1765bf;
+    --sapList_Hover_Background: #16417f;
+    --sapList_Active_Background: #1662bb;
+    --sapList_Active_TextColor: #fff;
+    --sapList_SelectionBorderColor: #24c8f5;
+    --_ui5_side_navigation_collapsed_selected_item_background: linear-gradient(90deg, #155bb5, #0e408b);
+    --_ui5_side_navigation_collapsed_selected_item_background_hover: linear-gradient(90deg, #1a6cca, #104b9d);
+    --_ui5_side_navigation_icon_color: #9de7ff;
+    --_ui5_side_navigation_expand_icon_color: #9de7ff;
+    --_ui5-v2-18-0_side_navigation_collapsed_selected_item_background: linear-gradient(90deg, #155bb5, #0e408b);
+    --_ui5-v2-18-0_side_navigation_collapsed_selected_item_background_hover: linear-gradient(90deg, #1a6cca, #104b9d);
+    --_ui5-v2-18-0_side_navigation_icon_color: #9de7ff;
+    --_ui5-v2-18-0_side_navigation_expand_icon_color: #9de7ff;
 }
+.sideNav ui5-side-navigation { height: 100%; background: transparent; }
+.sideNav ui5-side-navigation-item,
+.sideNav ui5-side-navigation-sub-item {
+    --sapList_TextColor: #f3f8ff;
+    --sapList_Background: transparent;
+    --_ui5_side_navigation_collapsed_selected_item_background: linear-gradient(90deg, #155bb5, #0e408b);
+    --_ui5_side_navigation_collapsed_selected_item_background_hover: linear-gradient(90deg, #1a6cca, #104b9d);
+    --_ui5_side_navigation_icon_color: #9de7ff;
+    --_ui5-v2-18-0_side_navigation_collapsed_selected_item_background: linear-gradient(90deg, #155bb5, #0e408b);
+    --_ui5-v2-18-0_side_navigation_collapsed_selected_item_background_hover: linear-gradient(90deg, #1a6cca, #104b9d);
+    --_ui5-v2-18-0_side_navigation_icon_color: #9de7ff;
+    --_ui5-v2-18-0_side_navigation_expand_icon_color: #9de7ff;
+}
+.sideNav ui5-side-navigation-item[selected],
+.sideNav ui5-side-navigation-sub-item[selected] {
+    --sapList_TextColor: #fff;
+    --_ui5_side_navigation_icon_color: #fff;
+    --_ui5-v2-18-0_side_navigation_icon_color: #fff;
+}
+.sideNavBrand { padding: 1.1rem .8rem; min-height: 4.5rem; display: flex; align-items: center; justify-content: center; }
+.sideNavBrand img { width: 2.3rem; height: 2.3rem; }
+.sideNavBrand .digiAuditBrand { font-size: 1.5rem; }
 
 /* -----------------------------
    Main Content Area

@@ -10,6 +10,7 @@ import ChangePasswordPage from "@/features/auth/pages/ChangePasswordPage";
 import AuthGuard from "../guards/AuthGuard";
 
 import NotFoundPage from "@/pages/NotFoundPage";
+import ComingSoonPage from "@/pages/ComingSoonPage";
 import AppRouterRoot from "./AppRouterRoot";
 
 import {
@@ -55,6 +56,7 @@ export const appRouter = createBrowserRouter(
                 {processRoutes}
                 {centralCatalogRoutes}
                 {usermanagementRoutes}
+                <Route path="/coming-soon/:section" element={<ComingSoonPage />} />
                 </Route>
 
                 <Route path="*" element={<NotFoundPage />} />

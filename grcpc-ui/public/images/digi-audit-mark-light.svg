@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 80" role="img" aria-label="Digi Audit">
+  <path fill="#fff" d="M16 8h22c21 0 34 13 34 32S59 72 38 72H16V55h22c11 0 17-6 17-15s-6-15-17-15H16z"/>
+  <path fill="#fff" d="M68 71 82 9h8L75 71z"/>
+  <path fill="#22c3df" d="M4 12h8v8H4zm8 8h7v7h-7zm-8 8h7v7H4zm9 7h7v7h-7z"/>
+  <path fill="#22c3df" d="M57 65C67 38 80 24 96 15 82 31 70 49 57 73c-5-10-10-17-17-24 8 3 13 8 17 16Z"/>
+</svg>

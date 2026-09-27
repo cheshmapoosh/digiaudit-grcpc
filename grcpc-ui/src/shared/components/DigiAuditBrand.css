@@ -1,0 +1,5 @@
+.digiAuditBrand { display: inline-flex; align-items: center; gap: .35rem; color: #080e5f; font-family: Arial, sans-serif; font-size: clamp(2rem, 3.5vw, 3.9rem); font-weight: 300; letter-spacing: -.075em; line-height: 1; white-space: nowrap; }
+.digiAuditBrand img { width: 1.2em; height: 1em; flex: none; }
+.digiAuditBrand strong { font-weight: 300; }
+.digiAuditBrand--light { color: white; }
+.digiAuditBrand--compact { font-size: 1.8rem; }
