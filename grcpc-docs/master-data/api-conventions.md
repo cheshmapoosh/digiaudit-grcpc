@@ -66,7 +66,7 @@ Closed Master Data code vocabularies are explicit uppercase strings, not Java or
 
 The canonical stored/wire code source for controlled polymorphic values is [table-catalog.md](table-catalog.md#controlled-polymorphic-stored-code-vocabularies).
 
-Revision Entity Type contains 50 stored codes. Document Link Target Type contains 42 stored codes.
+Revision Entity Type contains 50 stored codes. Document Link Target Type contains 43 stored codes.
 
 The Browser never sends Revision Content, `RevisionEntityType`, Revision Content sequence numbers, snapshots, or Backend transaction ordering.
 

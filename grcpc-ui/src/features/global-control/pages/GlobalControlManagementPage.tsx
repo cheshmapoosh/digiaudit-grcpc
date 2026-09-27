@@ -1,12 +1,15 @@
-import { createElement, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  Button, Dialog, Input, Label, Link, MessageStrip, Option, Select, Tab, Table,
+  Bar, Button, Dialog, Input, Label, Link, MessageStrip, Option, Select, Tab, Table,
   TableCell, TableHeaderCell, TableHeaderRow, TableRow, TextArea, Title, Tree,
   TreeItemCustom,
 } from "@ui5/webcomponents-react";
-import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
+import {
+  DocumentManager, EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE, toDocumentAggregateRequest,
+  type ParentSaveDocumentDraftState,
+} from "@/features/document";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
@@ -14,6 +17,7 @@ import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import GlobalControlCreateMenu from "../components/GlobalControlCreateMenu";
 import type {
   ControlGroup, ControlGroupCreate, ControlGroupUpdate, GlobalControl,
   GlobalControlCreate, GlobalControlUpdate, GlobalControlRegulation, RegulationOption,
@@ -104,7 +108,6 @@ function GroupTreeItem({ node, selected, expanded }: {
 export default function GlobalControlManagementPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const appDir = typeof document !== "undefined" && document.documentElement.dir === "ltr" ? "ltr" : "rtl";
   const { manage } = useMasterDataAccess("CONTROL");
   const groups = useGlobalControlState((state) => state.groups);
   const controls = useGlobalControlState((state) => state.controls);
@@ -120,6 +123,10 @@ export default function GlobalControlManagementPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [editor, setEditor] = useState<Editor>(null);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [editorTab, setEditorTab] = useState<"general" | "documents">("general");
+  const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
+  const [draftGeneration, setDraftGeneration] = useState(0);
   const [groupForm, setGroupForm] = useState<GroupForm>(emptyGroup);
   const [controlForm, setControlForm] = useState<ControlForm>(emptyControl);
   const [baseline, setBaseline] = useState("");
@@ -130,7 +137,7 @@ export default function GlobalControlManagementPage() {
     kind: "group" | "control"; id: string; name: string; version: number;
   } | null>(null);
   const [leaveOpen, setLeaveOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"general" | "regulations">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "regulations" | "documents">("general");
   const [related, setRelated] = useState<GlobalControlRegulation[]>([]);
   const [regulationOptions, setRegulationOptions] = useState<RegulationOption[]>([]);
   const [regulationId, setRegulationId] = useState("");
@@ -146,7 +153,8 @@ export default function GlobalControlManagementPage() {
     ? descendants(groups, selectedGroup.id) : new Set<string>(), [groups, selectedGroup, editor]);
   const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const currentForm = editor?.startsWith("group") ? groupForm : controlForm;
-  const dirty = editor !== null && (JSON.stringify(currentForm) !== baseline || invalidDateDraft);
+  const dirty = editor !== null && (JSON.stringify(currentForm) !== baseline
+    || invalidDateDraft || (!editor.startsWith("group") && documents.dirty));
   const { blocker } = useUnsavedChangesGuard(dirty);
   const availableRegulations = useMemo(() => regulationOptions.filter((option) =>
     !related.some((link) => link.regulationId === option.id)), [regulationOptions, related]);
@@ -169,6 +177,8 @@ export default function GlobalControlManagementPage() {
     setActiveTab("general");
   };
   const beginGroup = (edit: boolean) => {
+    setViewOpen(false);
+    setEditorTab("general");
     const next = edit && selectedGroup ? {
       code: selectedGroup.code, name: selectedGroup.name,
       description: selectedGroup.description ?? "", parentId: selectedGroup.parentId ?? "",
@@ -183,6 +193,10 @@ export default function GlobalControlManagementPage() {
     setError(null);
   };
   const beginControl = (edit: boolean) => {
+    setViewOpen(false);
+    setEditorTab("general");
+    setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
+    setDraftGeneration((value) => value + 1);
     const next = edit && selectedControl ? {
       code: selectedControl.code, name: selectedControl.name,
       description: selectedControl.description ?? "",
@@ -192,7 +206,8 @@ export default function GlobalControlManagementPage() {
       validFrom: selectedControl.validFrom ?? "", validTo: selectedControl.validTo ?? "",
     } : {
       ...emptyControl,
-      controlGroupId: selectedGroup?.id ?? selectedControl?.controlGroupId
+      controlGroupId: (selectedGroup?.status === "ACTIVE" ? selectedGroup.id : null)
+        ?? selectedControl?.controlGroupId
         ?? groups.find((group) => group.status === "ACTIVE")?.id ?? "",
     };
     setControlForm(next);
@@ -217,7 +232,7 @@ export default function GlobalControlManagementPage() {
     try {
       if (editor.startsWith("group")) {
         if (!groupForm.code.trim()) throw new Error(t("globalControl.errors.required"));
-        if (groupForm.parentId && (groupForm.parentId === selectedGroup?.id
+        if (editor === "groupEdit" && groupForm.parentId && (groupForm.parentId === selectedGroup?.id
           || blockedParents.has(groupForm.parentId)))
           throw new Error(t("globalControl.errors.parent"));
         const fields = {
@@ -239,12 +254,15 @@ export default function GlobalControlManagementPage() {
           throw new Error(t("globalControl.errors.required"));
         if (!groups.some((group) => group.id === controlForm.controlGroupId
           && group.status === "ACTIVE")) throw new Error(t("globalControl.errors.group"));
+        if (!documents.ready || documents.invalid || documents.uploading)
+          throw new Error(t("globalControl.errors.documents"));
         const fields = {
           name: controlForm.name.trim(), description: controlForm.description.trim() || null,
           controlGroupId: controlForm.controlGroupId,
           controlType: controlForm.controlType.trim(),
           testRequired: controlForm.testRequired === "true",
           validFrom: controlForm.validFrom || null, validTo: controlForm.validTo || null,
+          documents: toDocumentAggregateRequest(documents),
         };
         if (editor === "controlCreate") {
           const id = await createControl({
@@ -259,6 +277,7 @@ export default function GlobalControlManagementPage() {
         }
       }
       setEditor(null);
+      setDraftGeneration((value) => value + 1);
       setError(null);
     } catch (cause) { setError(message(cause)); }
     finally { setBusy(false); }
@@ -327,14 +346,22 @@ export default function GlobalControlManagementPage() {
   ].filter(({ item }) => (item.code + " " + item.name).toLocaleLowerCase("fa").includes(needle)) : [];
   const groupOptions = groups.filter((group) => group.status === "ACTIVE");
 
-  const startColumn = <div slot="startColumn" className="globalControlColumn">
-    <div className="globalControlToolbar">
-      <Title level="H4">{t("globalControl.title")}</Title>
-      <Button disabled={!manage || busy} onClick={() => beginGroup(false)}>
-        {t("globalControl.group.create")}</Button>
-      <Button disabled={!manage || busy || groupOptions.length === 0}
-        onClick={() => beginControl(false)}>{t("globalControl.control.create")}</Button>
-    </div>
+  const startColumn = <div className="globalControlColumn">
+    <Bar startContent={<Title level="H4">{t("globalControl.title")}</Title>}
+      endContent={<div className="globalControlToolbar">
+        <GlobalControlCreateMenu disabled={!manage || busy}
+          controlEnabled={groupOptions.length > 0}
+          onCreate={(kind) => kind === "group" ? beginGroup(false) : beginControl(false)} />
+        <Button disabled={!selected || busy} onClick={() => {
+          setActiveTab("general"); setViewOpen(true);
+        }}>{t("common.view")}</Button>
+        <Button design="Negative" disabled={!selected || !manage || busy}
+          onClick={() => {
+            const value = selectedGroup || selectedControl;
+            if (value) setDeleteCandidate({ kind: selectedGroup ? "group" : "control",
+              id: value.id, name: value.name, version: value.version });
+          }}>{t("common.delete")}</Button>
+      </div>} />
     <Input value={search} placeholder={t("globalControl.search")}
       onInput={(event) => setSearch(event.target.value)} />
     {needle ? filtered.map(({ item, kind }) => <Button key={kind + item.id}
@@ -347,16 +374,18 @@ export default function GlobalControlManagementPage() {
   </div>;
 
   const details = selectedGroup || selectedControl;
-  const midColumn = details ? <div slot="midColumn" className="globalControlColumn">
+  const viewDetails = details ? <div className="globalControlColumn">
     <Title level="H4">{details.name}</Title>
     {selectedControl ? <DetailTabContainer onTabSelect={(event) => {
       const key = event.detail.tab.getAttribute("data-tab-key");
-      if (key === "general" || key === "regulations") setActiveTab(key);
+      if (key === "general" || key === "regulations" || key === "documents") setActiveTab(key);
     }}>
       <Tab text={t("globalControl.tabs.general")} selected={activeTab === "general"}
         data-tab-key="general" />
       <Tab text={t("globalControl.tabs.regulations")} selected={activeTab === "regulations"}
         data-tab-key="regulations" />
+      <Tab text={t("globalControl.tabs.documents")} selected={activeTab === "documents"}
+        data-tab-key="documents" />
     </DetailTabContainer> : null}
     {activeTab === "general" || selectedGroup ? <>
       <div className="globalControlDetails">
@@ -380,11 +409,7 @@ export default function GlobalControlManagementPage() {
         <Button disabled={!manage || busy}
           onClick={() => selectedGroup ? beginGroup(true) : beginControl(true)}>
           {t("common.edit")}</Button>
-        <Button design="Negative" disabled={!manage || busy}
-          onClick={() => setDeleteCandidate({
-            kind: selectedGroup ? "group" : "control", id: details.id,
-            name: details.name, version: details.version,
-          })}>{t("common.delete")}</Button>
+        <Button design="Transparent" onClick={() => setViewOpen(false)}>{t("common.close")}</Button>
       </div>
     </> : null}
     {selectedControl && activeTab === "regulations" ? <>
@@ -415,6 +440,9 @@ export default function GlobalControlManagementPage() {
       {related.length === 0 ? <MessageStrip design="Information" hideCloseButton>
         {t("globalControl.regulations.empty")}</MessageStrip> : null}
     </> : null}
+    {viewOpen && selectedControl && activeTab === "documents" ? <DocumentManager
+      targetType="GLOBAL_CONTROL" targetId={selectedControl.id} readOnly
+      title={t("globalControl.tabs.documents")} /> : null}
   </div> : null;
 
   const groupEditor = editor?.startsWith("group") ?? false;
@@ -427,15 +455,28 @@ export default function GlobalControlManagementPage() {
     {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}</MessageStrip> : null}
     {loading ? <MessageStrip design="Information" hideCloseButton>
       {t("globalControl.loading")}</MessageStrip> : null}
-    {createElement("ui5-flexible-column-layout", {
-      layout: details ? "TwoColumnsStartExpanded" : "OneColumn",
-      dir: appDir,
-      style: { height: "calc(100vh - 11rem)", minHeight: "32rem", display: "block" },
-    }, startColumn, midColumn)}
+    {startColumn}
+    <Dialog open={viewOpen && Boolean(details)} className="globalControlDialog"
+      accessibleName={details?.name || t("globalControl.title")}
+      onClose={() => setViewOpen(false)}>
+      <ModalDialogHeader title={details?.name || t("globalControl.title")}
+        onClose={() => setViewOpen(false)} />
+      {viewDetails}
+    </Dialog>
     <Dialog open={editor !== null} className="globalControlDialog" onClose={closeEditor}
       accessibleName={editorTitle}>
       <ModalDialogHeader title={editorTitle} onClose={closeEditor} />
-      <div className="globalControlForm">
+      {!groupEditor ? <DetailTabContainer onTabSelect={(event) => {
+        const key = event.detail.tab.getAttribute("data-tab-key");
+        if (key === "general" || key === "documents") setEditorTab(key);
+      }}>
+        <Tab text={t("globalControl.tabs.general")} selected={editorTab === "general"}
+          data-tab-key="general" />
+        <Tab text={t("globalControl.tabs.documents")} selected={editorTab === "documents"}
+          data-tab-key="documents" />
+      </DetailTabContainer> : null}
+      <div className={editorTab === "general" || groupEditor
+        ? "globalControlForm" : "globalControlForm globalControlHidden"}>
         <Label required>{t("globalControl.code")}</Label>
         <Input value={form.code} readonly={editor === "groupEdit" || editor === "controlEdit"}
           disabled={busy} onInput={(event) => groupEditor
@@ -508,11 +549,20 @@ export default function GlobalControlManagementPage() {
           onInput={(event) => groupEditor
             ? setGroupForm((old) => ({ ...old, description: event.target.value }))
             : setControlForm((old) => ({ ...old, description: event.target.value }))} />
-        <div className="globalControlActions">
-          <Button design="Emphasized" disabled={busy || !dirty || invalidDateDraft}
-            onClick={() => void save()}>{t("common.save")}</Button>
-          <Button design="Transparent" onClick={closeEditor}>{t("common.cancel")}</Button>
-        </div>
+      </div>
+      {!groupEditor && editor ? <div className={editorTab === "documents"
+        ? "globalControlDocumentTab" : "globalControlDocumentTab globalControlHidden"}>
+        <DocumentManager targetType="GLOBAL_CONTROL"
+          targetId={editor === "controlEdit" ? selectedControlId ?? null : null}
+          persistenceMode="PARENT_SAVE" busy={busy}
+          title={t("globalControl.tabs.documents")}
+          draftResetKey={draftGeneration} onDraftStateChange={setDocuments} />
+      </div> : null}
+      <div className="globalControlActions globalControlDialogActions">
+        <Button design="Emphasized" disabled={busy || !dirty || invalidDateDraft
+          || (!groupEditor && (!documents.ready || documents.invalid || documents.uploading))}
+          onClick={() => void save()}>{t("common.save")}</Button>
+        <Button design="Transparent" onClick={closeEditor}>{t("common.cancel")}</Button>
       </div>
     </Dialog>
     <DeleteConfirmDialog open={Boolean(deleteCandidate)}

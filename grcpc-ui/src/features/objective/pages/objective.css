@@ -1,8 +1,11 @@
 .objectivePage { display: grid; gap: .75rem; min-width: 0; }
-.objectiveColumn { box-sizing: border-box; display: flex; flex-direction: column; gap: .75rem; height: 100%; overflow: auto; padding: 1rem; background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor); }
+.objectiveColumn { box-sizing: border-box; display: flex; flex-direction: column; gap: .75rem; min-height: calc(100vh - 11rem); overflow: auto; padding: 1rem; background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor); }
 .objectiveToolbar, .objectiveActions { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .objectiveDetails { display: grid; gap: .5rem; }
 .objectiveTreeLabel { padding: .35rem; }
 .objectiveDialog { width: min(52rem, 92vw); }
 .objectiveForm { display: grid; gap: .5rem; padding: 1rem; max-height: 75vh; overflow: auto; }
+.objectiveDocumentTab { padding: 1rem; max-height: 75vh; overflow: auto; }
+.objectiveTabHidden { display: none; }
+.objectiveDialogActions { padding: .75rem 1rem; }
 @media (max-width: 720px) { .objectiveDialog { width: 96vw; } }

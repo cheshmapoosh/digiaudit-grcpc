@@ -112,12 +112,13 @@ Revision Entity Type rules:
 
 `document_link.target_type` uses a separate vocabulary from `RevisionEntityType`. Reusing the same stored code for the same logical table does not make the two domain types interchangeable.
 
-`document_link.target_type` accepts 42 values after adding the Objective document target.
+`document_link.target_type` accepts 43 values after adding the Global Control document target.
 
 | Stored code | Exact target table | Target class |
 | --- | --- | --- |
 | `ORG` | `organization` | Normal Master Data |
 | `OBJECTIVE` | `objective` | Normal Master Data |
+| `GLOBAL_CONTROL` | `global_control` | Normal Master Data |
 | `CENTRAL_PROCESS` | `central_process` | Normal Master Data |
 | `CENTRAL_SUBPROCESS` | `central_subprocess` | Normal Master Data |
 | `CENTRAL_CONTROL` | `central_control` | Normal Master Data |
@@ -943,7 +944,7 @@ Document Link Target Type rules:
 
 **Purpose and family.** Controlled polymorphic link from an exact immutable Document Version to a permitted Master Data target.
 
-**Fields.** `ID`; `document_version_id RAW(16) NOT NULL`; controlled `target_type VARCHAR2(32 BYTE) NOT NULL`; `target_id RAW(16) NOT NULL`; lifecycle/audit/optimistic-lock fields compatible with the stored relationship. Link-role semantics such as `PRIMARY_DOCUMENT` are controlled by the Document domain; the final models do not prescribe a separate field name. `target_type` uses the canonical 41-code Document Link Target Type vocabulary in this catalog.
+**Fields.** `ID`; `document_version_id RAW(16) NOT NULL`; controlled `target_type VARCHAR2(32 BYTE) NOT NULL`; `target_id RAW(16) NOT NULL`; lifecycle/audit/optimistic-lock fields compatible with the stored relationship. Link-role semantics such as `PRIMARY_DOCUMENT` are controlled by the Document domain; the final models do not prescribe a separate field name. `target_type` uses the current 43-code Document Link Target Type vocabulary in this catalog.
 
 **Keys and relationships.** PK: `id`. Business key: unique `(document_version_id, target_type, target_id)`. FK: `document_version_id -> document_version(id)`. `target_id` is validated by Document Service against the controlled `target_type` rather than an unbounded generic target table.
 
@@ -951,7 +952,7 @@ Document Link Target Type rules:
 
 **Lifecycle, validity, and lock.** Link mutation is versioned and explicit. The link always names the precise version so a newer document file never silently changes historical evidence.
 
-**Constraints and indexes.** Unique link triple; target-type check against the canonical 41-code Document Link Target Type vocabulary; indexed `document_version_id` via the unique index and an appropriate target lookup index if not covered. The target cannot be an arbitrary legacy attachment target.
+**Constraints and indexes.** Unique link triple; target-type check against the current 43-code Document Link Target Type vocabulary; indexed `document_version_id` via the unique index and an appropriate target lookup index if not covered. The target cannot be an arbitrary legacy attachment target.
 
 **Mutability and Revision.** Linking to a Master Data target uses a direct Document command transaction and does not create Business Revision or Revision Content. The retained `MASTERDATA_REVISION` target vocabulary remains Backend-only and is not a normal Browser-selectable target.
 
@@ -1053,6 +1054,8 @@ This extension follows the current Oracle V2 runtime and Flyway profile. Postgre
 | `global_control_regulation` | Typed many-to-many link to existing Regulation/Law. | Unique `(global_control_id, regulation_id)`; FKs to `global_control` and `central_regulation`; `GLOBAL_CONTROL` and `REGULATION` Guards for link mutation. |
 
 This library is separate from `central_control`, `central_control_group`, and `central_control_objective`. It introduces no Global Control Scope or organization assignment.
+
+`V1188__global_control_document_target.sql` adds `GLOBAL_CONTROL` to the existing typed Document Link target constraint. Global Control Create/Update finalizes Document drafts inside the guarded aggregate transaction.
 
 ## Original numbered catalog count and current extension
 

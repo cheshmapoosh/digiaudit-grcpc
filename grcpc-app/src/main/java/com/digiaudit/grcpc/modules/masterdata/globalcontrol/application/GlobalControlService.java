@@ -3,6 +3,9 @@ package com.digiaudit.grcpc.modules.masterdata.globalcontrol.application;
 import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
+import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
+import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.CatalogCommandSupport;
 import com.digiaudit.grcpc.modules.masterdata.globalcontrol.api.GlobalControlDtos;
 import com.digiaudit.grcpc.modules.masterdata.globalcontrol.api.GlobalControlMapper;
@@ -17,6 +20,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionReque
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionEntityType;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationType;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
+import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,12 +46,13 @@ public class GlobalControlService {
   private final MasterDataRevisionActorProvider actors;
   private final RevisionMutationGuard guard;
   private final CatalogCommandSupport support;
+  private final DocumentCommandService documents;
   private final Clock clock;
 
   public GlobalControlService(GlobalControlRepository controls, ControlGroupRepository groups,
       GlobalControlRegulationRepository relations, GlobalControlMapper mapper,
       MasterDataRevisionCoordinator revisions, MasterDataRevisionActorProvider actors,
-      RevisionMutationGuard guard, CatalogCommandSupport support,
+      RevisionMutationGuard guard, CatalogCommandSupport support, DocumentCommandService documents,
       @Qualifier("masterDataRevisionClock") Clock clock) {
     this.controls = controls;
     this.groups = groups;
@@ -56,6 +62,7 @@ public class GlobalControlService {
     this.actors = actors;
     this.guard = guard;
     this.support = support;
+    this.documents = documents;
     this.clock = clock;
   }
 
@@ -73,15 +80,17 @@ public class GlobalControlService {
     return mapper.control(entity);
   }
 
-  public MasterDataRevisionMutationResponse create(GlobalControlDtos.Create request) {
+  public MasterDataAggregateMutationResponse create(GlobalControlDtos.Create request) {
     String code = support.normalizeCode(request.code());
     String name = support.normalizeTitle(request.name());
     String type = normalizeType(request.controlType());
     support.validateValidity(request.validFrom(), request.validTo());
+    AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     var result = revisions.executeStructural(MasterDataHierarchyKey.GLOBAL_CONTROL,
         RevisionRequest.central("Create global control " + code, "Global Control create", null),
         context -> {
           guard.requireHierarchyGuard(context, MasterDataHierarchyKey.GLOBAL_CONTROL);
+          var prepared = documents.prepareAggregate(request.documents());
           requireGroup(request.controlGroupId());
           if (controls.findByCode(code).isPresent()) throw support.duplicate(code);
           GlobalControlEntity entity = new GlobalControlEntity(UUID.randomUUID(), code, name,
@@ -89,21 +98,25 @@ public class GlobalControlService {
               Boolean.TRUE.equals(request.testRequired()), request.validFrom(), request.validTo(),
               actors.currentActorId(), Instant.now(clock));
           entity = controls.saveAndFlush(entity);
+          finalized.set(documents.finalizePreparedAggregate(prepared,
+              DocumentLinkTargetType.GLOBAL_CONTROL, entity.getId(), "MD_CONTROL_MANAGE"));
           return support.completed(context, entity, RevisionEntityType.GLOBAL_CONTROL,
               RevisionOperationType.CREATE, null, null, typed(entity));
         });
-    return MasterDataRevisionMutationResponse.from(result.primaryResult());
+    return support.aggregateResponse(result, finalized.get());
   }
 
-  public MasterDataRevisionMutationResponse update(UUID id, GlobalControlDtos.Update request) {
+  public MasterDataAggregateMutationResponse update(UUID id, GlobalControlDtos.Update request) {
     long expected = support.requireVersion(request.version());
     String name = support.normalizeTitle(request.name());
     String type = normalizeType(request.controlType());
     support.validateValidity(request.validFrom(), request.validTo());
+    AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     var result = revisions.executeStructural(MasterDataHierarchyKey.GLOBAL_CONTROL,
         RevisionRequest.central("Update global control " + id, "Global Control update", null),
         context -> {
           guard.requireHierarchyGuard(context, MasterDataHierarchyKey.GLOBAL_CONTROL);
+          var prepared = documents.prepareAggregate(request.documents());
           requireGroup(request.controlGroupId());
           GlobalControlEntity entity = requireControl(id);
           support.assertVersion(entity, expected);
@@ -112,10 +125,12 @@ public class GlobalControlService {
               request.controlGroupId(), type, Boolean.TRUE.equals(request.testRequired()),
               request.validFrom(), request.validTo(), actors.currentActorId(), Instant.now(clock));
           entity = controls.saveAndFlush(entity);
+          finalized.set(documents.finalizePreparedAggregate(prepared,
+              DocumentLinkTargetType.GLOBAL_CONTROL, entity.getId(), "MD_CONTROL_MANAGE"));
           return support.completed(context, entity, RevisionEntityType.GLOBAL_CONTROL,
               RevisionOperationType.UPDATE, expected, before, typed(entity));
         });
-    return MasterDataRevisionMutationResponse.from(result.primaryResult());
+    return support.aggregateResponse(result, finalized.get());
   }
 
   public MasterDataRevisionMutationResponse delete(UUID id, Long version) {

@@ -42,7 +42,7 @@ public class DocumentAuthorizationService {
         String area = switch (targetType) {
             case "ORG", "CENTRAL_ACCOUNT_GROUP", "OBJECTIVE" -> "REFERENCE";
             case "CENTRAL_PROCESS", "CENTRAL_SUBPROCESS" -> "PROCESS";
-            case "CENTRAL_CONTROL", "CENTRAL_CONTROL_OBJECTIVE_DEF" -> "CONTROL";
+            case "CENTRAL_CONTROL", "GLOBAL_CONTROL", "CENTRAL_CONTROL_OBJECTIVE_DEF" -> "CONTROL";
             case "CENTRAL_RISK_CATEGORY", "CENTRAL_RISK_TEMPLATE" -> "RISK";
             case "CENTRAL_REGULATION_GROUP", "CENTRAL_REGULATION", "CENTRAL_REQUIREMENT",
                     "CENTRAL_POLICY_GROUP", "CENTRAL_POLICY" -> "GOVERNANCE";

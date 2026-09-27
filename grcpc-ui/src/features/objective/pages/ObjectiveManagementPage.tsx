@@ -1,21 +1,21 @@
-import { createElement, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  Button, Dialog, Input, Label, Link, MessageStrip, Option, Select, TextArea,
+  Bar, Button, Dialog, Input, Label, Link, MessageStrip, Option, Select, Tab, TextArea,
   Title, Tree, TreeItemCustom,
 } from "@ui5/webcomponents-react";
-import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
 import {
   DocumentManager, EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE, toDocumentAggregateRequest,
   type ParentSaveDocumentDraftState,
 } from "@/features/document";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
+import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDateTime } from "@/shared/utils/date.utils";
 import type { Objective, ObjectiveCreate, ObjectiveUpdate } from "../domain/objective.model";
 import { useObjectiveState } from "../state/objective.state";
 import "./objective.css";
@@ -84,7 +84,6 @@ function errorText(error: unknown): string {
 
 export default function ObjectiveManagementPage() {
   const { t } = useTranslation();
-  const appDir = typeof document !== "undefined" && document.documentElement.dir === "ltr" ? "ltr" : "rtl";
   const navigate = useNavigate();
   const { manage } = useMasterDataAccess("REFERENCE");
   const items = useObjectiveState((state) => state.items);
@@ -96,7 +95,8 @@ export default function ObjectiveManagementPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
-  const [mode, setMode] = useState<"create" | "edit" | null>(null);
+  const [mode, setMode] = useState<"create" | "view" | "edit" | null>(null);
+  const [activeTab, setActiveTab] = useState<"general" | "documents">("general");
   const [form, setForm] = useState<Form>(emptyForm);
   const [baseline, setBaseline] = useState("");
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
@@ -114,13 +114,16 @@ export default function ObjectiveManagementPage() {
   const blockedParents = useMemo(() => selected && mode === "edit"
     ? descendantIds(items, selected.id) : new Set<string>(), [items, mode, selected]);
   const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
-  const dirty = mode !== null && (JSON.stringify(form) !== baseline || documents.dirty || invalidDateDraft);
+  const dirty = (mode === "create" || mode === "edit")
+    && (JSON.stringify(form) !== baseline || documents.dirty || invalidDateDraft);
   const { blocker } = useUnsavedChangesGuard(dirty);
 
   useEffect(() => { void load().catch((cause: unknown) => setError(errorText(cause))); }, [load]);
 
-  const begin = (nextMode: "create" | "edit") => {
-    const next = toForm(nextMode === "edit" ? selected : null);
+  const begin = (nextMode: "create" | "view" | "edit") => {
+    const next = nextMode === "create"
+      ? { ...emptyForm, parentObjectiveId: selected?.id ?? "" }
+      : toForm(selected);
     setForm(next);
     setBaseline(JSON.stringify(next));
     setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
@@ -130,6 +133,7 @@ export default function ObjectiveManagementPage() {
       validTo: { draftValue: "", valid: true, dirty: false },
     });
     setError(null);
+    setActiveTab("general");
     setMode(nextMode);
   };
 
@@ -147,7 +151,8 @@ export default function ObjectiveManagementPage() {
       setError(t("objective.errors.dates"));
       return;
     }
-    if (form.parentObjectiveId && (form.parentObjectiveId === selectedId || blockedParents.has(form.parentObjectiveId))) {
+    if (mode === "edit" && form.parentObjectiveId
+      && (form.parentObjectiveId === selectedId || blockedParents.has(form.parentObjectiveId))) {
       setError(t("objective.errors.parent"));
       return;
     }
@@ -167,7 +172,8 @@ export default function ObjectiveManagementPage() {
       } else if (selected) {
         await update(selected.id, { ...common, version: selected.version } satisfies ObjectiveUpdate);
       }
-      setMode(null);
+      setDraftGeneration((value) => value + 1);
+      setMode("view");
       setError(null);
     } catch (cause) { setError(errorText(cause)); }
     finally { setBusy(false); }
@@ -205,13 +211,23 @@ export default function ObjectiveManagementPage() {
     ? items.filter((item) => (item.code + " " + item.name).toLocaleLowerCase("fa")
         .includes(search.trim().toLocaleLowerCase("fa")))
     : [];
-  const startColumn = <div slot="startColumn" className="objectiveColumn">
-    <div className="objectiveToolbar">
-      <Title level="H4">{t("objective.title")}</Title>
-      <Button design="Emphasized" disabled={!manage || busy} onClick={() => begin("create")}>
-        {t("common.create")}
-      </Button>
-    </div>
+  const dialogTitle = t(mode === "create" ? "objective.create"
+    : mode === "edit" ? "objective.edit" : "objective.view");
+  const readOnly = mode === "view";
+
+  return <section className="objectivePage">
+    <Link onClick={() => navigate("/master-data")}>{t("masterData.title")}</Link>
+    {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}</MessageStrip> : null}
+    {loading ? <MessageStrip design="Information" hideCloseButton>{t("objective.loading")}</MessageStrip> : null}
+    <div className="objectiveColumn">
+    <Bar startContent={<Title level="H4">{t("objective.title")}</Title>}
+      endContent={<div className="objectiveActions">
+        <Button design="Emphasized" disabled={!manage || busy} onClick={() => begin("create")}>
+          {t("common.create")}</Button>
+        <Button disabled={!selected || busy} onClick={() => begin("view")}>{t("common.view")}</Button>
+        <Button design="Negative" disabled={!selected || !manage || busy}
+          onClick={() => setDeleteCandidate(selected)}>{t("common.delete")}</Button>
+      </div>} />
     <Input value={search} placeholder={t("objective.search")} onInput={(event) => setSearch(event.target.value)} />
     {search.trim() ? filtered.map((item) => <Button key={item.id} design="Transparent"
       onClick={() => setSelectedId(item.id)}>{item.code} · {item.name}</Button>)
@@ -219,80 +235,66 @@ export default function ObjectiveManagementPage() {
         {tree.map((node) => <ObjectiveTreeItem key={node.id} node={node}
           selectedId={selectedId} expandedIds={expandedIds} />)}
       </Tree>}
-  </div>;
-  const midColumn = selected ? <div slot="midColumn" className="objectiveColumn">
-    <Title level="H4">{selected.name}</Title>
-    <div className="objectiveDetails">
-      <Label>{t("objective.code")}: {selected.code}</Label>
-      <Label>{t("objective.type")}: {selected.objectiveType || "—"}</Label>
-      <Label>{t("objective.parent")}: {items.find((item) => item.id === selected.parentObjectiveId)?.name || "—"}</Label>
-      <Label>{t("objective.createdAt")}: {formatPersianDateTime(selected.createdAt)}</Label>
-      <Label>{t("objective.validFrom")}: {formatPersianDate(selected.validFrom) || "—"}</Label>
-      <Label>{t("objective.validTo")}: {formatPersianDate(selected.validTo) || "—"}</Label>
-      <Label>{t("objective.description")}: {selected.description || "—"}</Label>
     </div>
-    <div className="objectiveActions">
-      <Button disabled={!manage || busy} onClick={() => begin("edit")}>{t("common.edit")}</Button>
-      <Button design="Negative" disabled={!manage || busy} onClick={() => setDeleteCandidate(selected)}>
-        {t("common.delete")}
-      </Button>
-    </div>
-    <DocumentManager targetType="OBJECTIVE" targetId={selected.id} readOnly title={t("objective.documents")} />
-  </div> : null;
-
-  return <section className="objectivePage">
-    <Link onClick={() => navigate("/master-data")}>{t("masterData.title")}</Link>
-    {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}</MessageStrip> : null}
-    {loading ? <MessageStrip design="Information" hideCloseButton>{t("objective.loading")}</MessageStrip> : null}
-    {createElement("ui5-flexible-column-layout", {
-      layout: selected ? "TwoColumnsStartExpanded" : "OneColumn",
-      dir: appDir,
-      style: { height: "calc(100vh - 11rem)", minHeight: "32rem", display: "block" },
-    }, startColumn, midColumn)}
     <Dialog open={mode !== null} className="objectiveDialog" onClose={close}
-      accessibleName={t(mode === "create" ? "objective.create" : "objective.edit")}>
-      <ModalDialogHeader title={t(mode === "create" ? "objective.create" : "objective.edit")} onClose={close} />
-      <div className="objectiveForm">
+      accessibleName={dialogTitle}>
+      <ModalDialogHeader title={dialogTitle} onClose={close} />
+      <DetailTabContainer onTabSelect={(event) => {
+        const key = event.detail.tab.getAttribute("data-tab-key");
+        if (key === "general" || key === "documents") setActiveTab(key);
+      }}>
+        <Tab text={t("objective.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
+        <Tab text={t("objective.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
+      </DetailTabContainer>
+      <div className={activeTab === "general" ? "objectiveForm" : "objectiveForm objectiveTabHidden"}>
         <Label required>{t("objective.code")}</Label>
-        <Input value={form.code} readonly={mode === "edit"} disabled={busy}
+        <Input value={form.code} readonly={mode !== "create"} disabled={busy}
           onInput={(event) => setForm((old) => ({ ...old, code: event.target.value }))} />
         <Label required>{t("objective.name")}</Label>
-        <Input value={form.name} disabled={busy}
+        <Input value={form.name} readonly={readOnly} disabled={busy}
           onInput={(event) => setForm((old) => ({ ...old, name: event.target.value }))} />
         <Label>{t("objective.type")}</Label>
-        <Input value={form.objectiveType} disabled={busy}
+        <Input value={form.objectiveType} readonly={readOnly} disabled={busy}
           onInput={(event) => setForm((old) => ({ ...old, objectiveType: event.target.value }))} />
         <Label>{t("objective.parent")}</Label>
-        <Select value={form.parentObjectiveId} disabled={busy} accessibleName={t("objective.parent")}
+        <Select value={form.parentObjectiveId} disabled={busy || readOnly} accessibleName={t("objective.parent")}
           onChange={(event) => setForm((old) => ({ ...old, parentObjectiveId: event.target.value }))}>
           <Option value="">{t("objective.noParent")}</Option>
           {items.filter((item) => (mode !== "edit" || item.id !== selectedId) && !blockedParents.has(item.id))
             .map((item) => <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
         </Select>
         <Label>{t("objective.validFrom")}</Label>
-        <PersianDatePicker value={form.validFrom} disabled={busy} accessibleName={t("objective.validFrom")}
+        <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("objective.validFrom")}
           invalidValueMessage={t("objective.errors.dates")}
           onChange={(value) => setForm((old) => ({ ...old, validFrom: value }))}
           onDraftStateChange={(state) => setDateDrafts((old) =>
             old.validFrom.valid === state.valid && old.validFrom.draftValue === state.draftValue
               && old.validFrom.dirty === state.dirty ? old : { ...old, validFrom: state })} />
         <Label>{t("objective.validTo")}</Label>
-        <PersianDatePicker value={form.validTo} disabled={busy} accessibleName={t("objective.validTo")}
+        <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("objective.validTo")}
           invalidValueMessage={t("objective.errors.dates")}
           onChange={(value) => setForm((old) => ({ ...old, validTo: value }))}
           onDraftStateChange={(state) => setDateDrafts((old) =>
             old.validTo.valid === state.valid && old.validTo.draftValue === state.draftValue
               && old.validTo.dirty === state.dirty ? old : { ...old, validTo: state })} />
         <Label>{t("objective.description")}</Label>
-        <TextArea value={form.description} disabled={busy} rows={3}
+        <TextArea value={form.description} readonly={readOnly} disabled={busy} rows={3}
           onInput={(event) => setForm((old) => ({ ...old, description: event.target.value }))} />
-        <DocumentManager targetType="OBJECTIVE" targetId={mode === "edit" ? selectedId : null}
-          persistenceMode="PARENT_SAVE" busy={busy} title={t("objective.documents")}
-          draftResetKey={draftGeneration} onDraftStateChange={setDocuments} />
-        <div className="objectiveActions">
-          <Button design="Emphasized" disabled={busy || !dirty || invalidDateDraft || !documents.ready || documents.invalid || documents.uploading} onClick={() => void save()}>{t("common.save")}</Button>
-          <Button design="Transparent" onClick={close}>{t("common.cancel")}</Button>
-        </div>
+        {selected && mode !== "create" ? <Label>{t("objective.createdAt")}: {formatPersianDateTime(selected.createdAt)}</Label> : null}
+      </div>
+      <div className={activeTab === "documents" ? "objectiveDocumentTab" : "objectiveDocumentTab objectiveTabHidden"}>
+        {mode === "view" ? <DocumentManager targetType="OBJECTIVE" targetId={selectedId}
+          readOnly title={t("objective.documents")} />
+          : mode ? <DocumentManager targetType="OBJECTIVE" targetId={mode === "edit" ? selectedId : null}
+            persistenceMode="PARENT_SAVE" busy={busy} title={t("objective.documents")}
+            draftResetKey={draftGeneration} onDraftStateChange={setDocuments} /> : null}
+      </div>
+      <div className="objectiveActions objectiveDialogActions">
+        {readOnly ? <Button design="Emphasized" disabled={!manage || busy}
+          onClick={() => begin("edit")}>{t("common.edit")}</Button>
+          : <Button design="Emphasized" disabled={busy || !dirty || invalidDateDraft || !documents.ready || documents.invalid || documents.uploading}
+            onClick={() => void save()}>{t("common.save")}</Button>}
+        <Button design="Transparent" onClick={close}>{t(readOnly ? "common.close" : "common.cancel")}</Button>
       </div>
     </Dialog>
     <DeleteConfirmDialog open={Boolean(deleteCandidate)} title={t("objective.delete")}

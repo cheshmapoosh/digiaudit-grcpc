@@ -446,9 +446,9 @@ Each relation has its own closed stored-code vocabulary. These vocabularies must
 
 `RevisionEntityType` contains 50 stored codes after the Global Control extension and is used only for Revision Content.
 
-Document Link Target Type contains 42 stored codes after the Objective extension and is used only for Document Link target validation.
+Document Link Target Type contains 43 stored codes after the Global Control document extension and is used only for Document Link target validation.
 
-Document Link allows catalog tables `01` through `40` plus the narrow `MASTERDATA_REVISION` exception.
+Document Link allows the approved catalog targets, `OBJECTIVE`, and `GLOBAL_CONTROL`, plus the narrow `MASTERDATA_REVISION` exception.
 
 Document-family tables are not Document Link targets, and Prompt 4.2 Document commands do not create Revision Content.
 

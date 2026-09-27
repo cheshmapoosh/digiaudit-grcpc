@@ -3,6 +3,8 @@
   "objective.search": "Search objectives by name or code",
   "objective.create": "Create objective",
   "objective.edit": "Edit objective",
+  "objective.view": "View objective",
+  "objective.tabs.general": "General information",
   "objective.delete": "Delete objective",
   "objective.deleteConfirm": "Delete objective “{{name}}”?",
   "objective.loading": "Loading objectives…",

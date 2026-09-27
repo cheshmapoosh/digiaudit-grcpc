@@ -3,6 +3,8 @@
   "objective.search": "جستجوی هدف بر اساس نام یا کد",
   "objective.create": "ایجاد هدف",
   "objective.edit": "ویرایش هدف",
+  "objective.view": "مشاهده هدف",
+  "objective.tabs.general": "اطلاعات کلی",
   "objective.delete": "حذف هدف",
   "objective.deleteConfirm": "آیا هدف «{{name}}» حذف شود؟",
   "objective.loading": "در حال بارگذاری اهداف…",

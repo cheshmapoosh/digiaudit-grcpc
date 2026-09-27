@@ -1,3 +1,5 @@
+import type { DocumentAggregateRequest } from "@/features/document";
+
 export interface ControlGroup {
   id: string;
   nodeType: "controlGroup";
@@ -39,6 +41,7 @@ export type ControlGroupUpdate = Omit<ControlGroupCreate, "code"> & { version: n
 export interface GlobalControlCreate {
   code: string; name: string; description: string | null; controlGroupId: string;
   controlType: string; testRequired: boolean; validFrom: string | null; validTo: string | null;
+  documents: DocumentAggregateRequest;
 }
 export type GlobalControlUpdate = Omit<GlobalControlCreate, "code"> & { version: number };
 

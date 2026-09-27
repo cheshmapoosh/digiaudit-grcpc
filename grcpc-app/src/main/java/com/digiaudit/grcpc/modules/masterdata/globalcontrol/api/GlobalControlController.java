@@ -4,6 +4,7 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.shared.api.dto.CatalogLife
 import com.digiaudit.grcpc.modules.masterdata.globalcontrol.application.GlobalControlRegulationService;
 import com.digiaudit.grcpc.modules.masterdata.globalcontrol.application.GlobalControlService;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
+import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -46,13 +47,13 @@ public class GlobalControlController {
 
   @PostMapping
   @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
-  public MasterDataRevisionMutationResponse create(@Valid @RequestBody GlobalControlDtos.Create request) {
+  public MasterDataAggregateMutationResponse create(@Valid @RequestBody GlobalControlDtos.Create request) {
     return controls.create(request);
   }
 
   @PutMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
-  public MasterDataRevisionMutationResponse update(@PathVariable UUID id,
+  public MasterDataAggregateMutationResponse update(@PathVariable UUID id,
       @Valid @RequestBody GlobalControlDtos.Update request) {
     return controls.update(id, request);
   }

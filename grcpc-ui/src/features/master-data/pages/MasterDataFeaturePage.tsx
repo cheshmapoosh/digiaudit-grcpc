@@ -56,9 +56,9 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
     {
         key: "globalControls",
         titleKey: "masterData.items.globalControls",
-        defaultTitle: "کنترل‌های سطح کل",
+        defaultTitle: "کنترل‌های عمومی",
         descriptionKey: "masterData.items.globalControls.description",
-        defaultDescription: "گروه‌بندی کنترل‌های سطح کل و ارتباط آن‌ها با قوانین",
+        defaultDescription: "گروه‌بندی کنترل‌های عمومی و ارتباط آن‌ها با قوانین",
         icon: "shield",
         route: "/global-controls",
         group: "catalog",
