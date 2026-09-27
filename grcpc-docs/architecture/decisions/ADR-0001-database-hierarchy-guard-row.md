@@ -42,6 +42,7 @@ Current approved rows:
 | `REGULATION` | Shared Regulation Group, Regulation, and Requirement structure |
 | `POLICY` | Shared Policy Group and Policy structure |
 | `OBJECTIVE` | Business Objective hierarchy (approved later Objective extension) |
+| `GLOBAL_CONTROL` | Global Control Group hierarchy and control membership (approved later Global Control library extension) |
 
 `central_process` and `central_subprocess` are separate business tables but belong to one structural hierarchy and therefore share the `PROCESS` Guard Row.
 

@@ -55,6 +55,7 @@ const MASTER_DATA_PATH_PREFIXES = [
     "/organizations",
     "/processes",
     "/controls",
+    "/global-controls",
     "/control-objectives",
     "/objectives",
     "/regulations",

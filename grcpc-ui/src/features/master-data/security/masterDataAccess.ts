@@ -13,6 +13,7 @@ export function areaForPath(path: string): MasterDataArea | undefined {
   const areas: Record<string, MasterDataArea> = {
     organizations: "REFERENCE", objectives: "REFERENCE", "account-groups": "REFERENCE",
     processes: "PROCESS", risks: "RISK", controls: "CONTROL", "control-objectives": "CONTROL",
+    "global-controls": "CONTROL",
     regulations: "GOVERNANCE", policies: "GOVERNANCE",
   };
   return areas[path.split("/")[1]];

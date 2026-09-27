@@ -66,7 +66,7 @@ Closed Master Data code vocabularies are explicit uppercase strings, not Java or
 
 The canonical stored/wire code source for controlled polymorphic values is [table-catalog.md](table-catalog.md#controlled-polymorphic-stored-code-vocabularies).
 
-Revision Entity Type contains 47 stored codes. Document Link Target Type contains 42 stored codes.
+Revision Entity Type contains 50 stored codes. Document Link Target Type contains 42 stored codes.
 
 The Browser never sends Revision Content, `RevisionEntityType`, Revision Content sequence numbers, snapshots, or Backend transaction ordering.
 
@@ -222,6 +222,7 @@ The following route shapes are conventions, not table-oriented generic CRUD cont
 | Control | `POST /api/master-data/central/controls`; typed update/status/restore commands | list/detail/value-help query | No direct regulation relation. |
 | Control Objective | `POST /api/master-data/central/control-objectives`; typed update/status/restore commands | list/detail/value-help query | Distinct from the business Objective hierarchy. |
 | Business Objective | `POST/PUT/DELETE /api/objectives`; typed Organization assignment commands | `GET /api/objectives`; `GET /api/organizations/{organizationId}/objectives` | Objective hierarchy uses the `OBJECTIVE` Guard and Backend-owned revisions. |
+| Global Control library | `POST/PUT/DELETE /api/control-groups` and `/api/global-controls`; typed Regulation link add/remove | `GET /api/control-groups`, `/api/global-controls`, and `/api/global-controls/{id}/regulations` | Separate central library; `GLOBAL_CONTROL` Guard, plus `REGULATION` for link mutation. |
 | Risk Category/Template | typed category/tree and template commands | hierarchy/template query | Scope accepts Risk Template only. |
 | Account Group | typed hierarchy commands | tree/value-help query | Classifications use separate typed commands. |
 | Regulation Group/Regulation/Requirement | typed hierarchy commands | hierarchy/requirement query | Requirement is the scope/coverage endpoint. |
@@ -509,7 +510,7 @@ The client refreshes the typed Read DTO and lets the user resolve the conflict; 
 
 Create commands use approved business-key uniqueness plus explicit inactive reactivation/deleted restore behavior for safe duplicate handling.
 
-Structural Organization commands use the `ORGANIZATION` Guard; Objective hierarchy commands use `OBJECTIVE`; Process and Subprocess share `PROCESS`; Risk Category and Risk Template share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group, Regulation, and Requirement share `REGULATION`; Policy Group and Policy share `POLICY`. Policy aggregate Update acquires `POLICY` even when its submitted group is unchanged. Organization Objective assignments acquire `OBJECTIVE` and `ORGANIZATION` in lexical order before reference reads. Other typed relation changes add `PROCESS`, `ORGANIZATION`, `CONTROL`, or `REGULATION` Guards as required, acquired in lexical order before hierarchy and endpoint reads.
+Structural Organization commands use the `ORGANIZATION` Guard; Objective hierarchy commands use `OBJECTIVE`; Global Control Group and Global Control use `GLOBAL_CONTROL`; Process and Subprocess share `PROCESS`; Risk Category and Risk Template share `RISK`; Account Group uses `ACCOUNT_GROUP`; Regulation Group, Regulation, and Requirement share `REGULATION`; Policy Group and Policy share `POLICY`. Policy aggregate Update acquires `POLICY` even when its submitted group is unchanged. Organization Objective assignments acquire `OBJECTIVE` and `ORGANIZATION` in lexical order before reference reads. Global Control–Regulation link changes acquire `GLOBAL_CONTROL` and `REGULATION`. Other typed relation changes add `PROCESS`, `ORGANIZATION`, `CONTROL`, or `REGULATION` Guards as required, acquired in lexical order before hierarchy and endpoint reads.
 
 Guard acquisition applies the configured JPA lock-timeout hint. Recognized lock acquisition/timeout failures return `HIERARCHY_BUSY` and are not retried automatically. A missing configured Guard row returns `HIERARCHY_GUARD_NOT_CONFIGURED` and fails the operation before source or Revision persistence.
 

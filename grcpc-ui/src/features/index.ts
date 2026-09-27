@@ -5,5 +5,6 @@ export { masterDataRoutes } from "./master-data";
 export { processRoutes } from "./process";
 export { organizationRoutes } from "./organization";
 export { objectiveRoutes } from "./objective";
+export { globalControlRoutes } from "./global-control";
 export { usermanagementRoutes } from "./usermanagement";
 export { centralCatalogRoutes } from "./central-catalog";

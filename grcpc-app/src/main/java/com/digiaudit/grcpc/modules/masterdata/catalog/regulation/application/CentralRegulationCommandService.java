@@ -8,6 +8,7 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.api.dto.Central
 import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.entity.*;
 import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.repository.*;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.CatalogCommandSupport;
+import com.digiaudit.grcpc.modules.masterdata.globalcontrol.domain.GlobalControlRegulationRepository;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;
@@ -25,6 +26,7 @@ public class CentralRegulationCommandService {
   private final CentralRegulationRepository repository;
   private final CentralRegulationGroupRepository groups;
   private final CentralRegulationRequirementRepository requirements;
+  private final GlobalControlRegulationRepository globalControlRelations;
   private final MasterDataRevisionCoordinator revisions;
   private final MasterDataRevisionActorProvider actors;
   private final RevisionMutationGuard guard;
@@ -36,6 +38,7 @@ public class CentralRegulationCommandService {
       CentralRegulationRepository r,
       CentralRegulationGroupRepository groups,
       CentralRegulationRequirementRepository requirements,
+      GlobalControlRegulationRepository globalControlRelations,
       MasterDataRevisionCoordinator revisions,
       MasterDataRevisionActorProvider actors,
       RevisionMutationGuard guard,
@@ -45,6 +48,7 @@ public class CentralRegulationCommandService {
     repository = r;
     this.groups = groups;
     this.requirements = requirements;
+    this.globalControlRelations = globalControlRelations;
     this.revisions = revisions;
     this.actors = actors;
     this.guard = guard;
@@ -231,12 +235,14 @@ public class CentralRegulationCommandService {
               support.assertVersion(e, expected);
               support.validateLifecycle(e, op);
               if (op == RevisionOperationType.DELETE
-                  && requirements.existsByRegulationIdAndStatusNot(
-                      id, MasterDataLifecycleStatus.DELETED))
+                  && (requirements.existsByRegulationIdAndStatusNot(
+                      id, MasterDataLifecycleStatus.DELETED)
+                      || globalControlRelations.existsByRegulationIdAndStatusNot(
+                          id, MasterDataLifecycleStatus.DELETED)))
                 throw new ConflictException(
                     "DEPENDENCY_EXISTS",
                     "error.masterdata.v2.dependencyExists",
-                    "Regulation has nondeleted requirements",
+                    "Regulation has nondeleted requirements or Global Control relations",
                     id);
               if (op == RevisionOperationType.ACTIVATE || op == RevisionOperationType.RESTORE)
                 requireGroup(e.getRegulationGroupId());

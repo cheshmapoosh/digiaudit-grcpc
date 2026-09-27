@@ -30,10 +30,10 @@ Authority order:
 - Master Data V2 is Greenfield on a fresh Oracle schema.
 - Flyway owns the Day-Zero schema.
 - There is no Legacy data migration, compatibility API, compatibility view, or dual write.
-- The approved Objective extension adds `objective` and `organization_objective` to the existing business tables. The technical tables remain exactly:
+- The approved Objective and Global Control library extensions add `objective`, `organization_objective`, `control_group`, `global_control`, and `global_control_regulation` to the existing business tables. The technical tables remain exactly:
   - `document_temp_upload`
   - `masterdata_hierarchy_guard`
-- The current physical count is 47 active business tables, one retained historical Policy Version table, and two technical tables: 50.
+- The current physical count is 50 active business tables, one retained historical Policy Version table, and two technical tables: 53.
 - Do not add extra Master Data tables for convenience.
 - Do not create one lock table per feature. All hierarchy keys are rows in the single `masterdata_hierarchy_guard` table.
 
@@ -50,6 +50,7 @@ Current approved hierarchy keys:
 | `ORGANIZATION` | `organization` parent-child hierarchy |
 | `PROCESS` | Shared `central_process` and `central_subprocess` structure |
 | `OBJECTIVE` | `objective` parent-child hierarchy; Organization Objective assignment also takes `ORGANIZATION` |
+| `GLOBAL_CONTROL` | `control_group` hierarchy and Global Control membership; Regulation links also take `REGULATION` |
 
 Do not pre-create speculative hierarchy keys. A later vertical slice adds a key through Flyway only after its hierarchy boundary is approved.
 

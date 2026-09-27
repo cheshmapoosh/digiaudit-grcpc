@@ -2,7 +2,7 @@
 
 ## Catalog authority and count rule
 
-This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md), plus the approved Objective extension. It has 47 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables: 50 physical Master Data tables.
+This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md), plus the approved Objective and Global Control library extensions. It has 50 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables: 53 physical Master Data tables.
 
 Authoritative source files: `GRC_Master_Data_Logical_Model_Final_FA.docx` and `GRC_Master_Data_Physical_Design_Reference_FA.docx`; business meaning is cross-checked against `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`.
 
@@ -47,7 +47,7 @@ Stored codes are stable uppercase ASCII values stored in `VARCHAR2(32 BYTE)`. Ev
 
 ### Revision Entity Type stored-code vocabulary
 
-`masterdata_revision_content.entity_type` accepts 47 values, including the retained `CENTRAL_POLICY_VERSION` historical decoder, `CENTRAL_POLICY_ORG`, `OBJECTIVE`, and `ORGANIZATION_OBJECTIVE`.
+`masterdata_revision_content.entity_type` accepts 50 values, including the retained `CENTRAL_POLICY_VERSION` historical decoder, `CENTRAL_POLICY_ORG`, `OBJECTIVE`, `ORGANIZATION_OBJECTIVE`, `CONTROL_GROUP`, `GLOBAL_CONTROL`, and `GLOBAL_CONTROL_REGULATION`.
 
 | Stored code | Exact catalog table | Permitted Revision domain |
 | --- | --- | --- |
@@ -981,7 +981,7 @@ Document Link Target Type rules:
 
 **Purpose and family.** Ordered immutable change records belonging to one Master Data Revision; the controlled polymorphic reference identifies the changed entity.
 
-**Fields.** `ID`; `revision_id RAW(16) NOT NULL`; `sequence_number NUMBER(19,0) NOT NULL`; controlled `entity_type VARCHAR2(32 BYTE) NOT NULL`; `entity_id RAW(16) NOT NULL`; `operation_type VARCHAR2(32 BYTE) NOT NULL`; nullable `expected_version NUMBER(19,0)`; nullable `before_snapshot CLOB JSON`; nullable `after_snapshot CLOB JSON`; nullable `applied_entity_version NUMBER(19,0)`; nullable `validation_result CLOB JSON`; `created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `created_by RAW(16) NOT NULL`; `version NUMBER(19,0) NOT NULL`. `entity_type` uses the canonical 43-code Revision Entity Type vocabulary in this catalog.
+**Fields.** `ID`; `revision_id RAW(16) NOT NULL`; `sequence_number NUMBER(19,0) NOT NULL`; controlled `entity_type VARCHAR2(32 BYTE) NOT NULL`; `entity_id RAW(16) NOT NULL`; `operation_type VARCHAR2(32 BYTE) NOT NULL`; nullable `expected_version NUMBER(19,0)`; nullable `before_snapshot CLOB JSON`; nullable `after_snapshot CLOB JSON`; nullable `applied_entity_version NUMBER(19,0)`; nullable `validation_result CLOB JSON`; `created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `created_by RAW(16) NOT NULL`; `version NUMBER(19,0) NOT NULL`. `entity_type` uses the current 50-code Revision Entity Type vocabulary in this catalog.
 
 **Keys and relationships.** PK: `id`. Business key: unique `(revision_id, sequence_number)`. FK: `revision_id -> masterdata_revision(id)`. `entity_type/entity_id` is controlled polymorphism and must be domain-validated against the header.
 
@@ -989,7 +989,7 @@ Document Link Target Type rules:
 
 **Lifecycle, validity, and lock.** Operation is one of `CREATE`, `UPDATE`, `ACTIVATE`, `INACTIVATE`, `DELETE`, or `RESTORE`. No generic status/validity interval is documented. Applied content/snapshots are immutable; `version` supports guarded draft handling only.
 
-**Constraints and indexes.** Unique revision/sequence; controlled operation/entity type checked against the canonical 43-code Revision Entity Type vocabulary; revision-domain compatibility enforced by Backend validation; indexed `revision_id` via the unique key and target lookup only when proven necessary. JSON values require `IS JSON` checks.
+**Constraints and indexes.** Unique revision/sequence; controlled operation/entity type checked against the current 50-code Revision Entity Type vocabulary; revision-domain compatibility enforced by Backend validation; indexed `revision_id` via the unique key and target lookup only when proven necessary. JSON values require `IS JSON` checks.
 
 **Mutability and Revision.** Generated, sequenced, snapshot-filled, validated, and atomically applied by the Backend. The Frontend never sends this object, its sequence number, snapshots, or transaction order.
 
@@ -1021,13 +1021,13 @@ Document Link Target Type rules:
 
 **Fields and Oracle types.** `hierarchy_key VARCHAR2(64 BYTE) NOT NULL`; no UUID, version, lifecycle, audit, timestamp, status, description, or user columns.
 
-**Keys and relationships.** PK: `hierarchy_key`. No foreign keys. The seeded key set contains `ORGANIZATION`, `PROCESS`, `RISK`, `ACCOUNT_GROUP`, `REGULATION`, `POLICY`, and the later approved `OBJECTIVE`. Related family members share one key; there are no separate Subprocess, Risk Template, Regulation, Requirement, Policy, or Policy Version keys.
+**Keys and relationships.** PK: `hierarchy_key`. No foreign keys. The seeded key set contains `ORGANIZATION`, `PROCESS`, `RISK`, `ACCOUNT_GROUP`, `REGULATION`, `POLICY`, and the later approved `OBJECTIVE` and `GLOBAL_CONTROL`. Related family members share one key; there are no separate Subprocess, Risk Template, Regulation, Requirement, Policy, or Policy Version keys.
 
 **Lifecycle, validity, and lock.** The key must equal `UPPER(TRIM(hierarchy_key))`. Structural command transactions acquire the exact row with `PESSIMISTIC_WRITE` and a configured JPA lock-timeout hint before revision allocation, hierarchy reads, validation, or mutation. Runtime code never creates, repairs, renames, or reseeds rows.
 
 **Mutability and Revision.** Guard rows are immutable configuration and never create Revision Content. The table has no repository, API, controller, or generic CRUD exposure and is not a Document Link target.
 
-**Authority / non-invention note.** ADR-0001 and [hierarchy-guard-row-contract.md](hierarchy-guard-row-contract.md). `OBJECTIVE` is the sole later approved Guard key in this extension. No additional lock table, JVM lock, cache lock, or advisory-lock abstraction is authorized.
+**Authority / non-invention note.** ADR-0001 and [hierarchy-guard-row-contract.md](hierarchy-guard-row-contract.md). The later Objective and Global Control extensions approve their respective Guard keys. No additional lock table, JVM lock, cache lock, or advisory-lock abstraction is authorized.
 
 ## Approved Objective extension
 
@@ -1041,6 +1041,18 @@ The Objective extension adds exactly two business tables through `V1186__objecti
 These are separate from `central_control_objective` and its typed Subprocess scopes. Objective documents use the existing `document_link` target code `OBJECTIVE`; the local assignment does not introduce a new document target.
 
 This extension follows the current Oracle V2 runtime and Flyway profile. PostgreSQL support requires a separate port of the existing V2 schema and persistence mappings.
+
+## Approved Global Control library extension
+
+`V1187__global_control_library.sql` adds three central business tables:
+
+| Table | Purpose | Keys and relationships |
+| --- | --- | --- |
+| `control_group` | Hierarchical grouping for Global Controls. | Unique code; nullable self-FK `parent_id`; `GLOBAL_CONTROL` Guard. |
+| `global_control` | Reusable enterprise control definition with type, validity, and test-required flag. | Unique code; required FK `control_group_id`; `GLOBAL_CONTROL` Guard. |
+| `global_control_regulation` | Typed many-to-many link to existing Regulation/Law. | Unique `(global_control_id, regulation_id)`; FKs to `global_control` and `central_regulation`; `GLOBAL_CONTROL` and `REGULATION` Guards for link mutation. |
+
+This library is separate from `central_control`, `central_control_group`, and `central_control_objective`. It introduces no Global Control Scope or organization assignment.
 
 ## Original numbered catalog count and current extension
 

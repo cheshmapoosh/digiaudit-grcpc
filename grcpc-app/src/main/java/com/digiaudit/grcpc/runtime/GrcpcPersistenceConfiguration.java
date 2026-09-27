@@ -10,6 +10,9 @@ import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentL
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentTempUploadEntity;
 import com.digiaudit.grcpc.modules.document.infrastructure.persistence.DocumentVersionEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.globalcontrol.domain.ControlGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.globalcontrol.domain.GlobalControlEntity;
+import com.digiaudit.grcpc.modules.masterdata.globalcontrol.domain.GlobalControlRegulationEntity;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveEntity;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.OrganizationObjectiveEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.converter.CentralControlRelevanceConverter;
@@ -121,6 +124,9 @@ LocalOrganizationSubprocessScopeEntity.class.getName(),
                 CentralRiskCategoryEntity.class.getName(),
                 CentralRiskTemplateEntity.class.getName(),
                 CentralAccountGroupEntity.class.getName(),
+                ControlGroupEntity.class.getName(),
+                GlobalControlEntity.class.getName(),
+                GlobalControlRegulationEntity.class.getName(),
                 ObjectiveEntity.class.getName(),
                 OrganizationObjectiveEntity.class.getName(),
                 CentralRegulationGroupEntity.class.getName(),

@@ -19,6 +19,7 @@ import {
     masterDataRoutes,
     organizationRoutes,
     objectiveRoutes,
+    globalControlRoutes,
     processRoutes,
     centralCatalogRoutes,
     usermanagementRoutes,
@@ -50,6 +51,7 @@ export const appRouter = createBrowserRouter(
                 {masterDataRoutes}
                 {organizationRoutes}
                 {objectiveRoutes}
+                {globalControlRoutes}
                 {processRoutes}
                 {centralCatalogRoutes}
                 {usermanagementRoutes}

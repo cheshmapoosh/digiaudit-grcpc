@@ -11,6 +11,8 @@
   "masterData.items.processes.description": "مدیریت ساختار فرآیند و زیر‌فرآیند و زمینهٔ کنترل‌ها",
   "masterData.items.controls": "کنترل‌ها",
   "masterData.items.controls.description": "تعریف و نگهداری کاتالوگ کنترل‌ها و مستندات مرتبط",
+  "masterData.items.globalControls": "کنترل‌های سطح کل",
+  "masterData.items.globalControls.description": "گروه‌بندی کنترل‌های سطح کل و ارتباط آن‌ها با قوانین",
   "masterData.items.objectives": "اهداف کنترلی",
   "masterData.items.businessObjectives": "اهداف",
   "masterData.items.businessObjectives.description": "مدیریت ساختار اهداف و انتساب به سازمان",

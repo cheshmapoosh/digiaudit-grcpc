@@ -11,6 +11,8 @@
   "masterData.items.processes.description": "Manage the process hierarchy and control context",
   "masterData.items.controls": "Controls",
   "masterData.items.controls.description": "Define and maintain the control catalog and related documents",
+  "masterData.items.globalControls": "Global Controls",
+  "masterData.items.globalControls.description": "Manage Global Control groups and regulation relations",
   "masterData.items.objectives": "Control Objectives",
   "masterData.items.businessObjectives": "Objectives",
   "masterData.items.businessObjectives.description": "Manage objective hierarchy and organization assignments",
