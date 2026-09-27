@@ -4,6 +4,7 @@ public enum MasterDataHierarchyKey {
     ACCOUNT_GROUP,
     CONTROL,
     ORGANIZATION,
+    OBJECTIVE,
     POLICY,
     PROCESS,
     REGULATION,

@@ -7,6 +7,8 @@ import java.util.Set;
 
 public enum RevisionEntityType {
   ORGANIZATION("ORG", EnumSet.of(RevisionDomain.CENTRAL)),
+  OBJECTIVE("OBJECTIVE", EnumSet.of(RevisionDomain.CENTRAL)),
+  ORGANIZATION_OBJECTIVE("ORGANIZATION_OBJECTIVE", EnumSet.of(RevisionDomain.LOCAL)),
   CENTRAL_PROCESS("CENTRAL_PROCESS", EnumSet.of(RevisionDomain.CENTRAL)),
   CENTRAL_SUBPROCESS("CENTRAL_SUBPROCESS", EnumSet.of(RevisionDomain.CENTRAL)),
   CENTRAL_CONTROL("CENTRAL_CONTROL", EnumSet.of(RevisionDomain.CENTRAL)),

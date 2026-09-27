@@ -15,7 +15,8 @@ public class MasterDataStructuralDependencyChecker {
       List.of(
           "select count(*) from local_organization_subprocess_scope where organization_id = ?",
           "select count(*) from local_policy_organization_scope where organization_id = ?",
-          "select count(*) from central_policy_organization_scope where organization_id = ? and status <> 'DELETED'");
+          "select count(*) from central_policy_organization_scope where organization_id = ? and status <> 'DELETED'",
+          "select count(*) from organization_objective where organization_id = ? and status <> 'DELETED'");
   private static final List<String> CENTRAL_PROCESS_DEPENDENCY_QUERIES =
       List.of(
           "select count(*) from central_process where parent_process_id = ? and status <>"

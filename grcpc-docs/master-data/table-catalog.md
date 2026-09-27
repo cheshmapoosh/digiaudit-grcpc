@@ -2,7 +2,7 @@
 
 ## Catalog authority and count rule
 
-This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md). It has 45 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables: 48 physical Master Data tables.
+This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md), plus the approved Objective extension. It has 47 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables: 50 physical Master Data tables.
 
 Authoritative source files: `GRC_Master_Data_Logical_Model_Final_FA.docx` and `GRC_Master_Data_Physical_Design_Reference_FA.docx`; business meaning is cross-checked against `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`.
 
@@ -47,11 +47,13 @@ Stored codes are stable uppercase ASCII values stored in `VARCHAR2(32 BYTE)`. Ev
 
 ### Revision Entity Type stored-code vocabulary
 
-`masterdata_revision_content.entity_type` accepts 45 values, including the retained `CENTRAL_POLICY_VERSION` historical decoder and the new `CENTRAL_POLICY_ORG`.
+`masterdata_revision_content.entity_type` accepts 47 values, including the retained `CENTRAL_POLICY_VERSION` historical decoder, `CENTRAL_POLICY_ORG`, `OBJECTIVE`, and `ORGANIZATION_OBJECTIVE`.
 
 | Stored code | Exact catalog table | Permitted Revision domain |
 | --- | --- | --- |
 | `ORG` | `organization` | `CENTRAL` |
+| `OBJECTIVE` | `objective` | `CENTRAL` |
+| `ORGANIZATION_OBJECTIVE` | `organization_objective` | `LOCAL` |
 | `CENTRAL_PROCESS` | `central_process` | `CENTRAL` |
 | `CENTRAL_SUBPROCESS` | `central_subprocess` | `CENTRAL` |
 | `CENTRAL_CONTROL` | `central_control` | `CENTRAL` |
@@ -110,11 +112,12 @@ Revision Entity Type rules:
 
 `document_link.target_type` uses a separate vocabulary from `RevisionEntityType`. Reusing the same stored code for the same logical table does not make the two domain types interchangeable.
 
-`document_link.target_type` accepts 41 values after version links are migrated to Policy and Central Organization Scope is added.
+`document_link.target_type` accepts 42 values after adding the Objective document target.
 
 | Stored code | Exact target table | Target class |
 | --- | --- | --- |
 | `ORG` | `organization` | Normal Master Data |
+| `OBJECTIVE` | `objective` | Normal Master Data |
 | `CENTRAL_PROCESS` | `central_process` | Normal Master Data |
 | `CENTRAL_SUBPROCESS` | `central_subprocess` | Normal Master Data |
 | `CENTRAL_CONTROL` | `central_control` | Normal Master Data |
@@ -1018,15 +1021,28 @@ Document Link Target Type rules:
 
 **Fields and Oracle types.** `hierarchy_key VARCHAR2(64 BYTE) NOT NULL`; no UUID, version, lifecycle, audit, timestamp, status, description, or user columns.
 
-**Keys and relationships.** PK: `hierarchy_key`. No foreign keys. The seeded key set contains exactly `ORGANIZATION`, `PROCESS`, `RISK`, `ACCOUNT_GROUP`, `REGULATION`, and `POLICY`. Related family members share one key; there are no separate Subprocess, Risk Template, Regulation, Requirement, Policy, or Policy Version keys.
+**Keys and relationships.** PK: `hierarchy_key`. No foreign keys. The seeded key set contains `ORGANIZATION`, `PROCESS`, `RISK`, `ACCOUNT_GROUP`, `REGULATION`, `POLICY`, and the later approved `OBJECTIVE`. Related family members share one key; there are no separate Subprocess, Risk Template, Regulation, Requirement, Policy, or Policy Version keys.
 
 **Lifecycle, validity, and lock.** The key must equal `UPPER(TRIM(hierarchy_key))`. Structural command transactions acquire the exact row with `PESSIMISTIC_WRITE` and a configured JPA lock-timeout hint before revision allocation, hierarchy reads, validation, or mutation. Runtime code never creates, repairs, renames, or reseeds rows.
 
 **Mutability and Revision.** Guard rows are immutable configuration and never create Revision Content. The table has no repository, API, controller, or generic CRUD exposure and is not a Document Link target.
 
-**Authority / non-invention note.** ADR-0001 and [hierarchy-guard-row-contract.md](hierarchy-guard-row-contract.md). No additional Guard key, lock table, JVM lock, cache lock, or advisory-lock abstraction is authorized.
+**Authority / non-invention note.** ADR-0001 and [hierarchy-guard-row-contract.md](hierarchy-guard-row-contract.md). `OBJECTIVE` is the sole later approved Guard key in this extension. No additional lock table, JVM lock, cache lock, or advisory-lock abstraction is authorized.
 
-## Final count and verification rule
+## Approved Objective extension
+
+The Objective extension adds exactly two business tables through `V1186__objective_master_data.sql`:
+
+| Table | Purpose | Keys and relationships |
+| --- | --- | --- |
+| `objective` | Hierarchical central business objective with code, name, description, objective type, validity, and lifecycle. | Unique code; nullable self-FK `parent_objective_id`; `OBJECTIVE` Guard. |
+| `organization_objective` | Local use of a central objective by any Organization node, with local name, description, owner, validity, and lifecycle. | Unique `(organization_id, objective_id)`; FKs to `organization` and `objective`. |
+
+These are separate from `central_control_objective` and its typed Subprocess scopes. Objective documents use the existing `document_link` target code `OBJECTIVE`; the local assignment does not introduce a new document target.
+
+This extension follows the current Oracle V2 runtime and Flyway profile. PostgreSQL support requires a separate port of the existing V2 schema and persistence mappings.
+
+## Original numbered catalog count and current extension
 
 | Catalog family | Numbered tables |
 | --- | ---: |
@@ -1037,8 +1053,11 @@ Document Link Target Type rules:
 | Business Revision | 2 (`44`–`45`) |
 | **Business tables** | **45** |
 | Technical tables | 2 (`T1`–`T2`) |
-| **Total physical tables in this redesign scope** | **47** |
+| **Original numbered catalog plus technical tables** | **47** |
+| Retained historical and Policy simplification correction | 1 |
+| Objective extension business tables | 2 |
+| **Current physical Master Data tables** | **50** |
 
-Manual proof: the contiguous numbered business list starts at `01` and ends at `45` exactly once; `T1` and `T2` are outside the business list. Programmatic gates for later implementation tasks must count Markdown headings in the form `### NN. table_name` and confirm 45 numbered business headings, plus exactly one `### T1.` and one `### T2.` heading.
+The contiguous original numbered business list starts at `01` and ends at `45` exactly once; `T1` and `T2` are outside it. The Policy simplification correction retains one historical table, and the Objective extension adds the two typed business tables above.
 
 No KPI, KRI, risk-assessment, control-test, workflow, monitoring, job, scheduler, cache, outbox, Audit, generic assignment, generic Scope, generic Coverage, or invented relationship table is part of this catalog.

@@ -1,4 +1,5 @@
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
+import { OrganizationObjectivesTab } from "@/features/objective";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
@@ -25,7 +26,7 @@ import {
 import { buildTree, collectDescendantIds } from "../utils/organization.tree";
 
 export type OrganizationObjectMode = "create" | "edit" | "view";
-export type OrganizationTabKey = "general" | "documents";
+export type OrganizationTabKey = "general" | "objectives" | "documents";
 
 interface OrganizationFormState {
     code: string;
@@ -123,10 +124,11 @@ export default function OrganizationObjectPage({
         validTo: { draftValue: "", valid: true, dirty: false },
     });
     const [internalTab, setInternalTab] = useState<OrganizationTabKey>("general");
+    const [localObjectiveDirty, setLocalObjectiveDirty] = useState(false);
     const scopeRef = useRef(mode === "create" ? "CREATE" : value?.id ?? "EMPTY");
     const generalInformationDirty = JSON.stringify(normalized(form, mode)) !== baseline;
     const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
-    const dirty = generalInformationDirty || invalidDateDraft;
+    const dirty = generalInformationDirty || invalidDateDraft || localObjectiveDirty;
 
     const activeTab = controlledTab ?? internalTab;
     const readOnly = mode === "view";
@@ -211,7 +213,7 @@ export default function OrganizationObjectPage({
             <Tab text={t("organization.tabs.risks", { defaultValue: "Risks" })} disabled />
             <Tab text={t("organization.tabs.controls", { defaultValue: "Controls" })} disabled />
             <Tab text={t("organization.tabs.regulations", { defaultValue: "Regulations" })} disabled />
-            <Tab text={t("organization.tabs.objectives", { defaultValue: "Objectives" })} disabled />
+            <Tab text={t("organization.tabs.objectives", { defaultValue: "Objectives" })} selected={activeTab === "objectives"} data-tab-key="objectives" disabled={mode === "create"} />
             <Tab text={t("organization.tabs.policies", { defaultValue: "Policy" })} disabled />
             <Tab text={t("organization.tabs.documents", { defaultValue: "Documents" })} selected={activeTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
@@ -234,6 +236,7 @@ export default function OrganizationObjectPage({
                 </div>
             </div>
             <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("organization.tabs.documents", { defaultValue: "Documents" })} targetType="ORG" targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentAggregateError} onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
+            <div style={{ display: activeTab === "objectives" ? "block" : "none" }}><OrganizationObjectivesTab organizationId={value?.id ?? null} manage={manage} onDirtyChange={setLocalObjectiveDirty} /></div>
         </div>
 
         <div style={FOOTER_STYLE}>
