@@ -34,6 +34,7 @@
   "globalControl.tabs.documents": "Documents",
   "globalControl.regulations.add": "Add Regulation",
   "globalControl.regulations.select": "Select a regulation",
+  "globalControl.regulations.search": "Search law by code or name",
   "globalControl.regulations.empty": "No related regulations.",
   "globalControl.regulations.saveFirst": "Save the General Control before linking a regulation.",
   "globalControl.regulations.remove": "Remove Regulation",

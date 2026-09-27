@@ -1,0 +1,7 @@
+.hierarchyMultiSelectionDialog { width: min(42rem, 94vw); max-width: 94vw; }
+.hierarchyMultiSelectionBody { display: grid; gap: 1rem; padding: 1rem; box-sizing: border-box; min-width: min(34rem, 90vw); }
+.hierarchyMultiSelectionTree { min-height: 12rem; max-height: 48vh; overflow: auto; border: 1px solid var(--sapGroup_ContentBorderColor); padding: .5rem; }
+.hierarchyChoiceRow { display: flex; align-items: center; gap: .5rem; min-width: 0; width: 100%; }
+.hierarchyChoiceGroup { font-weight: 700; }
+.hierarchyMultiSelectionActions { display: flex; gap: .5rem; justify-content: flex-end; }
+@media (max-width: 720px) { .hierarchyMultiSelectionBody { min-width: 0; width: 90vw; } }

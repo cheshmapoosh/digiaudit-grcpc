@@ -2,7 +2,7 @@ import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  Bar, BusyIndicator, Button, Dialog, Input, Label, Link, MessageStrip, Option, Select, Tab,
+  Bar, BusyIndicator, Button, Dialog, Input, Label, Link, MessageStrip, ObjectStatus, Option, Select, Tab,
   Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow, Text, TextArea, Title, Tree,
   TreeItemCustom,
 } from "@ui5/webcomponents-react";
@@ -15,6 +15,7 @@ import { useMasterDataAccess } from "@/features/master-data/security/masterDataA
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
 import { MasterDataFormField, MasterDataObjectHeader } from "@/shared/components/MasterDataObjectHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
@@ -104,9 +105,10 @@ export default function ObjectiveManagementPage() {
   const [activeTab, setActiveTab] = useState<"general" | "organizations" | "documents">("general");
   const [organizations, setOrganizations] = useState<ObjectiveOrganizationLink[]>([]);
   const [organizationOptions, setOrganizationOptions] = useState<ObjectiveOrganizationOption[]>([]);
-  const [organizationId, setOrganizationId] = useState("");
-  const [organizationDeleteCandidate, setOrganizationDeleteCandidate] = useState<ObjectiveOrganizationLink | null>(null);
+  const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<Set<string>>(new Set());
+  const [organizationPickerOpen, setOrganizationPickerOpen] = useState(false);
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
+  const [organizationLoadFailed, setOrganizationLoadFailed] = useState(false);
   const [form, setForm] = useState<Form>(emptyForm);
   const [baseline, setBaseline] = useState("");
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
@@ -124,25 +126,46 @@ export default function ObjectiveManagementPage() {
   const blockedParents = useMemo(() => selected && mode === "edit"
     ? descendantIds(items, selected.id) : new Set<string>(), [items, mode, selected]);
   const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
+  const organizationDraftDirty = [...selectedOrganizationIds].sort().join("|")
+    !== organizations.map((link) => link.organizationId).sort().join("|");
   const dirty = (mode === "create" || mode === "edit")
-    && (JSON.stringify(form) !== baseline || documents.dirty || invalidDateDraft);
+    && (JSON.stringify(form) !== baseline || documents.dirty || invalidDateDraft || organizationDraftDirty);
   const { blocker } = useUnsavedChangesGuard(dirty);
 
   useEffect(() => { void load().catch((cause: unknown) => setError(errorText(cause))); }, [load]);
   useEffect(() => {
-    if (!selectedId || mode === "create" || mode === null) return;
+    if (mode === "create") {
+      let current = true;
+      void objectiveApi.organizationOptions().then((options) => {
+        if (current) { setOrganizationOptions(options); setOrganizationLoadFailed(false); }
+      }).catch((cause: unknown) => {
+        if (current) { setError(errorText(cause)); setOrganizationLoadFailed(true); }
+      })
+        .finally(() => { if (current) setOrganizationsLoading(false); });
+      return () => { current = false; };
+    }
+    if (!selectedId) return;
     let current = true;
-    void Promise.all([objectiveApi.organizations(selectedId), objectiveApi.organizationOptions()]).then(([links, options]) => {
-      if (current) { setOrganizations(links); setOrganizationOptions(options); setOrganizationId(""); }
-    }).catch((cause: unknown) => { if (current) setError(errorText(cause)); })
+    void Promise.all([objectiveApi.organizations(selectedId), mode
+      ? objectiveApi.organizationOptions() : Promise.resolve([] as ObjectiveOrganizationOption[])])
+      .then(([links, options]) => {
+      if (current) {
+        setOrganizations(links);
+        setOrganizationLoadFailed(false);
+        if (mode) { setOrganizationOptions(options); setSelectedOrganizationIds(new Set(links.map((link) => link.organizationId))); }
+      }
+    }).catch((cause: unknown) => {
+      if (current) { setError(errorText(cause)); setOrganizationLoadFailed(true); }
+    })
       .finally(() => { if (current) setOrganizationsLoading(false); });
     return () => { current = false; };
   }, [selectedId, mode]);
 
   const begin = (nextMode: "create" | "view" | "edit", preserveTab = false) => {
     savedClose.current = false;
-    if (nextMode !== "create") setOrganizationsLoading(true);
-    else setOrganizations([]);
+    setOrganizationsLoading(true);
+    setOrganizationLoadFailed(false);
+    if (nextMode === "create") { setOrganizations([]); setSelectedOrganizationIds(new Set()); }
     const next = nextMode === "create"
       ? { ...emptyForm, parentObjectiveId: selected?.id ?? "" }
       : toForm(selected);
@@ -184,6 +207,7 @@ export default function ObjectiveManagementPage() {
       objectiveType: form.objectiveType.trim() || null,
       parentObjectiveId: form.parentObjectiveId || null,
       validFrom: form.validFrom || null, validTo: form.validTo || null,
+      organizationIds: [...selectedOrganizationIds],
       documents: toDocumentAggregateRequest(documents),
     };
     setBusy(true);
@@ -197,6 +221,7 @@ export default function ObjectiveManagementPage() {
       }
       setDraftGeneration((value) => value + 1);
       savedClose.current = true;
+      setOrganizationsLoading(true);
       setMode(null);
       setError(null);
     } catch (cause) { setError(errorText(cause)); }
@@ -215,36 +240,15 @@ export default function ObjectiveManagementPage() {
     finally { setBusy(false); }
   };
 
-  const assignOrganization = async () => {
-    if (!selectedId || !organizationId) return;
-    setBusy(true);
-    try {
-      await objectiveApi.assign(organizationId, {
-        objectiveId: selectedId, name: null, description: null, owner: null,
-        validFrom: null, validTo: null,
-      });
-      setOrganizations(await objectiveApi.organizations(selectedId));
-      setOrganizationId("");
-      setError(null);
-    } catch (cause) { setError(errorText(cause)); }
-    finally { setBusy(false); }
-  };
-  const removeOrganization = async () => {
-    if (!selectedId || !organizationDeleteCandidate) return;
-    setBusy(true);
-    try {
-      await objectiveApi.removeAssignment(organizationDeleteCandidate.organizationId,
-        selectedId, organizationDeleteCandidate.version);
-      setOrganizations(await objectiveApi.organizations(selectedId));
-      setOrganizationDeleteCandidate(null);
-      setError(null);
-    } catch (cause) { setError(errorText(cause)); }
-    finally { setBusy(false); }
-  };
+  const toggleOrganization = (id: string) => setSelectedOrganizationIds((previous) => {
+    const next = new Set(previous);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const onTreeSelect = (event: TreeEvent) => {
     const id = event.detail?.item?.dataset?.objectiveId;
-    if (id) setSelectedId(id);
+    if (id && id !== selectedId) { setOrganizationsLoading(true); setOrganizations([]); setSelectedId(id); }
   };
   const onTreeToggle = (event: TreeEvent) => {
     event.preventDefault?.();
@@ -262,6 +266,23 @@ export default function ObjectiveManagementPage() {
     ? items.filter((item) => (item.code + " " + item.name).toLocaleLowerCase("fa")
         .includes(search.trim().toLocaleLowerCase("fa")))
     : [];
+  const organizationRows = [
+    ...organizations.map((link) => ({
+      id: link.organizationId, code: link.organizationCode, organizationName: link.organizationName,
+      assignmentName: link.name, owner: link.owner,
+      status: selectedOrganizationIds.has(link.organizationId) ? "FINAL" as const : "DRAFT_PENDING_DELETE" as const,
+    })),
+    ...[...selectedOrganizationIds].filter((id) => !organizations.some((link) => link.organizationId === id))
+      .map((id) => {
+        const option = organizationOptions.find((item) => item.id === id);
+        return { id, code: option?.code ?? "", organizationName: option?.name ?? "",
+          assignmentName: form.name, owner: null, status: "DRAFT_NEW" as const };
+      }),
+  ];
+  const organizationNodes: HierarchySelectionNode[] = organizationOptions
+    .filter((item) => item.status === "ACTIVE")
+    .map((item) => ({ id: item.id, parentId: item.parentOrganizationId,
+      code: item.code, name: item.name, selectable: true }));
   const dialogTitle = t(mode === "create" ? "objective.create"
     : mode === "edit" ? "objective.edit" : "objective.view");
   const readOnly = mode === "view";
@@ -280,7 +301,9 @@ export default function ObjectiveManagementPage() {
       <div className="objectiveTreeFrame">
         {loading || busy ? <BusyIndicator active delay={0} /> : null}
         {search.trim() ? filtered.map((item) => <Button key={item.id} design="Transparent"
-          onClick={() => setSelectedId(item.id)}>{item.code} · {item.name}</Button>)
+          onClick={() => {
+            if (item.id !== selectedId) { setOrganizationsLoading(true); setOrganizations([]); setSelectedId(item.id); }
+          }}>{item.code} · {item.name}</Button>)
           : <Tree onItemClick={onTreeSelect} onItemToggle={onTreeToggle}>
             {tree.map((node) => <ObjectiveTreeItem key={node.id} node={node}
               selectedId={selectedId} expandedIds={expandedIds} />)}
@@ -296,6 +319,9 @@ export default function ObjectiveManagementPage() {
         <Label showColon>{t("objective.type")}</Label><Text>{selected.objectiveType || "—"}</Text>
         <Label showColon>{t("objective.parent")}</Label><Text>{items.find((item) => item.id === selected.parentObjectiveId)?.name || t("objective.noParent")}</Text>
         <Label showColon>{t("objective.description")}</Label><Text>{selected.description || "—"}</Text>
+        <Label showColon>{t("objective.tabs.organizations")}</Label>
+        <Text>{organizationsLoading ? t("common.loading") : organizations.length
+          ? organizations.map((link) => link.organizationName).join("، ") : "—"}</Text>
         <Label showColon>{t("objective.createdAt")}</Label><Text>{formatPersianDateTime(selected.createdAt)}</Text>
       </div>
       <Bar endContent={<>
@@ -365,34 +391,26 @@ export default function ObjectiveManagementPage() {
         </div>
       </div>
       <div className={activeTab === "organizations" ? "objectiveOrganizationTab" : "objectiveOrganizationTab objectiveTabHidden"}>
-        {mode === "create" ? <MessageStrip design="Information" hideCloseButton>{t("objective.organizations.saveFirst")}</MessageStrip>
-          : organizationsLoading ? <BusyIndicator active delay={0} />
-            : <>
-              {mode === "edit" ? <div className="objectiveActions">
-                <Select value={organizationId} disabled={!manage || busy}
-                  accessibleName={t("objective.organizations.select")}
-                  onChange={(event) => setOrganizationId(event.target.value)}>
-                  <Option value="">{t("objective.organizations.select")}</Option>
-                  {organizationOptions.filter((option) => option.status === "ACTIVE"
-                    && !organizations.some((link) => link.organizationId === option.id))
-                    .map((option) => <Option key={option.id} value={option.id}>
-                      {option.code} · {option.name}</Option>)}
-                </Select>
-                <Button disabled={!manage || busy || !organizationId}
-                  onClick={() => void assignOrganization()}>{t("objective.organizations.assign")}</Button>
+        {organizationsLoading ? <BusyIndicator active delay={0} /> : <>
+              {!readOnly ? <div className="objectiveActions">
+                <Button design="Emphasized" disabled={!manage || busy}
+                  onClick={() => setOrganizationPickerOpen(true)}>{t("common.select")}</Button>
               </div> : null}
-              {organizations.length ? <Table headerRow={<TableHeaderRow>
+              {organizationRows.length ? <Table headerRow={<TableHeaderRow>
               <TableHeaderCell>{t("objective.organizations.unit")}</TableHeaderCell>
               <TableHeaderCell>{t("objective.organizations.assignment")}</TableHeaderCell>
               <TableHeaderCell>{t("objective.owner")}</TableHeaderCell>
-              {mode === "edit" ? <TableHeaderCell>{t("objective.actions")}</TableHeaderCell> : null}
+              <TableHeaderCell>{t("common.status")}</TableHeaderCell>
+              {!readOnly ? <TableHeaderCell>{t("objective.actions")}</TableHeaderCell> : null}
             </TableHeaderRow>}>
-              {organizations.map((link) => <TableRow key={link.organizationId}>
-                <TableCell>{link.organizationCode} · {link.organizationName}</TableCell>
-                <TableCell>{link.name}</TableCell>
-                <TableCell>{link.owner || "—"}</TableCell>
-                {mode === "edit" ? <TableCell><Button design="Negative" disabled={!manage || busy}
-                  onClick={() => setOrganizationDeleteCandidate(link)}>{t("objective.organizations.remove")}</Button></TableCell> : null}
+              {organizationRows.map((row) => <TableRow key={row.id}>
+                <TableCell>{row.code} · {row.organizationName}</TableCell>
+                <TableCell>{row.assignmentName}</TableCell>
+                <TableCell>{row.owner || "—"}</TableCell>
+                <TableCell><ObjectStatus state={row.status === "FINAL" ? "Positive" : "Information"}>
+                  {t(`common.relationStatus.${row.status}`)}</ObjectStatus></TableCell>
+                {!readOnly ? <TableCell><Button design="Transparent" disabled={!manage || busy}
+                  onClick={() => toggleOrganization(row.id)}>{t(row.status === "DRAFT_PENDING_DELETE" ? "common.undo" : "common.remove")}</Button></TableCell> : null}
               </TableRow>)}
             </Table> : <MessageStrip design="Information" hideCloseButton>{t("objective.organizations.empty")}</MessageStrip>}
             </>}
@@ -407,7 +425,7 @@ export default function ObjectiveManagementPage() {
       <div className="objectiveActions objectiveDialogActions">
         {readOnly ? <Button design="Emphasized" disabled={!manage || busy}
           onClick={() => begin("edit", true)}>{t("common.edit")}</Button>
-          : <Button design="Emphasized" disabled={busy || !dirty || invalidDateDraft || !documents.ready || documents.invalid || documents.uploading}
+          : <Button design="Emphasized" disabled={busy || organizationsLoading || organizationLoadFailed || !dirty || invalidDateDraft || !documents.ready || documents.invalid || documents.uploading}
             onClick={() => void save()}>{t("common.save")}</Button>}
         <Button design="Transparent" onClick={close}>{t(readOnly ? "common.close" : "common.cancel")}</Button>
       </div>
@@ -417,11 +435,12 @@ export default function ObjectiveManagementPage() {
       message={t("objective.deleteConfirm", { name: deleteCandidate?.name ?? "" })}
       confirmText={t("common.delete")} cancelText={t("common.cancel")} loading={busy}
       onClose={() => setDeleteCandidate(null)} onConfirm={() => void confirmDelete()} />
-    <DeleteConfirmDialog open={Boolean(organizationDeleteCandidate)}
-      title={t("objective.organizations.remove")}
-      message={t("objective.organization.removeConfirm", { name: organizationDeleteCandidate?.name ?? "" })}
-      confirmText={t("common.delete")} cancelText={t("common.cancel")} loading={busy}
-      onClose={() => setOrganizationDeleteCandidate(null)} onConfirm={() => void removeOrganization()} />
+    <HierarchyMultiSelectionDialog open={organizationPickerOpen}
+      title={t("objective.organizations.select")} searchPlaceholder={t("objective.organizations.search")}
+      nodes={organizationNodes} selectedIds={selectedOrganizationIds} busy={busy}
+      confirmText={t("common.confirm")} cancelText={t("common.cancel")}
+      onConfirm={(ids) => { setSelectedOrganizationIds(ids); setOrganizationPickerOpen(false); }}
+      onClose={() => setOrganizationPickerOpen(false)} />
     <DeleteConfirmDialog open={leaveOpen || blocker.state === "blocked"}
       title={t("common.unsavedChanges.title")} message={t("common.unsavedChanges.message")}
       confirmText={t("common.unsavedChanges.leave")} cancelText={t("common.unsavedChanges.stay")}

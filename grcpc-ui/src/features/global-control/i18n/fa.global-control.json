@@ -34,6 +34,7 @@
   "globalControl.tabs.documents": "مستندات",
   "globalControl.regulations.add": "افزودن قانون",
   "globalControl.regulations.select": "انتخاب قانون",
+  "globalControl.regulations.search": "جستجوی قانون بر اساس کد یا نام",
   "globalControl.regulations.empty": "قانون مرتبطی ثبت نشده است.",
   "globalControl.regulations.saveFirst": "برای ارتباط با قانون، ابتدا کنترل عمومی را ذخیره کنید.",
   "globalControl.regulations.remove": "حذف ارتباط قانون",

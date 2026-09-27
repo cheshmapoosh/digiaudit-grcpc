@@ -10,6 +10,7 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.Catalog
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.CatalogHierarchySupport;
 import com.digiaudit.grcpc.modules.masterdata.objective.api.ObjectiveDtos;
 import com.digiaudit.grcpc.modules.masterdata.objective.api.ObjectiveMapper;
+import com.digiaudit.grcpc.modules.masterdata.objective.api.OrganizationObjectiveDtos;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveEntity;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveRepository;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.OrganizationObjectiveRepository;
@@ -36,6 +37,7 @@ public class ObjectiveService {
   private final ObjectiveRepository objectives;
   private final ObjectiveMapper mapper;
   private final OrganizationObjectiveRepository assignments;
+  private final OrganizationObjectiveService organizationObjectives;
   private final MasterDataRevisionCoordinator revisions;
   private final MasterDataRevisionActorProvider actors;
   private final RevisionMutationGuard mutationGuard;
@@ -45,7 +47,7 @@ public class ObjectiveService {
   private final Clock clock;
 
   public ObjectiveService(ObjectiveRepository objectives, ObjectiveMapper mapper,
-      OrganizationObjectiveRepository assignments,
+      OrganizationObjectiveRepository assignments, OrganizationObjectiveService organizationObjectives,
       MasterDataRevisionCoordinator revisions, MasterDataRevisionActorProvider actors,
       RevisionMutationGuard mutationGuard, CatalogCommandSupport support,
       CatalogHierarchySupport hierarchySupport, DocumentCommandService documents,
@@ -53,6 +55,7 @@ public class ObjectiveService {
     this.objectives = objectives;
     this.mapper = mapper;
     this.assignments = assignments;
+    this.organizationObjectives = organizationObjectives;
     this.revisions = revisions;
     this.actors = actors;
     this.mutationGuard = mutationGuard;
@@ -89,10 +92,11 @@ public class ObjectiveService {
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     RevisionExecutionResult result = revisions.executeStructural(
-        MasterDataHierarchyKey.OBJECTIVE,
+        List.of(MasterDataHierarchyKey.OBJECTIVE, MasterDataHierarchyKey.ORGANIZATION),
         RevisionRequest.central("Create objective " + code, "Objective create", null),
         context -> {
           mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.OBJECTIVE);
+          mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
           var prepared = documents.prepareAggregate(request.documents());
           Map<UUID, ObjectiveEntity> hierarchy = hierarchy();
           if (objectives.findByCode(code).isPresent()) throw support.duplicate(code);
@@ -103,6 +107,7 @@ public class ObjectiveService {
               request.parentObjectiveId(), request.validFrom(), request.validTo(),
               actors.currentActorId(), Instant.now(clock));
           entity = objectives.saveAndFlush(entity);
+          synchronizeOrganizations(id, request.organizationIds());
           finalized.set(documents.finalizePreparedAggregate(prepared, DocumentLinkTargetType.OBJECTIVE,
               id, "MD_REFERENCE_MANAGE"));
           return support.completed(context, entity, RevisionEntityType.OBJECTIVE,
@@ -117,10 +122,11 @@ public class ObjectiveService {
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     RevisionExecutionResult result = revisions.executeStructural(
-        MasterDataHierarchyKey.OBJECTIVE,
+        List.of(MasterDataHierarchyKey.OBJECTIVE, MasterDataHierarchyKey.ORGANIZATION),
         RevisionRequest.central("Update objective " + id, "Objective update", null),
         context -> {
           mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.OBJECTIVE);
+          mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
           var prepared = documents.prepareAggregate(request.documents());
           Map<UUID, ObjectiveEntity> hierarchy = hierarchy();
           ObjectiveEntity entity = hierarchy.get(id);
@@ -134,6 +140,7 @@ public class ObjectiveService {
               normalizeType(request.objectiveType()), request.parentObjectiveId(),
               request.validFrom(), request.validTo(), actors.currentActorId(), Instant.now(clock));
           entity = objectives.saveAndFlush(entity);
+          synchronizeOrganizations(id, request.organizationIds());
           finalized.set(documents.finalizePreparedAggregate(prepared, DocumentLinkTargetType.OBJECTIVE,
               id, "MD_REFERENCE_MANAGE"));
           return support.completed(context, entity, RevisionEntityType.OBJECTIVE,
@@ -193,6 +200,28 @@ public class ObjectiveService {
   private Map<UUID, ObjectiveEntity> hierarchy() {
     return objectives.findAllByOrderByTitleAscIdAsc().stream()
         .collect(Collectors.toMap(ObjectiveEntity::getId, Function.identity()));
+  }
+
+  private void synchronizeOrganizations(UUID objectiveId, List<UUID> requestedIds) {
+    if (requestedIds == null) return;
+    Set<UUID> desired = new LinkedHashSet<>(requestedIds);
+    if (desired.contains(null) || desired.size() != requestedIds.size())
+      throw new UnprocessableEntityException("INVALID_ORGANIZATION_SELECTION",
+          "error.masterdata.objective.organizationSelection", "Organization selection is invalid");
+    var existing = assignments.findByObjectiveIdAndStatusNotOrderByNameAsc(
+        objectiveId, MasterDataLifecycleStatus.DELETED);
+    Set<UUID> current = existing.stream().map(e -> e.getOrganizationId())
+        .collect(Collectors.toSet());
+    for (var assignment : existing) {
+      if (!desired.contains(assignment.getOrganizationId()))
+        organizationObjectives.remove(assignment.getOrganizationId(), objectiveId,
+            assignment.getVersion());
+    }
+    for (UUID organizationId : desired) {
+      if (!current.contains(organizationId))
+        organizationObjectives.assign(organizationId,
+            new OrganizationObjectiveDtos.Create(objectiveId, null, null, null, null, null));
+    }
   }
 
   private Map<String, ?> typed(ObjectiveEntity e) {

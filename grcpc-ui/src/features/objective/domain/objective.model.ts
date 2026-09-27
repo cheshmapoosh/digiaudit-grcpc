@@ -24,6 +24,7 @@ export interface ObjectiveCreate {
   parentObjectiveId: string | null;
   validFrom: string | null;
   validTo: string | null;
+  organizationIds: string[];
   documents: DocumentAggregateRequest;
 }
 
@@ -60,4 +61,5 @@ export interface ObjectiveOrganizationOption {
   code: string;
   name: string;
   status: "ACTIVE" | "INACTIVE" | "DELETED";
+  parentOrganizationId: string | null;
 }

@@ -11,6 +11,7 @@
   "objective.organizations.unit": "واحد سازمانی",
   "objective.organizations.assignment": "هدف سازمانی",
   "objective.organizations.select": "انتخاب واحد سازمانی",
+  "objective.organizations.search": "جستجوی واحد سازمانی بر اساس کد یا نام",
   "objective.organizations.assign": "اختصاص به واحد سازمانی",
   "objective.organizations.remove": "حذف ارتباط",
   "objective.delete": "حذف هدف",

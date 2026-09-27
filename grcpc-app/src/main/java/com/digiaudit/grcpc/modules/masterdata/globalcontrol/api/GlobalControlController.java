@@ -41,6 +41,12 @@ public class GlobalControlController {
     return regulations.options();
   }
 
+  @GetMapping("/regulation-selection")
+  @PreAuthorize("@masterDataAuthorization.canView('CONTROL')")
+  public GlobalControlRegulationDtos.SelectionOptions regulationSelection() {
+    return regulations.selectionOptions();
+  }
+
   @GetMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canView('CONTROL')")
   public GlobalControlDtos.Detail detail(@PathVariable UUID id) { return controls.get(id); }

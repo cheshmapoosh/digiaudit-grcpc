@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
-import { LocalControlAssignmentDialog } from "@/features/local-master-data";
 import {
   Button,
   Input,
@@ -185,10 +183,6 @@ export default function CentralControlObjectPage({
   onDirtyChange,
 }: Props) {
   const { t } = useTranslation();
-  const localReference = useMasterDataAccess("REFERENCE");
-  const localProcess = useMasterDataAccess("PROCESS");
-  const localControl = useMasterDataAccess("CONTROL");
-  const [assignmentOpen, setAssignmentOpen] = useState(false);
   const controlScopePermissions = useControlScopePermissions();
   const accountGroupPermissions = useControlAccountGroupPermissions();
   const riskCoveragePermissions = useRiskControlCoveragePermissions();
@@ -415,17 +409,11 @@ export default function CentralControlObjectPage({
       <div className="controlObjectFooter">
         {mode === "view" ? <>
           <Button design="Emphasized" disabled={busy || !permissions.update} onClick={onEdit}>{t("common.edit", { defaultValue: "ویرایش" })}</Button>
-          {value?.status === "ACTIVE" && localReference.manage && localProcess.view
-            && localControl.view ? <Button disabled={busy} onClick={() => setAssignmentOpen(true)}>
-              {t("local.assign.control", { defaultValue: "انتساب کنترل به سازمان" })}
-            </Button> : null}
           <Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.close", { defaultValue: "بستن" })}</Button>
         </> : <><Button design="Emphasized" disabled={saveDisabled} onClick={submit}>{t("control.actions.submit")}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.cancel", { defaultValue: "انصراف" })}</Button></>}
       </div>
 
       <ControlGroupValueHelpDialog open={groupHelpOpen} groups={groups} selectedId={form.controlGroupId} onClose={() => setGroupHelpOpen(false)} onSelect={(id) => { change("controlGroupId", id); setGroupHelpOpen(false); }} />
-      {value?.id ? <LocalControlAssignmentDialog open={assignmentOpen}
-        controlId={value.id} onClose={() => setAssignmentOpen(false)} /> : null}
     </div>
   );
 }

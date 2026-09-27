@@ -11,6 +11,7 @@
   "objective.organizations.unit": "Organization unit",
   "objective.organizations.assignment": "Organization objective",
   "objective.organizations.select": "Select an organization unit",
+  "objective.organizations.search": "Search organization unit by code or name",
   "objective.organizations.assign": "Assign to organization unit",
   "objective.organizations.remove": "Remove assignment",
   "objective.delete": "Delete objective",

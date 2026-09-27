@@ -27,9 +27,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -41,6 +43,7 @@ public class GlobalControlService {
   private final GlobalControlRepository controls;
   private final ControlGroupRepository groups;
   private final GlobalControlRegulationRepository relations;
+  private final GlobalControlRegulationService regulationRelations;
   private final GlobalControlMapper mapper;
   private final MasterDataRevisionCoordinator revisions;
   private final MasterDataRevisionActorProvider actors;
@@ -50,13 +53,15 @@ public class GlobalControlService {
   private final Clock clock;
 
   public GlobalControlService(GlobalControlRepository controls, ControlGroupRepository groups,
-      GlobalControlRegulationRepository relations, GlobalControlMapper mapper,
+      GlobalControlRegulationRepository relations, GlobalControlRegulationService regulationRelations,
+      GlobalControlMapper mapper,
       MasterDataRevisionCoordinator revisions, MasterDataRevisionActorProvider actors,
       RevisionMutationGuard guard, CatalogCommandSupport support, DocumentCommandService documents,
       @Qualifier("masterDataRevisionClock") Clock clock) {
     this.controls = controls;
     this.groups = groups;
     this.relations = relations;
+    this.regulationRelations = regulationRelations;
     this.mapper = mapper;
     this.revisions = revisions;
     this.actors = actors;
@@ -86,10 +91,12 @@ public class GlobalControlService {
     String type = normalizeType(request.controlType());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
-    var result = revisions.executeStructural(MasterDataHierarchyKey.GLOBAL_CONTROL,
+    var result = revisions.executeStructural(
+        List.of(MasterDataHierarchyKey.GLOBAL_CONTROL, MasterDataHierarchyKey.REGULATION),
         RevisionRequest.central("Create global control " + code, "Global Control create", null),
         context -> {
           guard.requireHierarchyGuard(context, MasterDataHierarchyKey.GLOBAL_CONTROL);
+          guard.requireHierarchyGuard(context, MasterDataHierarchyKey.REGULATION);
           var prepared = documents.prepareAggregate(request.documents());
           requireGroup(request.controlGroupId());
           if (controls.findByCode(code).isPresent()) throw support.duplicate(code);
@@ -98,6 +105,7 @@ public class GlobalControlService {
               Boolean.TRUE.equals(request.testRequired()), request.validFrom(), request.validTo(),
               actors.currentActorId(), Instant.now(clock));
           entity = controls.saveAndFlush(entity);
+          synchronizeRegulations(entity.getId(), request.regulationIds());
           finalized.set(documents.finalizePreparedAggregate(prepared,
               DocumentLinkTargetType.GLOBAL_CONTROL, entity.getId(), "MD_CONTROL_MANAGE"));
           return support.completed(context, entity, RevisionEntityType.GLOBAL_CONTROL,
@@ -112,10 +120,12 @@ public class GlobalControlService {
     String type = normalizeType(request.controlType());
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
-    var result = revisions.executeStructural(MasterDataHierarchyKey.GLOBAL_CONTROL,
+    var result = revisions.executeStructural(
+        List.of(MasterDataHierarchyKey.GLOBAL_CONTROL, MasterDataHierarchyKey.REGULATION),
         RevisionRequest.central("Update global control " + id, "Global Control update", null),
         context -> {
           guard.requireHierarchyGuard(context, MasterDataHierarchyKey.GLOBAL_CONTROL);
+          guard.requireHierarchyGuard(context, MasterDataHierarchyKey.REGULATION);
           var prepared = documents.prepareAggregate(request.documents());
           requireGroup(request.controlGroupId());
           GlobalControlEntity entity = requireControl(id);
@@ -125,6 +135,7 @@ public class GlobalControlService {
               request.controlGroupId(), type, Boolean.TRUE.equals(request.testRequired()),
               request.validFrom(), request.validTo(), actors.currentActorId(), Instant.now(clock));
           entity = controls.saveAndFlush(entity);
+          synchronizeRegulations(entity.getId(), request.regulationIds());
           finalized.set(documents.finalizePreparedAggregate(prepared,
               DocumentLinkTargetType.GLOBAL_CONTROL, entity.getId(), "MD_CONTROL_MANAGE"));
           return support.completed(context, entity, RevisionEntityType.GLOBAL_CONTROL,
@@ -175,6 +186,25 @@ public class GlobalControlService {
   private void requireGroup(UUID id) {
     var group = groups.findById(id).orElseThrow(() -> invalidGroup(id));
     if (group.getStatus() != MasterDataLifecycleStatus.ACTIVE) throw invalidGroup(id);
+  }
+
+  private void synchronizeRegulations(UUID controlId, List<UUID> requestedIds) {
+    if (requestedIds == null) return;
+    Set<UUID> desired = new LinkedHashSet<>(requestedIds);
+    if (desired.contains(null) || desired.size() != requestedIds.size())
+      throw new UnprocessableEntityException("INVALID_REGULATION_SELECTION",
+          "error.masterdata.globalControl.regulationSelection", "Regulation selection is invalid");
+    var existing = relations.findByGlobalControlIdAndStatusNot(
+        controlId, MasterDataLifecycleStatus.DELETED);
+    Set<UUID> current = new LinkedHashSet<>();
+    existing.forEach(link -> current.add(link.getRegulationId()));
+    for (var link : existing) {
+      if (!desired.contains(link.getRegulationId()))
+        regulationRelations.remove(controlId, link.getRegulationId(), link.getVersion());
+    }
+    for (UUID regulationId : desired) {
+      if (!current.contains(regulationId)) regulationRelations.attach(controlId, regulationId);
+    }
   }
 
   private GlobalControlEntity requireControl(UUID id) {

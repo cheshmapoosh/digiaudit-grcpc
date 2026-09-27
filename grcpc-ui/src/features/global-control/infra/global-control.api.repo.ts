@@ -1,7 +1,7 @@
 import { httpClient } from "@/shared/infra/http.client";
 import type {
   ControlGroup, ControlGroupCreate, ControlGroupUpdate, GlobalControl, GlobalControlCreate,
-  GlobalControlUpdate, GlobalControlRegulation, RegulationOption,
+  GlobalControlUpdate, GlobalControlRegulation, RegulationOption, RegulationSelectionOptions,
 } from "../domain/global-control.model";
 
 type Mutation = { entityId: string; version: number; revisionId: string };
@@ -22,6 +22,7 @@ export const globalControlApi = {
   deleteControl: (id: string, version: number) =>
     httpClient.delete<Mutation>(controls + "/" + id + "?version=" + version),
   regulationOptions: () => httpClient.get<RegulationOption[]>(controls + "/regulation-options"),
+  regulationSelection: () => httpClient.get<RegulationSelectionOptions>(controls + "/regulation-selection"),
   relatedRegulations: (id: string) =>
     httpClient.get<GlobalControlRegulation[]>(controls + "/" + id + "/regulations"),
   attachRegulation: (id: string, regulationId: string) =>

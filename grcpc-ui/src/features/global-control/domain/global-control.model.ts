@@ -42,10 +42,15 @@ export interface GlobalControlCreate {
   code: string; name: string; description: string | null; controlGroupId: string;
   controlType: string; testRequired: boolean; validFrom: string | null; validTo: string | null;
   documents: DocumentAggregateRequest;
+  regulationIds: string[];
 }
 export type GlobalControlUpdate = Omit<GlobalControlCreate, "code"> & { version: number };
 
 export interface RegulationOption { id: string; code: string; name: string }
+export interface RegulationSelectionOptions {
+  groups: { id: string; parentId: string | null; code: string; name: string }[];
+  regulations: { id: string; groupId: string; code: string; name: string }[];
+}
 export interface GlobalControlRegulation {
   id: string; globalControlId: string; regulationId: string;
   regulationCode: string; regulationName: string; version: number;

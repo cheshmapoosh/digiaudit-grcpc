@@ -4,6 +4,7 @@ import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.entity.CentralRegulationEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.repository.CentralRegulationRepository;
+import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.repository.CentralRegulationGroupRepository;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.CatalogCommandSupport;
 import com.digiaudit.grcpc.modules.masterdata.globalcontrol.api.GlobalControlRegulationDtos;
 import com.digiaudit.grcpc.modules.masterdata.globalcontrol.domain.GlobalControlEntity;
@@ -39,6 +40,7 @@ public class GlobalControlRegulationService {
   private final GlobalControlRegulationRepository links;
   private final GlobalControlRepository controls;
   private final CentralRegulationRepository regulations;
+  private final CentralRegulationGroupRepository regulationGroups;
   private final MasterDataRevisionCoordinator revisions;
   private final MasterDataRevisionActorProvider actors;
   private final RevisionMutationGuard guard;
@@ -48,12 +50,14 @@ public class GlobalControlRegulationService {
 
   public GlobalControlRegulationService(GlobalControlRegulationRepository links,
       GlobalControlRepository controls, CentralRegulationRepository regulations,
+      CentralRegulationGroupRepository regulationGroups,
       MasterDataRevisionCoordinator revisions, MasterDataRevisionActorProvider actors,
       RevisionMutationGuard guard, CatalogCommandSupport support, ObjectMapper objectMapper,
       @Qualifier("masterDataRevisionClock") Clock clock) {
     this.links = links;
     this.controls = controls;
     this.regulations = regulations;
+    this.regulationGroups = regulationGroups;
     this.revisions = revisions;
     this.actors = actors;
     this.guard = guard;
@@ -76,6 +80,25 @@ public class GlobalControlRegulationService {
         .filter(e -> e.getStatus() == MasterDataLifecycleStatus.ACTIVE)
         .map(e -> new GlobalControlRegulationDtos.RegulationOption(
             e.getId(), e.getCode(), e.getTitle())).toList();
+  }
+
+  @Transactional(readOnly = true)
+  public GlobalControlRegulationDtos.SelectionOptions selectionOptions() {
+    var groups = regulationGroups.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(
+        MasterDataLifecycleStatus.DELETED).stream()
+        .filter(group -> group.getStatus() == MasterDataLifecycleStatus.ACTIVE)
+        .map(group -> new GlobalControlRegulationDtos.SelectionGroup(group.getId(),
+            group.getParentGroupId(), group.getCode(), group.getTitle())).toList();
+    var selectedGroupIds = groups.stream().map(GlobalControlRegulationDtos.SelectionGroup::id)
+        .collect(java.util.stream.Collectors.toSet());
+    var laws = regulations.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(
+        MasterDataLifecycleStatus.DELETED).stream()
+        .filter(regulation -> regulation.getStatus() == MasterDataLifecycleStatus.ACTIVE
+            && selectedGroupIds.contains(regulation.getRegulationGroupId()))
+        .map(regulation -> new GlobalControlRegulationDtos.RegulationOptionWithGroup(
+            regulation.getId(), regulation.getRegulationGroupId(),
+            regulation.getCode(), regulation.getTitle())).toList();
+    return new GlobalControlRegulationDtos.SelectionOptions(groups, laws);
   }
 
   public MasterDataRevisionMutationResponse attach(UUID controlId, UUID regulationId) {
