@@ -76,7 +76,7 @@ function ObjectiveTreeItem({ node, selectedId, expandedIds }: {
   return <TreeItemCustom
     data-objective-id={node.id} selected={node.id === selectedId}
     expanded={expandedIds.has(node.id)}
-    content={<span className="objectiveTreeLabel">{node.code} · {node.name}</span>}
+    content={<span className="objectiveTreeLabel">{node.name}</span>}
   >
     {node.children.map((child) => <ObjectiveTreeItem key={child.id} node={child}
       selectedId={selectedId} expandedIds={expandedIds} />)}
@@ -307,7 +307,7 @@ export default function ObjectiveManagementPage() {
         {search.trim() ? filtered.map((item) => <Button key={item.id} design="Transparent"
           onClick={() => {
             if (item.id !== selectedId) { setOrganizationsLoading(true); setOrganizations([]); setSelectedId(item.id); }
-          }}>{item.code} · {item.name}</Button>)
+          }}>{item.name}</Button>)
           : <Tree onItemClick={onTreeSelect} onItemToggle={onTreeToggle}>
             {tree.map((node) => <ObjectiveTreeItem key={node.id} node={node}
               selectedId={selectedId} expandedIds={expandedIds} />)}

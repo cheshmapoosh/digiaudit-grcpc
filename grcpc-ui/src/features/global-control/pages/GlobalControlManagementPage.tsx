@@ -99,14 +99,14 @@ function GroupTreeItem({ node, selected, expanded }: {
   return <TreeItemCustom data-node-kind="group" data-node-id={node.id}
     selected={selected?.kind === "group" && selected.id === node.id}
     expanded={expanded.has(node.id)}
-    content={<div className="globalControlTreeRow"><span>{node.code} · {node.name}</span>
+    content={<div className="globalControlTreeRow"><span>{node.name}</span>
       <span className="globalControlTreeType">{t("globalControl.group.menu")}</span></div>}>
     {node.children.map((child) => <GroupTreeItem key={child.id} node={child}
       selected={selected} expanded={expanded} />)}
     {node.controls.map((control) => <TreeItemCustom key={control.id}
       data-node-kind="control" data-node-id={control.id}
       selected={selected?.kind === "control" && selected.id === control.id}
-      content={<div className="globalControlTreeRow"><span>{control.code} · {control.name}</span>
+      content={<div className="globalControlTreeRow"><span>{control.name}</span>
         <span className="globalControlTreeType">{t("globalControl.control.menu")}</span></div>} />)}
   </TreeItemCustom>;
 }
@@ -417,7 +417,7 @@ export default function GlobalControlManagementPage() {
       {filtered.map(({ item, kind }) => <TreeItemCustom key={kind + item.id}
         data-node-kind={kind} data-node-id={item.id}
         selected={selected?.kind === kind && selected.id === item.id}
-        content={<div className="globalControlTreeRow"><span>{item.code} · {item.name}</span>
+        content={<div className="globalControlTreeRow"><span>{item.name}</span>
           <span className="globalControlTreeType">{t(kind === "group" ? "globalControl.group.menu" : "globalControl.control.menu")}</span></div>} />)}
     </Tree>
       : <Tree onItemClick={onTreeSelect} onItemToggle={onTreeToggle}>
