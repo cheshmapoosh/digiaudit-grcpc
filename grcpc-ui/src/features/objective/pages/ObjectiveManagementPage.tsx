@@ -107,6 +107,8 @@ export default function ObjectiveManagementPage() {
   const [organizationOptions, setOrganizationOptions] = useState<ObjectiveOrganizationOption[]>([]);
   const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<Set<string>>(new Set());
   const [organizationPickerOpen, setOrganizationPickerOpen] = useState(false);
+  const [organizationSearch, setOrganizationSearch] = useState("");
+  const [organizationStatusFilter, setOrganizationStatusFilter] = useState("ALL");
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
   const [organizationLoadFailed, setOrganizationLoadFailed] = useState(false);
   const [form, setForm] = useState<Form>(emptyForm);
@@ -165,6 +167,7 @@ export default function ObjectiveManagementPage() {
     savedClose.current = false;
     setOrganizationsLoading(true);
     setOrganizationLoadFailed(false);
+    if (!preserveTab) { setOrganizationSearch(""); setOrganizationStatusFilter("ALL"); }
     if (nextMode === "create") { setOrganizations([]); setSelectedOrganizationIds(new Set()); }
     const next = nextMode === "create"
       ? { ...emptyForm, parentObjectiveId: selected?.id ?? "" }
@@ -279,6 +282,11 @@ export default function ObjectiveManagementPage() {
           assignmentName: form.name, owner: null, status: "DRAFT_NEW" as const };
       }),
   ];
+  const organizationQuery = organizationSearch.trim().toLocaleLowerCase("fa");
+  const visibleOrganizationRows = organizationRows.filter((row) =>
+    (organizationStatusFilter === "ALL" || row.status === organizationStatusFilter)
+    && (!organizationQuery || `${row.code} ${row.organizationName} ${row.assignmentName} ${row.owner ?? ""}`
+      .toLocaleLowerCase("fa").includes(organizationQuery)));
   const organizationNodes: HierarchySelectionNode[] = organizationOptions
     .filter((item) => item.status === "ACTIVE")
     .map((item) => ({ id: item.id, parentId: item.parentOrganizationId,
@@ -391,19 +399,35 @@ export default function ObjectiveManagementPage() {
         </div>
       </div>
       <div className={activeTab === "organizations" ? "objectiveOrganizationTab" : "objectiveOrganizationTab objectiveTabHidden"}>
+        <div className="objectiveOrganizationToolbar">
+          <div className="objectiveOrganizationSearch">
+            <Label showColon>{t("objective.organizations.unit")}</Label>
+            <Input value={organizationSearch} placeholder={t("objective.organizations.search")}
+              accessibleName={t("objective.organizations.search")}
+              onInput={(event) => setOrganizationSearch(event.target.value)} />
+          </div>
+          <div className="objectiveOrganizationStatus">
+            <Label showColon>{t("common.status")}</Label>
+            <Select value={organizationStatusFilter} accessibleName={t("common.status")}
+              onChange={(event) => setOrganizationStatusFilter(event.target.value)}>
+              <Option value="ALL">{t("common.all")}</Option>
+              <Option value="FINAL">{t("common.relationStatus.FINAL")}</Option>
+              <Option value="DRAFT_NEW">{t("common.relationStatus.DRAFT_NEW")}</Option>
+              <Option value="DRAFT_PENDING_DELETE">{t("common.relationStatus.DRAFT_PENDING_DELETE")}</Option>
+            </Select>
+          </div>
+          {!readOnly ? <Button design="Emphasized" disabled={!manage || busy || organizationsLoading || organizationLoadFailed}
+            onClick={() => setOrganizationPickerOpen(true)}>{t("common.select")}</Button> : null}
+        </div>
         {organizationsLoading ? <BusyIndicator active delay={0} /> : <>
-              {!readOnly ? <div className="objectiveActions">
-                <Button design="Emphasized" disabled={!manage || busy}
-                  onClick={() => setOrganizationPickerOpen(true)}>{t("common.select")}</Button>
-              </div> : null}
-              {organizationRows.length ? <Table headerRow={<TableHeaderRow>
+              {visibleOrganizationRows.length ? <Table headerRow={<TableHeaderRow>
               <TableHeaderCell>{t("objective.organizations.unit")}</TableHeaderCell>
               <TableHeaderCell>{t("objective.organizations.assignment")}</TableHeaderCell>
               <TableHeaderCell>{t("objective.owner")}</TableHeaderCell>
               <TableHeaderCell>{t("common.status")}</TableHeaderCell>
               {!readOnly ? <TableHeaderCell>{t("objective.actions")}</TableHeaderCell> : null}
             </TableHeaderRow>}>
-              {organizationRows.map((row) => <TableRow key={row.id}>
+              {visibleOrganizationRows.map((row) => <TableRow key={row.id}>
                 <TableCell>{row.code} · {row.organizationName}</TableCell>
                 <TableCell>{row.assignmentName}</TableCell>
                 <TableCell>{row.owner || "—"}</TableCell>
@@ -412,7 +436,8 @@ export default function ObjectiveManagementPage() {
                 {!readOnly ? <TableCell><Button design="Transparent" disabled={!manage || busy}
                   onClick={() => toggleOrganization(row.id)}>{t(row.status === "DRAFT_PENDING_DELETE" ? "common.undo" : "common.remove")}</Button></TableCell> : null}
               </TableRow>)}
-            </Table> : <MessageStrip design="Information" hideCloseButton>{t("objective.organizations.empty")}</MessageStrip>}
+            </Table> : <MessageStrip design="Information" hideCloseButton>{t(organizationRows.length
+              ? "common.noData" : "objective.organizations.empty")}</MessageStrip>}
             </>}
       </div>
       <div className={activeTab === "documents" ? "objectiveDocumentTab" : "objectiveDocumentTab objectiveTabHidden"}>

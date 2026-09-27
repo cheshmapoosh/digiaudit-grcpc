@@ -149,6 +149,8 @@ export default function GlobalControlManagementPage() {
   const [regulationOptions, setRegulationOptions] = useState<RegulationSelectionOptions>({ groups: [], regulations: [] });
   const [selectedRegulationIds, setSelectedRegulationIds] = useState<Set<string>>(new Set());
   const [regulationPickerOpen, setRegulationPickerOpen] = useState(false);
+  const [regulationSearch, setRegulationSearch] = useState("");
+  const [regulationStatusFilter, setRegulationStatusFilter] = useState("ALL");
   const [relationsLoading, setRelationsLoading] = useState(false);
   const [relationsLoadFailed, setRelationsLoadFailed] = useState(false);
 
@@ -230,6 +232,7 @@ export default function GlobalControlManagementPage() {
     savedEditorClose.current = false;
     setViewOpen(false);
     setEditorTab(preserveTab ? activeTab : "general");
+    if (!preserveTab) { setRegulationSearch(""); setRegulationStatusFilter("ALL"); }
     setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
     setDraftGeneration((value) => value + 1);
     const next = edit && selectedControl ? {
@@ -377,6 +380,10 @@ export default function GlobalControlManagementPage() {
         return { id, code: option?.code ?? "", name: option?.name ?? "", status: "DRAFT_NEW" as const };
       }),
   ];
+  const regulationQuery = regulationSearch.trim().toLocaleLowerCase("fa");
+  const visibleRegulationRows = regulationRows.filter((row) =>
+    (regulationStatusFilter === "ALL" || row.status === regulationStatusFilter)
+    && (!regulationQuery || `${row.code} ${row.name}`.toLocaleLowerCase("fa").includes(regulationQuery)));
   const regulationNodes: HierarchySelectionNode[] = [
     ...regulationOptions.groups.map((item) => ({ id: item.id, parentId: item.parentId,
       code: item.code, name: item.name, selectable: false })),
@@ -425,18 +432,35 @@ export default function GlobalControlManagementPage() {
 
   const details = selectedGroup || selectedControl;
   const regulationPanel = <div className="globalControlRelationTab">
+      <div className="globalControlRegulationToolbar">
+        <div className="globalControlRegulationSearch">
+          <Label showColon>{t("globalControl.tabs.regulations")}</Label>
+          <Input value={regulationSearch} placeholder={t("globalControl.regulations.search")}
+            accessibleName={t("globalControl.regulations.search")}
+            onInput={(event) => setRegulationSearch(event.target.value)} />
+        </div>
+        <div className="globalControlRegulationStatus">
+          <Label showColon>{t("common.status")}</Label>
+          <Select value={regulationStatusFilter} accessibleName={t("common.status")}
+            onChange={(event) => setRegulationStatusFilter(event.target.value)}>
+            <Option value="ALL">{t("common.all")}</Option>
+            <Option value="FINAL">{t("common.relationStatus.FINAL")}</Option>
+            <Option value="DRAFT_NEW">{t("common.relationStatus.DRAFT_NEW")}</Option>
+            <Option value="DRAFT_PENDING_DELETE">{t("common.relationStatus.DRAFT_PENDING_DELETE")}</Option>
+          </Select>
+        </div>
+        {editor?.startsWith("control") ? <Button design="Emphasized"
+          disabled={!manage || busy || relationsLoading || relationsLoadFailed}
+          onClick={() => setRegulationPickerOpen(true)}>{t("common.select")}</Button> : null}
+      </div>
       {relationsLoading ? <BusyIndicator active delay={0} /> : <>
-      {editor?.startsWith("control") ? <div className="globalControlToolbar">
-        <Button design="Emphasized" disabled={!manage || busy}
-          onClick={() => setRegulationPickerOpen(true)}>{t("common.select")}</Button>
-      </div> : null}
       <Table headerRow={<TableHeaderRow>
         <TableHeaderCell>{t("globalControl.code")}</TableHeaderCell>
         <TableHeaderCell>{t("globalControl.name")}</TableHeaderCell>
         <TableHeaderCell>{t("common.status")}</TableHeaderCell>
         {editor?.startsWith("control") ? <TableHeaderCell>{t("globalControl.actions")}</TableHeaderCell> : null}
       </TableHeaderRow>}>
-        {regulationRows.map((row) => <TableRow key={row.id}>
+        {visibleRegulationRows.map((row) => <TableRow key={row.id}>
           <TableCell>{row.code}</TableCell>
           <TableCell>{row.name}</TableCell>
           <TableCell><ObjectStatus state={row.status === "FINAL" ? "Positive" : "Information"}>
@@ -445,8 +469,8 @@ export default function GlobalControlManagementPage() {
             onClick={() => toggleRegulation(row.id)}>{t(row.status === "DRAFT_PENDING_DELETE" ? "common.undo" : "common.remove")}</Button></TableCell> : null}
         </TableRow>)}
       </Table>
-      {regulationRows.length === 0 ? <MessageStrip design="Information" hideCloseButton>
-        {t("globalControl.regulations.empty")}</MessageStrip> : null}
+      {visibleRegulationRows.length === 0 ? <MessageStrip design="Information" hideCloseButton>
+        {t(regulationRows.length ? "common.noData" : "globalControl.regulations.empty")}</MessageStrip> : null}
       </>}
     </div>;
   const viewDetails = details ? <div className="globalControlDialogContent">

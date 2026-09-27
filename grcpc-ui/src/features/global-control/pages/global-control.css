@@ -15,8 +15,13 @@
 .globalControlDialog { width: 90vw; max-width: 90vw; }
 .globalControlDialogContent { width: 86vw; max-width: 86vw; display: grid; gap: .75rem; padding: 1rem; box-sizing: border-box; }
 .globalControlRelationTab { padding: 1rem; max-height: 68vh; overflow: auto; display: grid; gap: .75rem; }
+.globalControlRegulationToolbar { display: flex; align-items: end; gap: .75rem; }
+.globalControlRegulationSearch { display: grid; gap: .25rem; flex: 1 1 18rem; min-width: 0; }
+.globalControlRegulationSearch ui5-input { width: 100%; }
+.globalControlRegulationStatus { display: grid; gap: .25rem; flex: 0 0 12rem; }
+.globalControlRegulationToolbar > ui5-button { margin-inline-start: auto; }
 .globalControlDocumentTab { padding: 1rem; max-height: 68vh; overflow: auto; }
 .globalControlHidden { display: none; }
 .globalControlDialogActions { padding: .75rem 1rem; }
 @media (max-width: 900px) { .globalControlDetails { grid-template-columns: 1fr; } }
-@media (max-width: 720px) { .globalControlFcl { min-height: 30rem; } .globalControlDialog { width: 96vw; max-width: 96vw; } .globalControlDialogContent { width: 92vw; max-width: 92vw; } .globalControlTreeHeader, .globalControlTreeRow { grid-template-columns: minmax(0, 1fr) 6rem; } }
+@media (max-width: 720px) { .globalControlFcl { min-height: 30rem; } .globalControlDialog { width: 96vw; max-width: 96vw; } .globalControlDialogContent { width: 92vw; max-width: 92vw; } .globalControlTreeHeader, .globalControlTreeRow { grid-template-columns: minmax(0, 1fr) 6rem; } .globalControlRegulationToolbar { flex-wrap: wrap; } .globalControlRegulationStatus { flex: 1 1 10rem; } }
