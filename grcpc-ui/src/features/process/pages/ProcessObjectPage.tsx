@@ -1,4 +1,5 @@
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
+import { LocalContextAssignmentDialog } from "@/features/local-master-data";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
@@ -103,7 +104,9 @@ function FormField({ label, required, fullWidth, children }: { label: string; re
 
 export default function ProcessObjectPage({ mode, allItems, value, parent, requestedNodeType, activeTab: controlledTab, busy = false, error, documentAggregateError, onErrorClose, onSubmit, onCancel, onEdit, onActiveTabChange, onDirtyChange, onDocumentDirtyChange }: ProcessObjectPageProps) {
     const { t } = useTranslation();
-    const { manage } = useMasterDataAccess("PROCESS");
+    const { manage, view: processView } = useMasterDataAccess("PROCESS");
+    const localReference = useMasterDataAccess("REFERENCE");
+    const [assignmentOpen, setAssignmentOpen] = useState(false);
     const controlScopePermissions = useControlScopePermissions();
     const accountGroupClassificationPermissions = useControlAccountGroupPermissions();
     const objectiveAccountGroupClassificationPermissions = useControlObjectiveAccountGroupPermissions();
@@ -266,7 +269,17 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                     <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("process.tabs.documents", { defaultValue: "Documents" })} targetType={documentTarget(form.nodeType)} targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentAggregateError} onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
                 </div>
 
-                <div style={FOOTER_STYLE}>{mode === "view" ? <Button design="Emphasized" hidden={!manage} disabled={busy || !onEdit} onClick={onEdit}>{t("common.edit", { defaultValue: "Edit" })}</Button> : <Button design="Emphasized" disabled={saveDisabled} onClick={() => void submit()}>{t("common.save", { defaultValue: "Save" })}</Button>}<Button design="Transparent" disabled={busy} onClick={onCancel}>{mode === "view" ? t("common.close", { defaultValue: "Close" }) : t("common.cancel", { defaultValue: "Cancel" })}</Button></div>
+                <div style={FOOTER_STYLE}>{mode === "view" ? <>
+                    <Button design="Emphasized" hidden={!manage} disabled={busy || !onEdit} onClick={onEdit}>{t("common.edit", { defaultValue: "Edit" })}</Button>
+                    {value?.nodeType === "SUBPROCESS" && value.status === "ACTIVE"
+                        && localReference.manage && processView ? <Button disabled={busy}
+                            onClick={() => setAssignmentOpen(true)}>
+                            {t("local.assign.subprocess", { defaultValue: "انتساب زیرفرآیند به سازمان" })}
+                        </Button> : null}
+                </> : <Button design="Emphasized" disabled={saveDisabled} onClick={() => void submit()}>{t("common.save", { defaultValue: "Save" })}</Button>}<Button design="Transparent" disabled={busy} onClick={onCancel}>{mode === "view" ? t("common.close", { defaultValue: "Close" }) : t("common.cancel", { defaultValue: "Cancel" })}</Button></div>
+                {value?.nodeType === "SUBPROCESS" ? <LocalContextAssignmentDialog
+                    open={assignmentOpen} subprocessId={value.id}
+                    onClose={() => setAssignmentOpen(false)} /> : null}
             </div>
 
             <ProcessParentValueHelpDialog

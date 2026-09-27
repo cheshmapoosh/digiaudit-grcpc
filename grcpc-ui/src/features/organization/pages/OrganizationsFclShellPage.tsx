@@ -226,9 +226,10 @@ export default function OrganizationsFclShellPage() {
     const [treeExpansionAnchorId, setTreeExpansionAnchorId] = useState<string | null>(null);
     const [generalInformationDirty, setGeneralInformationDirty] = useState(false);
     const [documentDirty, setDocumentDirty] = useState(false);
+    const [localDirty, setLocalDirty] = useState(false);
     const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
     const pendingLeaveActionRef = useRef<(() => void) | null>(null);
-    const objectPageDirty = generalInformationDirty || documentDirty;
+    const objectPageDirty = generalInformationDirty || documentDirty || localDirty;
     const { blocker, runWithNavigationBypass } = useUnsavedChangesGuard(objectPageDirty);
 
     const requestObjectPageLeave = useCallback((action: () => void) => {
@@ -252,6 +253,7 @@ export default function OrganizationsFclShellPage() {
         setLeaveConfirmationOpen(false);
         setGeneralInformationDirty(false);
         setDocumentDirty(false);
+        setLocalDirty(false);
         if (blocker.state === "blocked") blocker.proceed();
         else if (action) runWithNavigationBypass(action);
     }, [blocker, runWithNavigationBypass]);
@@ -292,10 +294,19 @@ export default function OrganizationsFclShellPage() {
     }, [loadChildren, t]);
 
     useEffect(() => {
-        setObjectActiveTab("general");
         setGeneralInformationDirty(false);
         setDocumentDirty(false);
+        setLocalDirty(false);
     }, [objectTabScopeKey]);
+
+    useEffect(() => {
+        const requested = new URLSearchParams(location.search).get("tab");
+        const tabs: OrganizationTabKey[] = ["general", "subprocesses", "risks", "controls",
+            "regulations", "objectives", "policies", "documents"];
+        const next = tabs.includes(requested as OrganizationTabKey)
+            ? requested as OrganizationTabKey : "general";
+        setObjectActiveTab((current) => current === next ? current : next);
+    }, [location.search]);
 
     const treeSelectedId = useMemo(() => {
         if (routeMode === "create") {
@@ -732,9 +743,27 @@ export default function OrganizationsFclShellPage() {
                             }
                             onCancel={handleCancel}
                             onEdit={() => handleEdit()}
-                            onActiveTabChange={setObjectActiveTab}
+                            onActiveTabChange={(tab) => {
+                                setObjectActiveTab(tab);
+                                const params = new URLSearchParams(location.search);
+                                params.set("tab", tab);
+                                if (tab !== objectActiveTab) {
+                                    params.delete("localSection");
+                                    params.delete("localRowId");
+                                    params.delete("policyTargetId");
+                                }
+                                runWithNavigationBypass(() => navigate({
+                                    pathname: location.pathname,
+                                    search: params.toString(),
+                                }));
+                            }}
                             onDirtyChange={setGeneralInformationDirty}
                             onDocumentDirtyChange={setDocumentDirty}
+                            onLocalDirtyChange={setLocalDirty}
+                            onLocalNavigation={(params) => runWithNavigationBypass(() => navigate({
+                                pathname: location.pathname,
+                                search: params.toString(),
+                            }))}
                         />
                     ) : (
                         <MessageStrip design="Information" hideCloseButton>

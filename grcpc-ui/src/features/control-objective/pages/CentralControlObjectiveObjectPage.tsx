@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { LocalReverseList } from "@/features/local-master-data";
 import {
   Button,
   Input,
@@ -401,6 +402,13 @@ export default function CentralControlObjectiveObjectPage({
           />
         </div>
       </div>
+
+      {value?.id && mode === "view" ? <LocalReverseList
+        parentId={value.id}
+        path={`central/control-objectives/${value.id}/control-objective-scopes`}
+        section="control-objective-scopes"
+        titleKey="local.reverse.objectiveScopes" titleFa="انتساب‌های محلی این هدف کنترل"
+        areas={["PROCESS", "CONTROL"]} /> : null}
 
       <div className="controlObjectiveObjectFooter">
         {mode === "view" ? (

@@ -7,6 +7,7 @@ import com.digiaudit.grcpc.common.exception.GoneException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
 import com.digiaudit.grcpc.modules.masterdata.shared.exception.HierarchyGuardNotConfiguredException;
+import com.digiaudit.grcpc.modules.masterdata.local.application.LocalCommandBadRequestException;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,11 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleNotFound(NotFoundException ex, Locale locale) {
         log.warn("Handling NotFoundException: {}", ex.getMessage());
         return build(HttpStatus.NOT_FOUND, ex, locale, List.of());
+    }
+
+    @ExceptionHandler(LocalCommandBadRequestException.class)
+    public ResponseEntity<ApiErrorResponse> handleLocalBadRequest(LocalCommandBadRequestException ex, Locale locale) {
+        return build(HttpStatus.BAD_REQUEST, ex, locale, List.of());
     }
 
     @ExceptionHandler(ConflictException.class)

@@ -55,6 +55,11 @@ public class DocumentReadService {
     }
 
     public List<DocumentLinkSummaryResponse> listByTarget(String targetWireValue, UUID targetId) {
+        if (isLocalTarget(targetWireValue)) {
+            authorizationService.assertCanAccess(targetWireValue, targetId, VIEW_PERMISSION);
+            authorizationService.assertCanAccess(targetWireValue, targetId,
+                    DocumentCatalogPermissions.view(DocumentLinkTargetType.fromPublicWireValue(targetWireValue)));
+        }
         DocumentTargetContext targetContext = resolvePublicTarget(targetWireValue, targetId);
         authorizationService.assertCanAccess(
                 targetContext.authorizationResourceType(),
@@ -174,6 +179,14 @@ public class DocumentReadService {
             if (row.linkStatus() != DocumentLifecycleStatus.ACTIVE || !row.targetType().isPublicSelectable()) {
                 continue;
             }
+            if (isLocalTarget(row.targetType().wireValue())) {
+                if (authorizationService.canAccess(row.targetType().wireValue(), row.targetId(), permission)
+                        && authorizationService.canAccess(row.targetType().wireValue(), row.targetId(),
+                        DocumentCatalogPermissions.view(row.targetType()))) {
+                    return;
+                }
+                continue;
+            }
             DocumentTargetContext targetContext = targetContextResolver.resolvePublic(row.targetType(), row.targetId());
             if (authorizationService.canAccess(
                     targetContext.authorizationResourceType(),
@@ -195,6 +208,14 @@ public class DocumentReadService {
             if (!link.getTargetType().isPublicSelectable()) {
                 continue;
             }
+            if (isLocalTarget(link.getTargetType().wireValue())) {
+                if (authorizationService.canAccess(link.getTargetType().wireValue(), link.getTargetId(), permission)
+                        && authorizationService.canAccess(link.getTargetType().wireValue(), link.getTargetId(),
+                        DocumentCatalogPermissions.view(link.getTargetType()))) {
+                    return true;
+                }
+                continue;
+            }
             DocumentTargetContext targetContext = targetContextResolver.resolvePublic(link.getTargetType(), link.getTargetId());
             if (authorizationService.canAccess(
                     targetContext.authorizationResourceType(),
@@ -209,6 +230,10 @@ public class DocumentReadService {
             }
         }
         return false;
+    }
+
+    private boolean isLocalTarget(String wireValue) {
+        return wireValue != null && wireValue.startsWith("LOCAL_");
     }
 
     private RuntimeException downloadStorageFailure(DocumentStorageException ex) {

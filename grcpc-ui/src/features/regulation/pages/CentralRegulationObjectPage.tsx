@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { LocalReverseList } from "@/features/local-master-data";
 import {
   Button,
   Input,
@@ -488,6 +489,13 @@ export default function CentralRegulationObjectPage({
             />
           </div>
         </div>
+
+        {nodeType === "REQUIREMENT" && value?.id && mode === "view" ? <LocalReverseList
+          parentId={value.id}
+          path={`central/requirements/${value.id}/requirement-scopes`}
+          section="requirement-scopes"
+          titleKey="local.reverse.requirementScopes" titleFa="انتساب‌های محلی این الزام"
+          areas={["PROCESS", "GOVERNANCE"]} /> : null}
 
         <div className="regulationObjectFooter">
           {mode === "view" && permissions.update ? (

@@ -752,7 +752,6 @@ public class DocumentCommandService {
     }
 
     private void requireReadableSourceVersion(UUID versionId) {
-        if (currentUserProvider.getCurrentPrincipal().isRootUser()) return;
         boolean readable = linkRepository.findActiveLinksForVersion(versionId, DocumentLifecycleStatus.ACTIVE)
                 .stream()
                 .filter(link -> link.getTargetType().isPublicSelectable())
@@ -773,6 +772,10 @@ public class DocumentCommandService {
             String permission,
             String targetMutationPermission
     ) {
+        if (targetType.wireValue().startsWith("LOCAL_")) {
+            authorizationService.assertCanAccess(targetType.wireValue(), targetId, permission);
+            authorizationService.assertCanAccess(targetType.wireValue(), targetId, targetMutationPermission);
+        }
         DocumentTargetContext targetContext = targetContextResolver.resolvePublic(targetType, targetId);
         authorizationService.assertCanAccess(
                 targetContext.authorizationResourceType(),

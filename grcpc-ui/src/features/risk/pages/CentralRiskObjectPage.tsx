@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { LocalReverseList } from "@/features/local-master-data";
 import {
   Button,
   Input,
@@ -517,6 +518,13 @@ export default function CentralRiskObjectPage({
             />
           </div>
         </div>
+
+        {kind === "template" && value?.id && mode === "view" ? <LocalReverseList
+          parentId={value.id}
+          path={`central/risk-templates/${value.id}/risk-scopes`}
+          section="risk-scopes"
+          titleKey="local.reverse.riskScopes" titleFa="انتساب‌های محلی این الگوی ریسک"
+          areas={["PROCESS", "RISK"]} /> : null}
 
         <div className="riskObjectFooter">
           {mode === "view" ? (

@@ -22,5 +22,8 @@ public interface CentralSubprocessRequirementControlCoverageRepository extends J
   List<CentralSubprocessRequirementControlCoverageEntity> lockAllByIds(@Param("ids") List<UUID> ids);
   @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select c from CentralSubprocessRequirementControlCoverageEntity c where c.subprocessId = :subprocessId and c.requirementScopeId = :requirementScopeId and c.controlScopeId = :controlScopeId")
   Optional<CentralSubprocessRequirementControlCoverageEntity> lockByBusinessKey(@Param("subprocessId") UUID subprocessId, @Param("requirementScopeId") UUID requirementScopeId, @Param("controlScopeId") UUID controlScopeId);
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select e from CentralSubprocessRequirementControlCoverageEntity e where e.id = :id")
+  Optional<CentralSubprocessRequirementControlCoverageEntity> lockById(@Param("id") UUID id);
 }
 

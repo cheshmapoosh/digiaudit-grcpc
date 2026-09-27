@@ -93,6 +93,19 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
               targetType,
               targetId,
               "select id from central_policy where id = ? and status <> 'DELETED'");
+      case LOCAL_ORGANIZATION_SUBPROCESS_SCOPE -> local(targetType, targetId, "select c.organization_id from local_organization_subprocess_scope c where c.id = ? and c.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_CONTROL_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_control_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_RISK_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_risk_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_control_objective_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_REQUIREMENT_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_requirement_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_RISK_CONTROL_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_risk_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_risk_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_control_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_control_scope r on r.id = v.local_control_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_requirement_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_requirement_scope r on r.id = v.local_requirement_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED'");
+      case LOCAL_POLICY_ORGANIZATION_SCOPE -> local(targetType, targetId, "select p.organization_id from local_policy_organization_scope p where p.id = ? and p.status <> 'DELETED'");
+      case LOCAL_POLICY_SUBPROCESS_SCOPE -> local(targetType, targetId, "select c.organization_id from local_policy_subprocess_scope p join local_organization_subprocess_scope c on c.id = p.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED'");
+      case LOCAL_POLICY_CONTROL_SCOPE -> local(targetType, targetId, "select c.organization_id from local_policy_control_scope p join local_subprocess_control_scope s on s.id = p.local_control_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED'");
+      case LOCAL_POLICY_REQUIREMENT_SCOPE -> local(targetType, targetId, "select c.organization_id from local_policy_requirement_scope p join local_subprocess_requirement_scope s on s.id = p.local_requirement_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED'");
       case CENTRAL_SUBPROCESS_CONTROL_SCOPE,
               CENTRAL_SUBPROCESS_RISK_SCOPE,
               CENTRAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE,
@@ -106,20 +119,7 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
               CENTRAL_SUBPROCESS_RISK_CONTROL_COVERAGE,
               CENTRAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE,
               CENTRAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE,
-              CENTRAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE,
-              LOCAL_ORGANIZATION_SUBPROCESS_SCOPE,
-              LOCAL_SUBPROCESS_CONTROL_SCOPE,
-              LOCAL_SUBPROCESS_RISK_SCOPE,
-              LOCAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE,
-              LOCAL_SUBPROCESS_REQUIREMENT_SCOPE,
-              LOCAL_SUBPROCESS_RISK_CONTROL_COVERAGE,
-              LOCAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE,
-              LOCAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE,
-              LOCAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE,
-              LOCAL_POLICY_ORGANIZATION_SCOPE,
-              LOCAL_POLICY_SUBPROCESS_SCOPE,
-              LOCAL_POLICY_CONTROL_SCOPE,
-              LOCAL_POLICY_REQUIREMENT_SCOPE ->
+              CENTRAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE ->
           throw targetNotAvailable();
       case MASTERDATA_REVISION ->
           throw DocumentFailures.invalid(
@@ -164,6 +164,19 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
               "select id from central_policy_group where id = ? and status <> 'DELETED' for update";
           case CENTRAL_POLICY ->
               "select id from central_policy where id = ? and status <> 'DELETED' for update";
+          case LOCAL_ORGANIZATION_SUBPROCESS_SCOPE -> "select c.id from local_organization_subprocess_scope c where c.id = ? and c.status <> 'DELETED' for update of c.id";
+          case LOCAL_SUBPROCESS_CONTROL_SCOPE -> "select s.id from local_subprocess_control_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED' for update of s.id";
+          case LOCAL_SUBPROCESS_RISK_SCOPE -> "select s.id from local_subprocess_risk_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED' for update of s.id";
+          case LOCAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE -> "select s.id from local_subprocess_control_objective_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED' for update of s.id";
+          case LOCAL_SUBPROCESS_REQUIREMENT_SCOPE -> "select s.id from local_subprocess_requirement_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED' for update of s.id";
+          case LOCAL_SUBPROCESS_RISK_CONTROL_COVERAGE -> "select v.id from local_subprocess_risk_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED' for update of v.id";
+          case LOCAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE -> "select v.id from local_subprocess_risk_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED' for update of v.id";
+          case LOCAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE -> "select v.id from local_subprocess_control_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_control_scope r on r.id = v.local_control_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED' for update of v.id";
+          case LOCAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE -> "select v.id from local_subprocess_requirement_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_requirement_scope r on r.id = v.local_requirement_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED' for update of v.id";
+          case LOCAL_POLICY_ORGANIZATION_SCOPE -> "select p.id from local_policy_organization_scope p where p.id = ? and p.status <> 'DELETED' for update of p.id";
+          case LOCAL_POLICY_SUBPROCESS_SCOPE -> "select p.id from local_policy_subprocess_scope p join local_organization_subprocess_scope c on c.id = p.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED' for update of p.id";
+          case LOCAL_POLICY_CONTROL_SCOPE -> "select p.id from local_policy_control_scope p join local_subprocess_control_scope s on s.id = p.local_control_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED' for update of p.id";
+          case LOCAL_POLICY_REQUIREMENT_SCOPE -> "select p.id from local_policy_requirement_scope p join local_subprocess_requirement_scope s on s.id = p.local_requirement_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED' for update of p.id";
           case CENTRAL_SUBPROCESS_CONTROL_SCOPE,
                   CENTRAL_SUBPROCESS_RISK_SCOPE,
                   CENTRAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE,
@@ -177,20 +190,7 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
                   CENTRAL_SUBPROCESS_RISK_CONTROL_COVERAGE,
                   CENTRAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE,
                   CENTRAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE,
-                  CENTRAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE,
-                  LOCAL_ORGANIZATION_SUBPROCESS_SCOPE,
-                  LOCAL_SUBPROCESS_CONTROL_SCOPE,
-                  LOCAL_SUBPROCESS_RISK_SCOPE,
-                  LOCAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE,
-                  LOCAL_SUBPROCESS_REQUIREMENT_SCOPE,
-                  LOCAL_SUBPROCESS_RISK_CONTROL_COVERAGE,
-                  LOCAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE,
-                  LOCAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE,
-                  LOCAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE,
-                  LOCAL_POLICY_ORGANIZATION_SCOPE,
-                  LOCAL_POLICY_SUBPROCESS_SCOPE,
-                  LOCAL_POLICY_CONTROL_SCOPE,
-                  LOCAL_POLICY_REQUIREMENT_SCOPE ->
+                  CENTRAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE ->
               throw targetNotAvailable();
           case MASTERDATA_REVISION ->
               throw DocumentFailures.invalid(

@@ -32,6 +32,19 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.entity.C
 import com.digiaudit.grcpc.modules.masterdata.catalog.risk.domain.entity.CentralRiskCategoryEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.risk.domain.entity.CentralRiskTemplateEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.domain.entity.CentralDefinitionEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalOrganizationSubprocessScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalSubprocessControlScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalSubprocessRiskScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalSubprocessControlObjectiveScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalSubprocessRequirementScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalSubprocessRiskControlCoverageEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalSubprocessRiskControlObjectiveCoverageEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalSubprocessControlControlObjectiveCoverageEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalSubprocessRequirementControlCoverageEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalPolicyOrganizationScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalPolicySubprocessScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalPolicyControlScopeEntity;
+import com.digiaudit.grcpc.modules.masterdata.local.domain.entity.LocalPolicyRequirementScopeEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralProcessEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralSubprocessEntity;
 import com.digiaudit.grcpc.modules.masterdata.revision.infrastructure.persistence.JsonNodeClobConverter;
@@ -80,6 +93,19 @@ public class GrcpcPersistenceConfiguration {
                 DocumentTempUploadEntity.class.getName(),
                 DocumentVersionEntity.class.getName(),
                 CentralDefinitionEntity.class.getName(),
+LocalOrganizationSubprocessScopeEntity.class.getName(),
+                LocalSubprocessControlScopeEntity.class.getName(),
+                LocalSubprocessRiskScopeEntity.class.getName(),
+                LocalSubprocessControlObjectiveScopeEntity.class.getName(),
+                LocalSubprocessRequirementScopeEntity.class.getName(),
+                LocalSubprocessRiskControlCoverageEntity.class.getName(),
+                LocalSubprocessRiskControlObjectiveCoverageEntity.class.getName(),
+                LocalSubprocessControlControlObjectiveCoverageEntity.class.getName(),
+                LocalSubprocessRequirementControlCoverageEntity.class.getName(),
+                LocalPolicyOrganizationScopeEntity.class.getName(),
+                LocalPolicySubprocessScopeEntity.class.getName(),
+                LocalPolicyControlScopeEntity.class.getName(),
+                LocalPolicyRequirementScopeEntity.class.getName(),
                 CentralControlEntity.class.getName(),
                 CentralControlGroupEntity.class.getName(),
                 CentralControlRelevanceConverter.class.getName(),

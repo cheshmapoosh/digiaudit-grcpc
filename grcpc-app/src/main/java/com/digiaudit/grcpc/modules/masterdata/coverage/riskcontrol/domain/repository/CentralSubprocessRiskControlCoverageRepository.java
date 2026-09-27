@@ -12,6 +12,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface CentralSubprocessRiskControlCoverageRepository extends JpaRepository<CentralSubprocessRiskControlCoverageEntity, UUID> {
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select e from CentralSubprocessRiskControlCoverageEntity e where e.id = :id")
+  Optional<CentralSubprocessRiskControlCoverageEntity> lockById(@Param("id") UUID id);
   List<CentralSubprocessRiskControlCoverageEntity> findBySubprocessIdAndStatusNot(UUID subprocessId, MasterDataLifecycleStatus status);
   List<CentralSubprocessRiskControlCoverageEntity> findBySubprocessIdAndStatus(UUID subprocessId, MasterDataLifecycleStatus status);
   List<CentralSubprocessRiskControlCoverageEntity> findByRiskScopeIdAndStatusNot(UUID riskScopeId, MasterDataLifecycleStatus status);

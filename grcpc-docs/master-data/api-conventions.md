@@ -608,6 +608,12 @@ Permissions are named and remapped per V2 vertical slice; Legacy permissions are
 
 ## 17. API completion criteria
 
+### Implemented Local relationship commands (Prompt 8)
+
+The additive `/api/master-data/local` API exposes 13 concrete relationship families: Organization/Subprocess Context, Control, Risk, Objective and Requirement Scopes, four Coverage families, and four Policy Scope families. Context lists use `/organizations/{organizationId}/contexts`; Context detail and commands use `/organization-subprocess-scopes/{id}`. Other Context-owned rows use typed collection paths under `/organization-subprocess-scopes/{contextId}`, while Organization Policy and Control/Requirement Policy have their own typed target paths. Each family has list, detail, create, update, and explicit activate/inactivate/delete/restore commands. List paging and lifecycle filters are server-owned; default lists include ACTIVE and INACTIVE, while DELETED must be requested explicitly. Create reserves business keys across all statuses and never implicitly restores a DELETED row. Existing Central lifecycle/dependency behavior remains unchanged.
+
+`POST /api/master-data/local/control-assignments` is one atomic command that creates an explicit Context only if absent, then creates its Local Control Scope. It rejects existing INACTIVE or DELETED Contexts and returns the Context and Scope identifiers/versions with one LOCAL Revision. The nine global `/options/*` endpoints, four typed inherited Scope selectors, four typed inherited Coverage selectors, and seven `/central/*` reverse views are read-only. Source identifiers and identity fields are immutable after creation. Document commands use the existing Document API with 13 Local target types; they do not write Local Revisions.
+
 An endpoint set is complete only when it uses actual approved entity vocabulary.
 
 It must return revision-aware mutation results for revision-controlled features and Document-specific mutation results for Document commands.

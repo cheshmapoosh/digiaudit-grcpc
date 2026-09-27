@@ -11,4 +11,7 @@ public interface CentralSubprocessControlControlObjectiveCoverageRepository exte
   List<CentralSubprocessControlControlObjectiveCoverageEntity> findByControlScopeIdInAndStatusNot(List<UUID> controlScopeIds,MasterDataLifecycleStatus status); List<CentralSubprocessControlControlObjectiveCoverageEntity> findByControlObjectiveScopeIdInAndStatusNot(List<UUID> controlObjectiveScopeIds,MasterDataLifecycleStatus status);
   @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select c from CentralSubprocessControlControlObjectiveCoverageEntity c where c.id in :ids order by c.controlScopeId, c.controlObjectiveScopeId, c.id") List<CentralSubprocessControlControlObjectiveCoverageEntity> lockAllByIds(@Param("ids") List<UUID> ids);
   @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select c from CentralSubprocessControlControlObjectiveCoverageEntity c where c.subprocessId=:subprocessId and c.controlScopeId=:controlScopeId and c.controlObjectiveScopeId=:controlObjectiveScopeId") Optional<CentralSubprocessControlControlObjectiveCoverageEntity> lockByBusinessKey(@Param("subprocessId") UUID subprocessId,@Param("controlScopeId") UUID controlScopeId,@Param("controlObjectiveScopeId") UUID controlObjectiveScopeId);
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select e from CentralSubprocessControlControlObjectiveCoverageEntity e where e.id = :id")
+  Optional<CentralSubprocessControlControlObjectiveCoverageEntity> lockById(@Param("id") UUID id);
 }

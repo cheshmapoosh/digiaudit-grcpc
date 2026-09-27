@@ -622,6 +622,10 @@ This corrective planning task changes none of those application files.
 
 ## 16. Contract exit condition for each later slice
 
+### Local relationship dependency boundary (Prompt 8)
+
+The 13 Local relationship tables already exist in the approved V1164/V1183 schema. Prompt 8 registers concrete JPA managed types without changing migrations or database structure. Local lifecycle and delete commands use explicit status transitions, optimistic versions, existing hierarchy Guard rows, and a LOCAL Business Revision in one transaction. The Guard set is selected from `ORGANIZATION`, `PROCESS`, `CONTROL`, `RISK`, `REGULATION`, and `POLICY` according to the typed relationship family; locks are acquired in hierarchy-key order before eligibility and dependency reads. Local Context and Scope/Coverage/Policy dependency checks apply to Local commands. Central deletion checks retain their existing behavior, including historical Local blockers; Prompt 8 does not change Central deletion semantics. Runtime Oracle startup and real concurrent transactions remain separate verification gates.
+
 The default Greenfield runtime excludes future P4-P7 Legacy components and repositories while their source remains temporary implementation evidence. The central `PersistenceManagedTypes` bean is the exact JPA managed-class allowlist; package scanning is not an authority for persistence membership. Hibernate `ddl-auto=validate` and Flyway remain mandatory.
 
 When an owning V2 slice replaces a quarantined Legacy area, it must implement the approved V2 persistence and API, add only its approved managed classes to `PersistenceManagedTypes`, delete the replaced Legacy source, remove its quarantine entry, and prove startup again on fresh Oracle. No Legacy entity may be remapped to an approved V2 table as an interim measure.

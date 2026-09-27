@@ -17,7 +17,8 @@ Applies to `src/features/organization`.
 - General Information uses `code`, `name`, `organizationType`, `parentOrganizationId`, `status`, `location`, `validFrom`, `validTo`, and `description`; `displayLabel` is the Organization name.
 - Create displays server-owned `ACTIVE` without sending status. Edit sends only `ACTIVE` or `INACTIVE` with General Information; `DELETED` is never selectable.
 - Code is Create-only. Parent is selectable on both Create and Edit and is submitted by the same Save command. Exclude the current Organization and its descendants. Inactive nodes remain visible, selectable, editable, searchable, and structurally eligible.
-- Modal tab order is General Information, Subprocess, Risks, Controls, Regulations, Objectives, Policy, Documents. General Information and Documents are active; the intermediate relationship tabs are visible but disabled until their typed V2 flows are implemented.
+- Modal tab order is General Information, Subprocess, Risks, Controls, Regulations, Objectives, Policy, Documents. The six Local relationship tabs use the typed Local APIs and save their own rows independently. General Information and Organization Documents retain the Organization aggregate Save.
+- A Local Context is an explicit Organization/Subprocess relationship. Context and row deep links retain their IDs and list status in the URL. Local drafts participate in the modal's dirty navigation guard.
 - The List Report toolbar exposes only Create, View, and Delete.
 - Keep the FCL tree/list/object-page flow, parent value help, selection, expanded state, RTL, and i18n behavior.
 - Use the shared Document component in `PARENT_SAVE` mode with target type `ORG`; it emits serializable drafts and never performs a separate finalize command from this ObjectPage.

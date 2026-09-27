@@ -1,4 +1,5 @@
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
+import { LocalOrganizationWorkspace } from "@/features/local-master-data";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
@@ -25,7 +26,8 @@ import {
 import { buildTree, collectDescendantIds } from "../utils/organization.tree";
 
 export type OrganizationObjectMode = "create" | "edit" | "view";
-export type OrganizationTabKey = "general" | "documents";
+export type OrganizationTabKey = "general" | "subprocesses" | "risks" | "controls"
+    | "regulations" | "objectives" | "policies" | "documents";
 
 interface OrganizationFormState {
     code: string;
@@ -54,6 +56,8 @@ export interface OrganizationObjectPageProps {
     onActiveTabChange?: (tab: OrganizationTabKey) => void;
     onDirtyChange?: (dirty: boolean) => void;
     onDocumentDirtyChange?: (dirty: boolean) => void;
+    onLocalDirtyChange?: (dirty: boolean) => void;
+    onLocalNavigation?: (params: URLSearchParams) => void;
 }
 
 const ROOT_STYLE: CSSProperties = { display: "grid", gap: "0.75rem", minWidth: 0, maxWidth: "100%", background: "var(--sapBackgroundColor)" };
@@ -110,6 +114,7 @@ function FormField({ label, required, fullWidth, children }: { label: string; re
 export default function OrganizationObjectPage({
     mode, allItems, value, activeTab: controlledTab, busy = false, error, documentAggregateError, onErrorClose,
     onSubmit, onCancel, onEdit, onActiveTabChange, onDirtyChange, onDocumentDirtyChange,
+    onLocalDirtyChange, onLocalNavigation,
 }: OrganizationObjectPageProps) {
     const { t } = useTranslation();
     const { manage } = useMasterDataAccess("REFERENCE");
@@ -207,12 +212,12 @@ export default function OrganizationObjectPage({
 
         <DetailTabContainer onTabSelect={(event) => { const key = (event.detail.tab.getAttribute("data-tab-key") as OrganizationTabKey | null); if (key) { if (!controlledTab) setInternalTab(key); onActiveTabChange?.(key); } }}>
             <Tab text={t("organization.tabs.general", { defaultValue: "General Information" })} selected={activeTab === "general"} data-tab-key="general" />
-            <Tab text={t("organization.tabs.subprocesses", { defaultValue: "Subprocesses" })} disabled />
-            <Tab text={t("organization.tabs.risks", { defaultValue: "Risks" })} disabled />
-            <Tab text={t("organization.tabs.controls", { defaultValue: "Controls" })} disabled />
-            <Tab text={t("organization.tabs.regulations", { defaultValue: "Regulations" })} disabled />
-            <Tab text={t("organization.tabs.objectives", { defaultValue: "Objectives" })} disabled />
-            <Tab text={t("organization.tabs.policies", { defaultValue: "Policy" })} disabled />
+            <Tab text={t("organization.tabs.subprocesses", { defaultValue: "Subprocesses" })} selected={activeTab === "subprocesses"} data-tab-key="subprocesses" />
+            <Tab text={t("organization.tabs.risks", { defaultValue: "Risks" })} selected={activeTab === "risks"} data-tab-key="risks" />
+            <Tab text={t("organization.tabs.controls", { defaultValue: "Controls" })} selected={activeTab === "controls"} data-tab-key="controls" />
+            <Tab text={t("organization.tabs.regulations", { defaultValue: "Regulations" })} selected={activeTab === "regulations"} data-tab-key="regulations" />
+            <Tab text={t("organization.tabs.objectives", { defaultValue: "Objectives" })} selected={activeTab === "objectives"} data-tab-key="objectives" />
+            <Tab text={t("organization.tabs.policies", { defaultValue: "Policy" })} selected={activeTab === "policies"} data-tab-key="policies" />
             <Tab text={t("organization.tabs.documents", { defaultValue: "Documents" })} selected={activeTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
 
@@ -234,10 +239,20 @@ export default function OrganizationObjectPage({
                 </div>
             </div>
             <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("organization.tabs.documents", { defaultValue: "Documents" })} targetType="ORG" targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentAggregateError} onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
+            <div style={{ display: activeTab !== "general" && activeTab !== "documents" ? "block" : "none" }}>
+                {onLocalDirtyChange && onLocalNavigation ? <LocalOrganizationWorkspace
+                    organizationId={value?.id ?? null} tab={activeTab}
+                    onDirtyChange={onLocalDirtyChange}
+                    navigateWithinOrganization={onLocalNavigation} /> : null}
+            </div>
         </div>
 
         <div style={FOOTER_STYLE}>
-            {mode === "view" ? <Button design="Emphasized" hidden={!manage} disabled={busy || !onEdit} onClick={onEdit}>{t("common.edit", { defaultValue: "Edit" })}</Button> : <Button design="Emphasized" disabled={saveDisabled} onClick={() => void submit()}>{t("common.save", { defaultValue: "Save" })}</Button>}
+            {activeTab === "general" || activeTab === "documents"
+                ? mode === "view"
+                    ? <Button design="Emphasized" hidden={!manage} disabled={busy || !onEdit} onClick={onEdit}>{t("common.edit", { defaultValue: "Edit" })}</Button>
+                    : <Button design="Emphasized" disabled={saveDisabled} onClick={() => void submit()}>{t("common.save", { defaultValue: "Save" })}</Button>
+                : null}
             <Button design="Transparent" disabled={busy} onClick={onCancel}>{mode === "view" ? t("common.close", { defaultValue: "Close" }) : t("common.cancel", { defaultValue: "Cancel" })}</Button>
         </div>
 

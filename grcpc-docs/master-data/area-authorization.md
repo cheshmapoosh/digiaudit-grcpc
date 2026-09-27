@@ -153,6 +153,10 @@ cross-Area document identifiers and injected unauthorized relationship drafts.
 
 ## Intentionally deferred
 
+### Local relationship authorization (Prompt 8)
+
+Every Local route requires REFERENCE VIEW for reads or REFERENCE MANAGE for writes, plus VIEW in its participating area: Context requires PROCESS; Control Scope requires PROCESS and CONTROL; Risk Scope requires PROCESS and RISK; Objective Scope requires PROCESS and CONTROL; Requirement Scope requires PROCESS and GOVERNANCE; Coverage requires the union of its endpoint areas; Organization Policy requires GOVERNANCE without PROCESS; the other Policy families require PROCESS and GOVERNANCE plus CONTROL where the target is a Control Scope. Global options, nested options, reverse lists, deleted reads, and Local Document actions enforce the same family boundary. This is Area authorization; Organization ownership comes from persisted Context or typed Policy target rather than a submitted identifier. UI sections are independently gated so unrelated Area access is not required for a permitted section.
+
 No DelegationPolicy change, organizational security enforcement, IAM framework,
 Area table, Central/Local redesign, business Scope/Coverage redesign, new hierarchy
 key, workflow or compatibility API is included. No commit is created.

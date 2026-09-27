@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { LocalReverseList } from "@/features/local-master-data";
 import { useAuthState } from "@/features/auth";
 import { canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
 import {
@@ -600,6 +601,34 @@ export default function CentralPolicyObjectPage({
           />
         </div>
       </div>
+
+      {nodeType === "POLICY" && value?.id && mode === "view" ? <div
+        style={{ display: "grid", gap: "0.8rem" }}>
+        <LocalReverseList parentId={value.id}
+          path={`central/policies/${value.id}/organization-policy-scopes`}
+          section="organization-policies"
+          titleKey="local.reverse.organizationPolicies"
+          titleFa="تصمیم‌های محلی سیاست برای سازمان"
+          areas={["GOVERNANCE"]} />
+        <LocalReverseList parentId={value.id}
+          path={`central/policies/${value.id}/subprocess-policy-scopes`}
+          section="context-policies"
+          titleKey="local.reverse.contextPolicies"
+          titleFa="تصمیم‌های محلی سیاست برای زمینه"
+          areas={["PROCESS", "GOVERNANCE"]} />
+        <LocalReverseList parentId={value.id}
+          path={`central/policies/${value.id}/control-policy-scopes`}
+          section="control-policies"
+          titleKey="local.reverse.controlPolicies"
+          titleFa="تصمیم‌های محلی سیاست برای کنترل"
+          areas={["PROCESS", "CONTROL", "GOVERNANCE"]} />
+        <LocalReverseList parentId={value.id}
+          path={`central/policies/${value.id}/requirement-policy-scopes`}
+          section="requirement-policies"
+          titleKey="local.reverse.requirementPolicies"
+          titleFa="تصمیم‌های محلی سیاست برای الزام"
+          areas={["PROCESS", "GOVERNANCE"]} />
+      </div> : null}
 
       <div className="policyObjectFooter">
         {mode === "view" && permissions.update ? (
