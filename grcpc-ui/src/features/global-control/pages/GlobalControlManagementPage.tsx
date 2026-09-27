@@ -498,12 +498,11 @@ export default function GlobalControlManagementPage() {
       {selectedControl ? <Tab text={t("globalControl.tabs.documents")} selected={activeTab === "documents"}
         data-tab-key="documents" /> : null}
     </DetailTabContainer>
-    {activeTab === "general" || selectedGroup ? <>
-      <div className="globalControlDetails">
+    {activeTab === "general" || selectedGroup ?
+      <div className="globalControlForm">
+      <div className="masterDataFormGrid">
         <MasterDataFormField label={t("globalControl.code")}><Input value={details.code} readonly /></MasterDataFormField>
         <MasterDataFormField label={t("globalControl.name")}><Input value={details.name} readonly /></MasterDataFormField>
-        <MasterDataFormField label={t("globalControl.validFrom")}><Input value={formatPersianDate(details.validFrom)} readonly /></MasterDataFormField>
-        <MasterDataFormField label={t("globalControl.validTo")}><Input value={formatPersianDate(details.validTo)} readonly /></MasterDataFormField>
         {selectedGroup ? <MasterDataFormField label={t("globalControl.group.parent")}><Input value={
           groups.find((item) => item.id === selectedGroup.parentId)?.name
           || t("globalControl.group.none")} readonly /></MasterDataFormField> : null}
@@ -514,9 +513,21 @@ export default function GlobalControlManagementPage() {
           <MasterDataFormField label={t("globalControl.testRequired")}><Input value={
             t(selectedControl.testRequired ? "globalControl.yes" : "globalControl.no")} readonly /></MasterDataFormField>
         </> : null}
+        <div className="globalControlValidityRow">
+          <MasterDataFormField label={t("globalControl.validFrom")}>
+            <PersianDatePicker value={details.validFrom ?? ""} readonly
+              accessibleName={t("globalControl.validFrom")}
+              invalidValueMessage={t("globalControl.errors.dates")} />
+          </MasterDataFormField>
+          <MasterDataFormField label={t("globalControl.validTo")}>
+            <PersianDatePicker value={details.validTo ?? ""} readonly
+              accessibleName={t("globalControl.validTo")}
+              invalidValueMessage={t("globalControl.errors.dates")} />
+          </MasterDataFormField>
+        </div>
         <MasterDataFormField label={t("globalControl.description")} wide><TextArea value={details.description || ""} readonly rows={3} /></MasterDataFormField>
       </div>
-    </> : null}
+      </div> : null}
     {selectedControl && activeTab === "regulations" ? regulationPanel : null}
     {viewOpen && selectedControl && activeTab === "documents" ? <DocumentManager
       targetType="GLOBAL_CONTROL" targetId={selectedControl.id} readOnly
