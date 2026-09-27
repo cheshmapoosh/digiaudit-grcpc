@@ -302,7 +302,7 @@ export default function OrganizationsFclShellPage() {
     useEffect(() => {
         const requested = new URLSearchParams(location.search).get("tab");
         const tabs: OrganizationTabKey[] = ["general", "subprocesses", "risks", "controls",
-            "regulations", "objectives", "policies", "documents"];
+            "regulations", "objectives", "businessObjectives", "policies", "documents"];
         const next = tabs.includes(requested as OrganizationTabKey)
             ? requested as OrganizationTabKey : "general";
         setObjectActiveTab((current) => current === next ? current : next);

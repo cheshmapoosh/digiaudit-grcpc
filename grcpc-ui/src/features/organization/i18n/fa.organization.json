@@ -35,7 +35,8 @@
       "risks": "ریسک‌ها",
       "controls": "کنترل‌ها",
       "regulations": "قوانین",
-      "objectives": "اهداف",
+      "objectives": "اهداف کنترلی",
+      "businessObjectives": "اهداف",
       "policies": "سیاست",
       "documents": "مستندات"
     },

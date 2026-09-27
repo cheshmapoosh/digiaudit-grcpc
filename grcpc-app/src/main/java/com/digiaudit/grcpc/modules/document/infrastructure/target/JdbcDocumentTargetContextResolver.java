@@ -33,6 +33,9 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
               targetType,
               targetId,
               "select id from organization where id = ? and status <> 'DELETED'");
+      case OBJECTIVE ->
+          central(targetType, targetId,
+              "select id from objective where id = ? and status <> 'DELETED'");
       case CENTRAL_PROCESS ->
           central(
               targetType,
@@ -134,6 +137,8 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
         switch (targetType) {
           case ORGANIZATION ->
               "select id from organization where id = ? and status <> 'DELETED' for update";
+          case OBJECTIVE ->
+              "select id from objective where id = ? and status <> 'DELETED' for update";
           case CENTRAL_PROCESS ->
               "select id from central_process where id = ? and status <> 'DELETED' for update";
           case CENTRAL_SUBPROCESS ->

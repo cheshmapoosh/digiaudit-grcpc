@@ -12,6 +12,8 @@
   "masterData.items.controls": "کنترل‌ها",
   "masterData.items.controls.description": "تعریف و نگهداری کاتالوگ کنترل‌ها و مستندات مرتبط",
   "masterData.items.objectives": "اهداف کنترلی",
+  "masterData.items.businessObjectives": "اهداف",
+  "masterData.items.businessObjectives.description": "مدیریت ساختار اهداف و انتساب به سازمان",
   "masterData.items.objectives.description": "تعریف اهداف کنترلی و مستندات مرتبط",
   "masterData.items.regulations": "قوانین و مقررات",
   "masterData.items.regulations.description": "ساختار گروه قانون، قانون و الزام قانونی",

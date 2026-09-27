@@ -49,11 +49,11 @@ The active business-table count after Policy simplification is 45. The unmapped 
 
 The two technical tables are `document_temp_upload` and `masterdata_hierarchy_guard`.
 
-The total physical Master Data table count after this correction is 48.
+The total physical Master Data table count after this correction was 48. The approved Objective extension adds two business tables, bringing the current count to 50.
 
 The active business structures are the original catalog with Policy Version removed from active use and Central Policy–Organization Scope added.
 
-The Document business-table count remains 3. The physical contract is `45 active business tables + 1 retained historical table + 2 technical tables = 48 physical tables`.
+The Document business-table count remains 3. The current physical contract is `47 active business tables + 1 retained historical table + 2 technical tables = 50 physical tables`.
 
 No additional Master Data table is authorized merely to simplify implementation.
 
@@ -65,7 +65,7 @@ No generic assignment table is authorized.
 
 No generic document-attachment table is authorized.
 
-No generic objective table is authorized.
+The approved Objective extension authorizes exactly `objective` and `organization_objective` for business objectives. They are distinct from Control Objective; no generic Objective Scope or Objective Scope Assignment is authorized.
 
 No generic target table is authorized for core Master Data relations.
 
@@ -442,9 +442,9 @@ The approved model permits exactly two controlled polymorphic relations:
 
 Each relation has its own closed stored-code vocabulary. These vocabularies must not be conflated, even where both reuse the same stored code for the same logical table.
 
-`RevisionEntityType` contains exactly 43 stored codes and is used only for Revision Content.
+`RevisionEntityType` contains 47 stored codes after the Objective extension and is used only for Revision Content.
 
-Document Link Target Type contains exactly 41 stored codes and is used only for Document Link target validation.
+Document Link Target Type contains 42 stored codes after the Objective extension and is used only for Document Link target validation.
 
 Document Link allows catalog tables `01` through `40` plus the narrow `MASTERDATA_REVISION` exception.
 
@@ -642,7 +642,7 @@ It must remove the Legacy behavior it replaces within that same slice.
 
 It must not leave a compatibility endpoint, dual write, or unused Legacy entity behind.
 
-It must preserve the 45 business tables and exactly two technical tables: `document_temp_upload` and `masterdata_hierarchy_guard`.
+It must preserve the approved business tables, including the two Objective extension tables, and exactly two technical tables: `document_temp_upload` and `masterdata_hierarchy_guard`.
 
 It must leave KPI and KRI outside Master Data V2.
 

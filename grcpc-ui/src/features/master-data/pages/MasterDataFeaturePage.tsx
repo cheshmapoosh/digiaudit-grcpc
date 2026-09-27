@@ -54,6 +54,17 @@ const MASTER_DATA_ITEMS: MasterDataItem[] = [
         iconTone: 2,
     },
     {
+        key: "businessObjectives",
+        titleKey: "masterData.items.businessObjectives",
+        defaultTitle: "اهداف",
+        descriptionKey: "masterData.items.businessObjectives.description",
+        defaultDescription: "مدیریت اهداف مرکزی و انتساب به سازمان",
+        icon: "activity-assigned-to-goal",
+        route: "/objectives",
+        group: "catalog",
+        iconTone: 3,
+    },
+    {
         key: "objectives",
         titleKey: "masterData.items.objectives",
         defaultTitle: "اهداف کنترلی",

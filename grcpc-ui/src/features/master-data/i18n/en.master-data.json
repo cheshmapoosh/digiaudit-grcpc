@@ -12,6 +12,8 @@
   "masterData.items.controls": "Controls",
   "masterData.items.controls.description": "Define and maintain the control catalog and related documents",
   "masterData.items.objectives": "Control Objectives",
+  "masterData.items.businessObjectives": "Objectives",
+  "masterData.items.businessObjectives.description": "Manage objective hierarchy and organization assignments",
   "masterData.items.objectives.description": "Define control objectives and related documents",
   "masterData.items.regulations": "Laws and Regulations",
   "masterData.items.regulations.description": "Manage law groups, laws, and legal requirements",

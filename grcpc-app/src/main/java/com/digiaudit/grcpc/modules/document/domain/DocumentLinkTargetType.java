@@ -6,6 +6,7 @@ import java.util.Locale;
 
 public enum DocumentLinkTargetType {
     ORGANIZATION("ORG", true),
+    OBJECTIVE("OBJECTIVE", true),
     CENTRAL_PROCESS("CENTRAL_PROCESS", true),
     CENTRAL_SUBPROCESS("CENTRAL_SUBPROCESS", true),
     CENTRAL_CONTROL("CENTRAL_CONTROL", true),

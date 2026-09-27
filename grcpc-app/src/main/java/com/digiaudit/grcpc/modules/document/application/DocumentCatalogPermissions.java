@@ -8,6 +8,7 @@ final class DocumentCatalogPermissions {
   static String view(DocumentLinkTargetType type) {
     return switch (type) {
       case ORGANIZATION -> "MD_REFERENCE_VIEW";
+      case OBJECTIVE -> "MD_REFERENCE_VIEW";
       case CENTRAL_PROCESS, CENTRAL_SUBPROCESS -> "MD_PROCESS_VIEW";
       case CENTRAL_CONTROL -> "MD_CONTROL_VIEW";
       case CENTRAL_CONTROL_OBJECTIVE -> "MD_CONTROL_VIEW";
@@ -53,6 +54,7 @@ final class DocumentCatalogPermissions {
   static String mutate(DocumentLinkTargetType type) {
     return switch (type) {
       case ORGANIZATION -> "MD_REFERENCE_MANAGE";
+      case OBJECTIVE -> "MD_REFERENCE_MANAGE";
       case CENTRAL_PROCESS, CENTRAL_SUBPROCESS -> "MD_PROCESS_MANAGE";
       case CENTRAL_CONTROL -> "MD_CONTROL_MANAGE";
       case CENTRAL_CONTROL_OBJECTIVE -> "MD_CONTROL_MANAGE";

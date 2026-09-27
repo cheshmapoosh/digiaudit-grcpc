@@ -41,6 +41,7 @@ Current approved rows:
 | `ACCOUNT_GROUP` | Account Group hierarchy |
 | `REGULATION` | Shared Regulation Group, Regulation, and Requirement structure |
 | `POLICY` | Shared Policy Group and Policy structure |
+| `OBJECTIVE` | Business Objective hierarchy (approved later Objective extension) |
 
 `central_process` and `central_subprocess` are separate business tables but belong to one structural hierarchy and therefore share the `PROCESS` Guard Row.
 

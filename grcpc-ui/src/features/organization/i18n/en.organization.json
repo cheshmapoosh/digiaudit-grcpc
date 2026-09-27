@@ -35,7 +35,8 @@
       "risks": "Risks",
       "controls": "Controls",
       "regulations": "Regulations",
-      "objectives": "Objectives",
+      "objectives": "Control Objectives",
+      "businessObjectives": "Objectives",
       "policies": "Policy",
       "documents": "Documents"
     },

@@ -1,5 +1,6 @@
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { LocalOrganizationWorkspace } from "@/features/local-master-data";
+import { OrganizationObjectivesTab } from "@/features/objective";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
@@ -27,7 +28,7 @@ import { buildTree, collectDescendantIds } from "../utils/organization.tree";
 
 export type OrganizationObjectMode = "create" | "edit" | "view";
 export type OrganizationTabKey = "general" | "subprocesses" | "risks" | "controls"
-    | "regulations" | "objectives" | "policies" | "documents";
+    | "regulations" | "objectives" | "businessObjectives" | "policies" | "documents";
 
 interface OrganizationFormState {
     code: string;
@@ -128,10 +129,11 @@ export default function OrganizationObjectPage({
         validTo: { draftValue: "", valid: true, dirty: false },
     });
     const [internalTab, setInternalTab] = useState<OrganizationTabKey>("general");
+    const [localObjectiveDirty, setLocalObjectiveDirty] = useState(false);
     const scopeRef = useRef(mode === "create" ? "CREATE" : value?.id ?? "EMPTY");
     const generalInformationDirty = JSON.stringify(normalized(form, mode)) !== baseline;
     const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
-    const dirty = generalInformationDirty || invalidDateDraft;
+    const dirty = generalInformationDirty || invalidDateDraft || localObjectiveDirty;
 
     const activeTab = controlledTab ?? internalTab;
     const readOnly = mode === "view";
@@ -216,7 +218,8 @@ export default function OrganizationObjectPage({
             <Tab text={t("organization.tabs.risks", { defaultValue: "Risks" })} selected={activeTab === "risks"} data-tab-key="risks" />
             <Tab text={t("organization.tabs.controls", { defaultValue: "Controls" })} selected={activeTab === "controls"} data-tab-key="controls" />
             <Tab text={t("organization.tabs.regulations", { defaultValue: "Regulations" })} selected={activeTab === "regulations"} data-tab-key="regulations" />
-            <Tab text={t("organization.tabs.objectives", { defaultValue: "Objectives" })} selected={activeTab === "objectives"} data-tab-key="objectives" />
+            <Tab text={t("organization.tabs.objectives", { defaultValue: "Control Objectives" })} selected={activeTab === "objectives"} data-tab-key="objectives" />
+            <Tab text={t("organization.tabs.businessObjectives", { defaultValue: "Objectives" })} selected={activeTab === "businessObjectives"} data-tab-key="businessObjectives" disabled={mode === "create"} />
             <Tab text={t("organization.tabs.policies", { defaultValue: "Policy" })} selected={activeTab === "policies"} data-tab-key="policies" />
             <Tab text={t("organization.tabs.documents", { defaultValue: "Documents" })} selected={activeTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
@@ -239,12 +242,13 @@ export default function OrganizationObjectPage({
                 </div>
             </div>
             <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("organization.tabs.documents", { defaultValue: "Documents" })} targetType="ORG" targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentAggregateError} onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
-            <div style={{ display: activeTab !== "general" && activeTab !== "documents" ? "block" : "none" }}>
+            <div style={{ display: activeTab !== "general" && activeTab !== "documents" && activeTab !== "businessObjectives" ? "block" : "none" }}>
                 {onLocalDirtyChange && onLocalNavigation ? <LocalOrganizationWorkspace
                     organizationId={value?.id ?? null} tab={activeTab}
                     onDirtyChange={onLocalDirtyChange}
                     navigateWithinOrganization={onLocalNavigation} /> : null}
             </div>
+            <div style={{ display: activeTab === "businessObjectives" ? "block" : "none" }}><OrganizationObjectivesTab organizationId={value?.id ?? null} manage={manage} onDirtyChange={setLocalObjectiveDirty} /></div>
         </div>
 
         <div style={FOOTER_STYLE}>

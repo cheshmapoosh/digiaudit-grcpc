@@ -11,7 +11,7 @@ export function canAccessMasterData(me: Identity, area: MasterDataArea, manage =
 
 export function areaForPath(path: string): MasterDataArea | undefined {
   const areas: Record<string, MasterDataArea> = {
-    organizations: "REFERENCE", "account-groups": "REFERENCE",
+    organizations: "REFERENCE", objectives: "REFERENCE", "account-groups": "REFERENCE",
     processes: "PROCESS", risks: "RISK", controls: "CONTROL", "control-objectives": "CONTROL",
     regulations: "GOVERNANCE", policies: "GOVERNANCE",
   };

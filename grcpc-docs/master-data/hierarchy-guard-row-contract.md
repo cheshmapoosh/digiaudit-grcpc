@@ -20,7 +20,9 @@ All unrelated Conceptual, Logical, Physical, Document, Revision, Greenfield, Leg
 | --- | ---: |
 | Business tables | 45 |
 | Technical tables | 2 |
-| Total Master Data V2 physical tables | 47 |
+| Total Master Data V2 physical tables at this decision | 47 |
+
+The later Policy simplification and Objective extension bring the current physical count to 50; the technical table count remains two. The `OBJECTIVE` Guard row is seeded by `V1186`.
 
 Approved technical tables:
 
@@ -57,6 +59,7 @@ The table has one row per approved independent hierarchy, not one row per busine
 | `ACCOUNT_GROUP` | `central_account_group` | All Account Group structural mutations share this Guard. |
 | `REGULATION` | `central_regulation_group`, `central_regulation`, `central_regulation_requirement` | The complete Regulation family shares this Guard. |
 | `POLICY` | `central_policy_group`, `central_policy` | Policy Group and Policy structural mutations share this Guard; Policy aggregate Update acquires it even if the submitted group is unchanged. Four typed Policy relation collections add their referenced hierarchy Guards. |
+| `OBJECTIVE` | `objective` | Objective create, update, delete, and restore share this Guard. Organization Objective assignment also acquires `OBJECTIVE` and `ORGANIZATION` in lexical order. |
 
 Future feature procedure:
 
