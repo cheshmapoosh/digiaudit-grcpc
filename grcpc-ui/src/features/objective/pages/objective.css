@@ -1,11 +1,17 @@
 .objectivePage { display: grid; gap: .75rem; min-width: 0; }
-.objectiveColumn { box-sizing: border-box; display: flex; flex-direction: column; gap: .75rem; min-height: calc(100vh - 11rem); overflow: auto; padding: 1rem; background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor); }
+.objectiveFcl { width: 100%; height: calc(100vh - 7rem); min-height: 38rem; }
+.objectiveFclColumn { height: 100%; min-height: 0; padding: 1rem; box-sizing: border-box; background: var(--sapBackgroundColor); }
+.objectiveListReport { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 1rem; height: 100%; min-height: 0; }
+.objectiveTreeFrame { min-height: 0; overflow: auto; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapList_Background); padding: .5rem; }
+.objectiveSummary { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 1rem; height: 100%; }
+.objectiveSummaryDetails { display: grid; grid-template-columns: 9rem minmax(0, 1fr); align-content: start; gap: .75rem; padding: 1rem; overflow: auto; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
 .objectiveToolbar, .objectiveActions { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .objectiveDetails { display: grid; gap: .5rem; }
 .objectiveTreeLabel { padding: .35rem; }
-.objectiveDialog { width: min(52rem, 92vw); }
+.objectiveDialog { width: 90vw; max-width: 90vw; }
 .objectiveForm { display: grid; gap: .5rem; padding: 1rem; max-height: 75vh; overflow: auto; }
 .objectiveDocumentTab { padding: 1rem; max-height: 75vh; overflow: auto; }
+.objectiveOrganizationTab { padding: 1rem; max-height: 75vh; overflow: auto; }
 .objectiveTabHidden { display: none; }
 .objectiveDialogActions { padding: .75rem 1rem; }
-@media (max-width: 720px) { .objectiveDialog { width: 96vw; } }
+@media (max-width: 720px) { .objectiveFcl { min-height: 30rem; } .objectiveDialog { width: 96vw; max-width: 96vw; } }

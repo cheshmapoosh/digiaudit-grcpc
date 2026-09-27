@@ -5,8 +5,9 @@ import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 type CreateKind = "group" | "control";
 
-export default function GlobalControlCreateMenu({ disabled, controlEnabled, onCreate }: {
+export default function GlobalControlCreateMenu({ disabled, groupEnabled, controlEnabled, onCreate }: {
   disabled: boolean;
+  groupEnabled: boolean;
   controlEnabled: boolean;
   onCreate: (kind: CreateKind) => void;
 }) {
@@ -14,7 +15,7 @@ export default function GlobalControlCreateMenu({ disabled, controlEnabled, onCr
   const [open, setOpen] = useState(false);
   const [opener, setOpener] = useState<HTMLElement | undefined>();
   return <>
-    <Button design="Emphasized" disabled={disabled} endIcon="slim-arrow-down"
+    <Button design="Emphasized" disabled={disabled || (!groupEnabled && !controlEnabled)} endIcon="slim-arrow-down"
       accessibilityAttributes={{ hasPopup: "menu", expanded: open ? "true" : "false" }}
       onClick={(event) => {
         setOpener(event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined);
@@ -25,13 +26,15 @@ export default function GlobalControlCreateMenu({ disabled, controlEnabled, onCr
         onClose={() => setOpen(false)}
         onItemClick={(event) => {
           const id = event.detail.item?.id;
-          if (id === "global-create-group" || (id === "global-create-control" && controlEnabled)) {
+          if ((id === "global-create-group" && groupEnabled)
+            || (id === "global-create-control" && controlEnabled)) {
             setOpen(false);
             onCreate(id === "global-create-group" ? "group" : "control");
           }
         }}>
-        <MenuItem id="global-create-group" text={t("globalControl.group.create")} />
-        <MenuItem id="global-create-control" text={t("globalControl.control.create")}
+        <MenuItem id="global-create-group" text={t("globalControl.group.menu")}
+          disabled={!groupEnabled} />
+        <MenuItem id="global-create-control" text={t("globalControl.control.menu")}
           disabled={!controlEnabled} />
       </Menu>, document.body) : null}
   </>;

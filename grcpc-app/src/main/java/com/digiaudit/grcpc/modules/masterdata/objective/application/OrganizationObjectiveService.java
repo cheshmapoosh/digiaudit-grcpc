@@ -61,6 +61,21 @@ public class OrganizationObjectiveService {
         organizationId, MasterDataLifecycleStatus.DELETED).stream().map(this::detail).toList();
   }
 
+  @Transactional(readOnly = true)
+  public List<OrganizationObjectiveDtos.OrganizationLink> listOrganizations(UUID objectiveId) {
+    requireObjective(objectiveId);
+    return assignments.findByObjectiveIdAndStatusNotOrderByNameAsc(
+        objectiveId, MasterDataLifecycleStatus.DELETED).stream()
+        .map(assignment -> {
+          var organization = organizations.findById(assignment.getOrganizationId()).orElse(null);
+          if (organization == null || organization.getStatus() == MasterDataLifecycleStatus.DELETED)
+            return null;
+          return new OrganizationObjectiveDtos.OrganizationLink(organization.getId(),
+              organization.getCode(), organization.getName(), assignment.getName(),
+              assignment.getOwner(), assignment.getStatus(), assignment.getVersion());
+        }).filter(java.util.Objects::nonNull).toList();
+  }
+
   public MasterDataRevisionMutationResponse assign(UUID organizationId,
       OrganizationObjectiveDtos.Create request) {
     support.validateValidity(request.validFrom(), request.validTo());

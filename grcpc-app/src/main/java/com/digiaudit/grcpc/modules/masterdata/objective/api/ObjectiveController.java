@@ -1,6 +1,7 @@
 package com.digiaudit.grcpc.modules.masterdata.objective.api;
 
 import com.digiaudit.grcpc.modules.masterdata.objective.application.ObjectiveService;
+import com.digiaudit.grcpc.modules.masterdata.objective.application.OrganizationObjectiveService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.api.dto.CatalogLifecycleCommandRequest;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
@@ -14,7 +15,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/objectives")
 public class ObjectiveController {
   private final ObjectiveService service;
-  public ObjectiveController(ObjectiveService service) { this.service = service; }
+  private final OrganizationObjectiveService organizationObjectives;
+  public ObjectiveController(ObjectiveService service,
+      OrganizationObjectiveService organizationObjectives) {
+    this.service = service;
+    this.organizationObjectives = organizationObjectives;
+  }
 
   @GetMapping
   @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
@@ -23,6 +29,12 @@ public class ObjectiveController {
   @GetMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
   public ObjectiveDtos.Detail detail(@PathVariable UUID id) { return service.get(id); }
+
+  @GetMapping("/{id}/organizations")
+  @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
+  public List<OrganizationObjectiveDtos.OrganizationLink> organizations(@PathVariable UUID id) {
+    return organizationObjectives.listOrganizations(id);
+  }
 
   @PostMapping
   @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")

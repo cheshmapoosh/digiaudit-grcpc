@@ -44,3 +44,20 @@ export interface OrganizationObjective {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ObjectiveOrganizationLink {
+  organizationId: string;
+  organizationCode: string;
+  organizationName: string;
+  name: string;
+  owner: string | null;
+  status: "ACTIVE" | "INACTIVE" | "DELETED";
+  version: number;
+}
+
+export interface ObjectiveOrganizationOption {
+  id: string;
+  code: string;
+  name: string;
+  status: "ACTIVE" | "INACTIVE" | "DELETED";
+}

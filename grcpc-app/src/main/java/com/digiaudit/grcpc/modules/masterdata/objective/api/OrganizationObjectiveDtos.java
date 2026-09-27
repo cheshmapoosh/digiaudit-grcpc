@@ -16,4 +16,7 @@ public final class OrganizationObjectiveDtos {
   public record Detail(UUID id, UUID organizationId, UUID objectiveId, String objectiveCode,
       String name, String description, String owner, LocalDate validFrom, LocalDate validTo,
       MasterDataLifecycleStatus status, long version, Instant createdAt, Instant updatedAt) {}
+  public record OrganizationLink(UUID organizationId, String organizationCode,
+      String organizationName, String name, String owner, MasterDataLifecycleStatus status,
+      long version) {}
 }
