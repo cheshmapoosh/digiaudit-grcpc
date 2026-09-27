@@ -19,5 +19,5 @@
 .objectiveOrganizationStatus { display: grid; gap: .25rem; flex: 0 0 12rem; }
 .objectiveOrganizationToolbar > ui5-button { margin-inline-start: auto; }
 .objectiveTabHidden { display: none; }
-.objectiveDialogActions { padding: .75rem 1rem; }
+.objectiveDialogActions { justify-content: center; padding: .75rem 1rem; }
 @media (max-width: 720px) { .objectiveFcl { min-height: 30rem; } .objectiveDialog { width: 96vw; max-width: 96vw; } .objectiveDialogContent { width: 92vw; max-width: 92vw; } .objectiveOrganizationToolbar { flex-wrap: wrap; } .objectiveOrganizationStatus { flex: 1 1 10rem; } }

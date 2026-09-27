@@ -22,6 +22,6 @@
 .globalControlRegulationToolbar > ui5-button { margin-inline-start: auto; }
 .globalControlDocumentTab { padding: 1rem; max-height: 68vh; overflow: auto; }
 .globalControlHidden { display: none; }
-.globalControlDialogActions { padding: .75rem 1rem; }
+.globalControlDialogActions { justify-content: center; padding: .75rem 1rem; }
 @media (max-width: 900px) { .globalControlDetails { grid-template-columns: 1fr; } }
 @media (max-width: 720px) { .globalControlFcl { min-height: 30rem; } .globalControlDialog { width: 96vw; max-width: 96vw; } .globalControlDialogContent { width: 92vw; max-width: 92vw; } .globalControlTreeHeader, .globalControlTreeRow { grid-template-columns: minmax(0, 1fr) 6rem; } .globalControlRegulationToolbar { flex-wrap: wrap; } .globalControlRegulationStatus { flex: 1 1 10rem; } }
