@@ -1,0 +1,7 @@
+.masterDataObjectHeader { display: grid; gap: .75rem; padding: .75rem 1rem; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
+.masterDataObjectHeaderGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1.25rem; }
+.masterDataObjectHeaderField { display: grid; gap: .35rem; min-width: 0; }
+.masterDataFormGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1.25rem; }
+.masterDataFormField { display: grid; gap: .35rem; min-width: 0; }
+.masterDataFormFieldWide { grid-column: 1 / -1; }
+@media (max-width: 900px) { .masterDataObjectHeaderGrid, .masterDataFormGrid { grid-template-columns: 1fr; } .masterDataFormFieldWide { grid-column: auto; } }

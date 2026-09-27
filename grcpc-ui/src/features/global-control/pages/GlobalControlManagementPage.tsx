@@ -1,4 +1,4 @@
-import { createElement, useEffect, useMemo, useState } from "react";
+import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -15,6 +15,7 @@ import { useMasterDataAccess } from "@/features/master-data/security/masterDataA
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import { MasterDataFormField, MasterDataObjectHeader } from "@/shared/components/MasterDataObjectHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -93,16 +94,19 @@ function descendants(groups: ControlGroup[], id: string): Set<string> {
 function GroupTreeItem({ node, selected, expanded }: {
   node: GroupNode; selected: Selection; expanded: Set<string>;
 }) {
+  const { t } = useTranslation();
   return <TreeItemCustom data-node-kind="group" data-node-id={node.id}
     selected={selected?.kind === "group" && selected.id === node.id}
     expanded={expanded.has(node.id)}
-    content={<span>{node.code} · {node.name}</span>}>
+    content={<div className="globalControlTreeRow"><span>{node.code} · {node.name}</span>
+      <span className="globalControlTreeType">{t("globalControl.group.menu")}</span></div>}>
     {node.children.map((child) => <GroupTreeItem key={child.id} node={child}
       selected={selected} expanded={expanded} />)}
     {node.controls.map((control) => <TreeItemCustom key={control.id}
       data-node-kind="control" data-node-id={control.id}
       selected={selected?.kind === "control" && selected.id === control.id}
-      content={<span>{control.code} · {control.name}</span>} />)}
+      content={<div className="globalControlTreeRow"><span>{control.code} · {control.name}</span>
+        <span className="globalControlTreeType">{t("globalControl.control.menu")}</span></div>} />)}
   </TreeItemCustom>;
 }
 
@@ -124,6 +128,7 @@ export default function GlobalControlManagementPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [editor, setEditor] = useState<Editor>(null);
+  const savedEditorClose = useRef(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [editorTab, setEditorTab] = useState<"general" | "regulations" | "documents">("general");
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
@@ -177,9 +182,10 @@ export default function GlobalControlManagementPage() {
     setSelected(selection);
     setActiveTab("general");
   };
-  const beginGroup = (edit: boolean) => {
+  const beginGroup = (edit: boolean, preserveTab = false) => {
+    savedEditorClose.current = false;
     setViewOpen(false);
-    setEditorTab("general");
+    setEditorTab(preserveTab ? activeTab : "general");
     const next = edit && selectedGroup ? {
       code: selectedGroup.code, name: selectedGroup.name,
       description: selectedGroup.description ?? "", parentId: selectedGroup.parentId ?? "",
@@ -193,9 +199,10 @@ export default function GlobalControlManagementPage() {
     setEditor(edit ? "groupEdit" : "groupCreate");
     setError(null);
   };
-  const beginControl = (edit: boolean) => {
+  const beginControl = (edit: boolean, preserveTab = false) => {
+    savedEditorClose.current = false;
     setViewOpen(false);
-    setEditorTab("general");
+    setEditorTab(preserveTab ? activeTab : "general");
     setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
     setDraftGeneration((value) => value + 1);
     const next = edit && selectedControl ? {
@@ -218,6 +225,7 @@ export default function GlobalControlManagementPage() {
     setError(null);
   };
   const closeEditor = () => {
+    if (savedEditorClose.current) return;
     if (dirty) setLeaveOpen(true);
     else setEditor(null);
   };
@@ -277,6 +285,7 @@ export default function GlobalControlManagementPage() {
           } satisfies GlobalControlUpdate);
         }
       }
+      savedEditorClose.current = true;
       setEditor(null);
       setDraftGeneration((value) => value + 1);
       setError(null);
@@ -368,9 +377,17 @@ export default function GlobalControlManagementPage() {
       onInput={(event) => setSearch(event.target.value)} />
     <div className="globalControlTreeFrame">
     {loading || busy ? <BusyIndicator active delay={0} /> : null}
-    {needle ? filtered.map(({ item, kind }) => <Button key={kind + item.id}
-      design="Transparent" onClick={() => choose({ kind, id: item.id })}>
-      {item.code} · {item.name}</Button>)
+    <div className="globalControlTreeHeader">
+      <Label>{t("globalControl.tree.name")}</Label>
+      <Label>{t("globalControl.tree.kind")}</Label>
+    </div>
+    {needle ? <Tree onItemClick={onTreeSelect}>
+      {filtered.map(({ item, kind }) => <TreeItemCustom key={kind + item.id}
+        data-node-kind={kind} data-node-id={item.id}
+        selected={selected?.kind === kind && selected.id === item.id}
+        content={<div className="globalControlTreeRow"><span>{item.code} · {item.name}</span>
+          <span className="globalControlTreeType">{t(kind === "group" ? "globalControl.group.menu" : "globalControl.control.menu")}</span></div>} />)}
+    </Tree>
       : <Tree onItemClick={onTreeSelect} onItemToggle={onTreeToggle}>
         {tree.map((node) => <GroupTreeItem key={node.id} node={node}
           selected={selected} expanded={expanded} />)}
@@ -383,7 +400,7 @@ export default function GlobalControlManagementPage() {
       {editor === "controlCreate" ? <MessageStrip design="Information" hideCloseButton>
         {t("globalControl.regulations.saveFirst")}</MessageStrip> : null}
       {selectedControl && editor !== "controlCreate" ? <>
-      <div className="globalControlToolbar">
+      {editor === "controlEdit" ? <div className="globalControlToolbar">
         <Select value={regulationId} disabled={!manage || busy}
           accessibleName={t("globalControl.regulations.select")}
           onChange={(event) => setRegulationId(event.target.value)}>
@@ -393,18 +410,18 @@ export default function GlobalControlManagementPage() {
         </Select>
         <Button disabled={!manage || busy || !regulationId}
           onClick={() => void attachRegulation()}>{t("globalControl.regulations.add")}</Button>
-      </div>
+      </div> : null}
       <Table headerRow={<TableHeaderRow>
         <TableHeaderCell>{t("globalControl.code")}</TableHeaderCell>
         <TableHeaderCell>{t("globalControl.name")}</TableHeaderCell>
-        <TableHeaderCell>{t("globalControl.actions")}</TableHeaderCell>
+        {editor === "controlEdit" ? <TableHeaderCell>{t("globalControl.actions")}</TableHeaderCell> : null}
       </TableHeaderRow>}>
         {related.map((link) => <TableRow key={link.id}>
           <TableCell>{link.regulationCode}</TableCell>
           <TableCell>{link.regulationName}</TableCell>
-          <TableCell><Button design="Negative" disabled={!manage || busy}
+          {editor === "controlEdit" ? <TableCell><Button design="Negative" disabled={!manage || busy}
             onClick={() => setRelationCandidate(link)}>
-            {t("globalControl.regulations.remove")}</Button></TableCell>
+            {t("globalControl.regulations.remove")}</Button></TableCell> : null}
         </TableRow>)}
       </Table>
       {related.length === 0 ? <MessageStrip design="Information" hideCloseButton>
@@ -412,6 +429,18 @@ export default function GlobalControlManagementPage() {
       </> : null}
     </div>;
   const viewDetails = details ? <div className="globalControlDialogContent">
+    <MasterDataObjectHeader title={details.name} fields={[
+      { label: t("globalControl.code"), value: details.code },
+      { label: t("globalControl.name"), value: details.name },
+      { label: t("globalControl.tree.kind"), value: t(selectedGroup ? "globalControl.group.menu" : "globalControl.control.menu") },
+      { label: t(selectedGroup ? "globalControl.group.parent" : "globalControl.group.select"),
+        value: selectedGroup ? groups.find((item) => item.id === selectedGroup.parentId)?.name || t("globalControl.group.none")
+          : groups.find((item) => item.id === selectedControl?.controlGroupId)?.name || "—" },
+      { label: t("globalControl.validFrom"), value: formatPersianDate(details.validFrom) },
+      { label: t("globalControl.validTo"), value: formatPersianDate(details.validTo) },
+      { label: t("globalControl.createdAt"), value: formatPersianDateTime(details.createdAt) },
+      { label: t("globalControl.updatedAt"), value: formatPersianDateTime(details.updatedAt) },
+    ]} />
     <DetailTabContainer onTabSelect={(event) => {
       const key = event.detail.tab.getAttribute("data-tab-key");
       if (key === "general" || key === "regulations" || key === "documents") setActiveTab(key);
@@ -426,33 +455,32 @@ export default function GlobalControlManagementPage() {
     </DetailTabContainer>
     {activeTab === "general" || selectedGroup ? <>
       <div className="globalControlDetails">
-        <Label>{t("globalControl.code")}: {details.code}</Label>
-        <Label>{t("globalControl.createdAt")}: {formatPersianDateTime(details.createdAt)}</Label>
-        <Label>{t("globalControl.validFrom")}: {formatPersianDate(details.validFrom)}</Label>
-        <Label>{t("globalControl.validTo")}: {formatPersianDate(details.validTo)}</Label>
-        {selectedGroup ? <Label>{t("globalControl.group.parent")}: {
+        <MasterDataFormField label={t("globalControl.code")}><Input value={details.code} readonly /></MasterDataFormField>
+        <MasterDataFormField label={t("globalControl.name")}><Input value={details.name} readonly /></MasterDataFormField>
+        <MasterDataFormField label={t("globalControl.validFrom")}><Input value={formatPersianDate(details.validFrom)} readonly /></MasterDataFormField>
+        <MasterDataFormField label={t("globalControl.validTo")}><Input value={formatPersianDate(details.validTo)} readonly /></MasterDataFormField>
+        {selectedGroup ? <MasterDataFormField label={t("globalControl.group.parent")}><Input value={
           groups.find((item) => item.id === selectedGroup.parentId)?.name
-          || t("globalControl.group.none")}</Label> : null}
+          || t("globalControl.group.none")} readonly /></MasterDataFormField> : null}
         {selectedControl ? <>
-          <Label>{t("globalControl.group.select")}: {
-            groups.find((item) => item.id === selectedControl.controlGroupId)?.name || "—"}</Label>
-          <Label>{t("globalControl.type")}: {selectedControl.controlType}</Label>
-          <Label>{t("globalControl.testRequired")}: {
-            t(selectedControl.testRequired ? "globalControl.yes" : "globalControl.no")}</Label>
+          <MasterDataFormField label={t("globalControl.group.select")}><Input value={
+            groups.find((item) => item.id === selectedControl.controlGroupId)?.name || "—"} readonly /></MasterDataFormField>
+          <MasterDataFormField label={t("globalControl.type")}><Input value={selectedControl.controlType} readonly /></MasterDataFormField>
+          <MasterDataFormField label={t("globalControl.testRequired")}><Input value={
+            t(selectedControl.testRequired ? "globalControl.yes" : "globalControl.no")} readonly /></MasterDataFormField>
         </> : null}
-        <Label>{t("globalControl.description")}: {details.description || "—"}</Label>
-      </div>
-      <div className="globalControlActions">
-        <Button disabled={!manage || busy}
-          onClick={() => selectedGroup ? beginGroup(true) : beginControl(true)}>
-          {t("common.edit")}</Button>
-        <Button design="Transparent" onClick={() => setViewOpen(false)}>{t("common.close")}</Button>
+        <MasterDataFormField label={t("globalControl.description")} wide><TextArea value={details.description || ""} readonly rows={3} /></MasterDataFormField>
       </div>
     </> : null}
     {selectedControl && activeTab === "regulations" ? regulationPanel : null}
     {viewOpen && selectedControl && activeTab === "documents" ? <DocumentManager
       targetType="GLOBAL_CONTROL" targetId={selectedControl.id} readOnly
       title={t("globalControl.tabs.documents")} /> : null}
+    <div className="globalControlActions globalControlDialogActions">
+      <Button design="Emphasized" disabled={!manage || busy}
+        onClick={() => selectedGroup ? beginGroup(true, true) : beginControl(true, true)}>{t("common.edit")}</Button>
+      <Button design="Transparent" onClick={() => setViewOpen(false)}>{t("common.close")}</Button>
+    </div>
   </div> : null;
 
   const summaryColumn = details ? createElement("div", { slot: "midColumn", className: "globalControlFclColumn" },
@@ -494,6 +522,18 @@ export default function GlobalControlManagementPage() {
     <Dialog open={editor !== null} className="globalControlDialog" onClose={closeEditor}
       accessibleName={editorTitle}>
       <ModalDialogHeader title={editorTitle} onClose={closeEditor} />
+      <div className="globalControlDialogContent">
+      <MasterDataObjectHeader title={form.name || editorTitle} fields={[
+        { label: t("globalControl.code"), value: form.code },
+        { label: t("globalControl.name"), value: form.name },
+        { label: t("globalControl.tree.kind"), value: t(groupEditor ? "globalControl.group.menu" : "globalControl.control.menu") },
+        { label: t(groupEditor ? "globalControl.group.parent" : "globalControl.group.select"),
+          value: groups.find((item) => item.id === (groupEditor ? groupForm.parentId : controlForm.controlGroupId))?.name || t("globalControl.group.none") },
+        { label: t("globalControl.validFrom"), value: formatPersianDate(form.validFrom) },
+        { label: t("globalControl.validTo"), value: formatPersianDate(form.validTo) },
+        { label: t("globalControl.createdAt"), value: editor?.endsWith("Edit") ? formatPersianDateTime(details?.createdAt) : "" },
+        { label: t("globalControl.updatedAt"), value: editor?.endsWith("Edit") ? formatPersianDateTime(details?.updatedAt) : "" },
+      ]} />
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key");
         if (key === "general" || key === "regulations" || key === "documents") setEditorTab(key);
@@ -507,18 +547,16 @@ export default function GlobalControlManagementPage() {
       </DetailTabContainer>
       <div className={editorTab === "general" || groupEditor
         ? "globalControlForm" : "globalControlForm globalControlHidden"}>
-        <Label required>{t("globalControl.code")}</Label>
-        <Input value={form.code} readonly={editor === "groupEdit" || editor === "controlEdit"}
+        <div className="masterDataFormGrid">
+        <MasterDataFormField label={t("globalControl.code")} required><Input value={form.code} readonly={editor === "groupEdit" || editor === "controlEdit"}
           disabled={busy} onInput={(event) => groupEditor
             ? setGroupForm((old) => ({ ...old, code: event.target.value }))
-            : setControlForm((old) => ({ ...old, code: event.target.value }))} />
-        <Label required>{t("globalControl.name")}</Label>
-        <Input value={form.name} disabled={busy} onInput={(event) => groupEditor
+            : setControlForm((old) => ({ ...old, code: event.target.value }))} /></MasterDataFormField>
+        <MasterDataFormField label={t("globalControl.name")} required><Input value={form.name} disabled={busy} onInput={(event) => groupEditor
           ? setGroupForm((old) => ({ ...old, name: event.target.value }))
-          : setControlForm((old) => ({ ...old, name: event.target.value }))} />
+          : setControlForm((old) => ({ ...old, name: event.target.value }))} /></MasterDataFormField>
         {groupEditor ? <>
-          <Label>{t("globalControl.group.parent")}</Label>
-          <Select value={groupForm.parentId} disabled={busy}
+          <MasterDataFormField label={t("globalControl.group.parent")}><Select value={groupForm.parentId} disabled={busy}
             accessibleName={t("globalControl.group.parent")}
             onChange={(event) => setGroupForm((old) => ({
               ...old, parentId: event.target.value,
@@ -527,10 +565,9 @@ export default function GlobalControlManagementPage() {
             {groupOptions.filter((item) => (editor !== "groupEdit" || item.id !== selectedGroup?.id)
               && !blockedParents.has(item.id)).map((item) =>
               <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-          </Select>
+          </Select></MasterDataFormField>
         </> : <>
-          <Label required>{t("globalControl.group.select")}</Label>
-          <Select value={controlForm.controlGroupId} disabled={busy}
+          <MasterDataFormField label={t("globalControl.group.select")} required><Select value={controlForm.controlGroupId} disabled={busy}
             accessibleName={t("globalControl.group.select")}
             onChange={(event) => setControlForm((old) => ({
               ...old, controlGroupId: event.target.value,
@@ -538,24 +575,21 @@ export default function GlobalControlManagementPage() {
             <Option value="">{t("globalControl.group.select")}</Option>
             {groupOptions.map((item) =>
               <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-          </Select>
-          <Label required>{t("globalControl.type")}</Label>
-          <Input value={controlForm.controlType} disabled={busy}
+          </Select></MasterDataFormField>
+          <MasterDataFormField label={t("globalControl.type")} required><Input value={controlForm.controlType} disabled={busy}
             onInput={(event) => setControlForm((old) => ({
               ...old, controlType: event.target.value,
-            }))} />
-          <Label required>{t("globalControl.testRequired")}</Label>
-          <Select value={controlForm.testRequired} disabled={busy}
+            }))} /></MasterDataFormField>
+          <MasterDataFormField label={t("globalControl.testRequired")} required><Select value={controlForm.testRequired} disabled={busy}
             accessibleName={t("globalControl.testRequired")}
             onChange={(event) => setControlForm((old) => ({
               ...old, testRequired: event.target.value === "true" ? "true" : "false",
             }))}>
             <Option value="false">{t("globalControl.no")}</Option>
             <Option value="true">{t("globalControl.yes")}</Option>
-          </Select>
+          </Select></MasterDataFormField>
         </>}
-        <Label>{t("globalControl.validFrom")}</Label>
-        <PersianDatePicker value={form.validFrom} disabled={busy}
+        <MasterDataFormField label={t("globalControl.validFrom")}><PersianDatePicker value={form.validFrom} disabled={busy}
           accessibleName={t("globalControl.validFrom")}
           invalidValueMessage={t("globalControl.errors.dates")}
           onChange={(value) => groupEditor
@@ -563,9 +597,8 @@ export default function GlobalControlManagementPage() {
             : setControlForm((old) => ({ ...old, validFrom: value }))}
           onDraftStateChange={(state) => setDateDrafts((old) =>
             old.validFrom.valid === state.valid && old.validFrom.draftValue === state.draftValue
-              && old.validFrom.dirty === state.dirty ? old : { ...old, validFrom: state })} />
-        <Label>{t("globalControl.validTo")}</Label>
-        <PersianDatePicker value={form.validTo} disabled={busy}
+              && old.validFrom.dirty === state.dirty ? old : { ...old, validFrom: state })} /></MasterDataFormField>
+        <MasterDataFormField label={t("globalControl.validTo")}><PersianDatePicker value={form.validTo} disabled={busy}
           accessibleName={t("globalControl.validTo")}
           invalidValueMessage={t("globalControl.errors.dates")}
           onChange={(value) => groupEditor
@@ -573,12 +606,12 @@ export default function GlobalControlManagementPage() {
             : setControlForm((old) => ({ ...old, validTo: value }))}
           onDraftStateChange={(state) => setDateDrafts((old) =>
             old.validTo.valid === state.valid && old.validTo.draftValue === state.draftValue
-              && old.validTo.dirty === state.dirty ? old : { ...old, validTo: state })} />
-        <Label>{t("globalControl.description")}</Label>
-        <TextArea value={form.description} disabled={busy} rows={3}
+              && old.validTo.dirty === state.dirty ? old : { ...old, validTo: state })} /></MasterDataFormField>
+        <MasterDataFormField label={t("globalControl.description")} wide><TextArea value={form.description} disabled={busy} rows={3}
           onInput={(event) => groupEditor
             ? setGroupForm((old) => ({ ...old, description: event.target.value }))
-            : setControlForm((old) => ({ ...old, description: event.target.value }))} />
+            : setControlForm((old) => ({ ...old, description: event.target.value }))} /></MasterDataFormField>
+        </div>
       </div>
       {!groupEditor && editorTab === "regulations" ? regulationPanel : null}
       {!groupEditor && editor ? <div className={editorTab === "documents"
@@ -594,6 +627,7 @@ export default function GlobalControlManagementPage() {
           || (!groupEditor && (!documents.ready || documents.invalid || documents.uploading))}
           onClick={() => void save()}>{t("common.save")}</Button>
         <Button design="Transparent" onClick={closeEditor}>{t("common.cancel")}</Button>
+      </div>
       </div>
     </Dialog>
     <DeleteConfirmDialog open={Boolean(deleteCandidate)}

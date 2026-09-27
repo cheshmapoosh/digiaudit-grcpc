@@ -24,6 +24,7 @@
   "objective.description": "Description",
   "objective.owner": "Owner",
   "objective.createdAt": "Created at",
+  "objective.updatedAt": "Updated at",
   "objective.validFrom": "Valid from",
   "objective.validTo": "Valid to",
   "objective.documents": "Documents",

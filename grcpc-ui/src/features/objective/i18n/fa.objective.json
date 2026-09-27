@@ -24,6 +24,7 @@
   "objective.description": "توضیحات",
   "objective.owner": "مالک",
   "objective.createdAt": "تاریخ ایجاد",
+  "objective.updatedAt": "تاریخ ویرایش",
   "objective.validFrom": "تاریخ اعتبار از",
   "objective.validTo": "تاریخ اعتبار تا",
   "objective.documents": "مستندات",

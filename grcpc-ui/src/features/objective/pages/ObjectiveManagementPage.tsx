@@ -1,4 +1,4 @@
-import { createElement, useEffect, useMemo, useState } from "react";
+import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -15,9 +15,10 @@ import { useMasterDataAccess } from "@/features/master-data/security/masterDataA
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import { MasterDataFormField, MasterDataObjectHeader } from "@/shared/components/MasterDataObjectHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
-import { formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type { Objective, ObjectiveCreate, ObjectiveOrganizationLink, ObjectiveOrganizationOption, ObjectiveUpdate } from "../domain/objective.model";
 import { objectiveApi } from "../infra/objective.api.repo";
 import { useObjectiveState } from "../state/objective.state";
@@ -99,6 +100,7 @@ export default function ObjectiveManagementPage() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<"create" | "view" | "edit" | null>(null);
+  const savedClose = useRef(false);
   const [activeTab, setActiveTab] = useState<"general" | "organizations" | "documents">("general");
   const [organizations, setOrganizations] = useState<ObjectiveOrganizationLink[]>([]);
   const [organizationOptions, setOrganizationOptions] = useState<ObjectiveOrganizationOption[]>([]);
@@ -137,7 +139,8 @@ export default function ObjectiveManagementPage() {
     return () => { current = false; };
   }, [selectedId, mode]);
 
-  const begin = (nextMode: "create" | "view" | "edit") => {
+  const begin = (nextMode: "create" | "view" | "edit", preserveTab = false) => {
+    savedClose.current = false;
     if (nextMode !== "create") setOrganizationsLoading(true);
     else setOrganizations([]);
     const next = nextMode === "create"
@@ -152,11 +155,12 @@ export default function ObjectiveManagementPage() {
       validTo: { draftValue: "", valid: true, dirty: false },
     });
     setError(null);
-    setActiveTab("general");
+    if (!preserveTab) setActiveTab("general");
     setMode(nextMode);
   };
 
   const close = () => {
+    if (savedClose.current) return;
     if (dirty) setLeaveOpen(true);
     else setMode(null);
   };
@@ -192,8 +196,8 @@ export default function ObjectiveManagementPage() {
         await update(selected.id, { ...common, version: selected.version } satisfies ObjectiveUpdate);
       }
       setDraftGeneration((value) => value + 1);
-      setOrganizationsLoading(true);
-      setMode("view");
+      savedClose.current = true;
+      setMode(null);
       setError(null);
     } catch (cause) { setError(errorText(cause)); }
     finally { setBusy(false); }
@@ -311,6 +315,17 @@ export default function ObjectiveManagementPage() {
     <Dialog open={mode !== null} className="objectiveDialog" onClose={close}
       accessibleName={dialogTitle}>
       <ModalDialogHeader title={dialogTitle} onClose={close} />
+      <div className="objectiveDialogContent">
+      <MasterDataObjectHeader title={form.name || dialogTitle} fields={[
+        { label: t("objective.code"), value: form.code },
+        { label: t("objective.name"), value: form.name },
+        { label: t("objective.type"), value: form.objectiveType },
+        { label: t("objective.parent"), value: items.find((item) => item.id === form.parentObjectiveId)?.name || t("objective.noParent") },
+        { label: t("objective.validFrom"), value: formatPersianDate(form.validFrom) },
+        { label: t("objective.validTo"), value: formatPersianDate(form.validTo) },
+        { label: t("objective.createdAt"), value: selected && mode !== "create" ? formatPersianDateTime(selected.createdAt) : "" },
+        { label: t("objective.updatedAt"), value: selected && mode !== "create" ? formatPersianDateTime(selected.updatedAt) : "" },
+      ]} />
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key");
         if (key === "general" || key === "organizations" || key === "documents") setActiveTab(key);
@@ -320,46 +335,40 @@ export default function ObjectiveManagementPage() {
         <Tab text={t("objective.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
       </DetailTabContainer>
       <div className={activeTab === "general" ? "objectiveForm" : "objectiveForm objectiveTabHidden"}>
-        <Label required>{t("objective.code")}</Label>
-        <Input value={form.code} readonly={mode !== "create"} disabled={busy}
-          onInput={(event) => setForm((old) => ({ ...old, code: event.target.value }))} />
-        <Label required>{t("objective.name")}</Label>
-        <Input value={form.name} readonly={readOnly} disabled={busy}
-          onInput={(event) => setForm((old) => ({ ...old, name: event.target.value }))} />
-        <Label>{t("objective.type")}</Label>
-        <Input value={form.objectiveType} readonly={readOnly} disabled={busy}
-          onInput={(event) => setForm((old) => ({ ...old, objectiveType: event.target.value }))} />
-        <Label>{t("objective.parent")}</Label>
-        <Select value={form.parentObjectiveId} disabled={busy || readOnly} accessibleName={t("objective.parent")}
-          onChange={(event) => setForm((old) => ({ ...old, parentObjectiveId: event.target.value }))}>
-          <Option value="">{t("objective.noParent")}</Option>
-          {items.filter((item) => (mode !== "edit" || item.id !== selectedId) && !blockedParents.has(item.id))
-            .map((item) => <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-        </Select>
-        <Label>{t("objective.validFrom")}</Label>
-        <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("objective.validFrom")}
-          invalidValueMessage={t("objective.errors.dates")}
-          onChange={(value) => setForm((old) => ({ ...old, validFrom: value }))}
-          onDraftStateChange={(state) => setDateDrafts((old) =>
-            old.validFrom.valid === state.valid && old.validFrom.draftValue === state.draftValue
-              && old.validFrom.dirty === state.dirty ? old : { ...old, validFrom: state })} />
-        <Label>{t("objective.validTo")}</Label>
-        <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("objective.validTo")}
-          invalidValueMessage={t("objective.errors.dates")}
-          onChange={(value) => setForm((old) => ({ ...old, validTo: value }))}
-          onDraftStateChange={(state) => setDateDrafts((old) =>
-            old.validTo.valid === state.valid && old.validTo.draftValue === state.draftValue
-              && old.validTo.dirty === state.dirty ? old : { ...old, validTo: state })} />
-        <Label>{t("objective.description")}</Label>
-        <TextArea value={form.description} readonly={readOnly} disabled={busy} rows={3}
-          onInput={(event) => setForm((old) => ({ ...old, description: event.target.value }))} />
-        {selected && mode !== "create" ? <Label>{t("objective.createdAt")}: {formatPersianDateTime(selected.createdAt)}</Label> : null}
+        <div className="masterDataFormGrid">
+          <MasterDataFormField label={t("objective.code")} required><Input value={form.code} readonly={mode !== "create"} disabled={busy}
+            onInput={(event) => setForm((old) => ({ ...old, code: event.target.value }))} /></MasterDataFormField>
+          <MasterDataFormField label={t("objective.name")} required><Input value={form.name} readonly={readOnly} disabled={busy}
+            onInput={(event) => setForm((old) => ({ ...old, name: event.target.value }))} /></MasterDataFormField>
+          <MasterDataFormField label={t("objective.type")}><Input value={form.objectiveType} readonly={readOnly} disabled={busy}
+            onInput={(event) => setForm((old) => ({ ...old, objectiveType: event.target.value }))} /></MasterDataFormField>
+          <MasterDataFormField label={t("objective.parent")}><Select value={form.parentObjectiveId} disabled={busy || readOnly} accessibleName={t("objective.parent")}
+            onChange={(event) => setForm((old) => ({ ...old, parentObjectiveId: event.target.value }))}>
+            <Option value="">{t("objective.noParent")}</Option>
+            {items.filter((item) => (mode !== "edit" || item.id !== selectedId) && !blockedParents.has(item.id))
+              .map((item) => <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
+          </Select></MasterDataFormField>
+          <MasterDataFormField label={t("objective.validFrom")}><PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("objective.validFrom")}
+            invalidValueMessage={t("objective.errors.dates")}
+            onChange={(value) => setForm((old) => ({ ...old, validFrom: value }))}
+            onDraftStateChange={(state) => setDateDrafts((old) =>
+              old.validFrom.valid === state.valid && old.validFrom.draftValue === state.draftValue
+                && old.validFrom.dirty === state.dirty ? old : { ...old, validFrom: state })} /></MasterDataFormField>
+          <MasterDataFormField label={t("objective.validTo")}><PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("objective.validTo")}
+            invalidValueMessage={t("objective.errors.dates")}
+            onChange={(value) => setForm((old) => ({ ...old, validTo: value }))}
+            onDraftStateChange={(state) => setDateDrafts((old) =>
+              old.validTo.valid === state.valid && old.validTo.draftValue === state.draftValue
+                && old.validTo.dirty === state.dirty ? old : { ...old, validTo: state })} /></MasterDataFormField>
+          <MasterDataFormField label={t("objective.description")} wide><TextArea value={form.description} readonly={readOnly} disabled={busy} rows={3}
+            onInput={(event) => setForm((old) => ({ ...old, description: event.target.value }))} /></MasterDataFormField>
+        </div>
       </div>
       <div className={activeTab === "organizations" ? "objectiveOrganizationTab" : "objectiveOrganizationTab objectiveTabHidden"}>
         {mode === "create" ? <MessageStrip design="Information" hideCloseButton>{t("objective.organizations.saveFirst")}</MessageStrip>
           : organizationsLoading ? <BusyIndicator active delay={0} />
             : <>
-              <div className="objectiveActions">
+              {mode === "edit" ? <div className="objectiveActions">
                 <Select value={organizationId} disabled={!manage || busy}
                   accessibleName={t("objective.organizations.select")}
                   onChange={(event) => setOrganizationId(event.target.value)}>
@@ -371,19 +380,19 @@ export default function ObjectiveManagementPage() {
                 </Select>
                 <Button disabled={!manage || busy || !organizationId}
                   onClick={() => void assignOrganization()}>{t("objective.organizations.assign")}</Button>
-              </div>
+              </div> : null}
               {organizations.length ? <Table headerRow={<TableHeaderRow>
               <TableHeaderCell>{t("objective.organizations.unit")}</TableHeaderCell>
               <TableHeaderCell>{t("objective.organizations.assignment")}</TableHeaderCell>
               <TableHeaderCell>{t("objective.owner")}</TableHeaderCell>
-              <TableHeaderCell>{t("objective.actions")}</TableHeaderCell>
+              {mode === "edit" ? <TableHeaderCell>{t("objective.actions")}</TableHeaderCell> : null}
             </TableHeaderRow>}>
               {organizations.map((link) => <TableRow key={link.organizationId}>
                 <TableCell>{link.organizationCode} · {link.organizationName}</TableCell>
                 <TableCell>{link.name}</TableCell>
                 <TableCell>{link.owner || "—"}</TableCell>
-                <TableCell><Button design="Negative" disabled={!manage || busy}
-                  onClick={() => setOrganizationDeleteCandidate(link)}>{t("objective.organizations.remove")}</Button></TableCell>
+                {mode === "edit" ? <TableCell><Button design="Negative" disabled={!manage || busy}
+                  onClick={() => setOrganizationDeleteCandidate(link)}>{t("objective.organizations.remove")}</Button></TableCell> : null}
               </TableRow>)}
             </Table> : <MessageStrip design="Information" hideCloseButton>{t("objective.organizations.empty")}</MessageStrip>}
             </>}
@@ -397,10 +406,11 @@ export default function ObjectiveManagementPage() {
       </div>
       <div className="objectiveActions objectiveDialogActions">
         {readOnly ? <Button design="Emphasized" disabled={!manage || busy}
-          onClick={() => begin("edit")}>{t("common.edit")}</Button>
+          onClick={() => begin("edit", true)}>{t("common.edit")}</Button>
           : <Button design="Emphasized" disabled={busy || !dirty || invalidDateDraft || !documents.ready || documents.invalid || documents.uploading}
             onClick={() => void save()}>{t("common.save")}</Button>}
         <Button design="Transparent" onClick={close}>{t(readOnly ? "common.close" : "common.cancel")}</Button>
+      </div>
       </div>
     </Dialog>
     <DeleteConfirmDialog open={Boolean(deleteCandidate)} title={t("objective.delete")}

@@ -1,6 +1,8 @@
 {
   "globalControl.title": "General Controls",
   "globalControl.search": "Search by name or code",
+  "globalControl.tree.name": "Name",
+  "globalControl.tree.kind": "Type",
   "globalControl.loading": "Loading General Controls…",
   "globalControl.group.create": "Create General Control Group",
   "globalControl.group.menu": "General Control Group",
@@ -25,6 +27,7 @@
   "globalControl.validFrom": "Valid From",
   "globalControl.validTo": "Valid To",
   "globalControl.createdAt": "Created At",
+  "globalControl.updatedAt": "Updated At",
   "globalControl.actions": "Actions",
   "globalControl.tabs.general": "General Information",
   "globalControl.tabs.regulations": "Regulations",

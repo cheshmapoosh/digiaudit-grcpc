@@ -1,6 +1,8 @@
 {
   "globalControl.title": "کنترل‌های عمومی",
   "globalControl.search": "جستجو بر اساس نام یا کد",
+  "globalControl.tree.name": "نام",
+  "globalControl.tree.kind": "نوع",
   "globalControl.loading": "در حال بارگذاری کنترل‌های عمومی…",
   "globalControl.group.create": "ایجاد گروه کنترل عمومی",
   "globalControl.group.menu": "گروه کنترل عمومی",
@@ -25,6 +27,7 @@
   "globalControl.validFrom": "تاریخ اعتبار از",
   "globalControl.validTo": "تاریخ اعتبار تا",
   "globalControl.createdAt": "تاریخ ایجاد",
+  "globalControl.updatedAt": "تاریخ ویرایش",
   "globalControl.actions": "اقدامات",
   "globalControl.tabs.general": "اطلاعات کلی",
   "globalControl.tabs.regulations": "قوانین",

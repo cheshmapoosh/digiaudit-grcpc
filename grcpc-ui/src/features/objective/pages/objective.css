@@ -9,9 +9,10 @@
 .objectiveDetails { display: grid; gap: .5rem; }
 .objectiveTreeLabel { padding: .35rem; }
 .objectiveDialog { width: 90vw; max-width: 90vw; }
-.objectiveForm { display: grid; gap: .5rem; padding: 1rem; max-height: 75vh; overflow: auto; }
+.objectiveDialogContent { width: 86vw; max-width: 86vw; display: grid; gap: .75rem; padding: 1rem; box-sizing: border-box; }
+.objectiveForm { padding: 1rem; max-height: 60vh; overflow: auto; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
 .objectiveDocumentTab { padding: 1rem; max-height: 75vh; overflow: auto; }
 .objectiveOrganizationTab { padding: 1rem; max-height: 75vh; overflow: auto; }
 .objectiveTabHidden { display: none; }
 .objectiveDialogActions { padding: .75rem 1rem; }
-@media (max-width: 720px) { .objectiveFcl { min-height: 30rem; } .objectiveDialog { width: 96vw; max-width: 96vw; } }
+@media (max-width: 720px) { .objectiveFcl { min-height: 30rem; } .objectiveDialog { width: 96vw; max-width: 96vw; } .objectiveDialogContent { width: 92vw; max-width: 92vw; } }
