@@ -12,6 +12,7 @@
 .globalControlToolbar, .globalControlActions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .globalControlDetails { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1.25rem; padding: 1rem; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
 .globalControlForm { padding: 1rem; max-height: 60vh; overflow: auto; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
+.globalControlValidityRow { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1.25rem; }
 .globalControlDialog { width: 90vw; max-width: 90vw; }
 .globalControlDialogContent { width: 86vw; max-width: 86vw; display: grid; gap: .75rem; padding: 1rem; box-sizing: border-box; }
 .globalControlRelationTab { padding: 1rem; max-height: 68vh; overflow: auto; display: grid; gap: .75rem; }
@@ -23,5 +24,5 @@
 .globalControlDocumentTab { padding: 1rem; max-height: 68vh; overflow: auto; }
 .globalControlHidden { display: none; }
 .globalControlDialogActions { justify-content: center; padding: .75rem 1rem; }
-@media (max-width: 900px) { .globalControlDetails { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .globalControlDetails, .globalControlValidityRow { grid-template-columns: 1fr; } }
 @media (max-width: 720px) { .globalControlFcl { min-height: 30rem; } .globalControlDialog { width: 96vw; max-width: 96vw; } .globalControlDialogContent { width: 92vw; max-width: 92vw; } .globalControlTreeHeader, .globalControlTreeRow { grid-template-columns: minmax(0, 1fr) 6rem; } .globalControlRegulationToolbar { flex-wrap: wrap; } .globalControlRegulationStatus { flex: 1 1 10rem; } }

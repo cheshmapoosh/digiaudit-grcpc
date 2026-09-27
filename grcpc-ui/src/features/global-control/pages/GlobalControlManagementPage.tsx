@@ -637,6 +637,7 @@ export default function GlobalControlManagementPage() {
             <Option value="true">{t("globalControl.yes")}</Option>
           </Select></MasterDataFormField>
         </>}
+        <div className="globalControlValidityRow">
         <MasterDataFormField label={t("globalControl.validFrom")}><PersianDatePicker value={form.validFrom} disabled={busy}
           accessibleName={t("globalControl.validFrom")}
           invalidValueMessage={t("globalControl.errors.dates")}
@@ -655,6 +656,7 @@ export default function GlobalControlManagementPage() {
           onDraftStateChange={(state) => setDateDrafts((old) =>
             old.validTo.valid === state.valid && old.validTo.draftValue === state.draftValue
               && old.validTo.dirty === state.dirty ? old : { ...old, validTo: state })} /></MasterDataFormField>
+        </div>
         <MasterDataFormField label={t("globalControl.description")} wide><TextArea value={form.description} disabled={busy} rows={3}
           onInput={(event) => groupEditor
             ? setGroupForm((old) => ({ ...old, description: event.target.value }))
