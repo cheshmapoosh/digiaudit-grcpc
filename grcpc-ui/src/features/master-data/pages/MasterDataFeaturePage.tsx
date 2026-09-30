@@ -17,16 +17,16 @@ type MasterDataItem = {
 // The order follows the RTL launcher in the supplied governance layout.
 const MASTER_DATA_ITEMS: MasterDataItem[] = [
     { key: "organizations", icon: "org-chart", iconTone: 6, route: "/organizations" },
+    { key: "processes", icon: "process", iconTone: 8, route: "/processes" },
     { key: "controls", icon: "shield", iconTone: 2, route: "/controls" },
     { key: "risks", icon: "alert", iconTone: 1, route: "/risks" },
     { key: "accounts", icon: "employee", iconTone: 7, route: "/access-control/users", access: "users" },
-    { key: "regulations", icon: "document-text", iconTone: 5, route: "/regulations" },
-    { key: "globalControls", icon: "copy", iconTone: 4, route: "/global-controls" },
+    { key: "regulations", icon: "official-service", iconTone: 5, route: "/regulations" },
+    { key: "globalControls", icon: "checklist", iconTone: 4, route: "/global-controls" },
     { key: "businessObjectives", icon: "flag", iconTone: 3, route: "/objectives" },
     { key: "objectives", icon: "target-group", iconTone: 8, route: "/control-objectives" },
     { key: "accountGroups", icon: "group", iconTone: 7, route: "/account-groups" },
     { key: "policies", icon: "document-text", iconTone: 4, route: "/policies" },
-    { key: "processes", icon: "org-chart", iconTone: 8, route: "/processes" },
 ];
 
 export default function MasterDataFeaturePage() {
