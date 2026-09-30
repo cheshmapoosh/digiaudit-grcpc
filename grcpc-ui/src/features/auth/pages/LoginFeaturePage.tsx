@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Button, CheckBox, Input, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
+import { Button, CheckBox, Input, MessageStrip, Text } from "@ui5/webcomponents-react";
 import { useAuthState } from "@/features/auth";
 import { useInitialAppReady } from "@/shared/bootstrap/useInitialAppReady";
 import { resolveLoginReturnUrl, type LoginRouterState } from "@/features/auth/utils/returnUrl";
-import DigiAuditBrand from "@/shared/components/DigiAuditBrand";
 import { applySettings, loadSettings, saveSettings } from "@/ui/ui-settings";
 import "./login.css";
 
@@ -67,7 +66,7 @@ export default function LoginFeaturePage() {
         <div className="loginPage" dir={isFa ? "rtl" : "ltr"}>
             <section className="loginHero" aria-label={t("auth.login.hero.ariaLabel")}>
                 <div className="loginHeroCopy">
-                    <DigiAuditBrand light />
+                    <img className="loginHeroBrand" src="/images/digi-audit-login-wordmark-light.svg" alt="Digi Audit" />
                     <h1>{t("auth.login.hero.platform")}</h1>
                     <p className="loginHeroModules">{t("auth.login.hero.modules")}</p>
                     <p className="loginHeroTagline">{t("auth.login.hero.tagline")}</p>
@@ -77,11 +76,10 @@ export default function LoginFeaturePage() {
                     <span>{t("auth.login.hero.trusted")}</span><span>{t("auth.login.hero.efficient")}</span>
                 </div>
             </section>
-            <section className="loginPanel">
+            <section className="loginPanel" aria-label={t("auth.login.welcome")}>
                 <div className="loginLanguage"><Button design="Transparent" icon="world" onClick={toggleLanguage}>{isFa ? "فارسی" : "English"}</Button></div>
                 <div className="loginPanelContent">
-                    <DigiAuditBrand />
-                    <Title level="H2" className="loginWelcome">{t("auth.login.welcome")}</Title>
+                    <img className="loginPanelBrand" src="/images/digi-audit-wordmark.svg" alt="Digi Audit" />
                     <Text className="loginIntro">{t("auth.login.intro")}</Text>
                     <form className="loginForm" onSubmit={(event) => void handleSubmit(event)}>
                         {error && <MessageStrip design="Negative" onClose={clearError}>{error}</MessageStrip>}
@@ -110,7 +108,6 @@ export default function LoginFeaturePage() {
                             {submitting ? t("auth.login.actions.submitting") : t("auth.login.actions.submit")}
                         </Button>
                     </form>
-                    <div className="loginTrust"><span>{t("auth.login.or")}</span><p>♢ {t("auth.login.trust")}</p></div>
                 </div>
                 <div className="loginPowered"><img src="/images/digi-audit-mark.svg" alt="" /><span>{t("auth.login.poweredBy")} <strong>Digi Audit</strong><small>{t("auth.login.hero.platform")}</small></span></div>
             </section>

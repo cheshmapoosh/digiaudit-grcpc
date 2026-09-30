@@ -69,6 +69,8 @@ export default function LocalOrganizationWorkspace({
         referenceManage && spec.areas.every((area) => canAccessMasterData(me, area)),
     [me, referenceManage]);
     const visibleSections = LOCAL_SECTIONS.filter((spec) => spec.tab === tab && canRead(spec));
+    const sectionButtons = visibleSections.filter((spec) =>
+        spec.key !== "requirement-scopes" && spec.key !== "control-objective-scopes");
     const requestedSection = isSection(rawSection) ? LOCAL_SECTION_BY_KEY[rawSection] : null;
     const activeSpec = requestedSection?.tab === tab && canRead(requestedSection)
         ? requestedSection : visibleSections[0] ?? null;
@@ -228,13 +230,13 @@ export default function LocalOrganizationWorkspace({
     }
 
     return <div style={{ display: "grid", gap: "0.8rem" }}>
-        <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-            {visibleSections.map((spec) => <Button key={spec.key}
+        {sectionButtons.length > 0 ? <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+            {sectionButtons.map((spec) => <Button key={spec.key}
                 design={activeSpec?.key === spec.key ? "Emphasized" : "Transparent"}
                 onClick={() => setSection(spec)}>
                 {t(spec.labelKey, { defaultValue: spec.labelFa })}
             </Button>)}
-        </div>
+        </div> : null}
         {processView && tab !== "subprocesses" && activeSpec?.key !== "organization-policies"
             ? <div style={{ display: "grid", gap: "0.3rem" }}>
                 <Title level="H6">{t("local.contextSelector", {

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import {
     ShellBarItem,
+    ButtonBadge,
     Popover,
     List,
     ListItemCustom,
@@ -21,11 +22,12 @@ export type NotificationItem = {
 
 type Props = {
     items: NotificationItem[];
+    trigger?: "shellbar" | "button";
     onOpenItem?: (item: NotificationItem) => void;
     onMarkAllRead?: () => void;
 };
 
-export default function NotificationMenu({ items, onOpenItem, onMarkAllRead }: Props) {
+export default function NotificationMenu({ items, trigger = "shellbar", onOpenItem, onMarkAllRead }: Props) {
     const { t } = useTranslation();
 
     const [open, setOpen] = useState(false);
@@ -86,8 +88,7 @@ export default function NotificationMenu({ items, onOpenItem, onMarkAllRead }: P
                     headerText={t("notifications.title")}
                     style={{ width: 360, maxWidth: "90vw", maxHeight: "70vh" }}
                 >
-                    {/* Header actions (بدون دکمه بستن) */}
-                    <div style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    {items.length > 0 && <div style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <Text style={{ fontSize: 12, opacity: 0.7 }}>
                             {unreadCount > 0 ? t("notifications.unreadCount", { count: unreadCount }) : t("notifications.allRead")}
                         </Text>
@@ -99,7 +100,7 @@ export default function NotificationMenu({ items, onOpenItem, onMarkAllRead }: P
                         >
                             {t("notifications.markAllRead")}
                         </Button>
-                    </div>
+                    </div>}
 
                     {/* ✅ Scrollable list area */}
                     <div style={{ maxHeight: "50vh", overflowY: "auto" }}>
@@ -160,12 +161,19 @@ export default function NotificationMenu({ items, onOpenItem, onMarkAllRead }: P
 
     return (
         <>
-            <ShellBarItem
+            {trigger === "shellbar" ? <ShellBarItem
                 id={openerId}
                 icon="bell"
                 text={unreadCount > 0 ? `${t("shell.notifications")} (${unreadCount})` : t("shell.notifications")}
                 onClick={openMenu}
-            />
+            /> : <Button
+                id={openerId}
+                icon="bell"
+                design="Transparent"
+                accessibleName={t("shell.notifications")}
+                badge={unreadCount > 0 ? <ButtonBadge design="OverlayText" text={String(unreadCount)} /> : undefined}
+                onClick={openMenu}
+            />}
             {popoverNode}
         </>
     );

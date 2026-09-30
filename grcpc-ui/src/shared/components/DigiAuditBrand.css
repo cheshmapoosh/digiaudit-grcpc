@@ -3,3 +3,4 @@
 .digiAuditBrand strong { font-weight: 300; }
 .digiAuditBrand--light { color: white; }
 .digiAuditBrand--compact { font-size: 1.8rem; }
+.digiAuditBrand--markOnly img { width: 2.1em; height: 1.45em; }

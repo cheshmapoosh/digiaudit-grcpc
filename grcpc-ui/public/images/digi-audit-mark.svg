@@ -1,6 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 80" role="img" aria-label="Digi Audit">
-  <path fill="#080e5f" d="M16 8h22c21 0 34 13 34 32S59 72 38 72H16V55h22c11 0 17-6 17-15s-6-15-17-15H16z"/>
-  <path fill="#080e5f" d="M68 71 82 9h8L75 71z"/>
-  <path fill="#22c3df" d="M4 12h8v8H4zm8 8h7v7h-7zm-8 8h7v7H4zm9 7h7v7h-7z"/>
-  <path fill="#22c3df" d="M57 65C67 38 80 24 96 15 82 31 70 49 57 73c-5-10-10-17-17-24 8 3 13 8 17 16Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 104 72" role="img" aria-label="Digi Audit">
+  <g fill="#26c4dc">
+    <path d="M3 12h7v7H3zm7 7h7v7h-7zM3 27h7v7H3zm9 9h7v7h-7z"/>
+  </g>
+  <path fill="#080e5f" d="M19 7h20c22 0 36 13 36 29S61 65 39 65H19V52h20c14 0 22-6 22-16s-8-16-22-16H19z"/>
+  <path fill="#080e5f" d="M64 65 81 8h7L72 65z"/>
+  <path fill="#080e5f" d="M88 8 104 65h-8L84 23z"/>
+  <path fill="#26c4dc" d="M76 47c8-14 17-23 28-28-12 9-20 19-27 31z"/>
 </svg>

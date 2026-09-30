@@ -1,154 +1,114 @@
 .masterDataPage {
     min-height: 100%;
-    padding: 1.5rem 1.5rem 2.5rem;
     box-sizing: border-box;
-    background: var(--sapBackgroundColor);
+    padding: 1.65rem 1.35rem 2rem;
+    background: #f3f6fa;
+    color: #202b43;
 }
 
-.masterDataHero {
-    width: min(76rem, 100%);
-    margin: 0 auto;
-    padding: 1.25rem 1.5rem;
-    box-sizing: border-box;
-    direction: rtl;
+.masterDataBreadcrumb {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    border: 1px solid var(--sapGroup_ContentBorderColor);
-    border-top: 3px solid var(--sapBrandColor, var(--sapInformativeColor));
-    border-radius: 0.5rem;
-    background: var(--sapGroup_ContentBackground);
+    gap: .9rem;
+    min-height: 2rem;
+    margin: 0 .55rem 1.3rem;
+    direction: rtl;
 }
 
-.masterDataHeroIcon {
-    width: 3.75rem;
-    height: 3.75rem;
-    flex: 0 0 3.75rem;
-    display: grid;
-    place-items: center;
-    border-radius: 0.4rem;
-    color: var(--sapBrandColor, var(--sapInformativeColor));
-    background: color-mix(in srgb, var(--sapBrandColor, var(--sapInformativeColor)) 8%, var(--sapList_Background));
-    border: 1px solid color-mix(in srgb, var(--sapBrandColor, var(--sapInformativeColor)) 18%, var(--sapGroup_ContentBorderColor));
+.masterDataBreadcrumb ui5-link {
+    color: #808ca5;
+    text-decoration: none;
+    font-size: .92rem;
 }
 
-.masterDataHeroIcon ui5-icon {
-    width: 1.9rem;
-    height: 1.9rem;
+.masterDataBreadcrumb ui5-icon {
+    width: .8rem;
+    height: .8rem;
+    color: #8b97aa;
 }
 
-.masterDataHeroText {
-    min-width: 0;
-}
-
-.masterDataEyebrow {
-    display: inline-block;
-    margin-bottom: 0.15rem;
-    color: var(--sapContent_LabelColor);
-    font-size: var(--sapFontSmallSize);
+.masterDataBreadcrumb h1 {
+    margin: 0;
+    color: #102d70;
+    font-size: 1.03rem;
     font-weight: 700;
-    letter-spacing: 0.03em;
-}
-
-.masterDataSubtitle {
-    margin: 0.35rem 0 0;
-    max-width: 48rem;
-    color: var(--sapContent_LabelColor);
-    line-height: 1.8;
-}
-
-.masterDataSections {
-    width: min(76rem, 100%);
-    margin: 1.25rem auto 0;
-    direction: rtl;
-    display: grid;
-    gap: 1.25rem;
-}
-
-.masterDataSection {
-    min-width: 0;
-    padding: 0;
-    border: 1px solid var(--sapGroup_ContentBorderColor);
-    border-radius: 0.5rem;
-    background: var(--sapGroup_ContentBackground);
-    overflow: hidden;
-}
-
-.masterDataSectionHeader {
-    display: flex;
-    align-items: center;
-    min-height: 3.25rem;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--sapGroup_ContentBorderColor);
-    background: var(--sapList_HeaderBackground);
 }
 
 .masterDataTileGrid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0;
-    padding: 1px;
-    background: var(--sapGroup_ContentBorderColor);
-}
-
-.masterDataTile {
-    min-width: 0;
-    min-height: 7.75rem;
-    padding: 1rem 1.1rem;
-    box-sizing: border-box;
-    border: 0;
-    border-inline-start: 3px solid transparent;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas: "icon body";
-    align-items: center;
-    gap: 0.95rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .75rem;
     direction: rtl;
-    text-align: start;
-    color: var(--sapTextColor);
-    background: var(--sapList_Background);
-    cursor: pointer;
-    font: inherit;
-    appearance: none;
-    transition:
-        background-color 120ms ease,
-        border-color 120ms ease;
 }
 
-.masterDataTile:hover {
-    border-inline-start-color: var(--sapBrandColor, var(--sapInformativeColor));
-    background: var(--sapList_Hover_Background, var(--sapList_Background));
-}
-
-.masterDataTile:active {
-    background: var(--sapList_Active_Background, var(--sapList_Background));
-}
-
-.masterDataTile:focus-visible {
+.masterDataTileCard {
     position: relative;
-    z-index: 1;
-    outline: 2px solid var(--sapContent_FocusColor);
-    outline-offset: -2px;
+    min-width: 0;
+    height: 10.35rem;
+    overflow: hidden;
+    border-radius: 0;
+    background: #fff;
+    --_ui5-v2-18-0_card_border: 1px solid #e6eaf0;
+    --_ui5-v2-18-0_card_border-radius: 0;
+    --_ui5-v2-18-0_card_box_shadow: none;
+    --_ui5-v2-18-0_card_hover_box_shadow: none;
+}
+
+.masterDataTileCard::part(root),
+.masterDataTileCard:hover::part(root) {
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.masterDataTileCard:hover,
+.masterDataTileCard:focus-within {
+    --_ui5-v2-18-0_card_border: 1px solid #a9c2e5;
+}
+
+.masterDataTileCard ui5-card-header {
+    width: 100%;
+    height: 8rem;
+    box-sizing: border-box;
+    --_ui5-v2-18-0_card_header_focus_radius: 0;
+    --_ui5-v2-18-0_card_header_focus_bottom_radius: 0;
+    --sapGroup_ContentBackground: #fff;
+    --sapTextColor: #222c43;
+    --sapContent_LabelColor: #7b849a;
+}
+
+.masterDataTileCard ui5-card-header::part(title),
+.masterDataTileCard ui5-card-header::part(subtitle) {
+    width: 100%;
+    direction: rtl;
+    text-align: right;
+}
+
+.masterDataTileCard ui5-card-header::part(title) {
+    font-size: 1rem;
+}
+
+.masterDataTileCard ui5-card-header::part(subtitle) {
+    max-height: 3.7rem;
+    font-size: .83rem;
+    line-height: 1.65;
+    -webkit-line-clamp: 3;
 }
 
 .masterDataTileIcon {
     --master-data-icon-accent: var(--sapBrandColor, var(--sapInformativeColor));
-
-    grid-area: icon;
-    width: 3.1rem;
-    height: 3.1rem;
-    flex: none;
     display: grid;
     place-items: center;
-    border-radius: 0.45rem;
+    width: 3.75rem;
+    height: 3.75rem;
+    border-radius: .55rem;
+    background: color-mix(in srgb, var(--master-data-icon-accent) 10%, var(--sapGroup_ContentBackground, #fff));
     color: var(--master-data-icon-accent);
-    background: color-mix(in srgb, var(--master-data-icon-accent) 9%, var(--sapGroup_ContentBackground));
-    border: 1px solid color-mix(in srgb, var(--master-data-icon-accent) 18%, var(--sapGroup_ContentBorderColor));
 }
 
 .masterDataTileIcon ui5-icon {
-    width: 1.55rem;
-    height: 1.55rem;
+    width: 1.85rem;
+    height: 1.85rem;
+    color: var(--master-data-icon-accent);
 }
 
 .masterDataTileIconTone1 { --master-data-icon-accent: var(--sapAccentColor1, var(--sapNegativeColor)); }
@@ -160,81 +120,29 @@
 .masterDataTileIconTone7 { --master-data-icon-accent: var(--sapAccentColor7, var(--sapPositiveColor)); }
 .masterDataTileIconTone8 { --master-data-icon-accent: var(--sapAccentColor8, var(--sapInformativeColor)); }
 
-.masterDataTileBody {
-    grid-area: body;
-    min-width: 0;
-    display: grid;
-    gap: 0.3rem;
+.masterDataTileArrow {
+    position: absolute;
+    inset-inline-end: auto;
+    left: 1rem;
+    bottom: 1rem;
+    border: 1px solid #e5e9ef;
+    border-radius: .4rem;
+    background: #fbfcfe;
 }
 
-.masterDataTileTitle {
-    color: var(--sapTextColor);
-    font-size: 1rem;
-    font-weight: 700;
-    line-height: 1.5;
+@media (max-width: 74rem) {
+    .masterDataTileGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-.masterDataTileDescription {
-    color: var(--sapContent_LabelColor);
-    font-size: var(--sapFontSmallSize);
-    line-height: 1.65;
+@media (max-width: 58rem) {
+    .masterDataTileGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (min-width: 70rem) {
-    .masterDataSection:first-child .masterDataTileGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .masterDataSection:last-child .masterDataTileGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+@media (max-width: 38rem) {
+    .masterDataPage { padding: 1rem .75rem 1.5rem; }
+    .masterDataTileGrid { grid-template-columns: 1fr; }
 }
 
-@media (min-width: 48.01rem) {
-    .masterDataTileCard:last-child:nth-child(2n + 1) {
-        grid-column: span 2;
-    }
-}
-
-@media (max-width: 48rem) {
-    .masterDataPage {
-        padding: 1rem 0.75rem 2rem;
-    }
-
-    .masterDataHero {
-        padding: 1rem;
-        align-items: flex-start;
-    }
-
-    .masterDataHeroIcon {
-        width: 3.1rem;
-        height: 3.1rem;
-        flex-basis: 3.1rem;
-    }
-
-    .masterDataTileGrid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 32rem) {
-    .masterDataHeroIcon {
-        display: none;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .masterDataTile {
-        transition: none;
-    }
-}
-
-.masterDataTileCard {
-    min-width: 0;
-    border-radius: 0;
-    box-shadow: none;
-}
-
-.masterDataTileCard ui5-card-header {
-    min-height: 7.75rem;
+@media (max-width: 42rem) {
+    .masterDataTileGrid { grid-template-columns: 1fr; }
 }

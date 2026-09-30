@@ -6,33 +6,36 @@
 /* Root app container */
 .appRoot {
     height: 100dvh;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 216px minmax(0, 1fr);
+    grid-template-rows: 5.7rem minmax(0, 1fr);
     min-width: 0;
     min-height: 0;
-    padding-block-end: 2rem;
     box-sizing: border-box;
     overflow: hidden;
-    background: var(--sapBackgroundColor);
+    background: #f3f6fa;
     color: var(--sapTextColor);
 }
 
-/* Body under ShellBar */
-.appBody {
-    flex: 1;
-    display: flex;
-    min-height: 0;
-    min-width: 0;
+.appRoot--sideNavCollapsed {
+    grid-template-columns: 56px minmax(0, 1fr);
 }
+
+.appBody { display: contents; }
 
 /* -----------------------------
    Side Navigation
 ------------------------------ */
 .sideNav {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
     overflow: hidden;
     transition: width 120ms ease;
-    border-inline-end: 1px solid #113875;
-    background: radial-gradient(ellipse at 0 110%, #0b63c0 0, transparent 30%), linear-gradient(155deg, #031747 0%, #061f5f 70%, #073d87 100%);
+    background: #06254b;
     --sapList_Background: transparent;
     --sapList_TextColor: #f3f8ff;
     --sapContent_IconColor: #9de7ff;
@@ -51,7 +54,7 @@
     --_ui5-v2-18-0_side_navigation_icon_color: #9de7ff;
     --_ui5-v2-18-0_side_navigation_expand_icon_color: #9de7ff;
 }
-.sideNav ui5-side-navigation { height: 100%; background: transparent; }
+.sideNav ui5-side-navigation { flex: 1; min-height: 0; height: auto; background: transparent; }
 .sideNav ui5-side-navigation-item,
 .sideNav ui5-side-navigation-sub-item {
     --sapList_TextColor: #f3f8ff;
@@ -70,19 +73,82 @@
     --_ui5_side_navigation_icon_color: #fff;
     --_ui5-v2-18-0_side_navigation_icon_color: #fff;
 }
-.sideNavBrand { padding: 1.1rem .8rem; min-height: 4.5rem; display: flex; align-items: center; justify-content: center; }
-.sideNavBrand img { width: 2.3rem; height: 2.3rem; }
-.sideNavBrand .digiAuditBrand { font-size: 1.5rem; }
+.sideNavBrand { flex: none; height: 5.7rem; box-sizing: border-box; padding: .65rem .35rem; display: flex; align-items: center; justify-content: center; }
+.sideNavBrandLink { display: inline-flex; align-items: center; justify-content: center; max-width: 100%; }
+.sideNavBrandLink::part(root) { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.sideNavBrandMark { width: 2.3rem; height: 2.3rem; object-fit: contain; }
+.sideNavBrandWordmark { display: block; width: min(11.5rem, 100%); height: 3rem; object-fit: contain; }
 
 /* -----------------------------
    Main Content Area
 ------------------------------ */
 .mainContent {
-    flex: 1;
+    grid-column: 2;
+    grid-row: 2;
     min-width: 0;
     min-height: 0;
     overflow: auto;
     padding: 12px; /* SAP desktop default */
+}
+
+.governanceHeader {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    height: 4rem;
+    margin: .8rem 1.15rem 0;
+    padding: 0 1rem;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    border: 1px solid #edf0f5;
+    border-radius: .45rem;
+    background: #fff;
+    box-shadow: 0 1px 4px rgb(31 52 81 / 3%);
+}
+
+.governanceHeaderLogo {
+    width: 5.7rem;
+    height: 3rem;
+    object-fit: contain;
+    padding-right: .8rem;
+    margin-right: .25rem;
+    border-right: 1px solid #e4e8ee;
+}
+
+.governanceHeader > ui5-button { flex: none; }
+
+.governanceProfileButton { max-width: 11rem; }
+
+.governanceHeaderSearch {
+    width: min(23rem, 34%);
+    flex: none;
+    margin-left: auto;
+}
+
+.governanceHeaderSearch ui5-input {
+    width: 100%;
+    direction: rtl;
+    border-radius: 2rem;
+}
+
+.governanceHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    flex: none;
+}
+
+.appRoot--masterData .mainContent {
+    padding: 0;
+}
+
+@media (max-width: 42rem) {
+    .governanceHeader { margin-inline: .5rem; padding-inline: .45rem; gap: .2rem; }
+    .governanceHeaderLogo { width: 3.25rem; padding-right: .3rem; margin-right: .1rem; }
+    .governanceProfileButton { max-width: 2.5rem; overflow: hidden; }
+    .governanceHeaderSearch { width: auto; min-width: 2.5rem; flex: 1; }
 }
 
 /* =========================================================

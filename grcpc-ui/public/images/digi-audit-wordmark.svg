@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" role="img" aria-label="Digi Audit">
+  <g fill="#26c4dc">
+    <path d="M3 13h6v6H3zm7 7h6v6h-6zM3 28h6v6H3zm8 8h6v6h-6z"/>
+  </g>
+  <path fill="#080e5f" d="M19 9h21c21 0 34 12 34 26S61 61 40 61H19V49h21c14 0 21-5 21-14s-7-14-21-14H19z"/>
+  <text x="81" y="55" fill="#080e5f" font-family="Arial, sans-serif" font-size="42" font-weight="300" letter-spacing="-1">IGI</text>
+  <path fill="#080e5f" d="M151 61 167 10h7l-15 51z"/>
+  <path fill="#080e5f" d="M175 10 192 61h-8l-13-38z"/>
+  <path fill="#26c4dc" d="M162 43c8-13 17-21 30-25-12 8-21 17-29 28z"/>
+  <text x="195" y="55" fill="#080e5f" font-family="Arial, sans-serif" font-size="42" font-weight="300" letter-spacing="-1">UDIT</text>
+</svg>

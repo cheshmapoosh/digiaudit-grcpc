@@ -1,11 +1,13 @@
 import { MASTER_DATA_AREAS, canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {Outlet, useLocation, useNavigate} from "react-router-dom";
 import {useTranslation} from "react-i18next";
 
 import {
     Button,
-    ShellBar,
+    FlexBox,
+    Input,
+    Link,
     SideNavigation,
     SideNavigationItem,
     SideNavigationSubItem,
@@ -19,9 +21,7 @@ import NotificationMenu, {
 } from "./components/NotificationMenu";
 import UserProfileMenu from "./components/UserProfileMenu";
 import {useAuthState} from "@/features/auth";
-import {AppFooter} from "@/shared/components/AppFooter.tsx";
 import { useInitialAppReady } from "@/shared/bootstrap/useInitialAppReady";
-import DigiAuditBrand from "@/shared/components/DigiAuditBrand";
 
 type SelectionChangeDetail = {
     item?: HTMLElement;
@@ -48,8 +48,9 @@ function getPathFromSelectionEvent(event: SelectionChangeEvent): string | null {
     return route || null;
 }
 
-const SIDENAV_WIDTH = 280;
+const SIDENAV_WIDTH = 216;
 const SIDENAV_COLLAPSED_WIDTH = 56;
+const EMPTY_NOTIFICATIONS: NotificationItem[] = [];
 
 const MASTER_DATA_PATH_PREFIXES = [
     "/master-data",
@@ -78,7 +79,14 @@ export default function MainLayout() {
 
     const {t, i18n} = useTranslation();
 
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 42rem)").matches);
+
+    useEffect(() => {
+        const media = window.matchMedia("(max-width: 42rem)");
+        const updateCollapsed = (event: MediaQueryListEvent) => setCollapsed(event.matches);
+        media.addEventListener("change", updateCollapsed);
+        return () => media.removeEventListener("change", updateCollapsed);
+    }, []);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -87,24 +95,13 @@ export default function MainLayout() {
     const logout = useAuthState((state) => state.logout);
 
     const selectedPath = useMemo(() => location.pathname, [location.pathname]);
+    const isMasterDataPage = selectedPath === "/master-data";
+    const masterDataSearch = isMasterDataPage ? new URLSearchParams(location.search).get("q") ?? "" : "";
     const sideNavWidth = collapsed ? SIDENAV_COLLAPSED_WIDTH : SIDENAV_WIDTH;
 
-    const notifications: NotificationItem[] = [
-        {
-            id: "1",
-            title: t("notifications.sample1.title"),
-            description: t("notifications.sample1.desc"),
-            time: "5m",
-            unread: true,
-        },
-        {
-            id: "2",
-            title: t("notifications.sample2.title"),
-            description: t("notifications.sample2.desc"),
-            time: "Yesterday",
-            unread: false,
-        },
-    ];
+    function navigateToMasterDataSearch(value: string) {
+        navigate({ pathname: "/master-data", search: value ? `?q=${encodeURIComponent(value)}` : "" }, { replace: true });
+    }
 
     async function handleLogout() {
         try {
@@ -169,7 +166,7 @@ export default function MainLayout() {
     const mainItems: NavItem[] = [
         {
             key: "dashboard",
-            text: t("nav.dashboard"),
+            text: t("nav.home"),
             icon: "home",
             route: "/dashboard",
             selected: selectedPath.startsWith("/dashboard"),
@@ -177,58 +174,56 @@ export default function MainLayout() {
         {
             key: "masterData",
             text: t("nav.governance"),
-            icon: "building",
+            icon: "shield",
             route: "/master-data",
             selected: isPathInPrefixes(selectedPath, MASTER_DATA_PATH_PREFIXES),
         },
         { key: "risk", text: t("nav.riskManagement"), icon: "alert", route: "/coming-soon/risk-management", selected: selectedPath === "/coming-soon/risk-management" },
-        { key: "audit", text: t("nav.internalAudit"), icon: "search", route: "/coming-soon/internal-audit", selected: selectedPath === "/coming-soon/internal-audit" },
-        { key: "compliance", text: t("nav.compliance"), icon: "shield", route: "/coming-soon/compliance", selected: selectedPath === "/coming-soon/compliance" },
-        { key: "reports", text: t("nav.reports"), icon: "bar-chart", route: "/coming-soon/reports", selected: selectedPath === "/coming-soon/reports" },
+        { key: "compliance", text: t("nav.complianceManagement"), icon: "document-text", route: "/coming-soon/compliance", selected: selectedPath === "/coming-soon/compliance" },
+        { key: "audit", text: t("nav.internalAuditManagement"), icon: "search", route: "/coming-soon/internal-audit", selected: selectedPath === "/coming-soon/internal-audit" },
+        { key: "reports", text: t("nav.reports"), icon: "pie-chart", route: "/coming-soon/reports", selected: selectedPath === "/coming-soon/reports" },
         { key: "settings", text: t("nav.settings"), icon: "action-settings", route: "/coming-soon/settings", selected: selectedPath === "/coming-soon/settings" },
     ];
 
     return (
-        <div className="appRoot" data-ui5-compact-size>
-            <ShellBar primaryTitle={t("app.title")} secondaryTitle={t("app.subtitle")}>
-                <Button
-                    slot="startButton"
-                    icon="menu2"
-                    design="Transparent"
-                    onClick={() => setCollapsed((value) => !value)}
-                />
-
-                <UiSettingsMenu/>
-
-                <NotificationMenu
-                    items={notifications}
-                    onOpenItem={(item) => console.log("open notification", item.id)}
-                    onMarkAllRead={() => console.log("mark all as read")}
-                />
-
+        <div className={`appRoot${isMasterDataPage ? " appRoot--masterData" : ""}${collapsed ? " appRoot--sideNavCollapsed" : ""}`} dir={i18n.language.startsWith("fa") ? "rtl" : "ltr"} data-ui5-compact-size>
+            <FlexBox className="governanceHeader" dir="ltr">
+                <img className="governanceHeaderLogo" src="/images/digi-audit-mark.svg" alt="Digi Audit" />
                 <UserProfileMenu
+                    trigger="button"
                     fullName={fullName}
-                    email={undefined}
                     onOpenProfile={() => navigate("/profile")}
                     onChangeUsername={() => navigate("/change-username")}
                     onChangePassword={() => navigate("/change-password")}
                     onLogout={() => void handleLogout()}
                 />
-            </ShellBar>
+                <UiSettingsMenu trigger="button" />
+                <div className="governanceHeaderSearch">
+                    <Input
+                        value={masterDataSearch}
+                        placeholder={t("masterData.searchPlaceholder")}
+                        accessibleName={t("masterData.searchLabel")}
+                        icon={<Button design="Transparent" icon="search" accessibleName={t("masterData.searchLabel")} onClick={() => navigateToMasterDataSearch(masterDataSearch)} />}
+                        onInput={(event) => navigateToMasterDataSearch(event.target.value)}
+                    />
+                </div>
+                <FlexBox className="governanceHeaderActions" dir="ltr">
+                    <NotificationMenu trigger="button" items={EMPTY_NOTIFICATIONS} />
+                    <Button icon="menu2" design="Transparent" accessibleName={t("nav.menu")} onClick={() => setCollapsed((value) => !value)} />
+                </FlexBox>
+            </FlexBox>
 
             <div className="appBody" dir={i18n.language.startsWith("fa") ? "rtl" : "ltr"}>
                 <aside
                     className="sideNav"
-                    style={{
-                        width: sideNavWidth,
-                        flex: `0 0 ${sideNavWidth}px`,
-                    }}
+                    style={{ width: sideNavWidth }}
                 >
+                    <div className="sideNavBrand">
+                        <Link className="sideNavBrandLink" accessibleName={t("nav.home")} onClick={() => navigateToPath("/dashboard")}>
+                            {collapsed ? <img className="sideNavBrandMark" src="/images/digi-audit-mark-light.svg" alt="" /> : <img className="sideNavBrandWordmark" src="/images/digi-audit-wordmark-light.svg" alt="" />}
+                        </Link>
+                    </div>
                     <SideNavigation collapsed={collapsed} onSelectionChange={onSelectionChange}>
-                        <div slot="header" className="sideNavBrand">
-                            {collapsed ? <img src="/images/digi-audit-mark-light.svg" alt="Digi Audit" /> : <DigiAuditBrand compact light />}
-                        </div>
-
                         {mainItems.filter((item) => item.key !== "masterData" || MASTER_DATA_AREAS.some((area) => canAccessMasterData(me, area))).map((item) => (
                             <SideNavigationItem
                                 key={item.key}
@@ -280,7 +275,6 @@ export default function MainLayout() {
                     <Outlet/>
                 </main>
             </div>
-            <AppFooter />
         </div>
     );
 }

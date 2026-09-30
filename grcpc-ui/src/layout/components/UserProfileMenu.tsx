@@ -14,6 +14,7 @@ import {
 
 type Props = {
     fullName: string;
+    trigger?: "shellbar" | "button";
     email?: string;
     initials?: string;
     onLogout?: () => void;
@@ -24,6 +25,7 @@ type Props = {
 
 export default function UserProfileMenu({
                                             fullName,
+                                            trigger = "shellbar",
                                             email,
                                             initials,
                                             onLogout,
@@ -168,12 +170,19 @@ export default function UserProfileMenu({
 
     return (
         <>
-            <ShellBarItem
+            {trigger === "shellbar" ? <ShellBarItem
                 id={openerId}
                 icon="employee"
                 text={t("user.me")}
                 onClick={openMenu}
-            />
+            /> : <Button
+                id={openerId}
+                className="governanceProfileButton"
+                icon="employee"
+                design="Transparent"
+                accessibleName={t("user.menu")}
+                onClick={openMenu}
+            >{fullName}</Button>}
             {popoverNode}
         </>
     );
