@@ -1,3 +1,4 @@
+import { RequirementControlAssignmentsTab, useRequirementControlAssignmentPermissions } from "@/features/requirement-control-assignment";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
@@ -23,10 +24,6 @@ import {
   type DocumentLinkTargetType,
   type ParentSaveDocumentDraftState,
 } from "@/features/document";
-import {
-  RequirementControlCoveragesTab,
-  useRequirementControlCoveragePermissions,
-} from "@/features/requirement-control-coverage";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -167,7 +164,7 @@ export default function CentralRegulationObjectPage({
   onDirtyChange,
 }: Props) {
   const { t } = useTranslation();
-  const coveragePermissions = useRequirementControlCoveragePermissions();
+  const assignmentPermissions = useRequirementControlAssignmentPermissions();
   const [form, setForm] = useState<FormState>(() => toForm(value, initialParentId));
   const [baseline, setBaseline] = useState(() =>
     JSON.stringify(normalized(toForm(value, initialParentId))),
@@ -324,7 +321,7 @@ export default function CentralRegulationObjectPage({
           onTabSelect={(event) => {
             const key = event.detail.tab.getAttribute("data-tab-key") as CentralRegulationTabKey | null;
             if (key === "general" || key === "documents"
-              || (key === "controls" && nodeType === "REQUIREMENT" && mode !== "create" && coveragePermissions.view)) {
+              || (key === "controls" && nodeType === "REQUIREMENT" && mode !== "create" && assignmentPermissions.view)) {
               onActiveTabChange(key);
             }
           }}
@@ -338,7 +335,7 @@ export default function CentralRegulationObjectPage({
             <Tab
               text={t("regulation.tabs.controls")}
               selected={activeTab === "controls"}
-              disabled={mode === "create" || !coveragePermissions.view}
+              disabled={mode === "create" || !assignmentPermissions.view}
               data-tab-key="controls"
             />
           ) : null}
@@ -464,8 +461,8 @@ export default function CentralRegulationObjectPage({
                 : "regulationTabPanel regulationTabPanelHidden"
             }
           >
-            {nodeType === "REQUIREMENT" && value?.id && coveragePermissions.view ? (
-              <RequirementControlCoveragesTab requirementId={value.id} />
+            {nodeType === "REQUIREMENT" && value?.id && assignmentPermissions.view ? (
+              <RequirementControlAssignmentsTab requirementId={value.id} />
             ) : null}
           </div>
 

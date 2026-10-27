@@ -49,11 +49,11 @@ The active business-table count after Policy simplification is 45. The unmapped 
 
 The two technical tables are `document_temp_upload` and `masterdata_hierarchy_guard`.
 
-The total physical Master Data table count after this correction was 48. The approved Objective extension adds two business tables, bringing that count to 50. The approved Global Control library extension adds three more business tables, bringing the current count to 53.
+The total physical Master Data table count after this correction was 48. The approved Objective extension adds two business tables, bringing that count to 50. The approved Global Control library extension adds three more business tables, bringing that count to 53. The accepted [Central Assignment correction](accepted-corrections/2026-10-27-central-reference-assignments.md) adds four business tables, bringing the current count to 57.
 
 The active business structures are the original catalog with Policy Version removed from active use and Central Policy–Organization Scope added.
 
-The Document business-table count remains 3. The current physical contract is `50 active business tables + 1 retained historical table + 2 technical tables = 53 physical tables`.
+The Document business-table count remains 3. The current physical contract is `54 active business tables + 1 retained historical table + 2 technical tables = 57 physical tables`.
 
 No additional Master Data table is authorized merely to simplify implementation.
 
@@ -233,11 +233,11 @@ Only `central_risk_template` is a valid risk Scope endpoint.
 
 The Control definition has no generic objective text that duplicates Control Objective.
 
-Control and Control Objective connect only through typed context-aware Coverage.
+Control and Control Objective retain typed context-aware Coverage and additionally have the direct typed reference Assignment accepted in [accepted-corrections/2026-10-27-central-reference-assignments.md](accepted-corrections/2026-10-27-central-reference-assignments.md).
 
 Control has no direct relation to Regulation or Regulation Group.
 
-Requirement–Control Coverage is the only approved compliance relation from Control to regulation content.
+Requirement–Control Coverage remains Scope-based. The accepted correction adds direct Requirement–Control reference Assignment; no direct relation to Regulation or Regulation Group is added.
 
 Account Group classification is a direct typed relation to Control or Control Objective.
 
@@ -262,7 +262,9 @@ of the Control Scope path and Control Objective Scope path, deduplicated by exac
 ID with separate contribution lists. It remains query-only and does not authorize direct
 Subprocess–Account Group persistence or mutation ownership.
 
-## 8. Typed Scope, Classification, and Coverage rules
+## 8. Typed Scope, Assignment, Classification, and Coverage rules
+
+The accepted [Central reference Assignment correction](accepted-corrections/2026-10-27-central-reference-assignments.md) adds four independent typed Central families and removes Coverage from this phase UI while preserving its tables, APIs, Revision and dependencies. It also clarifies OrganizationObjective as existing local Organization Objective scope and keeps the four Policy Scope families and existing Document/Global Control assignments unchanged.
 
 Scope means membership or applicability of a Central definition in a Subprocess or Local Context.
 
@@ -280,7 +282,7 @@ The two Account Group classifications are direct Control–Account Group and Con
 
 The four Central Coverage types are Risk–Control, Risk–Control Objective, Control–Control Objective, and Requirement–Control.
 
-Prompt 7 relationship completion makes these four existing tables runtime-owned by the Central
+The retained Prompt 7 relationship completion API makes these four existing tables runtime-owned by the Central
 Subprocess aggregate. Only `PATCH /api/master-data/central/subprocesses/{subprocessId}` accepts
 their nullable typed change sets; no standalone or catalog-owned Coverage mutation route exists.
 The Save acquires the `PROCESS` hierarchy Guard, locks the typed endpoint union in Control, Risk,
@@ -444,7 +446,7 @@ The approved model permits exactly two controlled polymorphic relations:
 
 Each relation has its own closed stored-code vocabulary. These vocabularies must not be conflated, even where both reuse the same stored code for the same logical table.
 
-`RevisionEntityType` contains 50 stored codes after the Global Control extension and is used only for Revision Content.
+`RevisionEntityType` contains 54 stored codes after the four Central reference Assignments and is used only for Revision Content.
 
 Document Link Target Type contains 43 stored codes after the Global Control document extension and is used only for Document Link target validation.
 

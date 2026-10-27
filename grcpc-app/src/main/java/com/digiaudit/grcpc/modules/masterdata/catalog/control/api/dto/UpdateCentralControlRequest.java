@@ -4,6 +4,9 @@ import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchReques
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.enums.*;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.CentralControlAccountGroupChangeRequest;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
+import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrol.api.dto.CentralRiskControlAssignmentChangeRequest;
+import com.digiaudit.grcpc.modules.masterdata.assignment.controlcontrolobjective.api.dto.CentralControlControlObjectiveAssignmentChangeRequest;
+import com.digiaudit.grcpc.modules.masterdata.assignment.requirementcontrol.api.dto.CentralRequirementControlAssignmentChangeRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -36,4 +39,7 @@ public record UpdateCentralControlRequest(
     LocalDate validFrom,
     LocalDate validTo,
     @Valid DocumentAggregateBatchRequest documents,
-    @Valid List<CentralControlAccountGroupChangeRequest> accountGroupChanges) {}
+    @Valid List<CentralControlAccountGroupChangeRequest> accountGroupChanges,
+    @Valid List<CentralRiskControlAssignmentChangeRequest> riskAssignments,
+    @Valid List<CentralControlControlObjectiveAssignmentChangeRequest> controlObjectiveAssignments,
+    @Valid List<CentralRequirementControlAssignmentChangeRequest> requirementAssignments) {}

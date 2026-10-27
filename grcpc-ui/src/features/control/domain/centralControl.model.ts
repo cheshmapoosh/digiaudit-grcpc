@@ -1,3 +1,6 @@
+import type { RequirementControlAssignment, RequirementControlAssignmentChange } from "@/features/requirement-control-assignment";
+import type { ControlControlObjectiveAssignment, ControlControlObjectiveAssignmentChange } from "@/features/control-control-objective-assignment";
+import type { RiskControlAssignment, RiskControlAssignmentChange } from "@/features/risk-control-assignment";
 import type { DocumentAggregateRequest } from "@/features/document";
 import type { ControlAccountGroupChange, ControlAccountGroupClassification } from "@/features/control-account-group";
 
@@ -151,6 +154,9 @@ export interface CreateCentralControlCommand {
   validTo: string | null;
   documents: DocumentAggregateRequest;
   accountGroupChanges: ControlAccountGroupChange[];
+  riskAssignments: RiskControlAssignmentChange[];
+  controlObjectiveAssignments: ControlControlObjectiveAssignmentChange[];
+  requirementAssignments: RequirementControlAssignmentChange[];
 }
 
 export interface UpdateCentralControlCommand extends Omit<CreateCentralControlCommand, "code"> {
@@ -164,6 +170,9 @@ export interface CentralControlMutationResponse {
   version: number;
   finalizedDocuments: unknown[];
   accountGroupClassifications: ControlAccountGroupClassification[];
+  riskAssignments: RiskControlAssignment[];
+  controlObjectiveAssignments: ControlControlObjectiveAssignment[];
+  requirementAssignments: RequirementControlAssignment[];
 }
 
 export interface CentralControlRevisionResponse {

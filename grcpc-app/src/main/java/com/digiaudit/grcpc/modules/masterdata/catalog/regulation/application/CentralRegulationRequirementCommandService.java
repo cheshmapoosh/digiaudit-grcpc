@@ -224,7 +224,7 @@ public class CentralRegulationRequirementCommandService {
     long expected = support.requireVersion(version);
     var result =
         revisions.executeStructural(
-            MasterDataHierarchyKey.REGULATION,
+            java.util.List.of(MasterDataHierarchyKey.CONTROL, MasterDataHierarchyKey.REGULATION),
             RevisionRequest.central(
                 op + " regulation requirement " + id, "Requirement lifecycle", null),
             c -> {

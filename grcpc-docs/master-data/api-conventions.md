@@ -66,7 +66,7 @@ Closed Master Data code vocabularies are explicit uppercase strings, not Java or
 
 The canonical stored/wire code source for controlled polymorphic values is [table-catalog.md](table-catalog.md#controlled-polymorphic-stored-code-vocabularies).
 
-Revision Entity Type contains 50 stored codes. Document Link Target Type contains 43 stored codes.
+Revision Entity Type contains 54 stored codes. Document Link Target Type contains 43 stored codes.
 
 The Browser never sends Revision Content, `RevisionEntityType`, Revision Content sequence numbers, snapshots, or Backend transaction ordering.
 
@@ -637,3 +637,11 @@ It must protect downloads.
 It must expose read-only Effective, Diagnostic, Roll-up, and Policy Applicability query APIs.
 
 It must preserve KPI and KRI exclusions.
+
+## Accepted Central reference Assignments (2026-10-27)
+
+The [accepted correction](accepted-corrections/2026-10-27-central-reference-assignments.md) is binding for the four typed direct Central relationships. Control Create/Update owns nullable `riskAssignments`, `controlObjectiveAssignments`, `requirementAssignments`; Control Objective owns nullable `riskAssignments`. They share the existing aggregate command, version, transaction and single CENTRAL Revision with Documents and classifications. Missing/empty arrays are no-ops; identical-only UPDATE drafts yield NO_CHANGE if the owner is otherwise unchanged. No browser mutation chain or standalone Assignment write API exists.
+
+Owner GET collections end in `risk-assignments`, `control-objective-assignments`, or `requirement-assignments`; inverse collections end in `control-assignments` or `control-objective-assignments`. Exact routes, typed options, operations, authorization and errors are recorded in the correction. Existing Coverage APIs remain supported, but no component in this UI phase invokes them. Subprocess Save omits Coverage changes.
+
+CONTROL + RISK view protects both risk families; CONTROL + GOVERNANCE view protects Requirement–Control; CONTROL view protects Control–Control Objective. Mutation requires owner CONTROL manage + destination view. PROCESS/Organization authority is not part of these central reference relations. All guards are acquired in lexical union before eligibility/dependency reads; targeted definition row locks follow Control, Risk Template, Control Objective, Requirement and ascending ID. Control Objective retains targeted row locking and has no independent hierarchy Guard.

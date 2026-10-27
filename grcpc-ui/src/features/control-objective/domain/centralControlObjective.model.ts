@@ -1,3 +1,4 @@
+import type { RiskControlObjectiveAssignment, RiskControlObjectiveAssignmentChange } from "@/features/risk-control-objective-assignment";
 import type { DocumentAggregateRequest } from "@/features/document";
 import type {
   ControlObjectiveAccountGroupChange,
@@ -37,6 +38,7 @@ export interface CreateCentralControlObjectiveCommand {
   validTo: string | null;
   documents: DocumentAggregateRequest;
   accountGroupChanges: ControlObjectiveAccountGroupChange[];
+  riskAssignments: RiskControlObjectiveAssignmentChange[];
 }
 
 export interface UpdateCentralControlObjectiveCommand {
@@ -49,6 +51,7 @@ export interface UpdateCentralControlObjectiveCommand {
   validTo: string | null;
   documents: DocumentAggregateRequest;
   accountGroupChanges: ControlObjectiveAccountGroupChange[];
+  riskAssignments: RiskControlObjectiveAssignmentChange[];
 }
 
 export interface CentralControlObjectiveMutationResponse {
@@ -57,6 +60,7 @@ export interface CentralControlObjectiveMutationResponse {
   version: number;
   finalizedDocuments: unknown[];
   accountGroupClassifications: ControlObjectiveAccountGroupClassification[];
+  riskAssignments: RiskControlObjectiveAssignment[];
 }
 
 export interface CentralControlObjectiveRevisionResponse {

@@ -9,6 +9,14 @@ These instructions apply to the whole repository. More specific `AGENTS.md` file
 - Deployment files live at the repository root and under `docker/`.
 - The application is a GRC product. Keep naming, UX, API contracts, and security behavior consistent across backend and frontend.
 
+## Shared project terminology
+
+- When the user says `کاتالوگ` or `کاتالوگ‌ها` without further qualification, interpret it as the core Master Data catalogs (`کاتالوگ‌های اطلاعات پایه`): Organization, Process, Subprocess, Objective, Control Objective, Control, Risk, Regulation, Regulation Requirement, Policy, and Account Group.
+- This conversational term includes structural Organization and Process/Subprocess catalogs; it is not limited to the backend `modules/masterdata/catalog` package or the UI's specialized-catalog group.
+- A `کاتالوگ` is the collection for one core entity type; an `آیتم کاتالوگ` is one record in that collection; a `جدول کاتالوگ` is the database table storing those records. `موجودیت‌های هسته‌ای` and `جداول هسته‌ای` are the corresponding domain and database terms used in earlier discussions.
+- Relationship, Assignment, Scope, Coverage, Document, Revision, and technical tables support catalogs; they are not themselves core catalogs under this terminology.
+- See [Project terminology](grcpc-docs/master-data/README.md#project-terminology) for the Persian definitions and database-table mapping. This vocabulary agreement does not change schema, API names, or business rules.
+
 ## Repository-level rules
 - Prefer small, focused changes. Do not rewrite working features unless the task explicitly asks for refactoring.
 - Inspect the existing feature closest to the requested change and follow its pattern before introducing a new pattern.
@@ -18,6 +26,14 @@ These instructions apply to the whole repository. More specific `AGENTS.md` file
 - When adding user-facing UI text, use i18n keys instead of hardcoded text.
 - When adding backend database changes, use Flyway migrations. Do not edit migrations that may already be applied in normal operational delivery. Before production activation, explicitly designated Master Data V2 Day-Zero migrations may be refined only to create the final schema directly on a fresh Oracle database; this exception does not authorize rewriting operational migrations or upgrading populated Master Data V2 schemas.
 - Maintain backend/frontend API contract compatibility. A DTO and its bundled UI normally change in the same task. Prompt 5.10 supersedes the remaining conflicting Prompt 5.8/5.9 browser rules: target Create/Edit uses one structural aggregate command for General Information, typed parent/owner, and Document drafts; temporary upload remains immediate and target-independent.
+
+## Accepted Central reference Assignments (2026-10-27)
+
+- Follow `grcpc-docs/master-data/accepted-corrections/2026-10-27-central-reference-assignments.md`. It authorizes exactly four typed direct Central Assignment tables and supersedes older direct-relation/count prohibitions only for those families.
+- Control owns Risk/Control Objective/Requirement assignments; Control Objective owns Risk assignments. They share one aggregate Save and CENTRAL Revision with Documents/classifications.
+- Coverage UI is removed in this phase; its schema, APIs, data and dependency rules remain. OrganizationObjective, Policy Scope and existing Document/Global Control links are not reimplemented.
+- Guard unions are lexical; endpoint row locks are Control, Risk Template, Control Objective, Requirement, then ID. Control Objective gets no new Guard.
+- This delivery permits only backend compile with `-Dskip.ui=true -Dmaven.test.skip=true`, UI typecheck and lint. Do not create, edit or run tests, run the app/Flyway, or connect to a database/browser/external service.
 
 ## Structural hierarchy concurrency rule
 - Before implementing, modifying, or reviewing a structural mutation, identify the affected hierarchy boundary.

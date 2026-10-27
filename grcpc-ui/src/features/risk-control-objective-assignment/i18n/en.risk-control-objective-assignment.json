@@ -1,0 +1,71 @@
+{
+  "riskControlObjectiveAssignment": {
+    "empty": "No assignments match the current filter.",
+    "search": "Search by code or name",
+    "filter": {
+      "all": "All"
+    },
+    "fields": {
+      "endpoint": "Related definition",
+      "endpointStatus": "Definition status",
+      "endpointValidity": "Definition validity",
+      "status": "Assignment status",
+      "validFrom": "Assignment valid from",
+      "validTo": "Assignment valid to",
+      "owner": "Assignment owner",
+      "riskTemplate": "Risks"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "DELETED": "Deleted"
+    },
+    "editState": {
+      "DRAFT_NEW": "New draft",
+      "DRAFT_EDITED": "Edited draft",
+      "DRAFT_DELETE": "Deletion draft",
+      "FINAL": "Final",
+      "DRAFT_RESTORED": "Restore draft"
+    },
+    "actions": {
+      "select": "Select",
+      "confirm": "Confirm",
+      "edit": "Edit validity",
+      "activate": "Activate",
+      "inactivate": "Inactivate",
+      "delete": "Delete",
+      "restore": "Restore",
+      "undo": "Undo draft",
+      "apply": "Apply draft",
+      "retry": "Retry",
+      "showDeleted": "Show deleted",
+      "showCurrent": "Show current"
+    },
+    "selection": {
+      "title": "Select central definitions",
+      "search": "Search by code or name"
+    },
+    "editor": {
+      "title": "Edit assignment validity"
+    },
+    "validation": {
+      "invalidDate": "Enter a valid date.",
+      "invalidRange": "Invalid validity range.",
+      "notReady": "Assignment drafts are not ready to save."
+    },
+    "errors": {
+      "generic": "Unable to load or save assignments.",
+      "duplicate": "This pair already has an active assignment.",
+      "version": "The record has changed. Reload it.",
+      "lifecycle": "Invalid lifecycle transition.",
+      "endpointInactive": "Both definitions must be active for this operation.",
+      "invalidChange": "Invalid assignment change set.",
+      "notFound": "Assignment or related definition not found.",
+      "forbidden": "You do not have permission to view or change these assignments."
+    },
+    "title": "Risks",
+    "inverse": {
+      "title": "Control objectives"
+    }
+  }
+}

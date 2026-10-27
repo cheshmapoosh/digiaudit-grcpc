@@ -70,3 +70,9 @@ Any exception requires documented UI5 limitation.
 
 Before completing UI work verify that all visible interactive elements
 use UI5 components when available.
+
+## Accepted Central reference Assignment UI
+
+- Follow `grcpc-docs/master-data/accepted-corrections/2026-10-27-central-reference-assignments.md`. Four typed Assignment families use owner-local drafts and one existing catalog Save; inverse lists are read-only owner links.
+- No Coverage manager/inverse component may mount in this phase. Retain shared Scope components, including CoverageInverseTable in Control Objective Scope, and preserve Coverage backend APIs/data.
+- Pending Assignment selections and invalid visible date drafts join owner dirty/navigation protection and Save readiness. No PROCESS/Organization permission, Scope selector or Coverage label belongs to these central Assignments.

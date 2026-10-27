@@ -1,3 +1,5 @@
+import { RiskTemplateControlAssignmentsTab, useRiskControlAssignmentPermissions } from "@/features/risk-control-assignment";
+import { RiskTemplateControlObjectiveAssignmentsTab, useRiskControlObjectiveAssignmentPermissions } from "@/features/risk-control-objective-assignment";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
@@ -21,14 +23,6 @@ import {
   type DocumentAggregateDraftError,
   type ParentSaveDocumentDraftState,
 } from "@/features/document";
-import {
-  RiskControlCoveragesSection,
-  useRiskControlCoveragePermissions,
-} from "@/features/risk-control-coverage";
-import {
-  RiskControlObjectiveCoveragesSection,
-  useRiskControlObjectiveCoveragePermissions,
-} from "@/features/risk-control-objective-coverage";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -181,8 +175,8 @@ export default function CentralRiskObjectPage({
   onDirtyChange,
 }: Props) {
   const { t } = useTranslation();
-  const controlCoveragePermissions = useRiskControlCoveragePermissions();
-  const objectiveCoveragePermissions = useRiskControlObjectiveCoveragePermissions();
+  const controlAssignmentPermissions = useRiskControlAssignmentPermissions();
+  const objectiveAssignmentPermissions = useRiskControlObjectiveAssignmentPermissions();
   const [form, setForm] = useState<FormState>(() => toForm(kind, value, initialParentCategoryId));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(kind, value, initialParentCategoryId))));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -396,14 +390,14 @@ export default function CentralRiskObjectPage({
             const key = event.detail.tab.getAttribute("data-tab-key") as CentralRiskTabKey | null;
             if (key === "general" || key === "documents"
               || (key === "controlCenter" && kind === "template" && mode !== "create"
-                && controlCoveragePermissions.view && objectiveCoveragePermissions.view)) {
+                && controlAssignmentPermissions.view && objectiveAssignmentPermissions.view)) {
               onActiveTabChange(key);
             }
           }}
         >
           <Tab text={t("risk.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
           {kind === "template" ? <Tab text={t("risk.tabs.risk")} disabled data-tab-key="risk" /> : null}
-          {kind === "template" ? <Tab text={t("risk.tabs.controlCenter")} selected={activeTab === "controlCenter"} disabled={mode === "create" || !controlCoveragePermissions.view || !objectiveCoveragePermissions.view} data-tab-key="controlCenter" /> : null}
+          {kind === "template" ? <Tab text={t("risk.tabs.controlCenter")} selected={activeTab === "controlCenter"} disabled={mode === "create" || !controlAssignmentPermissions.view || !objectiveAssignmentPermissions.view} data-tab-key="controlCenter" /> : null}
           <Tab text={t("risk.tabs.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
 
@@ -496,10 +490,10 @@ export default function CentralRiskObjectPage({
           </div>
 
           <div className={activeTab === "controlCenter" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
-            {kind === "template" && value?.id && controlCoveragePermissions.view && objectiveCoveragePermissions.view ? (
+            {kind === "template" && value?.id && controlAssignmentPermissions.view && objectiveAssignmentPermissions.view ? (
               <>
-                <RiskControlCoveragesSection riskTemplateId={value.id} title={t("risk.coverage.controls")} />
-                <RiskControlObjectiveCoveragesSection riskTemplateId={value.id} title={t("risk.coverage.controlObjectives")} />
+                <RiskTemplateControlAssignmentsTab riskTemplateId={value.id} />
+                <RiskTemplateControlObjectiveAssignmentsTab riskTemplateId={value.id} />
               </>
             ) : null}
           </div>

@@ -22,3 +22,5 @@ Applies to `src/features/organization`.
 - The List Report toolbar exposes only Create, View, and Delete.
 - Keep the FCL tree/list/object-page flow, parent value help, selection, expanded state, RTL, and i18n behavior.
 - Use the shared Document component in `PARENT_SAVE` mode with target type `ORG`; it emits serializable drafts and never performs a separate finalize command from this ObjectPage.
+
+- The accepted 2026-10-27 correction removes the four Local Coverage managers and all linked Coverage lists from this form. Coverage localSection deep links fall back to an authorized section of the same tab and clear invalid selections. Contexts, Scopes, Organization Objectives, Policy Scope and Documents remain.

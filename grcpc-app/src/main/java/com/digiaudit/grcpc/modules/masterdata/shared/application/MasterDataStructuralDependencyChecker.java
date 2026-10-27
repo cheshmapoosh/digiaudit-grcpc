@@ -32,11 +32,16 @@ public class MasterDataStructuralDependencyChecker {
           "select count(*) from local_organization_subprocess_scope where subprocess_id = ?");
   private static final List<String> CENTRAL_CONTROL_DEPENDENCY_QUERIES =
       List.of(
+          "select count(*) from central_risk_control_assignment where control_id = ? and status <> 'DELETED'",
+          "select count(*) from central_control_control_objective_assignment where control_id = ? and status <> 'DELETED'",
+          "select count(*) from central_requirement_control_assignment where control_id = ? and status <> 'DELETED'",
           "select count(*) from central_subprocess_control_scope where control_id = ?",
           "select count(*) from local_subprocess_control_scope where control_id = ?",
           "select count(*) from central_control_account_group where control_id = ?");
   private static final List<String> CENTRAL_CONTROL_OBJECTIVE_DEPENDENCY_QUERIES =
       List.of(
+          "select count(*) from central_risk_control_objective_assignment where control_objective_id = ? and status <> 'DELETED'",
+          "select count(*) from central_control_control_objective_assignment where control_objective_id = ? and status <> 'DELETED'",
           "select count(*) from central_subprocess_control_objective_scope where"
               + " control_objective_id = ?",
           "select count(*) from local_subprocess_control_objective_scope where control_objective_id"
@@ -45,6 +50,8 @@ public class MasterDataStructuralDependencyChecker {
               + " = ?");
   private static final List<String> CENTRAL_RISK_TEMPLATE_DEPENDENCY_QUERIES =
       List.of(
+          "select count(*) from central_risk_control_assignment where risk_template_id = ? and status <> 'DELETED'",
+          "select count(*) from central_risk_control_objective_assignment where risk_template_id = ? and status <> 'DELETED'",
           "select count(*) from central_subprocess_risk_scope where risk_template_id = ?",
           "select count(*) from local_subprocess_risk_scope where risk_template_id = ?");
   private static final List<String> CENTRAL_ACCOUNT_GROUP_DEPENDENCY_QUERIES =
@@ -54,6 +61,7 @@ public class MasterDataStructuralDependencyChecker {
               + " ?");
   private static final List<String> CENTRAL_REQUIREMENT_DEPENDENCY_QUERIES =
       List.of(
+          "select count(*) from central_requirement_control_assignment where requirement_id = ? and status <> 'DELETED'",
           "select count(*) from central_subprocess_requirement_scope where requirement_id = ?",
           "select count(*) from local_subprocess_requirement_scope where requirement_id = ?");
   private static final List<String> CENTRAL_POLICY_DEPENDENCY_QUERIES =

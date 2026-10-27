@@ -2,7 +2,7 @@
 
 ## Catalog authority and count rule
 
-This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md), plus the approved Objective and Global Control library extensions. It has 50 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables: 53 physical Master Data tables.
+This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md), plus the approved Objective and Global Control library extensions. It has 54 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables: 57 physical Master Data tables, including the four typed Assignments accepted in [accepted-corrections/2026-10-27-central-reference-assignments.md](accepted-corrections/2026-10-27-central-reference-assignments.md).
 
 Authoritative source files: `GRC_Master_Data_Logical_Model_Final_FA.docx` and `GRC_Master_Data_Physical_Design_Reference_FA.docx`; business meaning is cross-checked against `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`.
 
@@ -47,7 +47,7 @@ Stored codes are stable uppercase ASCII values stored in `VARCHAR2(32 BYTE)`. Ev
 
 ### Revision Entity Type stored-code vocabulary
 
-`masterdata_revision_content.entity_type` accepts 50 values, including the retained `CENTRAL_POLICY_VERSION` historical decoder, `CENTRAL_POLICY_ORG`, `OBJECTIVE`, `ORGANIZATION_OBJECTIVE`, `CONTROL_GROUP`, `GLOBAL_CONTROL`, and `GLOBAL_CONTROL_REGULATION`.
+`masterdata_revision_content.entity_type` accepts 54 values, including the retained `CENTRAL_POLICY_VERSION` historical decoder, `CENTRAL_POLICY_ORG`, `OBJECTIVE`, `ORGANIZATION_OBJECTIVE`, `CONTROL_GROUP`, `GLOBAL_CONTROL`, and `GLOBAL_CONTROL_REGULATION`.
 
 | Stored code | Exact catalog table | Permitted Revision domain |
 | --- | --- | --- |
@@ -77,6 +77,10 @@ Stored codes are stable uppercase ASCII values stored in `VARCHAR2(32 BYTE)`. Ev
 | `CENTRAL_POLICY_REQUIREMENT` | `central_policy_requirement_scope` | `CENTRAL` |
 | `CENTRAL_CONTROL_ACCOUNT_GROUP` | `central_control_account_group` | `CENTRAL` |
 | `CENTRAL_OBJECTIVE_ACCOUNT_GROUP` | `central_control_objective_account_group` | `CENTRAL` |
+| `CENTRAL_RISK_CONTROL_ASG` | `central_risk_control_assignment` | `CENTRAL` |
+| `CENTRAL_RISK_OBJECTIVE_ASG` | `central_risk_control_objective_assignment` | `CENTRAL` |
+| `CENTRAL_CONTROL_OBJECTIVE_ASG` | `central_control_control_objective_assignment` | `CENTRAL` |
+| `CENTRAL_REQUIREMENT_CONTROL_ASG` | `central_requirement_control_assignment` | `CENTRAL` |
 | `CENTRAL_RISK_CONTROL_COV` | `central_subprocess_risk_control_coverage` | `CENTRAL` |
 | `CENTRAL_RISK_OBJECTIVE_COV` | `central_subprocess_risk_control_objective_coverage` | `CENTRAL` |
 | `CENTRAL_CONTROL_OBJECTIVE_COV` | `central_subprocess_control_control_objective_coverage` | `CENTRAL` |
@@ -982,7 +986,7 @@ Document Link Target Type rules:
 
 **Purpose and family.** Ordered immutable change records belonging to one Master Data Revision; the controlled polymorphic reference identifies the changed entity.
 
-**Fields.** `ID`; `revision_id RAW(16) NOT NULL`; `sequence_number NUMBER(19,0) NOT NULL`; controlled `entity_type VARCHAR2(32 BYTE) NOT NULL`; `entity_id RAW(16) NOT NULL`; `operation_type VARCHAR2(32 BYTE) NOT NULL`; nullable `expected_version NUMBER(19,0)`; nullable `before_snapshot CLOB JSON`; nullable `after_snapshot CLOB JSON`; nullable `applied_entity_version NUMBER(19,0)`; nullable `validation_result CLOB JSON`; `created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `created_by RAW(16) NOT NULL`; `version NUMBER(19,0) NOT NULL`. `entity_type` uses the current 50-code Revision Entity Type vocabulary in this catalog.
+**Fields.** `ID`; `revision_id RAW(16) NOT NULL`; `sequence_number NUMBER(19,0) NOT NULL`; controlled `entity_type VARCHAR2(32 BYTE) NOT NULL`; `entity_id RAW(16) NOT NULL`; `operation_type VARCHAR2(32 BYTE) NOT NULL`; nullable `expected_version NUMBER(19,0)`; nullable `before_snapshot CLOB JSON`; nullable `after_snapshot CLOB JSON`; nullable `applied_entity_version NUMBER(19,0)`; nullable `validation_result CLOB JSON`; `created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `created_by RAW(16) NOT NULL`; `version NUMBER(19,0) NOT NULL`. `entity_type` uses the current 54-code Revision Entity Type vocabulary in this catalog.
 
 **Keys and relationships.** PK: `id`. Business key: unique `(revision_id, sequence_number)`. FK: `revision_id -> masterdata_revision(id)`. `entity_type/entity_id` is controlled polymorphism and must be domain-validated against the header.
 
@@ -990,7 +994,7 @@ Document Link Target Type rules:
 
 **Lifecycle, validity, and lock.** Operation is one of `CREATE`, `UPDATE`, `ACTIVATE`, `INACTIVATE`, `DELETE`, or `RESTORE`. No generic status/validity interval is documented. Applied content/snapshots are immutable; `version` supports guarded draft handling only.
 
-**Constraints and indexes.** Unique revision/sequence; controlled operation/entity type checked against the current 50-code Revision Entity Type vocabulary; revision-domain compatibility enforced by Backend validation; indexed `revision_id` via the unique key and target lookup only when proven necessary. JSON values require `IS JSON` checks.
+**Constraints and indexes.** Unique revision/sequence; controlled operation/entity type checked against the current 54-code Revision Entity Type vocabulary; revision-domain compatibility enforced by Backend validation; indexed `revision_id` via the unique key and target lookup only when proven necessary. JSON values require `IS JSON` checks.
 
 **Mutability and Revision.** Generated, sequenced, snapshot-filled, validated, and atomically applied by the Backend. The Frontend never sends this object, its sequence number, snapshots, or transaction order.
 
@@ -1071,8 +1075,23 @@ This library is separate from `central_control`, `central_control_group`, and `c
 | **Original numbered catalog plus technical tables** | **47** |
 | Retained historical and Policy simplification correction | 1 |
 | Objective extension business tables | 2 |
-| **Current physical Master Data tables** | **50** |
+| Global Control library extension business tables | 3 |
+| Central reference Assignment business tables | 4 |
+| **Current physical Master Data tables** | **57** |
 
-The contiguous original numbered business list starts at `01` and ends at `45` exactly once; `T1` and `T2` are outside it. The Policy simplification correction retains one historical table, and the Objective extension adds the two typed business tables above.
+The contiguous original numbered business list starts at `01` and ends at `45` exactly once; `T1` and `T2` are outside it. The Policy simplification correction retains one historical table, and the Objective extension adds two typed business tables, the Global Control library adds three, and the accepted Central reference Assignment correction adds four.
 
 No KPI, KRI, risk-assessment, control-test, workflow, monitoring, job, scheduler, cache, outbox, Audit, generic assignment, generic Scope, generic Coverage, or invented relationship table is part of this catalog.
+
+## Central reference Assignment extension (accepted 2026-10-27)
+
+See the [accepted correction](accepted-corrections/2026-10-27-central-reference-assignments.md) for ownership, typed API, eligibility, dependency and lock-order contracts.
+
+| Table | Profile / direct FKs | Business key / deletion protection |
+| --- | --- | --- |
+| `central_risk_control_assignment` | ID + L+V; `central_risk_template`, `central_control` | exact Risk Template + Control; non-DELETED row blocks either definition delete |
+| `central_risk_control_objective_assignment` | ID + L+V; `central_risk_template`, `central_control_objective` | exact Risk Template + Control Objective; same dependency rule |
+| `central_control_control_objective_assignment` | ID + L+V; `central_control`, `central_control_objective` | exact Control + Control Objective; same dependency rule |
+| `central_requirement_control_assignment` | ID + L+V; `central_regulation_requirement`, `central_control` | exact Requirement + Control; same dependency rule |
+
+V1189 creates these four tables without changing existing migrations. Unique pairs remain occupied in DELETED state; lifecycle restore reuses the same UUID. All FK paths are indexed, validity ranges checked, and deleted metadata constrained. No Scope/Context/Organization FK, generic target, technical table or Guard row is introduced. Assignment is CENTRAL and has no new Document Link target code. Existing Coverage remains physically and operationally intact.

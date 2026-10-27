@@ -33,7 +33,7 @@ Authority order:
 - The approved Objective and Global Control library extensions add `objective`, `organization_objective`, `control_group`, `global_control`, and `global_control_regulation` to the existing business tables. The technical tables remain exactly:
   - `document_temp_upload`
   - `masterdata_hierarchy_guard`
-- The current physical count is 50 active business tables, one retained historical Policy Version table, and two technical tables: 53.
+- The accepted 2026-10-27 Central reference Assignment correction authorizes four more typed business tables: 54 active business tables, one retained historical Policy Version table, and two technical tables: 57.
 - Do not add extra Master Data tables for convenience.
 - Do not create one lock table per feature. All hierarchy keys are rows in the single `masterdata_hierarchy_guard` table.
 
@@ -128,3 +128,10 @@ Do not preserve a Legacy endpoint, entity, table, permission, or data flow as a 
 Until its owning P4-P7 slice is implemented, future-slice Legacy source may remain only as implementation evidence and must stay excluded from the default component and repository scans. `PersistenceManagedTypes` is the exact JPA managed-class allowlist; do not rely on package entity scanning, weaken Hibernate `ddl-auto=validate`, or map a Legacy entity to a V2 table.
 
 When an owning V2 slice replaces a quarantined area, implement its approved V2 persistence and API, add only its approved managed classes to `PersistenceManagedTypes`, delete the Legacy source, remove the quarantine entry, and rerun fresh-Oracle Flyway plus Hibernate validation.
+
+## Central reference Assignments
+
+- Read `grcpc-docs/master-data/accepted-corrections/2026-10-27-central-reference-assignments.md`. Implement four independent typed families in `assignment`; no generic Assignment framework or target pair is authorized.
+- Control and Control Objective aggregate Saves own the typed drafts, canonical response, owner version and one CENTRAL Revision. Assignment-only no-op updates participate in NO_CHANGE detection.
+- Acquire the full lexical Guard union including concurrent classifications; lock affected endpoint rows in Control, Risk Template, Control Objective, Requirement order before validation. Control Objective has no hierarchy Guard of its own.
+- Control/Control Objective/Risk Template/Requirement deletion checks all non-DELETED assignments and never cascades. Keep existing Coverage dependencies.

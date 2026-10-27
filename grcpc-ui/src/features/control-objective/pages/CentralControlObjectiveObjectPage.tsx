@@ -1,3 +1,5 @@
+import { ControlObjectiveRiskTemplateAssignmentsTab, EMPTY_RISK_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE, useRiskControlObjectiveAssignmentPermissions, type RiskControlObjectiveAssignmentDraftState } from "@/features/risk-control-objective-assignment";
+import { ControlObjectiveControlAssignmentsTab, useControlControlObjectiveAssignmentPermissions } from "@/features/control-control-objective-assignment";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
@@ -28,14 +30,6 @@ import {
   type ControlObjectiveAccountGroupClassification,
   type ControlObjectiveClassificationDraftState,
 } from "@/features/control-objective-account-group";
-import {
-  ControlObjectiveControlsTab,
-  useControlControlObjectiveCoveragePermissions,
-} from "@/features/control-control-objective-coverage";
-import {
-  ControlObjectiveRiskCoveragesTab,
-  useRiskControlObjectiveCoveragePermissions,
-} from "@/features/risk-control-objective-coverage";
 import {
   ControlObjectiveSubprocessScopesTab,
   useControlObjectiveScopePermissions,
@@ -151,8 +145,8 @@ export default function CentralControlObjectiveObjectPage({
   const { t } = useTranslation();
   const classificationPermissions = useControlObjectiveAccountGroupPermissions();
   const scopePermissions = useControlObjectiveScopePermissions();
-  const riskCoveragePermissions = useRiskControlObjectiveCoveragePermissions();
-  const controlCoveragePermissions = useControlControlObjectiveCoveragePermissions();
+  const riskAssignmentPermissions = useRiskControlObjectiveAssignmentPermissions();
+  const controlAssignmentPermissions = useControlControlObjectiveAssignmentPermissions();
   const [form, setForm] = useState<FormState>(() => toForm(value));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value))));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -163,12 +157,13 @@ export default function CentralControlObjectiveObjectPage({
   const [adoptedClassifications, setAdoptedClassifications] = useState<
   ControlObjectiveAccountGroupClassification[] | null>(null);
   const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
+  const [riskAssignmentDraft, setRiskAssignmentDraft] = useState<RiskControlObjectiveAssignmentDraftState>(EMPTY_RISK_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE);
   const scopeRef = useRef(mode === "create" ? "CREATE" : value?.id ?? "EMPTY");
 
   const readOnly = mode === "view";
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const generalDirty = JSON.stringify(normalized(form)) !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
-  const dirty = generalDirty || documents.dirty || documents.uploading || classifications.dirty;
+  const dirty = generalDirty || documents.dirty || documents.uploading || classifications.dirty || riskAssignmentDraft.dirty;
   const scope = mode === "create" ? "CREATE" : value?.id ?? "EMPTY";
 
   useEffect(() => {
@@ -179,6 +174,7 @@ export default function CentralControlObjectiveObjectPage({
       setBaseline(JSON.stringify(normalized(next)));
       setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
       setClassifications(EMPTY_CONTROL_OBJECTIVE_CLASSIFICATION_DRAFT_STATE);
+      setRiskAssignmentDraft(EMPTY_RISK_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE);
       setAdoptedClassifications(null);
       setDateDrafts({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
       scopeRef.current = scope;
@@ -222,6 +218,11 @@ export default function CentralControlObjectiveObjectPage({
       onActiveTabChange("accountGroups");
       return false;
     }
+    if (!riskAssignmentDraft.ready || riskAssignmentDraft.invalid) {
+      setValidationError(t("centralAssignment.validation.notReady"));
+      onActiveTabChange("risks");
+      return false;
+    }
     setValidationError(null);
     return true;
   };
@@ -236,6 +237,7 @@ export default function CentralControlObjectiveObjectPage({
       validTo: form.validTo || null,
       documents: toDocumentAggregateRequest(documents),
       accountGroupChanges: classifications.changes,
+      riskAssignments: riskAssignmentDraft.changes,
     };
     const payload: CreateCentralControlObjectiveCommand | UpdateCentralControlObjectiveCommand =
       mode === "create"
@@ -258,7 +260,9 @@ export default function CentralControlObjectiveObjectPage({
     || !documents.ready
     || classifications.invalid
     || !classifications.ready
-    || (!generalDirty && !documents.dirty && !classifications.dirty);
+    || riskAssignmentDraft.invalid
+    || !riskAssignmentDraft.ready
+    || (!generalDirty && !documents.dirty && !classifications.dirty && !riskAssignmentDraft.dirty);
 
   const headerValues = useMemo(
     () => [
@@ -289,8 +293,8 @@ export default function CentralControlObjectiveObjectPage({
           const key = event.detail.tab.getAttribute("data-tab-key") as CentralControlObjectiveTabKey | null;
           if (key === "general" || key === "documents"
             || (key === "subprocesses" && mode !== "create" && scopePermissions.view)
-            || (key === "risks" && mode !== "create" && riskCoveragePermissions.view)
-            || (key === "controls" && mode !== "create" && controlCoveragePermissions.view)
+            || (key === "risks" && riskAssignmentPermissions.view)
+            || (key === "controls" && mode !== "create" && controlAssignmentPermissions.view)
             || (key === "accountGroups" && classificationPermissions.view)) {
             onActiveTabChange(key);
           }
@@ -298,8 +302,8 @@ export default function CentralControlObjectiveObjectPage({
       >
         <Tab text={t("controlObjective.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
         <Tab text={t("controlObjective.tabs.subprocesses")} selected={activeTab === "subprocesses"} disabled={mode === "create" || !scopePermissions.view} data-tab-key="subprocesses" />
-        <Tab text={t("controlObjective.tabs.risks")} selected={activeTab === "risks"} disabled={mode === "create" || !riskCoveragePermissions.view} data-tab-key="risks" />
-        <Tab text={t("controlObjective.tabs.controls")} selected={activeTab === "controls"} disabled={mode === "create" || !controlCoveragePermissions.view} data-tab-key="controls" />
+        <Tab text={t("controlObjective.tabs.risks")} selected={activeTab === "risks"} disabled={!riskAssignmentPermissions.view} data-tab-key="risks" />
+        <Tab text={t("controlObjective.tabs.controls")} selected={activeTab === "controls"} disabled={mode === "create" || !controlAssignmentPermissions.view} data-tab-key="controls" />
         <Tab
           text={t("controlObjective.tabs.accountGroups")}
           selected={activeTab === "accountGroups"}
@@ -368,11 +372,11 @@ export default function CentralControlObjectiveObjectPage({
         </div>
 
         <div className={activeTab === "risks" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
-          {value?.id && riskCoveragePermissions.view ? <ControlObjectiveRiskCoveragesTab controlObjectiveId={value.id} /> : null}
+          {riskAssignmentPermissions.view ? <ControlObjectiveRiskTemplateAssignmentsTab controlObjectiveId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskAssignmentDraft} /> : null}
         </div>
 
         <div className={activeTab === "controls" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
-          {value?.id && controlCoveragePermissions.view ? <ControlObjectiveControlsTab controlObjectiveId={value.id} /> : null}
+          {value?.id && controlAssignmentPermissions.view ? <ControlObjectiveControlAssignmentsTab controlObjectiveId={value.id} /> : null}
         </div>
 
         <div className={activeTab === "accountGroups" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>

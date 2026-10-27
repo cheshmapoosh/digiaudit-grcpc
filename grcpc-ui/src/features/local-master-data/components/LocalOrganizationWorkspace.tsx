@@ -13,7 +13,7 @@ import { LOCAL_SECTIONS, LOCAL_SECTION_BY_KEY, type LocalSectionSpec } from "../
 import { localApi } from "../infra/local.api.repo";
 import LocalOptionPicker from "./LocalOptionPicker";
 import LocalSectionPane from "./LocalSectionPane";
-import LocalLinkedCoverageList from "./LocalLinkedCoverageList";
+
 
 interface Props {
     organizationId: string | null;
@@ -23,12 +23,13 @@ interface Props {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const FORM_SECTIONS = LOCAL_SECTIONS.filter(spec => !spec.key.endsWith("-coverages"));
 const LOCAL_TABS: OrganizationTabKey[] = [
     "subprocesses", "risks", "controls", "regulations", "objectives", "policies",
 ];
 
 function isSection(value: string | null): value is LocalSectionKey {
-    return Boolean(value && Object.hasOwn(LOCAL_SECTION_BY_KEY, value));
+    return Boolean(value && !value.endsWith("-coverages") && Object.hasOwn(LOCAL_SECTION_BY_KEY, value));
 }
 
 export default function LocalOrganizationWorkspace({
@@ -39,10 +40,11 @@ export default function LocalOrganizationWorkspace({
     const me = useAuthState((state) => state.me);
     const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const rawSection = params.get("localSection");
-    const rawContext = params.get("contextId");
-    const rawRow = params.get("localRowId");
-    const rawTarget = params.get("policyTargetId");
-    const rawStatus = params.get("localStatus");
+    const hiddenSection = Boolean(rawSection?.endsWith("-coverages"));
+    const rawContext = hiddenSection ? null : params.get("contextId");
+    const rawRow = hiddenSection ? null : params.get("localRowId");
+    const rawTarget = hiddenSection ? null : params.get("policyTargetId");
+    const rawStatus = hiddenSection ? null : params.get("localStatus");
     const malformed = [rawContext, rawRow, rawTarget].some(
         (value) => value !== null && !UUID_PATTERN.test(value),
     ) || Boolean(rawStatus && !["ACTIVE", "INACTIVE", "DELETED"].includes(rawStatus));
@@ -68,7 +70,7 @@ export default function LocalOrganizationWorkspace({
     const canWrite = useCallback((spec: LocalSectionSpec) =>
         referenceManage && spec.areas.every((area) => canAccessMasterData(me, area)),
     [me, referenceManage]);
-    const visibleSections = LOCAL_SECTIONS.filter((spec) => spec.tab === tab && canRead(spec));
+    const visibleSections = FORM_SECTIONS.filter((spec) => spec.tab === tab && canRead(spec));
     const sectionButtons = visibleSections.filter((spec) =>
         spec.key !== "requirement-scopes" && spec.key !== "control-objective-scopes");
     const requestedSection = isSection(rawSection) ? LOCAL_SECTION_BY_KEY[rawSection] : null;
@@ -84,6 +86,16 @@ export default function LocalOrganizationWorkspace({
         ? validatedTargetId : null;
     const statusFilter = rawStatus && !malformed ? rawStatus as LocalStatus : null;
     const dirty = Object.values(dirtyBySection).some(Boolean);
+
+    useEffect(() => {
+        if (!hiddenSection) return;
+        const next = new URLSearchParams(location.search);
+        for (const key of ["contextId", "localRowId", "policyTargetId", "localStatus"]) next.delete(key);
+        const fallback = visibleSections[0];
+        if (fallback) next.set("localSection", fallback.key);
+        else { next.delete("localSection"); next.set("tab", "general"); }
+        navigateWithinOrganization(next);
+    }, [hiddenSection, location.search, navigateWithinOrganization, visibleSections]);
 
     useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
 
@@ -204,21 +216,13 @@ export default function LocalOrganizationWorkspace({
             ...(deletedContexts?.items ?? [])].some((row) => row.id === selectedContext.id)
             ? [selectedContext] : []),
     ];
-    const linked: LocalSectionKey[] = tab === "risks"
-        ? ["risk-control-coverages"]
-        : tab === "regulations" ? ["requirement-control-coverages"]
-            : tab === "objectives"
-                ? ["risk-control-objective-coverages",
-                    "control-control-objective-coverages"]
-                : [];
-
     if (!LOCAL_TABS.includes(tab)) return null;
     if (!organizationId) return <MessageStrip design="Information" hideCloseButton>
         {t("local.saveOrganizationFirst", {
             defaultValue: "ابتدا اطلاعات سازمان را ذخیره کنید؛ سپس روابط محلی را ثبت کنید.",
         })}
     </MessageStrip>;
-    if (malformed || (rawSection && !isSection(rawSection))) {
+    if (malformed || (rawSection && !hiddenSection && !isSection(rawSection))) {
         return <MessageStrip design="Negative" hideCloseButton>
             {t("local.errors.invalidSelection", { defaultValue: "انتخاب یا پیوند محلی نامعتبر است." })}
         </MessageStrip>;
@@ -313,7 +317,7 @@ export default function LocalOrganizationWorkspace({
                 <Option value="DELETED">{t("local.status.DELETED", { defaultValue: "حذف‌شده" })}</Option>
             </Select>
         </div>
-        {LOCAL_SECTIONS.filter((spec) => canRead(spec)).map((spec) =>
+        {FORM_SECTIONS.filter((spec) => canRead(spec)).map((spec) =>
             <LocalSectionPane key={spec.key} spec={spec} organizationId={organizationId}
                 contextId={contextId} policyTargetId={policyTargetId}
                 active={activeSpec?.key === spec.key && (!needsContext || Boolean(contextId))
@@ -330,17 +334,6 @@ export default function LocalOrganizationWorkspace({
                     setSelection({ contextId: id });
                 }}
                 resetKey={resetKey} />)}
-        {contextId ? linked.filter((key) => canRead(LOCAL_SECTION_BY_KEY[key]))
-            .map((key) => <LocalLinkedCoverageList key={key} section={key}
-                organizationId={organizationId} contextId={contextId}
-                labelKey={LOCAL_SECTION_BY_KEY[key].labelKey}
-                labelFa={LOCAL_SECTION_BY_KEY[key].labelFa}
-                onOpen={(_, row) => setSelection({
-                    tab: LOCAL_SECTION_BY_KEY[key].tab,
-                    localSection: key,
-                    localRowId: row.id,
-                    localStatus: row.status === "DELETED" ? "DELETED" : null,
-                }, true)} />) : null}
         <DeleteConfirmDialog open={pendingNavigation !== null}
             title={t("common.unsavedChanges.title", { defaultValue: "تغییرات ذخیره‌نشده" })}
             message={t("common.unsavedChanges.message", {

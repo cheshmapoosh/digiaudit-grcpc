@@ -22,7 +22,7 @@ All unrelated Conceptual, Logical, Physical, Document, Revision, Greenfield, Leg
 | Technical tables | 2 |
 | Total Master Data V2 physical tables at this decision | 47 |
 
-The later Policy simplification, Objective extension, and Global Control library extension bring the current physical count to 53; the technical table count remains two. The `OBJECTIVE` Guard row is seeded by `V1186`, and `GLOBAL_CONTROL` by `V1187`.
+The later Policy simplification, Objective extension, and Global Control library extension bring the physical count to 53; the accepted 2026-10-27 four-Assignment correction brings the current count to 57. The technical table count remains two. The `OBJECTIVE` Guard row is seeded by `V1186`, and `GLOBAL_CONTROL` by `V1187`.
 
 Approved technical tables:
 
@@ -57,6 +57,7 @@ The table has one row per approved independent hierarchy, not one row per busine
 | `PROCESS` | `central_process`, `central_subprocess` | Process and Subprocess are one structural hierarchy and share one Guard. |
 | `RISK` | `central_risk_category`, `central_risk_template` | Category and Template structural mutations share this Guard. |
 | `ACCOUNT_GROUP` | `central_account_group` | All Account Group structural mutations share this Guard. |
+| `CONTROL` | `central_control_group`, `central_control` | Existing Control hierarchy/aggregate Guard; direct Assignments union referenced `RISK`/`REGULATION` Guards and classification changes retain `ACCOUNT_GROUP`. Control Objective remains non-hierarchical. |
 | `REGULATION` | `central_regulation_group`, `central_regulation`, `central_regulation_requirement` | The complete Regulation family shares this Guard. |
 | `POLICY` | `central_policy_group`, `central_policy` | Policy Group and Policy structural mutations share this Guard; Policy aggregate Update acquires it even if the submitted group is unchanged. Four typed Policy relation collections add their referenced hierarchy Guards. |
 | `OBJECTIVE` | `objective` | Objective create, update, delete, and restore share this Guard. Organization Objective assignment also acquires `OBJECTIVE` and `ORGANIZATION` in lexical order. |
@@ -227,3 +228,7 @@ A hierarchy slice is not accepted without evidence that:
 - lock timeout fails safely;
 - failed operations persist no source or Revision partial state;
 - normal reads and non-structural updates remain available as designed.
+
+## Central reference Assignment correction (2026-10-27)
+
+The four typed direct Assignments add no Guard key. Their commands use the existing sorted union of CONTROL, RISK and REGULATION as applicable, retaining ACCOUNT_GROUP for concurrent classification drafts. Control Objective remains non-hierarchical with a targeted row lock. Endpoint lifecycle/dependency paths and the global endpoint-row order are listed in the [accepted correction](accepted-corrections/2026-10-27-central-reference-assignments.md). No database or real concurrency verification was run for this delivery by explicit project-owner request.

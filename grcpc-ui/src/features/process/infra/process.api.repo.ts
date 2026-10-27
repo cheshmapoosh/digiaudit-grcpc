@@ -89,7 +89,7 @@ function toSubprocessCreateBody(payload: ProcessNodeCreate) {
         riskScopeChanges: payload.riskScopeChanges,
         controlObjectiveScopeChanges: payload.controlObjectiveScopeChanges,
         requirementScopeChanges: payload.requirementScopeChanges,
-        // Coverage endpoints must already be persisted; Create intentionally sends no Coverage fields.
+        // This UI phase submits Scope changes only; retained Coverage data is untouched.
     };
 }
 
@@ -125,10 +125,6 @@ function toSubprocessUpdateBody(payload: ProcessNodeUpdate) {
         riskScopeChanges: payload.riskScopeChanges,
         controlObjectiveScopeChanges: payload.controlObjectiveScopeChanges,
         requirementScopeChanges: payload.requirementScopeChanges,
-        riskControlCoverageChanges: payload.riskControlCoverageChanges,
-        riskControlObjectiveCoverageChanges: payload.riskControlObjectiveCoverageChanges,
-        controlControlObjectiveCoverageChanges: payload.controlControlObjectiveCoverageChanges,
-        requirementControlCoverageChanges: payload.requirementControlCoverageChanges,
     };
 }
 

@@ -259,7 +259,7 @@ public class CentralRiskTemplateCommandService {
     long expectedVersion = support.requireVersion(version);
     RevisionExecutionResult result =
         revisions.executeStructural(
-            MasterDataHierarchyKey.RISK,
+            java.util.List.of(MasterDataHierarchyKey.CONTROL, MasterDataHierarchyKey.RISK),
             RevisionRequest.central(
                 operationType + " risk template " + id, "Risk Template lifecycle", null),
             context -> {

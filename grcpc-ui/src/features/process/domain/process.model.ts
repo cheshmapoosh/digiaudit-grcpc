@@ -4,10 +4,10 @@ import type { CentralSubprocessControlScope, ControlScopeChange } from "@/featur
 import type { CentralSubprocessRiskScope, RiskScopeChange } from "@/features/risk-scope";
 import type { CentralSubprocessControlObjectiveScope, ControlObjectiveScopeChange } from "@/features/control-objective-scope";
 import type { CentralSubprocessRequirementScope, RequirementScopeChange } from "@/features/requirement-scope";
-import type { CentralRiskControlCoverage, RiskControlCoverageChange } from "@/features/risk-control-coverage";
-import type { CentralRiskControlObjectiveCoverage, RiskControlObjectiveCoverageChange } from "@/features/risk-control-objective-coverage";
-import type { CentralControlControlObjectiveCoverage, ControlControlObjectiveCoverageChange } from "@/features/control-control-objective-coverage";
-import type { CentralRequirementControlCoverage, RequirementControlCoverageChange } from "@/features/requirement-control-coverage";
+import type { CentralRiskControlCoverage } from "@/features/risk-control-coverage";
+import type { CentralRiskControlObjectiveCoverage } from "@/features/risk-control-objective-coverage";
+import type { CentralControlControlObjectiveCoverage } from "@/features/control-control-objective-coverage";
+import type { CentralRequirementControlCoverage } from "@/features/requirement-control-coverage";
 
 export type ProcessStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type ProcessEditableStatus = "ACTIVE" | "INACTIVE";
@@ -87,10 +87,6 @@ export interface ProcessNodeUpdate {
     riskScopeChanges: RiskScopeChange[];
     controlObjectiveScopeChanges: ControlObjectiveScopeChange[];
     requirementScopeChanges: RequirementScopeChange[];
-    riskControlCoverageChanges: RiskControlCoverageChange[];
-    riskControlObjectiveCoverageChanges: RiskControlObjectiveCoverageChange[];
-    controlControlObjectiveCoverageChanges: ControlControlObjectiveCoverageChange[];
-    requirementControlCoverageChanges: RequirementControlCoverageChange[];
 }
 
 export interface ProcessLifecycleCommand {

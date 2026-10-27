@@ -16,7 +16,7 @@ Regulation manages law groups, laws, and law requirements in a tree/FCL UI.
 - Follow the Process tree/FCL pattern, but do not add drag-and-drop.
 - Keep typed V2 API/model contracts aligned with backend DTOs.
 - The requirements section/tab belongs to law nodes only, not to requirement nodes.
-- A saved Requirement may expose a read-only Controls Coverage inverse tab when PROCESS, GOVERNANCE, and CONTROL read permissions are complete. Regulation Group and Regulation never expose this relationship, and their Saves never own Coverage mutation.
+- A saved Requirement exposes a read-only Controls Assignment inverse tab with GOVERNANCE and CONTROL read authority. Regulation Group and Regulation never expose this relationship. Mutation belongs only to the Control aggregate Save; no PROCESS permission is required.
 - Create submenus always show Group, Regulation, and Requirement; contextual rules disable invalid item types instead of removing them from the menu.
 - Preserve expanded tree items and selected item across navigation, create, edit, delete, and refresh.
 - Put all visible text in `i18n/fa.regulation.json` and `i18n/en.regulation.json`.

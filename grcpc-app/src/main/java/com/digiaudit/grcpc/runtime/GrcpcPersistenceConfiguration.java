@@ -1,5 +1,9 @@
 package com.digiaudit.grcpc.runtime;
 
+import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrol.domain.entity.CentralRiskControlAssignmentEntity;
+import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrolobjective.domain.entity.CentralRiskControlObjectiveAssignmentEntity;
+import com.digiaudit.grcpc.modules.masterdata.assignment.controlcontrolobjective.domain.entity.CentralControlControlObjectiveAssignmentEntity;
+import com.digiaudit.grcpc.modules.masterdata.assignment.requirementcontrol.domain.entity.CentralRequirementControlAssignmentEntity;
 import com.digiaudit.grcpc.common.persistence.AuditableEntity;
 import com.digiaudit.grcpc.common.persistence.BooleanNumberConverter;
 import com.digiaudit.grcpc.modules.audit.domain.entity.AuditLogEntity;
@@ -115,6 +119,10 @@ LocalOrganizationSubprocessScopeEntity.class.getName(),
                 CentralControlGroupEntity.class.getName(),
                 CentralControlRelevanceConverter.class.getName(),
                 CentralControlObjectiveEntity.class.getName(),
+                CentralRiskControlAssignmentEntity.class.getName(),
+                CentralRiskControlObjectiveAssignmentEntity.class.getName(),
+                CentralControlControlObjectiveAssignmentEntity.class.getName(),
+                CentralRequirementControlAssignmentEntity.class.getName(),
                 CentralControlAccountGroupEntity.class.getName(),
                 CentralControlObjectiveAccountGroupEntity.class.getName(),
                 CentralSubprocessRiskControlCoverageEntity.class.getName(),

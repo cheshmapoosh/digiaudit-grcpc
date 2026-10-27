@@ -25,9 +25,9 @@ import type { CatalogActionPermissions } from "@/features/central-catalog/securi
 import ControlSubprocessScopesTab from "@/features/control-scope/components/ControlSubprocessScopesTab";
 import { useControlScopePermissions } from "@/features/control-scope/security/controlScopePermissions";
 import { ControlAccountGroupsTab, EMPTY_CLASSIFICATION_DRAFT_STATE, useControlAccountGroupPermissions, type ClassificationDraftState } from "@/features/control-account-group";
-import { ControlRiskCoveragesTab, useRiskControlCoveragePermissions } from "@/features/risk-control-coverage";
-import { ControlRequirementCoveragesTab, useRequirementControlCoveragePermissions } from "@/features/requirement-control-coverage";
-import { ControlControlObjectivesTab, useControlControlObjectiveCoveragePermissions } from "@/features/control-control-objective-coverage";
+import { ControlRiskTemplateAssignmentsTab, EMPTY_RISK_CONTROL_ASSIGNMENT_DRAFT_STATE, useRiskControlAssignmentPermissions, type RiskControlAssignmentDraftState } from "@/features/risk-control-assignment";
+import { ControlRequirementAssignmentsTab, EMPTY_REQUIREMENT_CONTROL_ASSIGNMENT_DRAFT_STATE, useRequirementControlAssignmentPermissions, type RequirementControlAssignmentDraftState } from "@/features/requirement-control-assignment";
+import { ControlControlObjectiveAssignmentsTab, EMPTY_CONTROL_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE, useControlControlObjectiveAssignmentPermissions, type ControlControlObjectiveAssignmentDraftState } from "@/features/control-control-objective-assignment";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -185,9 +185,9 @@ export default function CentralControlObjectPage({
   const { t } = useTranslation();
   const controlScopePermissions = useControlScopePermissions();
   const accountGroupPermissions = useControlAccountGroupPermissions();
-  const riskCoveragePermissions = useRiskControlCoveragePermissions();
-  const requirementCoveragePermissions = useRequirementControlCoveragePermissions();
-  const objectiveCoveragePermissions = useControlControlObjectiveCoveragePermissions();
+  const riskAssignmentPermissions = useRiskControlAssignmentPermissions();
+  const requirementAssignmentPermissions = useRequirementControlAssignmentPermissions();
+  const objectiveAssignmentPermissions = useControlControlObjectiveAssignmentPermissions();
   const [form, setForm] = useState<FormState>(() => toForm(value, initialControlGroupId));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, initialControlGroupId))));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -195,11 +195,14 @@ export default function CentralControlObjectPage({
   const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
   const [groupHelpOpen, setGroupHelpOpen] = useState(false);
   const [accountGroupDraft, setAccountGroupDraft] = useState<ClassificationDraftState>(EMPTY_CLASSIFICATION_DRAFT_STATE);
+  const [riskAssignmentDraft, setRiskAssignmentDraft] = useState<RiskControlAssignmentDraftState>(EMPTY_RISK_CONTROL_ASSIGNMENT_DRAFT_STATE);
+  const [objectiveAssignmentDraft, setObjectiveAssignmentDraft] = useState<ControlControlObjectiveAssignmentDraftState>(EMPTY_CONTROL_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE);
+  const [requirementAssignmentDraft, setRequirementAssignmentDraft] = useState<RequirementControlAssignmentDraftState>(EMPTY_REQUIREMENT_CONTROL_ASSIGNMENT_DRAFT_STATE);
   const scopeRef = useRef(mode === "create" ? "CREATE" : value?.id ?? "EMPTY");
   const readOnly = mode === "view";
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const generalDirty = JSON.stringify(normalized(form)) !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
-  const dirty = generalDirty || documents.dirty || documents.uploading || accountGroupDraft.dirty;
+  const dirty = generalDirty || documents.dirty || documents.uploading || accountGroupDraft.dirty || riskAssignmentDraft.dirty || objectiveAssignmentDraft.dirty || requirementAssignmentDraft.dirty;
   const scope = mode === "create" ? "CREATE" : value?.id ?? "EMPTY";
   const allRelevanceSelected = form.controlRelevance.length === RELEVANCE_VALUES.length;
 
@@ -212,6 +215,9 @@ export default function CentralControlObjectPage({
       setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
       setDateDrafts({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
       setAccountGroupDraft(EMPTY_CLASSIFICATION_DRAFT_STATE);
+      setRiskAssignmentDraft(EMPTY_RISK_CONTROL_ASSIGNMENT_DRAFT_STATE);
+      setObjectiveAssignmentDraft(EMPTY_CONTROL_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE);
+      setRequirementAssignmentDraft(EMPTY_REQUIREMENT_CONTROL_ASSIGNMENT_DRAFT_STATE);
       scopeRef.current = scope;
     }, 0);
     return () => window.clearTimeout(timer);
@@ -246,6 +252,10 @@ export default function CentralControlObjectPage({
       onActiveTabChange("accountGroups");
       return false;
     }
+    if ([riskAssignmentDraft, objectiveAssignmentDraft, requirementAssignmentDraft].some(draft => !draft.ready || draft.invalid)) {
+      setValidationError(t("centralAssignment.validation.notReady"));
+      return false;
+    }
     setValidationError(null);
     return true;
   };
@@ -274,6 +284,9 @@ export default function CentralControlObjectPage({
       validTo: form.validTo || null,
       documents: toDocumentAggregateRequest(documents),
       accountGroupChanges: accountGroupDraft.changes,
+      riskAssignments: riskAssignmentDraft.changes,
+      controlObjectiveAssignments: objectiveAssignmentDraft.changes,
+      requirementAssignments: requirementAssignmentDraft.changes,
     };
     const payload: CreateCentralControlCommand | UpdateCentralControlCommand = mode === "create"
       ? { ...common, code: form.code.trim().toUpperCase() }
@@ -284,7 +297,7 @@ export default function CentralControlObjectPage({
     }
   };
 
-  const saveDisabled = busy || invalidDate || documents.uploading || documents.invalid || !documents.ready || !accountGroupDraft.ready || accountGroupDraft.invalid || (!generalDirty && !documents.dirty && !accountGroupDraft.dirty);
+  const saveDisabled = busy || invalidDate || documents.uploading || documents.invalid || !documents.ready || !accountGroupDraft.ready || accountGroupDraft.invalid || [riskAssignmentDraft, objectiveAssignmentDraft, requirementAssignmentDraft].some(draft => !draft.ready || draft.invalid) || (!generalDirty && !documents.dirty && !accountGroupDraft.dirty && !riskAssignmentDraft.dirty && !objectiveAssignmentDraft.dirty && !requirementAssignmentDraft.dirty);
   const headerValues = useMemo(() => [
     [t("control.fields.code"), form.code || "-"],
     [t("control.fields.createdAt"), formatPersianDateTime(value?.createdAt)],
@@ -305,15 +318,15 @@ export default function CentralControlObjectPage({
 
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key") as CentralControlTabKey | null;
-        if (key === "general" || key === "documents" || (key === "subprocesses" && value?.id && controlScopePermissions.view) || (key === "accountGroups" && accountGroupPermissions.view) || (key === "risks" && value?.id && riskCoveragePermissions.view) || (key === "requirements" && value?.id && requirementCoveragePermissions.view) || (key === "controlObjectives" && value?.id && objectiveCoveragePermissions.view)) onActiveTabChange(key);
+        if (key === "general" || key === "documents" || (key === "subprocesses" && value?.id && controlScopePermissions.view) || (key === "accountGroups" && accountGroupPermissions.view) || (key === "risks" && riskAssignmentPermissions.view) || (key === "requirements" && requirementAssignmentPermissions.view) || (key === "controlObjectives" && objectiveAssignmentPermissions.view)) onActiveTabChange(key);
       }}>
         <Tab text={t("control.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
         <Tab text={t("control.tabs.subprocesses")} selected={activeTab === "subprocesses"} disabled={!value?.id || !controlScopePermissions.view} data-tab-key="subprocesses" />
         <Tab text={t("control.tabs.regulations")} disabled data-tab-key="regulations" />
-        <Tab text={t("control.tabs.requirements")} selected={activeTab === "requirements"} disabled={!value?.id || !requirementCoveragePermissions.view} data-tab-key="requirements" />
-        <Tab text={t("control.tabs.risks")} selected={activeTab === "risks"} disabled={!value?.id || !riskCoveragePermissions.view} data-tab-key="risks" />
+        <Tab text={t("control.tabs.requirements")} selected={activeTab === "requirements"} disabled={!requirementAssignmentPermissions.view} data-tab-key="requirements" />
+        <Tab text={t("control.tabs.risks")} selected={activeTab === "risks"} disabled={!riskAssignmentPermissions.view} data-tab-key="risks" />
         <Tab text={t("control.tabs.accountGroups")} selected={activeTab === "accountGroups"} disabled={!accountGroupPermissions.view} data-tab-key="accountGroups" />
-        <Tab text={t("control.tabs.controlObjectives")} selected={activeTab === "controlObjectives"} disabled={!value?.id || !objectiveCoveragePermissions.view} data-tab-key="controlObjectives" />
+        <Tab text={t("control.tabs.controlObjectives")} selected={activeTab === "controlObjectives"} disabled={!objectiveAssignmentPermissions.view} data-tab-key="controlObjectives" />
         <Tab text={t("control.tabs.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
       </DetailTabContainer>
 
@@ -397,9 +410,9 @@ export default function CentralControlObjectPage({
           {accountGroupPermissions.view ? <ControlAccountGroupsTab controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setAccountGroupDraft} /> : null}
         </div>
 
-        <div className={activeTab === "risks" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{value?.id && riskCoveragePermissions.view ? <ControlRiskCoveragesTab controlId={value.id} /> : null}</div>
-        <div className={activeTab === "requirements" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{value?.id && requirementCoveragePermissions.view ? <ControlRequirementCoveragesTab controlId={value.id} /> : null}</div>
-        <div className={activeTab === "controlObjectives" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{value?.id && objectiveCoveragePermissions.view ? <ControlControlObjectivesTab controlId={value.id} /> : null}</div>
+        <div className={activeTab === "risks" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{riskAssignmentPermissions.view ? <ControlRiskTemplateAssignmentsTab controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskAssignmentDraft} /> : null}</div>
+        <div className={activeTab === "requirements" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{requirementAssignmentPermissions.view ? <ControlRequirementAssignmentsTab controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setRequirementAssignmentDraft} /> : null}</div>
+        <div className={activeTab === "controlObjectives" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{objectiveAssignmentPermissions.view ? <ControlControlObjectiveAssignmentsTab controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setObjectiveAssignmentDraft} /> : null}</div>
 
         <div className={activeTab === "documents" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>
           <DocumentManager targetType="CENTRAL_CONTROL" targetId={value?.id ?? null} readOnly={readOnly || !permissions.documentUpload} showActions={!readOnly && permissions.documentUpload} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentError} onDraftStateChange={setDocuments} title={t("control.tabs.documents")} />
