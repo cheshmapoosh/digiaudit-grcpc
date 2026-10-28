@@ -557,12 +557,12 @@ export default function CentralRegulationsPage() {
           (row) =>
             row.id !== modalCurrentId && !modalGroupDescendants.has(row.id),
         )
-        .map((row) => ({ id: row.id, code: row.code, title: row.title }));
+        .map((row) => ({ id: row.id, code: row.code, title: row.title, status: row.status }));
     }
     if (modalType === "REGULATION") {
-      return groups.map((row) => ({ id: row.id, code: row.code, title: row.title }));
+      return groups.map((row) => ({ id: row.id, code: row.code, title: row.title, status: row.status }));
     }
-    return regulations.map((row) => ({ id: row.id, code: row.code, title: row.title }));
+    return regulations.map((row) => ({ id: row.id, code: row.code, title: row.title, status: row.status }));
   }, [groups, modalCurrentId, modalGroupDescendants, modalType, regulations]);
 
   const selectedParentLabel = labelById(selectedNode?.parentId);

@@ -10,6 +10,7 @@ export interface PolicyParentCandidate {
   id: string;
   code: string;
   title: string;
+  status: "ACTIVE" | "INACTIVE" | "DELETED";
 }
 
 interface Props {

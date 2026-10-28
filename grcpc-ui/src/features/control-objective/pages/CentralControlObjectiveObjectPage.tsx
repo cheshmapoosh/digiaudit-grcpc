@@ -1,10 +1,11 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { ControlObjectiveRiskTemplateAssignmentsTab, EMPTY_RISK_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE, useRiskControlObjectiveAssignmentPermissions, type RiskControlObjectiveAssignmentDraftState } from "@/features/risk-control-objective-assignment";
 import { ControlObjectiveControlAssignmentsTab, useControlControlObjectiveAssignmentPermissions } from "@/features/control-control-objective-assignment";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import {
   DocumentManager,
@@ -27,7 +28,7 @@ import {
 } from "@/features/control-objective-scope";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type {
   CentralControlObjectiveDetail,
   CentralControlObjectiveEditableStatus,
@@ -255,30 +256,9 @@ export default function CentralControlObjectiveObjectPage({
     || !riskAssignmentDraft.ready
     || (!generalDirty && !documents.dirty && !classifications.dirty && !riskAssignmentDraft.dirty);
 
-  const headerValues = useMemo(
-    () => [
-      [t("controlObjective.fields.code"), form.code || "-"],
-      [t("controlObjective.fields.createdAt"), formatPersianDateTime(value?.createdAt)],
-      [t("controlObjective.fields.validTo"), formatPersianDate(form.validTo)],
-      [t("controlObjective.fields.status"), t(`controlObjective.status.${form.status}`)],
-    ],
-    [form.code, form.status, form.validTo, t, value?.createdAt],
-  );
-
   return (
     <div className="controlObjectiveObjectPage">
-      <div className="controlObjectiveObjectHeader">
-        <Title level="H4">{form.title || t("controlObjective.object.title")}</Title>
-        <div className="controlObjectiveHeaderGrid modalTwoColumnGrid">
-          {headerValues.map(([label, displayValue]) => (
-            <div className="controlObjectiveHeaderItem" key={label}>
-              <Label showColon>{label}</Label>
-              <Text className="objectPageValue">{(displayValue) || "—"}</Text>
-            </div>
-          ))}
-        </div>
-      </div>
-
+      <CatalogParentHeader objectTitle={form.title || t("controlObjective.object.title")} standalone />
       <DetailTabContainer
         onTabSelect={(event) => {
           const key = event.detail.tab.getAttribute("data-tab-key") as CentralControlObjectiveTabKey | null;

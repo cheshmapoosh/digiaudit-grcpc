@@ -1,9 +1,10 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { RequirementControlAssignmentsTab, useRequirementControlAssignmentPermissions } from "@/features/requirement-control-assignment";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
@@ -17,7 +18,7 @@ import {
 } from "@/features/document";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import RegulationParentValueHelpDialog, {
   type RegulationParentCandidate,
 } from "../components/RegulationParentValueHelpDialog";
@@ -204,9 +205,6 @@ export default function CentralRegulationObjectPage({
         : null,
     [form.parentId, parentCandidates],
   );
-  const parentLabel = selectedParent
-    ? `${selectedParent.code} — ${selectedParent.title}`
-    : t("regulation.parent.none");
 
   const change = <K extends keyof FormState>(key: K, next: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: next }));
@@ -281,32 +279,14 @@ export default function CentralRegulationObjectPage({
     documents.invalid ||
     !documents.ready ||
     (!definitionDirty && !documents.dirty);
-  const headerValues = [
-    [t("regulation.fields.code"), form.code || "-"],
-    [t("regulation.fields.createdAt"), formatPersianDateTime(value?.createdAt)],
-    [
-      t("regulation.fields.validity"),
-      `${formatPersianDate(form.validFrom)} - ${formatPersianDate(form.validTo)}`,
-    ],
-    [t("regulation.fields.status"), t(`regulation.status.${form.status}`)],
-  ];
 
   return (
     <>
       <div className="regulationObjectPage">
-        <div className="regulationObjectHeader">
-          <Title level="H4">
-            {form.title || t(`regulation.nodeType.${typeKey}`)}
-          </Title>
-          <div className={nodeType === "GROUP" ? "regulationHeaderGrid modalTwoColumnGrid" : "regulationHeaderGrid"}>
-            {headerValues.map(([label, displayValue]) => (
-              <div className="regulationHeaderItem" key={label}>
-                <Label showColon>{label}</Label>
-                <Text className="objectPageValue">{(displayValue) || "—"}</Text>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CatalogParentHeader objectTitle={form.title || t(`regulation.nodeType.${typeKey}`)} label={t("regulation.fields.parent")} parentId={form.parentId} required={nodeType !== "GROUP"}
+          busy={busy} onClearParent={canChangeParent && nodeType === "GROUP" ? () => change("parentId", null) : undefined}
+          parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t(nodeType === "REQUIREMENT" ? "regulation.nodeType.regulation" : "regulation.nodeType.group"), status: selectedParent.status } : null}
+          selection={canChangeParent ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
         <DetailTabContainer
           onTabSelect={(event) => {
@@ -377,19 +357,6 @@ export default function CentralRegulationObjectPage({
               </Field>
               <Field label={t("regulation.fields.type")}>
                 {readOnly ? <Text className="objectPageValue">{(t(`regulation.nodeType.${typeKey}`)) || "—"}</Text> : <Input value={t(`regulation.nodeType.${typeKey}`)} readonly />}
-              </Field>
-              <Field
-                label={t("regulation.fields.parent")}
-                required={nodeType !== "GROUP"}
-              >
-                <div className="regulationParentField">
-                  {readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly />}
-                  {canChangeParent ? (
-                    <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>
-                      {t("regulation.parent.select")}
-                    </Button>
-                  ) : null}
-                </div>
               </Field>
               <Field label={t("regulation.fields.status")}>
                 {readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("regulation.status." + form.status)}</ObjectStatus> : <Select

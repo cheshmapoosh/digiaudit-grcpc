@@ -1,3 +1,4 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { createElement, useEffect, useMemo, useState } from "react";
@@ -18,7 +19,7 @@ import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
-import { MasterDataFormField, MasterDataObjectHeader } from "@/shared/components/MasterDataObjectHeader";
+import { MasterDataFormField } from "@/shared/components/MasterDataObjectHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -428,21 +429,15 @@ export default function ObjectiveManagementPage() {
       accessibleName={dialogTitle}>
       <ModalDialogHeader title={dialogTitle} onClose={close} />
       <div className="objectiveDialogContent">
-      <MasterDataObjectHeader title={form.name || dialogTitle} columns={2} fields={[
-        { label: t("objective.code"), value: form.code },
-        { label: t("objective.name"), value: form.name },
-        ...(!isStrategy ? [
-        { label: t("objective.kind.label"), value: t(`objective.kind.${form.kind}`) },
-        { label: t("objective.type"), value: form.objectiveType },
-        { label: t("objective.strategy.label"),
-          value: strategyLabels.get(form.parentObjectiveId)
-            || t("objective.strategy.missing") },
-        { label: t("objective.validFrom"), value: formatPersianDate(form.validFrom) },
-        { label: t("objective.validTo"), value: formatPersianDate(form.validTo) },
-        { label: t("objective.createdAt"), value: selected && mode !== "create" ? formatPersianDateTime(selected.createdAt) : "" },
-        { label: t("objective.updatedAt"), value: selected && mode !== "create" ? formatPersianDateTime(selected.updatedAt) : "" },
-        ] : []),
-      ]} />
+      <CatalogParentHeader objectTitle={form.name || dialogTitle} label={t("objective.strategy.label")} parentId={form.parentObjectiveId} required={!isStrategy}
+        parent={chosenStrategy ? { code: chosenStrategy.code, title: chosenStrategy.name, type: t("objective.kind.STRATEGY"), status: chosenStrategy.status } : null}
+        selection={!isStrategy && !readOnly && manage ? <Select value={chosenStrategy ? form.parentObjectiveId : ""} disabled={busy || readOnly}
+              accessibleName={t("objective.strategy.label")}
+            onChange={(event) => setForm((old) => ({ ...old, parentObjectiveId: event.target.value }))}>
+            <Option value="">{t("objective.strategy.choose")}</Option>
+            {rootStrategies.filter((item) => (mode !== "edit" || item.id !== selectedId) && !blockedParents.has(item.id))
+              .map((item) => <Option key={item.id} value={item.id}>{item.code} · {strategyLabels.get(item.id)}</Option>)}
+          </Select> : null} />
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key");
         if (key === "general" || key === "organizations" || key === "documents") setActiveTab(key);
@@ -461,14 +456,6 @@ export default function ObjectiveManagementPage() {
           {!isStrategy ? <>
           <MasterDataFormField label={t("objective.type")}>{readOnly ? <Text className="objectPageValue">{(form.objectiveType) || "—"}</Text> : <Input value={form.objectiveType} readonly={readOnly} disabled={busy}
             onInput={(event) => setForm((old) => ({ ...old, objectiveType: event.target.value }))} />}</MasterDataFormField>
-          <MasterDataFormField label={t("objective.strategy.label")} required>
-            {readOnly ? <Text className="objectPageValue">{strategyLabels.get(form.parentObjectiveId) || t("objective.strategy.missing")}</Text> : <Select value={chosenStrategy ? form.parentObjectiveId : ""} disabled={busy || readOnly}
-              accessibleName={t("objective.strategy.label")}
-            onChange={(event) => setForm((old) => ({ ...old, parentObjectiveId: event.target.value }))}>
-            <Option value="">{t("objective.strategy.choose")}</Option>
-            {rootStrategies.filter((item) => (mode !== "edit" || item.id !== selectedId) && !blockedParents.has(item.id))
-              .map((item) => <Option key={item.id} value={item.id}>{item.code} · {strategyLabels.get(item.id)}</Option>)}
-          </Select>}</MasterDataFormField>
           <div className="modalDateRange"><MasterDataFormField label={t("objective.validFrom")}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("objective.validFrom")}
             invalidValueMessage={t("objective.errors.dates")}
             onChange={(value) => setForm((old) => ({ ...old, validFrom: value }))}

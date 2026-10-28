@@ -1,10 +1,11 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Select, Option, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Select, Option, TextArea } from "@ui5/webcomponents-react";
 
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type {
   CentralControlEditableStatus,
   CentralControlGroupDetail,
@@ -31,15 +32,6 @@ interface Props {
 }
 
 const EMPTY_DATE_DRAFT: PersianDateDraftState = { draftValue: "", valid: true, dirty: false };
-
-function HeaderItem({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div className="controlHeaderItem">
-      <strong>{label}:</strong>
-      <span>{value?.trim() ? value : "-"}</span>
-    </div>
-  );
-}
 
 export default function CentralControlGroupObjectPage({
   mode,
@@ -115,38 +107,20 @@ export default function CentralControlGroupObjectPage({
   };
 
   const parent = groups.find((group) => group.id === parentGroupId);
-  const parentTitle = parent?.title ?? t("control.group.noParent", { defaultValue: "بدون گروه" });
-  const parentLabel = parent ? `${parent.code} — ${parent.title}` : parentTitle;
-  const statusLabel = status === "ACTIVE" ? t("control.status.ACTIVE") : t("control.status.INACTIVE");
-  const groupLabel = t("control.nodeType.group", { defaultValue: "گروه کنترل" });
 
   return (
     <div className="controlGroupObjectPage">
-      <div className="controlObjectHeader">
-        <Title level="H4">{mode === "create" ? groupLabel : title || groupLabel}</Title>
-        <div className="controlHeaderGrid modalTwoColumnGrid">
-          <HeaderItem label={t("control.fields.name")} value={title} />
-          <HeaderItem label={t("control.fields.code")} value={code} />
-          <HeaderItem label={t("control.fields.parentGroup")} value={parentLabel} />
-          <HeaderItem label={t("control.fields.status")} value={statusLabel} />
-          <HeaderItem label={t("control.fields.validity")} value={`${formatPersianDate(validFrom)} - ${formatPersianDate(validTo)}`} />
-          <HeaderItem label={t("control.fields.createdAt")} value={formatPersianDateTime(value?.createdAt)} />
-          <HeaderItem label={t("control.fields.updatedAt")} value={formatPersianDateTime(value?.updatedAt)} />
-        </div>
-      </div>
+      <CatalogParentHeader objectTitle={title || t("control.nodeType.group")} label={t("control.fields.parentGroup")} parentId={parentGroupId}
+        busy={busy} onClearParent={!readOnly ? () => setParentGroupId(null) : undefined}
+        parent={parent ? { code: parent.code, title: parent.title, type: t("control.nodeType.group"), status: parent.status } : null}
+        selection={!readOnly ? <Button disabled={busy} onClick={() => setValueHelpOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
       {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
       {validationError ? <MessageStrip design="Negative" onClose={() => setValidationError(null)}>{validationError}</MessageStrip> : null}
       <div className="controlFormGrid modalTwoColumnGrid">
         <div className="controlField"><Label showColon required>{t("control.fields.code")}</Label>{readOnly ? <Text className="objectPageValue">{(code) || "—"}</Text> : <Input value={code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(e) => setCode(e.target.value)} />}</div>
         <div className="controlField"><Label showColon required>{t("control.fields.name")}</Label>{readOnly ? <Text className="objectPageValue">{(title) || "—"}</Text> : <Input value={title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => setTitle(e.target.value)} />}</div>
-        <div className="controlField">
-          <Label showColon>{t("control.fields.parentGroup", { defaultValue: "گروه والد" })}</Label>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            {readOnly ? <Text className="objectPageValue">{(parentTitle) || "—"}</Text> : <Input value={parentTitle} readonly style={{ flex: 1 }} />}
-            {!readOnly ? <Button disabled={busy} onClick={() => setValueHelpOpen(true)}>{t("common.select", { defaultValue: "انتخاب" })}</Button> : null}
-          </div>
-        </div>
+
         <div className="controlField"><Label showColon>{t("control.fields.status")}</Label>{readOnly ? <ObjectStatus state={status === "ACTIVE" ? "Positive" : "None"}>{t("control.status." + status)}</ObjectStatus> : <Select value={status} disabled={mode !== "edit" || busy} onChange={(e) => setStatus(e.target.value as CentralControlEditableStatus)}><Option value="ACTIVE">{t("control.status.ACTIVE")}</Option><Option value="INACTIVE">{t("control.status.INACTIVE")}</Option></Select>}</div>
         <div className="controlDateRangeRow">
           <div className="controlField"><Label showColon>{t("control.fields.validFrom")}</Label>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(validFrom)) || "—"}</Text> : <PersianDatePicker value={validFrom} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validFrom")} invalidValueMessage={t("control.validation.invalidDate")} onChange={setValidFrom} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} />}</div>

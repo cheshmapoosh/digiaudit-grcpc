@@ -476,7 +476,7 @@ export default function CentralPoliciesPage() {
   const parentCandidates = useMemo<PolicyParentCandidate[]>(() =>
     groups
       .filter((row) => modalType !== "GROUP" || (row.id !== modalCurrentId && !modalGroupDescendants.has(row.id)))
-      .map((row) => ({ id: row.id, code: row.code, title: row.title })),
+      .map((row) => ({ id: row.id, code: row.code, title: row.title, status: row.status })),
     [groups, modalCurrentId, modalGroupDescendants, modalType],
   );
 

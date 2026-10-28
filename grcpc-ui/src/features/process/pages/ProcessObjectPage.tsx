@@ -1,8 +1,9 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import { DocumentManager, EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE, toDocumentAggregateRequest, type DocumentAggregateDraftError, type DocumentLinkTargetType, type ParentSaveDocumentDraftState } from "@/features/document";
 import { EMPTY_CONTROL_SCOPE_DRAFT_STATE, SubprocessControlScopesTab, useControlScopePermissions, type ControlScopeDraftState } from "@/features/control-scope";
@@ -13,7 +14,7 @@ import { SubprocessAccountGroupsTab, useControlAccountGroupPermissions } from "@
 import { useControlObjectiveAccountGroupPermissions } from "@/features/control-objective-account-group";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { formatPersianDate, formatPersianDateTime, toEnglishDigits } from "@/shared/utils/date.utils";
+import { formatPersianDate, toEnglishDigits } from "@/shared/utils/date.utils";
 import ProcessParentValueHelpDialog from "../components/ProcessParentValueHelpDialog";
 import type { ProcessNode, ProcessNodeCreate, ProcessNodeType, ProcessNodeUpdate } from "../domain/process.model";
 import { buildTree, collectDescendantIds } from "../utils/process.tree";
@@ -53,9 +54,7 @@ export interface ProcessObjectPageProps {
 }
 
 const ROOT_STYLE: CSSProperties = { display: "grid", gap: "0.75rem", minWidth: 0, maxWidth: "100%" };
-const HEADER_STYLE: CSSProperties = {  };
-const HEADER_TITLE_STYLE: CSSProperties = { padding: "0.5rem 1rem" };
-const HEADER_ROW_STYLE: CSSProperties = { display: "grid", gridTemplateColumns: "8rem minmax(0, 1fr)", gap: "0.5rem", alignItems: "center" };
+
 const FIELD_STYLE: CSSProperties = { display: "grid", gap: "0.35rem" };
 const BODY_STYLE: CSSProperties = { minHeight: 0, padding: "0.75rem" };
 
@@ -88,9 +87,6 @@ function optional(value: string): string | null { return value.trim() || null; }
 function nodeTypeLabel(type: ProcessNodeType, t: ReturnType<typeof useTranslation>["t"]) { return type === "PROCESS" ? t("process.nodeType.process", { defaultValue: "Process" }) : t("process.nodeType.subProcess", { defaultValue: "Subprocess" }); }
 function documentTarget(type: ProcessNodeType): DocumentLinkTargetType { return type === "PROCESS" ? "CENTRAL_PROCESS" : "CENTRAL_SUBPROCESS"; }
 
-function HeaderItem({ label, value }: { label: string; value?: string | null }) {
-    return <div style={HEADER_ROW_STYLE}><strong>{label}:</strong><span style={{ minWidth: 0, wordBreak: "break-word" }}>{value?.trim() || "-"}</span></div>;
-}
 function FormField({ label, required, fullWidth, children }: { label: string; required?: boolean; fullWidth?: boolean; children: ReactNode }) {
     return <div style={{ ...FIELD_STYLE, ...(fullWidth ? { gridColumn: "1 / -1" } : undefined) }}><Label showColon required={required}>{label}</Label>{children}</div>;
 }
@@ -148,8 +144,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
         return allItems.filter((item) => item.nodeType === "PROCESS" && !excluded.has(item.id));
     }, [allItems, value]);
     const selectedParent = form.parentId ? allItems.find((item) => item.id === form.parentId) : null;
-    const parentLabel = selectedParent ? `${selectedParent.code} - ${selectedParent.title}` : t("process.parent.none", { defaultValue: "No parent" });
-    const statusLabel = form.status === "ACTIVE" ? t("common.active", { defaultValue: "Active" }) : t("common.inactive", { defaultValue: "Inactive" });
+
     const change = <K extends keyof ProcessFormState>(key: K, next: ProcessFormState[K]) => setForm((current) => ({ ...current, [key]: next }));
 
     const validate = () => {
@@ -185,19 +180,11 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     return (
         <>
             <div style={ROOT_STYLE}>
-                <div style={HEADER_STYLE}>
-                    <div style={HEADER_TITLE_STYLE}><Title level="H4">{mode === "create" ? t("process.object.createModalTitle", { defaultValue: "Create" }) : form.title}</Title></div>
-                    <div className="modalThreeColumnGrid modalHeaderGrid">
-                        <HeaderItem label={t("process.fields.name", { defaultValue: "Title" })} value={form.title} />
-                        <HeaderItem label={t("process.fields.code", { defaultValue: "Code" })} value={form.code} />
-                        <HeaderItem label={t("process.fields.nodeType", { defaultValue: "Node type" })} value={nodeTypeLabel(form.nodeType, t)} />
-                        <HeaderItem label={t("process.fields.status", { defaultValue: "Status" })} value={statusLabel} />
-                        <HeaderItem label={form.nodeType === "PROCESS" ? t("process.fields.parentProcess", { defaultValue: "Parent process" }) : t("process.fields.owningProcess", { defaultValue: "Owning process" })} value={parentLabel} />
-                        <HeaderItem label={t("process.fields.validity", { defaultValue: "Validity" })} value={`${formatPersianDate(form.validFrom)} - ${formatPersianDate(form.validTo)}`} />
-                        <HeaderItem label={t("process.fields.createdAt", { defaultValue: "Created at" })} value={formatPersianDateTime(value?.createdAt)} />
-                        <HeaderItem label={t("process.fields.updatedAt")} value={formatPersianDateTime(value?.updatedAt)} />
-                    </div>
-                </div>
+                <CatalogParentHeader objectTitle={form.title || nodeTypeLabel(form.nodeType, t)} label={t(form.nodeType === "PROCESS" ? "process.fields.parentProcess" : "process.fields.owningProcess")}
+                    parentId={form.parentId} required={form.nodeType === "SUBPROCESS"}
+                    busy={busy} onClearParent={!readOnly && manage && form.nodeType === "PROCESS" ? () => change("parentId", null) : undefined}
+                    parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: nodeTypeLabel(selectedParent.nodeType, t), status: selectedParent.status } : null}
+                    selection={!readOnly && manage ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
                 <DetailTabContainer onTabSelect={(event) => { const key = event.detail.tab.getAttribute("data-tab-key") as ProcessTabKey | null; if (key) { if (!controlledTab) setInternalTab(key); onActiveTabChange?.(key); } }}>
                     <Tab text={t("process.tabs.general", { defaultValue: "General Information" })} selected={activeTab === "general"} data-tab-key="general" />
@@ -221,16 +208,6 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                         <FormField label={t("process.fields.name", { defaultValue: "Title" })} required>{readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", readValue(e))} />}</FormField>
                         <FormField label={t("process.fields.nodeType", { defaultValue: "Node type" })}>{readOnly ? <Text className="objectPageValue">{(nodeTypeLabel(form.nodeType, t)) || "—"}</Text> : <Input value={nodeTypeLabel(form.nodeType, t)} readonly />}</FormField>
                         <FormField label={t("process.fields.status", { defaultValue: "Status" })}>{readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t(form.status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select value={form.status} disabled={mode !== "edit" || busy} accessibleName={t("process.fields.status", { defaultValue: "Status" })} onChange={(e) => change("status", readValue(e) as "ACTIVE" | "INACTIVE")}><Option value="ACTIVE">{t("common.active", { defaultValue: "Active" })}</Option><Option value="INACTIVE">{t("common.inactive", { defaultValue: "Inactive" })}</Option></Select>}</FormField>
-                        <FormField label={form.nodeType === "PROCESS" ? t("process.fields.parentProcess", { defaultValue: "Parent process" }) : t("process.fields.owningProcess", { defaultValue: "Owning process" })} required={form.nodeType === "SUBPROCESS"}>
-                            <div style={{ display: "flex", gap: "0.5rem", alignItems: "end" }}>
-                                {readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly style={{ flex: 1, minWidth: 0 }} />}
-                                {!readOnly ? (
-                                    <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>
-                                        {t("process.parent.select", { defaultValue: "انتخاب" })}
-                                    </Button>
-                                ) : null}
-                            </div>
-                        </FormField>
                         <FormField label={t("process.fields.sortOrder", { defaultValue: "Sort order" })}>{readOnly ? <Text className="objectPageValue">{(form.sortOrder) || "—"}</Text> : <Input value={form.sortOrder} readonly={readOnly} disabled={busy} onInput={(e) => change("sortOrder", readValue(e))} />}</FormField>
                         <div className="modalDateRange"><FormField label={t("process.fields.validFrom", { defaultValue: "Valid from" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validFrom", { defaultValue: "Valid from" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validFrom", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validFrom.valid === state.valid && current.validFrom.draftValue === state.draftValue && current.validFrom.dirty === state.dirty ? current : { ...current, validFrom: state })} />}</FormField>
                         <FormField label={t("process.fields.validTo", { defaultValue: "Valid to" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validTo", { defaultValue: "Valid to" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validTo", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validTo.valid === state.valid && current.validTo.draftValue === state.draftValue && current.validTo.dirty === state.dirty ? current : { ...current, validTo: state })} />}</FormField></div>

@@ -1,10 +1,11 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { RiskTemplateControlAssignmentsTab, useRiskControlAssignmentPermissions } from "@/features/risk-control-assignment";
 import { RiskTemplateControlObjectiveAssignmentsTab, useRiskControlObjectiveAssignmentPermissions } from "@/features/risk-control-objective-assignment";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
@@ -16,7 +17,7 @@ import {
 } from "@/features/document";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import RiskCategoryValueHelpDialog from "../components/RiskCategoryValueHelpDialog";
 import type {
   CentralRiskCategoryDetail,
@@ -206,11 +207,6 @@ export default function CentralRiskObjectPage({
   const selectedParent = form.parentCategoryId
     ? categories.find((category) => category.id === form.parentCategoryId) ?? null
     : null;
-  const parentLabel = selectedParent
-    ? `${selectedParent.code} — ${selectedParent.title}`
-    : kind === "category"
-      ? t("risk.parent.none")
-      : "-";
 
   const change = <K extends keyof FormState>(key: K, next: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: next }));
@@ -323,15 +319,6 @@ export default function CentralRiskObjectPage({
     !documents.ready ||
     (!generalDirty && !documents.dirty);
 
-  const headerValues = useMemo(
-    () => [
-      [t("risk.fields.code"), form.code || "-"],
-      [t("risk.fields.createdAt"), formatPersianDateTime(value?.createdAt)],
-      [t("risk.fields.validTo"), formatPersianDate(form.validTo)],
-      [t("risk.fields.status"), t(`risk.status.${form.status}`)],
-    ],
-    [form.code, form.status, form.validTo, t, value?.createdAt],
-  );
   const documentTarget = kind === "category" ? "CENTRAL_RISK_CATEGORY" : "CENTRAL_RISK_TEMPLATE";
 
   const validFromField = (
@@ -364,17 +351,11 @@ export default function CentralRiskObjectPage({
   return (
     <>
       <div className="riskObjectPage">
-        <div className="riskObjectHeader">
-          <Title level="H4">{form.title || t(`risk.object.${kind}`)}</Title>
-          <div className={kind === "category" ? "riskHeaderGrid modalTwoColumnGrid" : "riskHeaderGrid"}>
-            {headerValues.map(([label, displayValue]) => (
-              <div className="riskHeaderItem" key={label}>
-                <Label showColon>{label}</Label>
-                <Text className="objectPageValue">{(displayValue) || "—"}</Text>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CatalogParentHeader objectTitle={form.title || t(`risk.object.${kind}`)} label={t(kind === "category" ? "risk.fields.parentCategory" : "risk.fields.riskCategory")}
+          parentId={form.parentCategoryId} required={kind === "template"}
+          busy={busy} onClearParent={canChangeParent && kind === "category" ? () => change("parentCategoryId", null) : undefined}
+          parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t("risk.nodeType.category"), status: selectedParent.status } : null}
+          selection={canChangeParent ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
         <DetailTabContainer
           onTabSelect={(event) => {
@@ -419,16 +400,6 @@ export default function CentralRiskObjectPage({
                   maxlength={255}
                   onInput={(event) => change("title", readValue(event))}
                 />}
-              </Field>
-              <Field label={t(kind === "category" ? "risk.fields.parentCategory" : "risk.fields.riskCategory")} required={kind === "template"}>
-                <div className="riskParentField">
-                  {readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly />}
-                  {canChangeParent ? (
-                    <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>
-                      {t("risk.parent.select")}
-                    </Button>
-                  ) : null}
-                </div>
               </Field>
               {kind === "template" ? (
                 <Field label={t("risk.fields.riskType")} required>

@@ -1,10 +1,11 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
 import { useAuthState } from "@/features/auth";
 import { canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
@@ -19,7 +20,7 @@ import {
   PersianDatePicker,
   type PersianDateDraftState,
 } from "@/shared/components/PersianDatePicker";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import PolicyParentValueHelpDialog, {
   type PolicyParentCandidate,
 } from "../components/PolicyParentValueHelpDialog";
@@ -94,15 +95,6 @@ function FormField({ label, required = false, fullWidth = false, children }: {
     <div className={fullWidth ? "policyFormField policyFormFieldFull" : "policyFormField"}>
       <Label showColon required={required}>{label}</Label>
       {children}
-    </div>
-  );
-}
-
-function HeaderItem({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div className="policyHeaderItem">
-      <strong>{label}:</strong>
-      <span>{value?.trim() ? value : "-"}</span>
     </div>
   );
 }
@@ -258,15 +250,6 @@ export default function CentralPolicyObjectPage({
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
   const parent = parentId ? parentCandidates.find((item) => item.id === parentId) : null;
-  const parentLabel = parent
-    ? `${parent.code} — ${parent.title}`
-    : t("policy.parent.none", { defaultValue: "بدون والد" });
-  const nodeTypeLabel = nodeType === "GROUP"
-    ? t("policy.nodeType.group", { defaultValue: "گروه سیاست" })
-    : t("policy.nodeType.policy", { defaultValue: "سیاست" });
-  const statusLabel = status === "ACTIVE"
-    ? t("common.active", { defaultValue: "فعال" })
-    : t("common.inactive", { defaultValue: "غیرفعال" });
 
   const validate = () => {
     if (!code.trim()) {
@@ -355,35 +338,10 @@ export default function CentralPolicyObjectPage({
 
   return (
     <div className="policyObjectPage">
-      <div className="policyObjectHeader">
-        <div className="policyObjectHeaderTitle">
-          <Title level="H4">{mode === "create" ? nodeTypeLabel : title || nodeTypeLabel}</Title>
-        </div>
-        <div className={nodeType === "GROUP" ? "policyObjectHeaderGrid modalTwoColumnGrid" : "policyObjectHeaderGrid"}>
-          <HeaderItem label={t("policy.fields.name", { defaultValue: "نام" })} value={title} />
-          <HeaderItem label={t("policy.fields.identifier", { defaultValue: "شناسه" })} value={code} />
-          <HeaderItem label={t("policy.fields.parent", { defaultValue: "والد" })} value={parentLabel} />
-          <HeaderItem label={t("policy.fields.status", { defaultValue: "وضعیت" })} value={statusLabel} />
-          {nodeType === "POLICY" ? (
-            <HeaderItem
-              label={t("policy.fields.policyType", { defaultValue: "نوع سیاست" })}
-              value={policyTypeLabel(policyType, t)}
-            />
-          ) : null}
-          <HeaderItem
-            label={t("policy.fields.validity", { defaultValue: "بازه اعتبار" })}
-            value={`${formatPersianDate(validFrom)} - ${formatPersianDate(validTo)}`}
-          />
-          <HeaderItem
-            label={t("policy.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}
-            value={formatPersianDateTime(value?.createdAt)}
-          />
-          <HeaderItem
-            label={t("policy.fields.updatedAt", { defaultValue: "تاریخ بروزرسانی" })}
-            value={formatPersianDateTime(value?.updatedAt)}
-          />
-        </div>
-      </div>
+      <CatalogParentHeader objectTitle={title || t(nodeType === "GROUP" ? "policy.nodeType.group" : "policy.nodeType.policy")} label={t("policy.fields.parent")} parentId={parentId} required={nodeType === "POLICY"}
+        busy={busy} onClearParent={canChangeParent && nodeType === "GROUP" ? () => setParentId(null) : undefined}
+        parent={parent ? { code: parent.code, title: parent.title, type: t("policy.nodeType.group"), status: parent.status } : null}
+        selection={canChangeParent ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
       <DetailTabContainer
         onTabSelect={(event) => {
@@ -429,16 +387,6 @@ export default function CentralPolicyObjectPage({
                 maxlength={255}
                 onInput={(event) => setTitle(readValue(event))}
               />}
-            </FormField>
-            <FormField label={t("policy.fields.parent", { defaultValue: "والد" })} required={nodeType === "POLICY"}>
-              <div className="policyParentField">
-                {readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly />}
-                {canChangeParent ? (
-                  <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>
-                    {t("common.select", { defaultValue: "انتخاب" })}
-                  </Button>
-                ) : null}
-              </div>
             </FormField>
             <FormField label={t("policy.fields.status", { defaultValue: "وضعیت" })}>
               {readOnly ? <ObjectStatus state={status === "ACTIVE" ? "Positive" : "None"}>{t(status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select

@@ -1,4 +1,12 @@
 .modalFooterActions { gap: .75rem; }
+.modalDialogHeader, .modalDialogHeader > ui5-bar, [data-catalog-parent-header] { width: 100%; min-width: 0; }
+.catalogParentHeader { width: 100%; min-width: 0; padding: .5rem 1rem; box-sizing: border-box; gap: .5rem; }
+.catalogParentHeaderToolbar { gap: .5rem 1rem; }
+.catalogParentHeaderIdentity { min-width: 0; flex: 1; }
+.catalogParentHeaderActions { min-width: 0; max-width: 100%; gap: .5rem; }
+.catalogParentHeaderActions > ui5-select { max-width: 100%; }
+.catalogParentHeaderFields { width: 100%; min-width: 0; }
+.catalogParentHeaderFields > * { min-width: 0; }
 .modalHeaderGrid { padding: .5rem 1rem; }
 div.modalTwoColumnGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem 1rem; min-width: 0; }
 .modalTwoColumnGrid > * { min-width: 0; }

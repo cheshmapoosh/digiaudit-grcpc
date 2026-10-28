@@ -1,7 +1,8 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
@@ -18,7 +19,7 @@ import {
   useControlObjectiveAccountGroupPermissions,
 } from "@/features/control-objective-account-group";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import AccountGroupParentValueHelpDialog from "../components/AccountGroupParentValueHelpDialog";
 import {
   CENTRAL_ACCOUNT_GROUP_IMPORTANCE,
@@ -176,7 +177,6 @@ export default function CentralAccountGroupObjectPage({
   const selectedParent = form.parentAccountGroupId
     ? rows.find((row) => row.id === form.parentAccountGroupId) ?? null
     : null;
-  const parentLabel = selectedParent ? `${selectedParent.code} — ${selectedParent.title}` : t("accountGroup.parent.none");
 
   const change = <K extends keyof FormState>(key: K, next: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: next }));
@@ -238,30 +238,14 @@ export default function CentralAccountGroupObjectPage({
   };
 
   const saveDisabled = busy || invalidDate || documents.uploading || documents.invalid || !documents.ready || (!generalDirty && !documents.dirty);
-  const headerValues = useMemo(
-    () => [
-      [t("accountGroup.fields.code"), form.code || "-"],
-      [t("accountGroup.fields.createdAt"), formatPersianDateTime(value?.createdAt)],
-      [t("accountGroup.fields.validity"), `${formatPersianDate(form.validFrom)} - ${formatPersianDate(form.validTo)}`],
-      [t("accountGroup.fields.status"), t(`accountGroup.status.${form.status}`)],
-    ],
-    [form.code, form.status, form.validFrom, form.validTo, t, value?.createdAt],
-  );
 
   return (
     <>
       <div className="accountGroupObjectPage">
-        <div className="accountGroupObjectHeader">
-          <Title level="H4">{form.title || t("accountGroup.object.title")}</Title>
-          <div className="accountGroupHeaderGrid">
-            {headerValues.map(([label, displayValue]) => (
-              <div className="accountGroupHeaderItem" key={label}>
-                <Label showColon>{label}</Label>
-                <Text className="objectPageValue">{(displayValue) || "—"}</Text>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CatalogParentHeader objectTitle={form.title || t("accountGroup.object.title")} label={t("accountGroup.fields.parent")} parentId={form.parentAccountGroupId}
+          busy={busy} onClearParent={canChangeParent ? () => change("parentAccountGroupId", null) : undefined}
+          parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t("accountGroup.object.title"), status: selectedParent.status } : null}
+          selection={canChangeParent ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
         <DetailTabContainer
           onTabSelect={(event) => {
@@ -307,16 +291,6 @@ export default function CentralAccountGroupObjectPage({
                   maxlength={255}
                   onInput={(event) => change("title", readValue(event))}
                 />}
-              </Field>
-              <Field label={t("accountGroup.fields.parent")}>
-                <div className="accountGroupParentField">
-                  {readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly />}
-                  {canChangeParent ? (
-                    <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>
-                      {t("accountGroup.parent.select")}
-                    </Button>
-                  ) : null}
-                </div>
               </Field>
               <Field label={t("accountGroup.fields.status")}>
                 {readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("accountGroup.status." + form.status)}</ObjectStatus> : <Select

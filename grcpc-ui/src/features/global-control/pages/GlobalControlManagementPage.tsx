@@ -1,3 +1,4 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { createElement, useEffect, useMemo, useState } from "react";
@@ -18,7 +19,7 @@ import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
-import { MasterDataFormField, MasterDataObjectHeader } from "@/shared/components/MasterDataObjectHeader";
+import { MasterDataFormField } from "@/shared/components/MasterDataObjectHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -473,19 +474,11 @@ export default function GlobalControlManagementPage() {
         {t(regulationRows.length ? "common.noData" : "globalControl.regulations.empty")}</MessageStrip> : null}
       </>}
     </div>;
+  const viewParent = groups.find((item) => item.id === (selectedGroup ? selectedGroup.parentId : selectedControl?.controlGroupId));
   const viewDetails = details ? <div className="globalControlDialogContent">
-    <MasterDataObjectHeader title={details.name} columns={selectedGroup ? 2 : 3} fields={[
-      { label: t("globalControl.code"), value: details.code },
-      { label: t("globalControl.name"), value: details.name },
-      { label: t("globalControl.tree.kind"), value: t(selectedGroup ? "globalControl.group.menu" : "globalControl.control.menu") },
-      { label: t(selectedGroup ? "globalControl.group.parent" : "globalControl.group.select"),
-        value: selectedGroup ? groups.find((item) => item.id === selectedGroup.parentId)?.name || t("globalControl.group.none")
-          : groups.find((item) => item.id === selectedControl?.controlGroupId)?.name || "—" },
-      { label: t("globalControl.validFrom"), value: formatPersianDate(details.validFrom) },
-      { label: t("globalControl.validTo"), value: formatPersianDate(details.validTo) },
-      { label: t("globalControl.createdAt"), value: formatPersianDateTime(details.createdAt) },
-      { label: t("globalControl.updatedAt"), value: formatPersianDateTime(details.updatedAt) },
-    ]} />
+    <CatalogParentHeader objectTitle={details.name} label={t(selectedGroup ? "globalControl.group.parent" : "globalControl.group.select")}
+      parentId={selectedGroup ? selectedGroup.parentId : selectedControl?.controlGroupId} required={Boolean(selectedControl)}
+      parent={viewParent ? { code: viewParent.code, title: viewParent.name, type: t("globalControl.group.menu"), status: viewParent.status } : null} />
     <DetailTabContainer onTabSelect={(event) => {
       const key = event.detail.tab.getAttribute("data-tab-key");
       if (key === "general" || key === "regulations" || key === "documents") setActiveTab(key);
@@ -503,10 +496,8 @@ export default function GlobalControlManagementPage() {
       <div className={selectedGroup ? "masterDataFormGrid modalTwoColumnGrid" : "masterDataFormGrid"}>
         <MasterDataFormField label={t("globalControl.code")}><Text className="objectPageValue">{(details.code) || "—"}</Text></MasterDataFormField>
         <MasterDataFormField label={t("globalControl.name")}><Text className="objectPageValue">{(details.name) || "—"}</Text></MasterDataFormField>
-        {selectedGroup ? <MasterDataFormField label={t("globalControl.group.parent")}><Text className="objectPageValue">{(groups.find((item) => item.id === selectedGroup.parentId)?.name
-          || t("globalControl.group.none")) || "—"}</Text></MasterDataFormField> : null}
         {selectedControl ? <>
-          <MasterDataFormField label={t("globalControl.group.select")}><Text className="objectPageValue">{groups.find((item) => item.id === selectedControl.controlGroupId)?.name || "—"}</Text></MasterDataFormField>
+
           <MasterDataFormField label={t("globalControl.type")}><Text className="objectPageValue">{(selectedControl.controlType) || "—"}</Text></MasterDataFormField>
           <MasterDataFormField label={t("globalControl.testRequired")}><Text className="objectPageValue">{(t(selectedControl.testRequired ? "globalControl.yes" : "globalControl.no")) || "—"}</Text></MasterDataFormField>
         </> : null}
@@ -556,6 +547,7 @@ export default function GlobalControlManagementPage() {
     ? t(editor === "groupEdit" ? "globalControl.group.edit" : "globalControl.group.create")
     : t(editor === "controlEdit" ? "globalControl.control.edit" : "globalControl.control.create");
   const form = groupEditor ? groupForm : controlForm;
+  const editorParent = groups.find((item) => item.id === (groupEditor ? groupForm.parentId : controlForm.controlGroupId));
   return <section className="globalControlPage">
     <Link onClick={() => navigate("/master-data")}>{t("masterData.title")}</Link>
     {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}</MessageStrip> : null}
@@ -570,17 +562,28 @@ export default function GlobalControlManagementPage() {
       <ModalDialogHeader title={editor ? editorTitle : details?.name || t("globalControl.title")}
         onClose={editor ? closeEditor : () => setViewOpen(false)} />
       {editor ? <div className="globalControlDialogContent">
-      <MasterDataObjectHeader title={form.name || editorTitle} columns={groupEditor ? 2 : 3} fields={[
-        { label: t("globalControl.code"), value: form.code },
-        { label: t("globalControl.name"), value: form.name },
-        { label: t("globalControl.tree.kind"), value: t(groupEditor ? "globalControl.group.menu" : "globalControl.control.menu") },
-        { label: t(groupEditor ? "globalControl.group.parent" : "globalControl.group.select"),
-          value: groups.find((item) => item.id === (groupEditor ? groupForm.parentId : controlForm.controlGroupId))?.name || t("globalControl.group.none") },
-        { label: t("globalControl.validFrom"), value: formatPersianDate(form.validFrom) },
-        { label: t("globalControl.validTo"), value: formatPersianDate(form.validTo) },
-        { label: t("globalControl.createdAt"), value: editor?.endsWith("Edit") ? formatPersianDateTime(details?.createdAt) : "" },
-        { label: t("globalControl.updatedAt"), value: editor?.endsWith("Edit") ? formatPersianDateTime(details?.updatedAt) : "" },
-      ]} />
+      <CatalogParentHeader objectTitle={form.name || editorTitle} label={t(groupEditor ? "globalControl.group.parent" : "globalControl.group.select")}
+        parentId={groupEditor ? groupForm.parentId : controlForm.controlGroupId} required={!groupEditor}
+        busy={busy} onClearParent={groupEditor && manage ? () => setGroupForm((old) => ({ ...old, parentId: "" })) : undefined}
+        parent={editorParent ? { code: editorParent.code, title: editorParent.name, type: t("globalControl.group.menu"), status: editorParent.status } : null}
+        selection={groupEditor ? <Select value={groupForm.parentId} disabled={busy}
+            accessibleName={t("globalControl.group.parent")}
+            onChange={(event) => setGroupForm((old) => ({
+              ...old, parentId: event.target.value,
+            }))}>
+            <Option value="">{t("globalControl.group.none")}</Option>
+            {groupOptions.filter((item) => (editor !== "groupEdit" || item.id !== selectedGroup?.id)
+              && !blockedParents.has(item.id)).map((item) =>
+              <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
+          </Select> : <Select value={controlForm.controlGroupId} disabled={busy}
+            accessibleName={t("globalControl.group.select")}
+            onChange={(event) => setControlForm((old) => ({
+              ...old, controlGroupId: event.target.value,
+            }))}>
+            <Option value="">{t("globalControl.group.select")}</Option>
+            {groupOptions.map((item) =>
+              <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
+          </Select>} />
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key");
         if (key === "general" || key === "regulations" || key === "documents") setEditorTab(key);
@@ -602,27 +605,8 @@ export default function GlobalControlManagementPage() {
         <MasterDataFormField label={t("globalControl.name")} required><Input value={form.name} disabled={busy} onInput={(event) => groupEditor
           ? setGroupForm((old) => ({ ...old, name: event.target.value }))
           : setControlForm((old) => ({ ...old, name: event.target.value }))} /></MasterDataFormField>
-        {groupEditor ? <>
-          <MasterDataFormField label={t("globalControl.group.parent")}><Select value={groupForm.parentId} disabled={busy}
-            accessibleName={t("globalControl.group.parent")}
-            onChange={(event) => setGroupForm((old) => ({
-              ...old, parentId: event.target.value,
-            }))}>
-            <Option value="">{t("globalControl.group.none")}</Option>
-            {groupOptions.filter((item) => (editor !== "groupEdit" || item.id !== selectedGroup?.id)
-              && !blockedParents.has(item.id)).map((item) =>
-              <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-          </Select></MasterDataFormField>
-        </> : <>
-          <MasterDataFormField label={t("globalControl.group.select")} required><Select value={controlForm.controlGroupId} disabled={busy}
-            accessibleName={t("globalControl.group.select")}
-            onChange={(event) => setControlForm((old) => ({
-              ...old, controlGroupId: event.target.value,
-            }))}>
-            <Option value="">{t("globalControl.group.select")}</Option>
-            {groupOptions.map((item) =>
-              <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-          </Select></MasterDataFormField>
+        {!groupEditor ? <>
+
           <MasterDataFormField label={t("globalControl.type")} required><Input value={controlForm.controlType} disabled={busy}
             onInput={(event) => setControlForm((old) => ({
               ...old, controlType: event.target.value,
@@ -635,7 +619,7 @@ export default function GlobalControlManagementPage() {
             <Option value="false">{t("globalControl.no")}</Option>
             <Option value="true">{t("globalControl.yes")}</Option>
           </Select></MasterDataFormField>
-        </>}
+        </> : null}
         <div className="globalControlValidityRow">
         <MasterDataFormField label={t("globalControl.validFrom")}><PersianDatePicker value={form.validFrom} disabled={busy}
           accessibleName={t("globalControl.validFrom")}

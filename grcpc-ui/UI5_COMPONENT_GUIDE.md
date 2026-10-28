@@ -149,6 +149,18 @@ component, or - there is a documented limitation.
   lifecycle status. Mount editors only after Edit, preserving the same draft,
   validity and aggregate Save behavior. Independently saved Local rows start
   in View and expose their own permission-checked Edit action.
+- Governance catalog dialogs use `CatalogParentHeader` in the native Dialog
+  header, retaining the current item's title and at most four parent fields:
+  code, title, type and lifecycle status. Parent/owner selection belongs in
+  this header and updates the existing form draft and Save command. Root items
+  keep the same layout with the catalog top level and No Parent state;
+  independent catalogs use the same layout with an Independent Catalog state.
+  A required or unresolved parent must never be presented as a root. Keep
+  existing selection permissions, eligibility filters and navigation guards.
+  Show Remove Parent in the header only for an editable optional parent that
+  is currently set. Clearing changes the existing draft; aggregate Save and
+  navigation protection still own persistence. Hide removal for required
+  parents, standalone catalogs and View mode, and disable it while busy.
 - The governance hub uses a simple Title without a hero avatar or repeated
   introductory copy or a Back button. Card descriptions belong in native Text in the Card body:
   CardHeader in UI5 2.18 limits subtitle lines and has no public wrapping option.

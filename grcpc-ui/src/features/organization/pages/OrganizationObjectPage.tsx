@@ -1,3 +1,4 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useAuthState } from "@/features/auth";
 import { organizationService } from "../service/organization.service";
@@ -6,7 +7,7 @@ import { LocalOrganizationWorkspace } from "@/features/local-master-data";
 import { OrganizationObjectivesTab } from "@/features/objective";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import {
     DocumentManager,
@@ -17,7 +18,7 @@ import {
 } from "@/features/document";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import ParentValueHelpDialog from "../components/ParentValueHelpDialog";
 import {
     ORGANIZATION_TYPES,
@@ -66,9 +67,7 @@ export interface OrganizationObjectPageProps {
 }
 
 const ROOT_STYLE: CSSProperties = { display: "grid", gap: "0.75rem", minWidth: 0, maxWidth: "100%" };
-const HEADER_STYLE: CSSProperties = {  };
-const HEADER_TITLE_STYLE: CSSProperties = { padding: "0.5rem 1rem" };
-const HEADER_ROW_STYLE: CSSProperties = { display: "grid", gridTemplateColumns: "8rem minmax(0, 1fr)", gap: "0.5rem", alignItems: "center" };
+
 const FIELD_STYLE: CSSProperties = { display: "grid", gap: "0.35rem" };
 const BODY_STYLE: CSSProperties = { minHeight: 0, padding: "0.75rem" };
 const FULL_WIDTH_STYLE: CSSProperties = { ...FIELD_STYLE, gridColumn: "1 / -1" };
@@ -105,10 +104,6 @@ function normalized(form: OrganizationFormState, mode: OrganizationObjectMode) {
 
 function readValue(event: unknown): string {
     return (event as { target?: { value?: string } }).target?.value ?? "";
-}
-
-function HeaderItem({ label, value }: { label: string; value?: string | null }) {
-    return <div style={HEADER_ROW_STYLE}><strong>{label}:</strong><span style={{ minWidth: 0, wordBreak: "break-word" }}>{value?.trim() || "-"}</span></div>;
 }
 
 function FormField({ label, required, fullWidth, children }: { label: string; required?: boolean; fullWidth?: boolean; children: ReactNode }) {
@@ -171,8 +166,7 @@ export default function OrganizationObjectPage({
 
     const descendants = useMemo(() => new Set(collectDescendantIds(buildTree(allItems), value?.id)), [allItems, value?.id]);
     const selectedParent = form.parentOrganizationId ? allItems.find((item) => item.id === form.parentOrganizationId) : null;
-    const parentLabel = selectedParent ? `${selectedParent.code} - ${selectedParent.name}` : t("organization.parent.none", { defaultValue: "No parent" });
-    const statusLabel = form.status === "ACTIVE" ? t("common.active", { defaultValue: "Active" }) : t("common.inactive", { defaultValue: "Inactive" });
+
     const typeLabel = t(`organization.types.${form.organizationType}`, { defaultValue: form.organizationType });
 
     const change = <K extends keyof OrganizationFormState>(key: K, next: OrganizationFormState[K]) => setForm((current) => ({ ...current, [key]: next }));
@@ -209,22 +203,10 @@ export default function OrganizationObjectPage({
         || (!generalInformationDirty && !documentDraft.dirty);
 
     return <div style={ROOT_STYLE}>
-        <div style={HEADER_STYLE}>
-            <div style={HEADER_TITLE_STYLE}><Title level="H4">{form.name || t("organization.object.modalTitle", { defaultValue: "Organization" })}</Title></div>
-            <div className="modalThreeColumnGrid modalHeaderGrid">
-                <HeaderItem label={t("organization.fields.name", { defaultValue: "Name" })} value={form.name} />
-                <HeaderItem label={t("organization.fields.code", { defaultValue: "Code" })} value={form.code} />
-                <HeaderItem label={t("organization.fields.organizationType", { defaultValue: "Organization type" })} value={typeLabel} />
-                <HeaderItem label={t("organization.fields.status", { defaultValue: "Status" })} value={statusLabel} />
-                <HeaderItem label={t("organization.fields.parent", { defaultValue: "Parent" })} value={parentLabel} />
-                <HeaderItem label={t("organization.fields.owner")} value={ownerOptions.find((o) => o.id === form.ownerUserId)?.displayLabel ?? value?.ownerDisplayLabel} />
-                <HeaderItem label={t("organization.fields.location", { defaultValue: "Location" })} value={form.location} />
-                <HeaderItem label={t("organization.fields.validity", { defaultValue: "Validity" })} value={`${formatPersianDate(form.validFrom)} - ${formatPersianDate(form.validTo)}`} />
-                <HeaderItem label={t("organization.fields.description", { defaultValue: "Description" })} value={form.description} />
-                <HeaderItem label={t("organization.fields.createdAt", { defaultValue: "Created at" })} value={formatPersianDateTime(value?.createdAt)} />
-                <HeaderItem label={t("organization.fields.updatedAt", { defaultValue: "Updated at" })} value={formatPersianDateTime(value?.updatedAt)} />
-            </div>
-        </div>
+        <CatalogParentHeader objectTitle={form.name || t("organization.object.modalTitle")} label={t("organization.fields.parent")} parentId={form.parentOrganizationId}
+            busy={busy} onClearParent={!readOnly ? () => change("parentOrganizationId", null) : undefined}
+            parent={selectedParent ? { code: selectedParent.code, title: selectedParent.name, type: t(`organization.types.${selectedParent.organizationType}`), status: selectedParent.status } : null}
+            selection={!readOnly ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
         <DetailTabContainer onTabSelect={(event) => { const key = (event.detail.tab.getAttribute("data-tab-key") as OrganizationTabKey | null); if (key) { if (!controlledTab) setInternalTab(key); onActiveTabChange?.(key); } }}>
             <Tab text={t("organization.tabs.general", { defaultValue: "General Information" })} selected={activeTab === "general"} data-tab-key="general" />
@@ -248,7 +230,6 @@ export default function OrganizationObjectPage({
                     <FormField label={t("organization.fields.name", { defaultValue: "Name" })} required>{readOnly ? <Text className="objectPageValue">{(form.name) || "—"}</Text> : <Input value={form.name} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("name", readValue(e))} />}</FormField>
                     <FormField label={t("organization.fields.organizationType", { defaultValue: "Organization type" })} required>{readOnly ? <Text className="objectPageValue">{(typeLabel) || "—"}</Text> : <Select value={form.organizationType} disabled={readOnly || busy} accessibleName={t("organization.fields.organizationType", { defaultValue: "Organization type" })} onChange={(e) => change("organizationType", readValue(e) as OrganizationType)}>{ORGANIZATION_TYPES.map((type) => <Option key={type} value={type}>{t(`organization.types.${type}`, { defaultValue: type })}</Option>)}</Select>}</FormField>
                     <FormField label={t("organization.fields.status", { defaultValue: "Status" })}>{readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t(form.status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select value={form.status} disabled={mode !== "edit" || busy} accessibleName={t("organization.fields.status", { defaultValue: "Status" })} onChange={(e) => change("status", readValue(e) as OrganizationEditableStatus)}><Option value="ACTIVE">{t("common.active", { defaultValue: "Active" })}</Option><Option value="INACTIVE">{t("common.inactive", { defaultValue: "Inactive" })}</Option></Select>}</FormField>
-                    <FormField label={t("organization.fields.parent", { defaultValue: "Parent" })}><div style={{ display: "flex", gap: "0.5rem" }}>{readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly style={{ flex: 1 }} />}{!readOnly ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("organization.parent.select", { defaultValue: "Select" })}</Button> : null}</div></FormField>
                     <FormField label={t("organization.fields.owner")}>
                         {readOnly ? <Text className="objectPageValue">{(ownerOptions.find((owner) => owner.id === form.ownerUserId)?.displayLabel ?? value?.ownerDisplayLabel ?? t("organization.owner.none")) || "—"}</Text> : <Select value={form.ownerUserId ?? ""} disabled={readOnly || busy || !canAssignOwner || ownerOptionsError} accessibleName={t("organization.fields.owner")} onChange={(e) => change("ownerUserId", e.detail.selectedOption?.value || null)}>
                             <Option value="" selected={!form.ownerUserId}>{t("organization.owner.none")}</Option>

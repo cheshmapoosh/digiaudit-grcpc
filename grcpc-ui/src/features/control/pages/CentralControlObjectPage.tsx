@@ -1,7 +1,8 @@
+import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ObjectStatus, Button, Input, Label, MessageStrip, MultiComboBox, MultiComboBoxItem, Option, Select, Tab, Text, TextArea, Title } from "@ui5/webcomponents-react";
+import { ObjectStatus, Button, Input, Label, MessageStrip, MultiComboBox, MultiComboBoxItem, Option, Select, Tab, Text, TextArea } from "@ui5/webcomponents-react";
 
 import {
   DocumentManager,
@@ -215,7 +216,7 @@ export default function CentralControlObjectPage({
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
   const change = <K extends keyof FormState>(key: K, next: FormState[K]) => setForm((current) => ({ ...current, [key]: next }));
-  const groupTitle = groups.find((group) => group.id === form.controlGroupId)?.title ?? t("common.notSpecified", { defaultValue: "تعیین نشده" });
+  const selectedGroup = groups.find((group) => group.id === form.controlGroupId);
 
   const changeTrigger = (next: FormState["triggerType"]) => {
     setForm((current) => ({
@@ -287,12 +288,6 @@ export default function CentralControlObjectPage({
   };
 
   const saveDisabled = busy || invalidDate || documents.uploading || documents.invalid || !documents.ready || !accountGroupDraft.ready || accountGroupDraft.invalid || [riskAssignmentDraft, objectiveAssignmentDraft, requirementAssignmentDraft].some(draft => !draft.ready || draft.invalid) || (!generalDirty && !documents.dirty && !accountGroupDraft.dirty && !riskAssignmentDraft.dirty && !objectiveAssignmentDraft.dirty && !requirementAssignmentDraft.dirty);
-  const headerValues = useMemo(() => [
-    [t("control.fields.code"), form.code || "-"],
-    [t("control.fields.createdAt"), formatPersianDateTime(value?.createdAt)],
-    [t("control.fields.validFrom"), formatPersianDate(form.validFrom)],
-    [t("control.fields.validTo"), formatPersianDate(form.validTo)],
-  ], [form.code, form.validFrom, form.validTo, t, value?.createdAt]);
 
   const selectField = <T extends string>(label: string, selectedValue: T | "", values: readonly T[], key: keyof FormState, prefix: string) => (
     <Field label={label}>{readOnly ? <Text className="objectPageValue">{(selectedValue ? t(prefix + "." + selectedValue) : "—") || "—"}</Text> : <Select value={selectedValue} disabled={readOnly || busy} onChange={(event) => change(key, readValue(event) as never)}><Option value="">{t("common.notSpecified", { defaultValue: "تعیین نشده" })}</Option>{values.map((item) => <Option key={item} value={item}>{t(`${prefix}.${item}`)}</Option>)}</Select>}</Field>
@@ -300,10 +295,9 @@ export default function CentralControlObjectPage({
 
   return (
     <div className="controlObjectPage">
-      <div className="controlObjectHeader">
-        <Title level="H4">{form.title || t("control.object.title")}</Title>
-        <div className="controlHeaderGrid">{headerValues.map(([label, displayValue]) => <div className="controlHeaderItem" key={label}><Label showColon>{label}</Label><Text className="objectPageValue">{(displayValue) || "—"}</Text></div>)}</div>
-      </div>
+      <CatalogParentHeader objectTitle={form.title || t("control.object.title")} label={t("control.fields.controlGroup")} parentId={form.controlGroupId} required
+        parent={selectedGroup ? { code: selectedGroup.code, title: selectedGroup.title, type: t("control.nodeType.group"), status: selectedGroup.status } : null}
+        selection={!readOnly ? <Button disabled={busy} onClick={() => setGroupHelpOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key") as CentralControlTabKey | null;
@@ -327,7 +321,7 @@ export default function CentralControlObjectPage({
           <div className="controlFormGrid">
             <Field label={t("control.fields.code")} required>{readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(e) => change("code", e.target.value)} />}</Field>
             <Field label={t("control.fields.name")} required>{readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", e.target.value)} />}</Field>
-            <Field label={t("control.fields.controlGroup")}><div style={{ display: "flex", gap: "0.5rem" }}>{readOnly ? <Text className="objectPageValue">{(groupTitle) || "—"}</Text> : <><Input value={groupTitle} readonly style={{ flex: 1 }} /><Button disabled={busy} onClick={() => setGroupHelpOpen(true)}>{t("common.select", { defaultValue: "انتخاب" })}</Button></>}</div></Field>
+
             {selectField(t("control.fields.controlClass"), form.controlClass, CONTROL_CLASSES, "controlClass", "control.controlClass")}
             {selectField(t("control.fields.importance"), form.importance, IMPORTANCE_VALUES, "importance", "control.importance")}
             {selectField(t("control.fields.controlRisk"), form.controlRisk, CONTROL_RISKS, "controlRisk", "control.controlRisk")}
@@ -415,7 +409,7 @@ export default function CentralControlObjectPage({
         </> : <><Button design="Emphasized" disabled={saveDisabled} onClick={submit}>{t("control.actions.submit")}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.cancel", { defaultValue: "انصراف" })}</Button></>}
       </DialogFooter>
 
-      <ControlGroupValueHelpDialog open={groupHelpOpen} groups={groups} selectedId={form.controlGroupId} onClose={() => setGroupHelpOpen(false)} onSelect={(id) => { change("controlGroupId", id); setGroupHelpOpen(false); }} />
+      <ControlGroupValueHelpDialog open={groupHelpOpen} groups={groups} selectedId={form.controlGroupId} allowEmpty={false} onClose={() => setGroupHelpOpen(false)} onSelect={(id) => { change("controlGroupId", id); setGroupHelpOpen(false); }} />
     </div>
   );
 }
