@@ -47,14 +47,14 @@ public class CentralPolicyGroupController {
 
   @PostMapping
   @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
-  public MasterDataAggregateMutationResponse create(
+  public CentralPolicyDtos.GroupAggregateResponse create(
       @Valid @RequestBody CentralPolicyDtos.CreateGroup r) {
     return commands.create(r);
   }
 
   @PatchMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
-  public MasterDataAggregateMutationResponse update(
+  public CentralPolicyDtos.GroupAggregateResponse update(
       @PathVariable UUID id, @Valid @RequestBody CentralPolicyDtos.UpdateGroup r) {
     return commands.update(id, r);
   }

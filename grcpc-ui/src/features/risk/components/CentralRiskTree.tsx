@@ -198,6 +198,7 @@ export default function CentralRiskTree({
   return (
     <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
       accessibleName={t("risk.list.title")}
+      noDataText={t("common.noData")}
       onItemClick={handleItemClick}
       onItemToggle={handleItemToggle}
       style={{ minHeight: "100%" }}

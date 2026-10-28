@@ -16,6 +16,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
 import com.digiaudit.grcpc.modules.organization.domain.entity.OrganizationEntity;
 import com.digiaudit.grcpc.modules.organization.domain.repository.OrganizationRepository;
+import com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
@@ -288,6 +289,79 @@ public class LocalControlPolicyService {
         row.getValidTo(), row.getVersion(), row.getCreatedAt(), row.getCreatedBy(),
         row.getUpdatedAt(), row.getUpdatedBy(), row.getDeletedAt(), row.getDeletedBy());
   }
+
+
+  public record AggregatePlan(LocalPolicyControlScopeEntity row, OrganizationLocalDtos.ControlPolicyChange change, boolean fresh, boolean metadata, MasterDataLifecycleStatus target) {}
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public AggregatePlan prepareAggregate(UUID organizationId, UUID targetId, OrganizationLocalDtos.ControlPolicyChange change,
+      MasterDataLifecycleStatus targetStatus, LocalDate targetFrom, LocalDate targetTo,
+      LocalOrganizationSubprocessScopeEntity context, MasterDataLifecycleStatus contextStatus, UUID definitionId) {
+    rules.requireWrite("PROCESS", "CONTROL", "GOVERNANCE");
+    rules.assertOwner(organizationId, context.getOrganizationId());
+    var subprocess = subprocesses.findById(context.getSubprocessId())
+        .orElseThrow(() -> rules.referenceNotFound(context.getSubprocessId()));
+    var definition = definitions.findById(definitionId).orElseThrow(() -> rules.referenceNotFound(definitionId));
+    var org = organizations.findById(organizationId).orElseThrow(() -> rules.referenceNotFound(organizationId));
+    var policy = policies.findById(change.policyId()).orElseThrow(() -> rules.referenceNotFound(change.policyId()));
+    var occupied = rows.findByLocalControlScopeIdAndPolicyId(targetId, change.policyId()).orElse(null);
+    var row = occupied == null ? null : rows.lockById(occupied.getId()).orElseThrow(() -> rules.notFound(occupied.getId()));
+    boolean fresh = row == null;
+    var target = rules.aggregateTarget(row == null ? null : row.getStatus(), change.operation(), change.requestedStatus(),
+        row == null ? null : row.getId(), row == null ? null : row.getVersion(), change.relationId(), change.version());
+    boolean retainedRestore = !fresh && row.getStatus() == MasterDataLifecycleStatus.DELETED
+        && change.operation() == OrganizationLocalDtos.Operation.CREATE_OR_RESTORE && change.scopeAction() == null
+        && change.validFrom() == null && change.validTo() == null;
+    boolean metadata = !retainedRestore && (fresh || change.operation() == OrganizationLocalDtos.Operation.UPDATE || change.operation() == OrganizationLocalDtos.Operation.CREATE_OR_RESTORE);
+    var action = metadata ? change.scopeAction() : row.getScopeAction();
+    LocalDate from = metadata ? change.validFrom() : row.getValidFrom();
+    LocalDate to = metadata ? change.validTo() : row.getValidTo();
+    if (target != MasterDataLifecycleStatus.DELETED) {
+      boolean active = fresh || row.getStatus() == MasterDataLifecycleStatus.DELETED || (target == MasterDataLifecycleStatus.ACTIVE && row.getStatus() != target);
+      if (action == null) throw rules.bad("Policy metadata is required");
+      if (active) {
+        rules.active(org.getStatus()); rules.active(policy.getStatus()); rules.active(targetStatus);
+        rules.active(subprocess.getStatus()); rules.active(contextStatus); rules.active(definition.getStatus());
+      }
+      else {
+        rules.nonDeleted(org.getStatus()); rules.nonDeleted(policy.getStatus()); rules.nonDeleted(targetStatus);
+        rules.nonDeleted(subprocess.getStatus()); rules.nonDeleted(contextStatus); rules.nonDeleted(definition.getStatus());
+      }
+      rules.dates(from, to);
+      if (!rules.contained(from, to, policy.getValidFrom(), policy.getValidTo()) || !rules.contained(from, to, targetFrom, targetTo))
+        throw rules.invalid("LOCAL_POLICY_VALIDITY_OUTSIDE_ENDPOINTS", "Policy interval exceeds exact target");
+    }
+    if (fresh) row = LocalPolicyControlScopeEntity.create(targetId, change.policyId(), action, from, to, actor(), now());
+    var effective = new OrganizationLocalDtos.ControlPolicyChange(change.controlScopeRef(), change.policyId(), change.operation(), change.relationId(), change.version(), action, from, to, change.requestedStatus());
+    return new AggregatePlan(row, effective, fresh, metadata, target);
+  }
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public RevisionContentResult applyAggregate(AggregatePlan plan) {
+    var row = plan.row(); var change = plan.change();
+    JsonNode before = plan.fresh() ? null : snapshot(row); Long expected = plan.fresh() ? null : row.getVersion();
+    var initial = row.getStatus();
+    boolean changedMetadata = plan.metadata() && (!java.util.Objects.equals(row.getScopeAction(), change.scopeAction())
+        || !java.util.Objects.equals(row.getValidFrom(), change.validFrom()) || !java.util.Objects.equals(row.getValidTo(), change.validTo()));
+    if (!plan.fresh() && !changedMetadata && initial == plan.target()) return null;
+    RevisionOperationType operation = plan.fresh() ? RevisionOperationType.CREATE : initial == MasterDataLifecycleStatus.DELETED ? RevisionOperationType.RESTORE
+        : initial != plan.target() ? plan.target() == MasterDataLifecycleStatus.DELETED ? RevisionOperationType.DELETE
+        : plan.target() == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE : RevisionOperationType.UPDATE;
+    if (!plan.fresh()) {
+      if (initial == MasterDataLifecycleStatus.DELETED) row.restore(actor(), now());
+      if (changedMetadata) row.update(change.scopeAction(), change.validFrom(), change.validTo(), actor(), now());
+      if (row.getStatus() != plan.target()) switch(plan.target()) {
+        case ACTIVE -> row.activate(actor(), now()); case INACTIVE -> row.inactivate(actor(), now()); case DELETED -> row.delete(actor(), now());
+      }
+    }
+    rows.saveAndFlush(row);
+    return RevisionContentResult.completed(RevisionEntityType.LOCAL_POLICY_CONTROL_SCOPE,
+        row.getId(), operation, expected, before, snapshot(row), row.getVersion(), mapper.valueToTree(Map.of("validated", true)));
+  }
+  public boolean changesAggregate(AggregatePlan plan) {
+    var row = plan.row(); var change = plan.change();
+    return plan.fresh() || row.getStatus() != plan.target() || (plan.metadata() && (!java.util.Objects.equals(row.getScopeAction(), change.scopeAction())
+        || !java.util.Objects.equals(row.getValidFrom(), change.validFrom()) || !java.util.Objects.equals(row.getValidTo(), change.validTo())));
+  }
+  public LocalControlPolicyDtos.Row canonical(AggregatePlan plan) { return map(plan.row()); }
 
   private UUID actor() { return currentUser.getCurrentPrincipal().getUserId(); }
   private Instant now() { return Instant.now(clock); }

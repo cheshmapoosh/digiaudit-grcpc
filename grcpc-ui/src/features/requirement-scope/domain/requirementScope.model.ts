@@ -4,8 +4,8 @@ import type {
   CentralRegulationSummary,
 } from "@/features/regulation/domain/centralRegulation.model";
 
-export type RequirementScopeStatus = "ACTIVE" | "INACTIVE";
-export type RequirementScopeStatusFilter = RequirementScopeStatus | "ALL";
+export type RequirementScopeStatus = "ACTIVE" | "INACTIVE" | "DELETED";
+export type RequirementScopeStatusFilter = Exclude<RequirementScopeStatus, "DELETED"> | "ALL";
 export type RequirementScopeEditState = "FINAL" | "DRAFT_NEW" | "DRAFT_EDITED" | "DRAFT_PENDING_DELETE";
 
 export interface CentralSubprocessRequirementScope {
@@ -62,7 +62,7 @@ export interface RequirementScopeChange {
   version?: number | null;
   validFrom?: string | null;
   validTo?: string | null;
-  requestedStatus?: RequirementScopeStatus | null;
+  requestedStatus?: Exclude<RequirementScopeStatus, "DELETED"> | null;
 }
 
 export interface RequirementScopeDraftState {

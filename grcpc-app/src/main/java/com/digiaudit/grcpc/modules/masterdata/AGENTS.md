@@ -8,6 +8,8 @@ Feature-specific `AGENTS.md` files under child folders extend these rules when w
 
 ## Required references
 
+The latest `grcpc-docs/master-data/accepted-corrections/2026-10-28-regulation-requirement-aggregate.md` supersedes the independent Import/read-only Requirement exception for the Regulation modal. Typed child CREATE/lifecycle drafts join main Create/Update, acquire CONTROL then REGULATION before hierarchy reads, and share the parent CENTRAL transaction/Revision and Documents. Strict draft preview has no writes; duplicate fresh codes never restore/upsert existing children. Keep standalone APIs compatible and do not run tests/runtime/DB verification.
+
 Use these documents before implementing any Master Data V2 slice:
 
 - `grcpc-docs/master-data/implementation-contract.md`
@@ -139,3 +141,9 @@ When an owning V2 slice replaces a quarantined area, implement its approved V2 p
 ## Main-page display ordering (2026-10-28)
 
 Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-main-catalog-display-order.md`. The explicit owner approval supersedes earlier no-drag rules only on main Governance trees. Sibling-only native UI5 dragging saves independent display ranks under the existing hierarchy Guard and one CENTRAL Revision; new inserts appear first. Modals, value helps and relationship tabs keep their existing sorting and have no ordering provider.
+
+## Governance modal aggregate extension (2026-10-28)
+
+Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-governance-modal-relations.md`. Aggregate Organization/Process/Subprocess Update owns its typed parent and is structural even for an unchanged parent; this supersedes the older non-structural General Information statements above. The seven additional typed parent Updates also use their existing structural Guard unions and one final owner mutation/Revision. Local Organization prepare/apply remains typed and MANDATORY; one CENTRAL header is persisted before its linked LOCAL Revision to satisfy the immediate caused-by FK, all within one protected outer transaction. No generic relationship command framework, new table/key or independent commit is authorized.
+
+Only offline backend compile with `-Dskip.ui=true -Dmaven.test.skip=true`, UI typecheck/lint and static diff/source inspection are permitted for this delivery. Do not create/edit/run tests, run an app/Flyway, or use MCP/browser/external service/DB/MinIO. Runtime layout, Oracle DDL and real concurrency remain unverified.

@@ -43,5 +43,6 @@
   "globalControl.errors.dates": "The validity date range is invalid.",
   "globalControl.errors.parent": "The selected parent group is invalid.",
   "globalControl.errors.group": "Select an active Control Group.",
-  "globalControl.errors.documents": "Document drafts must be ready."
+  "globalControl.errors.documents": "Document drafts must be ready.",
+  "globalControl.regulations.endpointStatus": "Regulation status"
 }

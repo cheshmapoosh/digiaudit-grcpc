@@ -50,14 +50,14 @@ public class CentralRiskCategoryController {
 
   @PostMapping
   @PreAuthorize("@masterDataAuthorization.canManage('RISK')")
-  public MasterDataAggregateMutationResponse create(
+  public CentralRiskCategoryAggregateResponse create(
       @Valid @RequestBody CreateCentralRiskCategoryRequest request) {
     return commands.create(request);
   }
 
   @PatchMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canManage('RISK')")
-  public MasterDataAggregateMutationResponse update(
+  public CentralRiskCategoryAggregateResponse update(
       @PathVariable UUID id, @Valid @RequestBody UpdateCentralRiskCategoryRequest request) {
     return commands.update(id, request);
   }

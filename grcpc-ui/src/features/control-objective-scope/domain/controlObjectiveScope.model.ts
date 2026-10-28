@@ -1,7 +1,7 @@
 import type { CentralControlObjectiveSummary } from "@/features/control-objective";
 
-export type ControlObjectiveScopeStatus = "ACTIVE" | "INACTIVE";
-export type ControlObjectiveScopeStatusFilter = ControlObjectiveScopeStatus | "ALL";
+export type ControlObjectiveScopeStatus = "ACTIVE" | "INACTIVE" | "DELETED";
+export type ControlObjectiveScopeStatusFilter = Exclude<ControlObjectiveScopeStatus, "DELETED"> | "ALL";
 export type ControlObjectiveScopeEditState = "FINAL" | "DRAFT_NEW" | "DRAFT_EDITED" | "DRAFT_PENDING_DELETE";
 
 export interface CentralSubprocessControlObjectiveScope {
@@ -56,7 +56,7 @@ export interface ControlObjectiveScopeChange {
   version?: number | null;
   validFrom?: string | null;
   validTo?: string | null;
-  requestedStatus?: ControlObjectiveScopeStatus | null;
+  requestedStatus?: Exclude<ControlObjectiveScopeStatus, "DELETED"> | null;
 }
 
 export interface ControlObjectiveScopeDraftState {

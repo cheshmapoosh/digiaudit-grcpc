@@ -1,8 +1,9 @@
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Dialog, List, ListItemStandard, Tree, TreeItem } from "@ui5/webcomponents-react";
+import { Dialog, Tree, TreeItem } from "@ui5/webcomponents-react";
 
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import type { CentralControlGroupSummary } from "../domain/centralControl.model";
@@ -55,20 +56,15 @@ export default function ControlGroupValueHelpDialog({
   );
 
   return (
-    <Dialog open={open} accessibleName={title} onClose={onClose}>
+    <Dialog className="catalogObjectDialog" open={open} accessibleName={title} onClose={onClose}>
       <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy} accessibleName={t("control.group.search", { defaultValue: "جستجوی گروه کنترل" })} />} />
       <div className="controlGroupValueHelp">
-
-          {allowEmpty ? <List separators="Inner">
-            <ListItemStandard selected={!selectedId} type={busy ? "Inactive" : "Active"} onClick={() => select(null)}>
-              {t("control.group.noParent", { defaultValue: "بدون گروه" })}
-            </ListItemStandard>
-          </List> : null}
-        <Tree accessibleName={title} onItemClick={(event) => {
+        <Tree accessibleName={title} noDataText={t("common.noData")} onItemClick={(event) => {
           const id = event.detail.item.dataset.groupId;
           if (id && !excluded.has(id)) select(id);
         }}>{rows.map(renderGroup)}</Tree>
         <DialogFooter>
+          {allowEmpty && selectedId ? <Button design="Negative" disabled={busy} onClick={() => select(null)}>{t("catalog.parentHeader.clear")}</Button> : null}
           <Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.close", { defaultValue: "بستن" })}</Button>
         </DialogFooter>
       </div>

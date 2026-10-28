@@ -1,5 +1,5 @@
-export type ControlScopeStatus = "ACTIVE" | "INACTIVE";
-export type ControlScopeStatusFilter = ControlScopeStatus | "ALL";
+export type ControlScopeStatus = "ACTIVE" | "INACTIVE" | "DELETED";
+export type ControlScopeStatusFilter = Exclude<ControlScopeStatus, "DELETED"> | "ALL";
 export type ControlScopeEditState = "FINAL" | "DRAFT_NEW" | "DRAFT_EDITED" | "DRAFT_PENDING_DELETE";
 
 export interface CentralSubprocessControlScope {
@@ -21,8 +21,8 @@ export interface CentralSubprocessControlScope {
   createdBy: string;
   updatedAt: string;
   updatedBy: string;
-  deletedAt: null;
-  deletedBy: null;
+  deletedAt: string | null;
+  deletedBy: string | null;
 }
 
 export interface ControlScopeOptions {
@@ -63,7 +63,7 @@ export interface ControlScopeChange {
   recommendedTestMethodCode?: string | null;
   validFrom?: string | null;
   validTo?: string | null;
-  requestedStatus?: ControlScopeStatus | null;
+  requestedStatus?: Exclude<ControlScopeStatus, "DELETED"> | null;
 }
 
 export interface ControlScopeDraftState {

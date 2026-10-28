@@ -59,6 +59,20 @@ public class CentralSubprocessRequirementScopeQueryService {
   }
 
   @Transactional(readOnly = true)
+  public List<CentralSubprocessRequirementScopeResponse> deletedForSubprocess(UUID subprocessId) {
+    CentralSubprocessEntity subprocess = requireSubprocess(subprocessId);
+    List<CentralSubprocessRequirementScopeEntity> rows = scopes.findBySubprocessIdAndStatus(subprocessId, MasterDataLifecycleStatus.DELETED);
+    Map<UUID, CentralRegulationRequirementEntity> byId = requirements.findAllById(
+        rows.stream().map(CentralSubprocessRequirementScopeEntity::getRequirementId).toList())
+        .stream().collect(Collectors.toMap(CentralRegulationRequirementEntity::getId, Function.identity()));
+    return rows.stream()
+        .map(row -> mapper.toResponse(row, subprocess, requireRequirement(byId, row.getRequirementId())))
+        .sorted(Comparator.comparing(CentralSubprocessRequirementScopeResponse::requirementCode)
+            .thenComparing(CentralSubprocessRequirementScopeResponse::id))
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
   public List<CentralSubprocessRequirementScopeResponse> listForRequirement(
       UUID requirementId, MasterDataLifecycleStatus status, String search) {
     validateNormalStatus(status);

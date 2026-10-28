@@ -1,249 +1,138 @@
-import { HeaderSearch } from "@/shared/components/HeaderSearch";
+import { centralControlApi } from "@/features/control/infra/centralControl.api.repo";
+import type { CentralControlGroupSummary, CentralControlSummary } from "@/features/control/domain/centralControl.model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionSheet, BusyIndicator, Button, Dialog, Icon, Label, Link, MessageStrip, ObjectStatus, Option, Select, Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow, Title } from "@ui5/webcomponents-react";
-import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
-import type { CentralControlDetail, CentralControlGroupSummary, CentralControlSummary } from "@/features/control/domain/centralControl.model";
-import { centralControlApi } from "@/features/control/infra/centralControl.api.repo";
-import CentralControlObjectPage, { type CentralControlTabKey } from "@/features/control/pages/CentralControlObjectPage";
-import { formatPersianDate } from "@/shared/utils/date.utils";
-import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
-import type { CentralSubprocessControlScope, ControlScopeChange, ControlScopeDraftRow, ControlScopeDraftState, ControlScopeDraftValues, ControlScopeOptions, ControlScopeStatusFilter } from "../domain/controlScope.model";
+import { Link, MessageStrip, Option, Select } from "@ui5/webcomponents-react";
+import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
+import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
+import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
+import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
+import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
+import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
+import type { PersianDateDraftState } from "@/shared/components/PersianDatePicker";
+
+import type { CentralSubprocessControlScope, ControlScopeChange, ControlScopeDraftRow, ControlScopeDraftState, ControlScopeOptions } from "../domain/controlScope.model";
 import { controlScopeApi } from "../infra/controlScope.api.repo";
 import { useControlScopePermissions } from "../security/controlScopePermissions";
 import { controlScopeErrorMessage } from "../utils/controlScopeError";
-import ControlScopeEditorDialog from "./ControlScopeEditorDialog";
-import ControlSelectionDialog from "./ControlSelectionDialog";
-import "../control-scope.css";
-import "@/features/control/control.css";
 
-interface Props {
-  subprocessId: string | null;
-  readOnly: boolean;
-  busy?: boolean;
-  onDraftStateChange?: (state: ControlScopeDraftState) => void;
-}
 
-const EMPTY_OPTIONS: ControlScopeOptions = { recommendedFrequencyCodes: [], recommendedExecutionMethodCodes: [], recommendedTestMethodCodes: [] };
-const READ_ONLY_CONTROL_PERMISSIONS: CatalogActionPermissions = { create: false, update: false, move: false, lifecycle: false, delete: false, restore: false, publish: false, documentUpload: false };
-function readFilter(event: unknown): ControlScopeStatusFilter { return ((event as { target?: { value?: string } }).target?.value ?? "ALL") as ControlScopeStatusFilter; }
-function fromPersisted(row: CentralSubprocessControlScope): ControlScopeDraftRow {
+const EMPTY_SELECTION = new Set<string>();
+interface Props { subprocessId: string | null; readOnly: boolean; busy?: boolean; canonicalRows?: CentralSubprocessControlScope[] | null; onDraftStateChange?: (state: ControlScopeDraftState) => void; }
+
+function persisted(row: CentralSubprocessControlScope): ControlScopeDraftRow {
   return { key: row.id, scopeId: row.id, controlId: row.controlId, controlCode: row.controlCode, controlTitle: row.controlTitle, recommendedFrequencyCode: row.recommendedFrequencyCode, recommendedExecutionMethodCode: row.recommendedExecutionMethodCode, recommendedTestMethodCode: row.recommendedTestMethodCode, status: row.status, validFrom: row.validFrom, validTo: row.validTo, version: row.version, editState: "FINAL", original: row };
 }
-function sameValues(row: ControlScopeDraftRow, original: CentralSubprocessControlScope): boolean {
-  return row.recommendedFrequencyCode === original.recommendedFrequencyCode
-    && row.recommendedExecutionMethodCode === original.recommendedExecutionMethodCode
-    && row.recommendedTestMethodCode === original.recommendedTestMethodCode
-    && row.validFrom === original.validFrom && row.validTo === original.validTo && row.status === original.status;
+function normalize(row: ControlScopeDraftRow): ControlScopeDraftRow {
+  return { ...row, editState: !row.original ? "DRAFT_NEW" : row.recommendedFrequencyCode === row.original.recommendedFrequencyCode && row.recommendedExecutionMethodCode === row.original.recommendedExecutionMethodCode && row.recommendedTestMethodCode === row.original.recommendedTestMethodCode && row.status === row.original.status && row.validFrom === row.original.validFrom && row.validTo === row.original.validTo ? "FINAL" : "DRAFT_EDITED" };
 }
-function sameConfigurationValues(row: ControlScopeDraftRow, original: CentralSubprocessControlScope): boolean {
-  return row.recommendedFrequencyCode === original.recommendedFrequencyCode
-    && row.recommendedExecutionMethodCode === original.recommendedExecutionMethodCode
-    && row.recommendedTestMethodCode === original.recommendedTestMethodCode
-    && row.validFrom === original.validFrom && row.validTo === original.validTo;
-}
-type ScopeStatusState = "Positive" | "None" | "Information";
-interface ScopeStatusPresentation {
-  translationKey: string;
-  state: ScopeStatusState;
-  icon: "accept" | "pause" | "information";
-}
-function statusFor(row: ControlScopeDraftRow): ScopeStatusPresentation {
-  if (row.editState === "FINAL") return row.status === "ACTIVE"
-    ? { translationKey: "controlScope.status.ACTIVE", state: "Positive", icon: "accept" }
-    : { translationKey: "controlScope.status.INACTIVE", state: "None", icon: "pause" };
-  if (row.editState === "DRAFT_PENDING_DELETE") return { translationKey: "controlScope.editState.DELETED", state: "Information", icon: "information" };
-  if (row.editState === "DRAFT_NEW") return { translationKey: `controlScope.editState.${row.status}`, state: "Information", icon: "information" };
-  if (row.editState === "DRAFT_EDITED" && row.original && row.status !== row.original.status && sameConfigurationValues(row, row.original)) {
-    return { translationKey: `controlScope.editState.${row.status}`, state: "Information", icon: "information" };
-  }
-  return { translationKey: "controlScope.editState.EDITED", state: "Information", icon: "information" };
-}
-function renderObjectStatus(text: string, presentation: ScopeStatusPresentation) {
-  return <ObjectStatus state={presentation.state} icon={<Icon name={presentation.icon} mode="Decorative" />}>{text}</ObjectStatus>;
-}
-function readOpener(event: unknown): HTMLElement | null {
-  const currentTarget = (event as { currentTarget?: EventTarget | null }).currentTarget;
-  return currentTarget instanceof HTMLElement ? currentTarget : null;
-}
-function isOwnDialogCloseEvent(event: unknown): boolean {
-  const candidate = event as { target?: EventTarget | null; currentTarget?: EventTarget | null };
-  return Boolean(candidate.target && candidate.currentTarget && candidate.target === candidate.currentTarget);
-}
-function valuesFor(row: ControlScopeDraftRow) {
-  return { recommendedFrequencyCode: row.recommendedFrequencyCode, recommendedExecutionMethodCode: row.recommendedExecutionMethodCode, recommendedTestMethodCode: row.recommendedTestMethodCode, validFrom: row.validFrom, validTo: row.validTo };
-}
-function toChanges(rows: ControlScopeDraftRow[]): ControlScopeChange[] {
+function changes(rows: ControlScopeDraftRow[]): ControlScopeChange[] {
   return rows.flatMap((row): ControlScopeChange[] => {
+    if (row.editState === "FINAL") return [];
     if (row.editState === "DRAFT_PENDING_DELETE") return [{ operation: "DELETE", controlId: row.controlId, scopeId: row.scopeId, version: row.version }];
-    if (!row.original) return [{ operation: "CREATE_OR_RESTORE", controlId: row.controlId, ...valuesFor(row) }];
-    if (row.editState !== "DRAFT_EDITED") return [];
-    const fieldsChanged = row.recommendedFrequencyCode !== row.original.recommendedFrequencyCode
-      || row.recommendedExecutionMethodCode !== row.original.recommendedExecutionMethodCode
-      || row.recommendedTestMethodCode !== row.original.recommendedTestMethodCode
-      || row.validFrom !== row.original.validFrom || row.validTo !== row.original.validTo;
-    if (fieldsChanged) return [{ operation: "UPDATE", controlId: row.controlId, scopeId: row.scopeId, version: row.version, requestedStatus: row.status, ...valuesFor(row) }];
-    return [{ operation: row.status === "ACTIVE" ? "ACTIVATE" : "INACTIVATE", controlId: row.controlId, scopeId: row.scopeId, version: row.version }];
+    if (!row.original || row.original.status === "DELETED") return [{ operation: "CREATE_OR_RESTORE", controlId: row.controlId, recommendedFrequencyCode: row.recommendedFrequencyCode, recommendedExecutionMethodCode: row.recommendedExecutionMethodCode, recommendedTestMethodCode: row.recommendedTestMethodCode, validFrom: row.validFrom, validTo: row.validTo }];
+    const metadataChanged = row.recommendedFrequencyCode !== row.original.recommendedFrequencyCode || row.recommendedExecutionMethodCode !== row.original.recommendedExecutionMethodCode || row.recommendedTestMethodCode !== row.original.recommendedTestMethodCode || row.validFrom !== row.original.validFrom || row.validTo !== row.original.validTo;
+    return metadataChanged ? [{ operation: "UPDATE", controlId: row.controlId, scopeId: row.scopeId, version: row.version, recommendedFrequencyCode: row.recommendedFrequencyCode, recommendedExecutionMethodCode: row.recommendedExecutionMethodCode, recommendedTestMethodCode: row.recommendedTestMethodCode, validFrom: row.validFrom, validTo: row.validTo, requestedStatus: row.status === "ACTIVE" ? "ACTIVE" : "INACTIVE" }]
+      : [{ operation: row.status === "ACTIVE" ? "ACTIVATE" : "INACTIVATE", controlId: row.controlId, scopeId: row.scopeId, version: row.version }];
   });
 }
-
-export default function SubprocessControlScopesTab({ subprocessId, readOnly, busy: parentBusy = false, onDraftStateChange }: Props) {
-  const { t } = useTranslation();
-  const permissions = useControlScopePermissions();
-  const [rows, setRows] = useState<ControlScopeDraftRow[]>([]);
-  const [controls, setControls] = useState<CentralControlSummary[]>([]);
-  const [controlGroups, setControlGroups] = useState<CentralControlGroupSummary[]>([]);
-  const [options, setOptions] = useState<ControlScopeOptions>(EMPTY_OPTIONS);
-  const [filter, setFilter] = useState<ControlScopeStatusFilter>("ALL");
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [loaded, setLoaded] = useState(false);
+export default function SubprocessControlScopesTab({ subprocessId, readOnly, busy = false, canonicalRows, onDraftStateChange }: Props) {
+  const { t } = useTranslation(); const permissions = useControlScopePermissions();
+  const [rows, setRows] = useState<ControlScopeDraftRow[]>(() => canonicalRows?.map(persisted) ?? []);
+  const [options, setOptions] = useState<CentralControlSummary[]>([]);
+  const [groups, setGroups] = useState<CentralControlGroupSummary[]>([]);
+  const [scopeOptions, setScopeOptions] = useState<ControlScopeOptions>({ recommendedFrequencyCodes: [], recommendedExecutionMethodCodes: [], recommendedTestMethodCodes: [] });
+  const [loading, setLoading] = useState(true); const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectionOpen, setSelectionOpen] = useState(false);
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [actionRowKey, setActionRowKey] = useState<string | null>(null);
-  const [actionSheetOpener, setActionSheetOpener] = useState<HTMLElement | null>(null);
-  const [viewControlId, setViewControlId] = useState<string | null>(null);
-  const [viewControl, setViewControl] = useState<CentralControlDetail | null>(null);
-  const [viewControlBusy, setViewControlBusy] = useState(false);
-  const [viewControlError, setViewControlError] = useState<string | null>(null);
-  const [viewControlTab, setViewControlTab] = useState<CentralControlTabKey>("general");
-  const generationRef = useRef(0);
-  const viewGenerationRef = useRef(0);
-
+  const [search, setSearch] = useState(""); const [filter, setFilter] = useState<CatalogRelationFilter>("ALL");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
+  const generation = useRef(0);
   const load = useCallback(async (signal?: AbortSignal) => {
-    const generation = ++generationRef.current;
-    if (!permissions.view) { setLoading(false); setLoaded(true); setRows([]); return; }
+    const current = ++generation.current;
+    if (!permissions.view) { setRows([]); setLoading(false); setLoaded(true); return; }
     setLoading(true); setLoaded(false);
     try {
-      const [availableControls, availableControlGroups, scopeOptions, persisted] = await Promise.all([
-        controlScopeApi.eligibleControls(signal), centralControlApi.listGroups(), controlScopeApi.options(signal),
-        subprocessId ? controlScopeApi.listForSubprocess(subprocessId, "ALL", "", signal) : Promise.resolve([]),
+      const [optionResponse, canonical, deleted, choices, groups] = await Promise.all([
+        controlScopeApi.options(signal), canonicalRows ? Promise.resolve(canonicalRows) : subprocessId ? controlScopeApi.listForSubprocess(subprocessId, "ALL", "", signal) : Promise.resolve([]),
+        subprocessId ? controlScopeApi.deletedForSubprocess(subprocessId, signal) : Promise.resolve([]), controlScopeApi.eligibleControls(signal), centralControlApi.listGroups(),
       ]);
-      if (generation !== generationRef.current) return;
-      setControls(availableControls);
-      setControlGroups(availableControlGroups);
-      setOptions(scopeOptions);
-      setRows(persisted.map(fromPersisted));
-      setError(null); setLoaded(true);
-    } catch (loadError) {
-      if (loadError instanceof Error && loadError.name === "AbortError") return;
-      if (generation === generationRef.current) { setError(controlScopeErrorMessage(loadError, t)); setLoaded(false); }
-    } finally { if (generation === generationRef.current) setLoading(false); }
-  }, [permissions.view, subprocessId, t]);
-
+      if (current !== generation.current) return;
+      setOptions(choices); setGroups(groups); setScopeOptions(optionResponse); setRows([...canonical, ...deleted].map(persisted));
+      setLoaded(true); setError(null);
+    } catch (cause) { if (cause instanceof Error && cause.name === "AbortError") return; if (current === generation.current) setError(controlScopeErrorMessage(cause, t)); }
+    finally { if (current === generation.current) setLoading(false); }
+  }, [subprocessId, permissions.view, t, canonicalRows]);
   useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, [load]);
-  const changes = useMemo(() => toChanges(rows), [rows]);
-  useEffect(() => { onDraftStateChange?.({ changes, dirty: changes.length > 0, ready: loaded || !permissions.view, invalid: Boolean(error) }); }, [changes, error, loaded, onDraftStateChange, permissions.view]);
 
-  const visibleRows = useMemo(() => {
-    const needle = search.trim().toLocaleLowerCase();
-    return rows.filter((row) => (filter === "ALL" || row.status === filter)
-      && (!needle || row.controlCode.toLocaleLowerCase().includes(needle) || row.controlTitle.toLocaleLowerCase().includes(needle)));
-  }, [filter, rows, search]);
-  const editing = editingKey ? rows.find((row) => row.key === editingKey) ?? null : null;
-  const actionRow = actionRowKey ? rows.find((row) => row.key === actionRowKey) ?? null : null;
-  const mutationBusy = parentBusy || loading;
-
-  const confirmSelection = (selectedIds: Set<string>) => {
-    setRows((current) => {
-      const byControl = new Map(controls.map((control) => [control.id, control]));
-      const next: ControlScopeDraftRow[] = [];
-      for (const row of current) {
-        if (selectedIds.has(row.controlId)) {
-          next.push(row.editState === "DRAFT_PENDING_DELETE" && row.original ? fromPersisted(row.original) : row);
-        } else if (!row.original) {
+  const pending = useMemo(() => changes(rows), [rows]);
+  const pendingDates = Object.values(dateDrafts).some(draft => draft.dirty);
+  const invalid = Object.values(dateDrafts).some(draft => !draft.valid) || rows.some(row => row.editState !== "FINAL" && row.editState !== "DRAFT_PENDING_DELETE" && Boolean(row.validFrom && row.validTo && row.validFrom > row.validTo));
+  useEffect(() => onDraftStateChange?.({ changes: pending, dirty: pending.length > 0 || pickerOpen || pendingDates, ready: (loaded || !permissions.view) && !pickerOpen && !pendingDates && !invalid, invalid: Boolean(error) || invalid }), [pending, pickerOpen, pendingDates, invalid, loaded, error, permissions.view, onDraftStateChange]);
+  const hasPendingDate = (key: string) => Boolean(dateDrafts[key + ":validFrom"]?.dirty || dateDrafts[key + ":validTo"]?.dirty);
+  const visible = rows.filter(row => (hasPendingDate(row.key) || row.editState !== "FINAL" || row.status !== "DELETED" && (filter === "ALL" || row.status === filter)) && (hasPendingDate(row.key) || row.editState !== "FINAL" || (row.controlCode + " " + row.controlTitle).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())));
+  const allOptions = useMemo(() => options, [options]);
+  const nodes = useMemo(() => {
+    const occupied = new Set(rows.filter(row => row.status !== "DELETED" && row.editState !== "DRAFT_PENDING_DELETE").map(row => row.controlId));
+    const nodes: HierarchySelectionNode[] = groups.map(item => ({ id: `group:${item.id}`, parentId: item.parentGroupId ? `group:${item.parentGroupId}` : null, code: item.code, name: item.title, selectable: false }));
+    options.forEach(item => nodes.push({ id: item.id, parentId: item.controlGroupId ? `group:${item.controlGroupId}` : null, code: item.code, name: item.title, selectable: item.status === "ACTIVE" && !occupied.has(item.id) }));
+    return nodes;
+  }, [options, rows, groups]);
+  const confirmSelection = (ids: Set<string>) => {
+    setRows(current => {
+      const next = [...current];
+      for (const id of ids) {
+        const index = next.findIndex(row => row.controlId === id);
+        if (index >= 0) {
+          const row = next[index];
+          if (row.editState === "DRAFT_PENDING_DELETE") next[index] = normalize(row);
+          else if (row.original?.status === "DELETED" && permissions.restore) next[index] = normalize({ ...row, status: "ACTIVE" });
           continue;
-        } else {
-          next.push({ ...row, editState: "DRAFT_PENDING_DELETE" });
         }
-      }
-      const occupied = new Set(current.map((row) => row.controlId));
-      for (const controlId of selectedIds) {
-        if (occupied.has(controlId)) continue;
-        const control = byControl.get(controlId);
-        if (!control || control.status !== "ACTIVE") continue;
-        next.push({ key: `new:${control.id}`, scopeId: null, controlId: control.id, controlCode: control.code, controlTitle: control.title, recommendedFrequencyCode: null, recommendedExecutionMethodCode: null, recommendedTestMethodCode: null, status: "ACTIVE", validFrom: null, validTo: null, version: null, editState: "DRAFT_NEW", original: null });
+        const item = allOptions.find(option => option.id === id);
+        if (item?.status !== "ACTIVE" || !permissions.create) continue;
+        next.push({ key: `new:${item.id}`, scopeId: null, controlId: item.id, controlCode: item.code, controlTitle: item.title, recommendedFrequencyCode: null, recommendedExecutionMethodCode: null, recommendedTestMethodCode: null, status: "ACTIVE", validFrom: null, validTo: null, version: null, editState: "DRAFT_NEW", original: null });
       }
       return next;
     });
-    setSelectionOpen(false);
+    setPickerOpen(false);
   };
-
-  const saveEdit = (values: ControlScopeDraftValues) => {
-    if (!editingKey) return;
-    setRows((current) => current.map((row) => {
-      if (row.key !== editingKey) return row;
-      const next = { ...row, ...values };
-      return { ...next, editState: !next.original ? "DRAFT_NEW" : sameValues(next, next.original) ? "FINAL" : "DRAFT_EDITED" };
+  const affected = (status: "ACTIVE" | "INACTIVE" | "DELETED") => rows.filter(row => selected.has(row.key) && (status === "DELETED"
+    ? row.editState !== "DRAFT_PENDING_DELETE" && (row.original?.status !== "DELETED" ? Boolean(row.original ? permissions.delete : permissions.create) : permissions.restore)
+    : Boolean(row.original && row.original.status !== "DELETED" && permissions.lifecycle && row.editState !== "DRAFT_PENDING_DELETE" && row.status !== status)));
+  const batch = (status: "ACTIVE" | "INACTIVE" | "DELETED") => {
+    const keys = new Set(affected(status).map(row => row.key));
+    if (status === "DELETED") setDateDrafts(current => Object.fromEntries(Object.entries(current).filter(([key]) => ![...keys].some(rowKey => key === rowKey + ":validFrom" || key === rowKey + ":validTo"))));
+    setRows(current => current.flatMap((row): ControlScopeDraftRow[] => {
+      if (!keys.has(row.key)) return [row];
+      if (status === "DELETED") return !row.original ? [] : row.original.status === "DELETED" ? [persisted(row.original)] : [{ ...row, editState: "DRAFT_PENDING_DELETE" }];
+      return [normalize({ ...row, status })];
     }));
-    setEditingKey(null);
   };
-  const changeLifecycle = (row: ControlScopeDraftRow, status: "ACTIVE" | "INACTIVE") => setRows((current) => current.map((candidate) => candidate.key !== row.key ? candidate : { ...candidate, status, editState: candidate.original && sameValues({ ...candidate, status }, candidate.original) ? "FINAL" : candidate.original ? "DRAFT_EDITED" : "DRAFT_NEW" }));
-  const remove = (row: ControlScopeDraftRow) => setRows((current) => row.original ? current.map((candidate) => candidate.key === row.key ? { ...candidate, editState: "DRAFT_PENDING_DELETE" } : candidate) : current.filter((candidate) => candidate.key !== row.key));
-  const undo = (row: ControlScopeDraftRow) => setRows((current) => row.original
-    ? current.map((candidate) => candidate.key === row.key ? fromPersisted(row.original!) : candidate)
-    : current.filter((candidate) => candidate.key !== row.key));
-  const canEditRow = (row: ControlScopeDraftRow) => Boolean(row.original && permissions.update);
-  const canChangeLifecycle = (row: ControlScopeDraftRow) => Boolean(row.original && permissions.lifecycle);
-  const canRemoveRow = (row: ControlScopeDraftRow) => (row.original && permissions.delete) || (!row.original && (permissions.create || permissions.restore));
-  const hasRowActions = (row: ControlScopeDraftRow) => row.editState !== "FINAL" || canEditRow(row) || canChangeLifecycle(row) || canRemoveRow(row);
-  const closeActionSheet = () => { setActionRowKey(null); setActionSheetOpener(null); };
-  const runRowAction = (action: () => void) => { closeActionSheet(); action(); };
-  const closeControlView = () => {
-    viewGenerationRef.current += 1;
-    setViewControlId(null);
-    setViewControl(null);
-    setViewControlError(null);
-    setViewControlBusy(false);
-    setViewControlTab("general");
-  };
-  const openControlView = async (centralControlId: string) => {
-    const generation = ++viewGenerationRef.current;
-    setViewControlId(centralControlId);
-    setViewControl(null);
-    setViewControlError(null);
-    setViewControlBusy(true);
-    setViewControlTab("general");
-    try {
-      const detail = await centralControlApi.detail(centralControlId);
-      if (generation === viewGenerationRef.current) setViewControl(detail);
-    } catch {
-      if (generation === viewGenerationRef.current) setViewControlError(t("control.errors.loadDetail"));
-    } finally {
-      if (generation === viewGenerationRef.current) setViewControlBusy(false);
-    }
-  };
-
+  const updateConfiguration = (key: string, field: "recommendedFrequencyCode" | "recommendedExecutionMethodCode" | "recommendedTestMethodCode", value: string) => setRows(current => current.map(row => row.key === key ? normalize({ ...row, [field]: value || null }) : row));
+  const updateDate = (key: string, field: "validFrom" | "validTo", value: string | null) => setRows(current => current.map(row => row.key === key ? normalize({ ...row, [field]: value }) : row));
+  const reportDate = (key: string, draft: PersianDateDraftState) => setDateDrafts(current => {
+    const previous = current[key]; if (previous?.dirty === draft.dirty && previous.valid === draft.valid && previous.draftValue === draft.draftValue) return current;
+    return { ...current, [key]: draft };
+  });
+  const columns: CatalogRelationColumn<ControlScopeDraftRow>[] = [
+    { key: "code", header: t("catalogRelation.code"), cell: row => row.controlCode },
+    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={"/controls/" + row.controlId} wrappingType="Normal">{row.controlTitle}</Link> },
+    ...([ ["recommendedFrequencyCode", "recommendedFrequencyCodes", "frequency", "control.operationFrequency"], ["recommendedExecutionMethodCode", "recommendedExecutionMethodCodes", "executionMethod", "control.automationType"], ["recommendedTestMethodCode", "recommendedTestMethodCodes", "testMethod", "control.testingTechnique"] ] as const).map(([field, optionField, label, translation]) => ({ key: field, header: t(`controlScope.fields.${label}`), cell: (row: ControlScopeDraftRow) => !readOnly && permissions.update && row.editState !== "DRAFT_PENDING_DELETE" ? <Select value={row[field] ?? ""} disabled={busy || loading} onChange={event => updateConfiguration(row.key, field, event.target.value)}><Option value="">{t("controlScope.options.none")}</Option>{scopeOptions[optionField].map(code => <Option key={code} value={code}>{t(`${translation}.${code}`)}</Option>)}</Select> : row[field] ? t(`${translation}.${row[field]}`) : "—" })),
+    ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: ControlScopeDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_PENDING_DELETE"} disabled={busy || loading}
+      onChange={value => updateDate(row.key, field, value)} onDraftStateChange={draft => reportDate(row.key + ":" + field, draft)} /> })),
+    { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={row.status} draft={row.editState === "FINAL" ? null : row.editState === "DRAFT_PENDING_DELETE" ? "delete" : !row.original || row.original.status === "DELETED" ? "new" : row.status !== row.original.status ? row.status === "ACTIVE" ? "active" : "inactive" : "edit"} /> },
+  ];
   if (!permissions.view) return <MessageStrip design="Information">{t("controlScope.errors.forbidden")}</MessageStrip>;
-  return <section className="controlScopeTab">
-    <div className="controlScopeToolbar"><Title level="H5">{t("controlScope.title")}</Title><div className="controlScopeToolbarGroup"><div className="controlScopeFilter"><Label showColon>{t("controlScope.filter.label")}</Label><Select value={filter} disabled={mutationBusy} onChange={(event) => setFilter(readFilter(event))}><Option value="ALL">{t("controlScope.filter.all")}</Option><Option value="ACTIVE">{t("controlScope.status.ACTIVE")}</Option><Option value="INACTIVE">{t("controlScope.status.INACTIVE")}</Option></Select></div><HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={mutationBusy} accessibleName={t("controlScope.dialog.search")} />
-    {!readOnly && (permissions.create || permissions.restore || permissions.delete) ? <Button design="Emphasized" disabled={mutationBusy || !loaded} onClick={() => setSelectionOpen(true)}>{t("controlScope.actions.selectControls")}</Button> : null}
-    </div></div>
-    {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}<Button design="Transparent" onClick={() => void load()}>{t("controlScope.actions.retry")}</Button></MessageStrip> : null}
-    {loading ? <BusyIndicator active delay={0} /> : loaded && visibleRows.length ? <Table headerRow={<TableHeaderRow><TableHeaderCell>{t("controlScope.fields.control")}</TableHeaderCell><TableHeaderCell>{t("controlScope.fields.frequency")}</TableHeaderCell><TableHeaderCell>{t("controlScope.fields.executionMethod")}</TableHeaderCell><TableHeaderCell>{t("controlScope.fields.testMethod")}</TableHeaderCell><TableHeaderCell>{t("controlScope.fields.validFrom")}</TableHeaderCell><TableHeaderCell>{t("controlScope.fields.validTo")}</TableHeaderCell><TableHeaderCell>{t("controlScope.fields.lifecycle")}</TableHeaderCell>{!readOnly ? <TableHeaderCell>{t("common.actions")}</TableHeaderCell> : null}</TableHeaderRow>}>
-      {visibleRows.map((row) => {
-        const status = statusFor(row);
-        return <TableRow key={row.key} rowKey={row.key}><TableCell><Link accessibleRole="Button" interactiveAreaSize="Large" wrappingType="Normal" onClick={(event) => { event.preventDefault(); void openControlView(row.controlId); }}>{`${row.controlCode} - ${row.controlTitle}`}</Link></TableCell><TableCell>{row.recommendedFrequencyCode ? t(`control.operationFrequency.${row.recommendedFrequencyCode}`, { defaultValue: row.recommendedFrequencyCode }) : "-"}</TableCell><TableCell>{row.recommendedExecutionMethodCode ? t(`control.automationType.${row.recommendedExecutionMethodCode}`, { defaultValue: row.recommendedExecutionMethodCode }) : "-"}</TableCell><TableCell>{row.recommendedTestMethodCode ? t(`control.testingTechnique.${row.recommendedTestMethodCode}`, { defaultValue: row.recommendedTestMethodCode }) : "-"}</TableCell><TableCell>{formatPersianDate(row.validFrom)}</TableCell><TableCell>{formatPersianDate(row.validTo)}</TableCell><TableCell>{renderObjectStatus(t(status.translationKey), status)}</TableCell>{!readOnly ? <TableCell><Button design="Transparent" icon="overflow" accessibleName={t("common.actions")} tooltip={t("common.actions")} disabled={mutationBusy || !hasRowActions(row)} accessibilityAttributes={{ hasPopup: "menu", expanded: actionRowKey === row.key ? "true" : "false" }} onClick={(event) => { const opener = readOpener(event); if (!opener) return; setActionRowKey(row.key); setActionSheetOpener(opener); }} /></TableCell> : null}</TableRow>;
-      })}
-    </Table> : loaded ? <div className="controlScopeEmpty">{t("controlScope.empty")}</div> : null}
-    {!readOnly ? <ActionSheet open={Boolean(actionRow && actionSheetOpener)} opener={actionSheetOpener} placement="Bottom" horizontalAlign="End" headerText={t("common.actions")} onClose={closeActionSheet}>
-      {actionRow && actionRow.editState !== "FINAL" ? <Button icon="undo" disabled={mutationBusy} onClick={() => runRowAction(() => undo(actionRow))}>{t("controlScope.actions.undo")}</Button> : <>
-        {actionRow && canEditRow(actionRow) ? <Button icon="edit" disabled={mutationBusy} onClick={() => runRowAction(() => setEditingKey(actionRow.key))}>{t("controlScope.actions.edit")}</Button> : null}
-        {actionRow && canChangeLifecycle(actionRow) && actionRow.status === "ACTIVE" ? <Button icon="pause" disabled={mutationBusy} onClick={() => runRowAction(() => changeLifecycle(actionRow, "INACTIVE"))}>{t("controlScope.actions.inactivate")}</Button> : null}
-        {actionRow && canChangeLifecycle(actionRow) && actionRow.status === "INACTIVE" ? <Button icon="accept" disabled={mutationBusy} onClick={() => runRowAction(() => changeLifecycle(actionRow, "ACTIVE"))}>{t("controlScope.actions.activate")}</Button> : null}
-        {actionRow && canRemoveRow(actionRow) ? <Button icon="delete" disabled={mutationBusy} onClick={() => runRowAction(() => remove(actionRow))}>{t("controlScope.actions.remove")}</Button> : null}
-      </>}
-    </ActionSheet> : null}
-    <Dialog open={Boolean(viewControlId)} accessibleName={t("control.view.title")} className="controlObjectDialog" onClose={(event) => { if (isOwnDialogCloseEvent(event)) closeControlView(); }}>
-      <ModalDialogHeader title={t("control.view.title")} onClose={closeControlView} />
-      <div className="controlDialogContent">
-        {viewControlBusy ? <BusyIndicator active delay={0} /> : viewControl ?
-          <CentralControlObjectPage key={`${viewControl.id}:view`} mode="view" value={viewControl} initialControlGroupId={viewControl.controlGroupId} groups={controlGroups} activeTab={viewControlTab} busy={false} permissions={READ_ONLY_CONTROL_PERMISSIONS} error={viewControlError} documentError={null} onErrorClose={() => setViewControlError(null)} onSubmit={async () => false} onCancel={closeControlView} onEdit={() => undefined} onActiveTabChange={setViewControlTab} onDirtyChange={() => undefined} />
-        : viewControlError ? <MessageStrip design="Negative" hideCloseButton>{viewControlError}</MessageStrip> : null}
-      </div>
-    </Dialog>
-    <ControlSelectionDialog open={selectionOpen} controls={controls} groups={controlGroups} rows={rows} busy={mutationBusy} onClose={() => setSelectionOpen(false)} onConfirm={confirmSelection} canToggle={(controlId, currentlySelected) => currentlySelected ? (rows.find((row) => row.controlId === controlId)?.original ? permissions.delete : true) : (permissions.create || permissions.restore)} />
-    <ControlScopeEditorDialog open={Boolean(editing)} row={editing} options={options} busy={mutationBusy} onClose={() => setEditingKey(null)} onSave={saveEdit} />
+  return <section>
+    <CatalogRelationToolbar title={t("controlScope.title")} search={search} onSearch={setSearch} filter={filter} onFilter={setFilter} editable={!readOnly} busy={busy || loading}
+      canSelect={loaded && (permissions.create || permissions.restore)} onSelect={() => setPickerOpen(true)} canActivate={affected("ACTIVE").length > 0} onActivate={() => batch("ACTIVE")}
+      canInactivate={affected("INACTIVE").length > 0} onInactivate={() => batch("INACTIVE")} canDelete={affected("DELETED").length > 0} onDelete={() => batch("DELETED")} />
+    {error ? <MessageStrip design="Negative" hideCloseButton>{error}<CatalogActionButton onClick={() => void load()}>{t("catalogRelation.retry")}</CatalogActionButton></MessageStrip> : null}
+    {invalid ? <MessageStrip design="Negative" hideCloseButton>{t("catalogRelation.invalid")}</MessageStrip> : null}
+    <CatalogRelationTable rows={visible} columns={columns} rowKey={row => row.key} accessibleName={t("controlScope.title")} selectable={!readOnly} selectedKeys={selected} onSelectionChange={setSelected} loading={loading} busy={busy} emptyText={t("catalogRelation.empty")} />
+    <HierarchyMultiSelectionDialog open={pickerOpen} title={t("catalogRelation.select")} searchAccessibleName={t("catalogRelation.search")} nodes={nodes} selectedIds={EMPTY_SELECTION} busy={busy} loading={loading} error={error}
+      confirmDisabled={Boolean(error)} confirmText={t("catalogRelation.select")} cancelText={t("common.cancel")} onConfirm={confirmSelection} onClose={() => setPickerOpen(false)} />
   </section>;
 }

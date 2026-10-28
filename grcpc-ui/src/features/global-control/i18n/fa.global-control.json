@@ -43,5 +43,6 @@
   "globalControl.errors.dates": "بازهٔ تاریخ معتبر نیست.",
   "globalControl.errors.parent": "گروه والد انتخاب‌شده معتبر نیست.",
   "globalControl.errors.group": "یک گروه کنترل فعال انتخاب کنید.",
-  "globalControl.errors.documents": "پیش‌نویس مستندات باید آماده باشد."
+  "globalControl.errors.documents": "پیش‌نویس مستندات باید آماده باشد.",
+  "globalControl.regulations.endpointStatus": "وضعیت قانون"
 }

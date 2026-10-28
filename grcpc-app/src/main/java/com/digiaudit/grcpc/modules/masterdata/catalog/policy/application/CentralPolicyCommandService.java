@@ -14,6 +14,7 @@ import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
 import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.api.mapper.CentralPolicyMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.*;
 import java.util.*;
@@ -42,6 +43,7 @@ public class CentralPolicyCommandService {
   private final CentralPolicyRequirementScopeQueryService requirementQueries;
   private final MasterDataAuthorizationService authorization;
   private final Clock clock;
+  private final CentralPolicyMapper mapper;
 
   public CentralPolicyCommandService(
       CentralPolicyRepository r,
@@ -61,7 +63,7 @@ public class CentralPolicyCommandService {
       CentralPolicyControlScopeQueryService controlQueries,
       CentralPolicyRequirementScopeQueryService requirementQueries,
       MasterDataAuthorizationService authorization,
-      @Qualifier("masterDataRevisionClock") Clock c) {
+      @Qualifier("masterDataRevisionClock") Clock c, CentralPolicyMapper mapper) {
     repository = r;
     groups = g;
     revisions = rev;
@@ -80,8 +82,10 @@ public class CentralPolicyCommandService {
     this.requirementQueries = requirementQueries;
     this.authorization = authorization;
     clock = c;
+    this.mapper = mapper;
   }
 
+  @org.springframework.transaction.annotation.Transactional
   public CentralPolicyDtos.PolicyAggregateResponse create(CentralPolicyDtos.CreatePolicy r) {
     String code = support.normalizeCode(r.code()),
         title = support.normalizeTitle(r.title()),
@@ -186,6 +190,7 @@ public class CentralPolicyCommandService {
     }
   }
 
+  @org.springframework.transaction.annotation.Transactional
   public CentralPolicyDtos.PolicyAggregateResponse update(UUID id, CentralPolicyDtos.UpdatePolicy r) {
     long expected = support.requireVersion(r.version());
     String title = support.normalizeTitle(r.title()),
@@ -477,7 +482,8 @@ public class CentralPolicyCommandService {
         authorization.canView("REFERENCE") ? organizationQueries.list(id, null, null) : List.of(),
         authorization.canView("PROCESS") && authorization.canView("CONTROL")
             ? controlQueries.list(id, null, null) : List.of(),
-        authorization.canView("PROCESS") ? requirementQueries.list(id, null, null) : List.of());
+        authorization.canView("PROCESS") ? requirementQueries.list(id, null, null) : List.of(),
+        mapper.detail(repository.findById(id).orElseThrow(() -> notFound(id))));
   }
 
   private boolean empty(DocumentAggregateBatchRequest r) {

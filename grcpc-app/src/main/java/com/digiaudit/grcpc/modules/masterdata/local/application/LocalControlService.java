@@ -19,6 +19,7 @@ import com.digiaudit.grcpc.modules.masterdata.scope.control.domain.repository.Ce
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
 import com.digiaudit.grcpc.modules.organization.domain.repository.OrganizationRepository;
 import com.digiaudit.grcpc.modules.usermanagement.domain.repository.AppUserRepository;
+import com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
@@ -461,6 +462,116 @@ public class LocalControlService {
         row.getStatus(), row.getValidFrom(), row.getValidTo(), row.getVersion(),
         row.getCreatedAt(), row.getCreatedBy(), row.getUpdatedAt(), row.getUpdatedBy(),
         row.getDeletedAt(), row.getDeletedBy());
+  }
+
+
+  /** Lock exact Central Scope endpoints before any Local relation-row locks in the aggregate. */
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public void lockAggregateReferences(List<OrganizationLocalDtos.ControlChange> changes) {
+    var ids = new java.util.TreeSet<UUID>(java.util.Comparator.comparing(UUID::toString));
+    if (changes == null) return;
+    for (var change : changes) {
+      if (change == null) throw rules.bad("Local Control change is required");
+      if (change.centralControlScopeId() != null) ids.add(change.centralControlScopeId());
+      if (change.scopeId() != null) {
+        var retained = rows.findById(change.scopeId()).orElseThrow(() -> rules.notFound(change.scopeId()));
+        if (retained.getCentralControlScopeId() != null) ids.add(retained.getCentralControlScopeId());
+      }
+    }
+    for (var id : ids) centralReferences.lockById(id).orElseThrow(() -> rules.referenceNotFound(id));
+  }
+
+  public record AggregatePlan(LocalSubprocessControlScopeEntity row, LocalOrganizationSubprocessScopeEntity context,
+      OrganizationLocalDtos.ControlChange change, boolean fresh, boolean metadata, MasterDataLifecycleStatus target) {}
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public AggregatePlan prepareAggregate(UUID organizationId, LocalOrganizationSubprocessScopeEntity context,
+      OrganizationLocalDtos.ControlChange change, MasterDataLifecycleStatus contextStatus, OrganizationLocalDeletions deleting) {
+    rules.requireWrite("PROCESS", "CONTROL");
+    rules.assertOwner(organizationId, context.getOrganizationId());
+    var org = organizations.findById(organizationId).orElseThrow(() -> rules.referenceNotFound(organizationId));
+    var subprocess = subprocesses.findById(context.getSubprocessId()).orElseThrow(() -> rules.referenceNotFound(context.getSubprocessId()));
+    var definition = definitions.findById(change.controlId()).orElseThrow(() -> rules.referenceNotFound(change.controlId()));
+    var occupied = rows.findByOrganizationSubprocessScopeIdAndControlId(context.getId(), change.controlId()).orElse(null);
+    var row = occupied == null ? null : rows.lockById(occupied.getId()).orElseThrow(() -> rules.notFound(occupied.getId()));
+    boolean fresh = row == null;
+    var target = rules.aggregateTarget(row == null ? null : row.getStatus(), change.operation(), change.requestedStatus(),
+        row == null ? null : row.getId(), row == null ? null : row.getVersion(), change.scopeId(), change.version());
+    boolean retainedRestore = !fresh && row.getStatus() == MasterDataLifecycleStatus.DELETED
+        && change.operation() == OrganizationLocalDtos.Operation.CREATE_OR_RESTORE
+        && change.sourceType() == null && change.centralControlScopeId() == null
+        && change.actualOwnerId() == null && change.frequencyCode() == null && change.executionMethodCode() == null && change.testMethodCode() == null && change.localContextNote() == null && change.validFrom() == null && change.validTo() == null;
+    boolean metadata = !retainedRestore && (fresh || change.operation() == OrganizationLocalDtos.Operation.UPDATE
+        || change.operation() == OrganizationLocalDtos.Operation.CREATE_OR_RESTORE);
+    if (row != null && ((change.sourceType() != null && change.sourceType() != row.getSourceType())
+        || (change.centralControlScopeId() != null && !change.centralControlScopeId().equals(row.getCentralControlScopeId())))) throw rules.bad("Immutable Local source changed");
+    var source = fresh ? change.sourceType() : row.getSourceType();
+    UUID centralId = fresh ? change.centralControlScopeId() : row.getCentralControlScopeId();
+    var central = centralId == null ? null : centralReferences.lockById(centralId).orElseThrow(() -> rules.referenceNotFound(centralId));
+    LocalDate from = metadata ? change.validFrom() : row.getValidFrom();
+    LocalDate to = metadata ? change.validTo() : row.getValidTo();
+    UUID ownerId = metadata ? change.actualOwnerId() : row.getActualOwnerId();
+    String frequency = normalize(metadata ? change.frequencyCode() : row.getFrequencyCode(), CentralControlOperationFrequency.class);
+    String execution = normalize(metadata ? change.executionMethodCode() : row.getExecutionMethodCode(), CentralControlAutomationType.class);
+    String test = normalize(metadata ? change.testMethodCode() : row.getTestMethodCode(), CentralControlTestingTechnique.class);
+    String note = rules.note(metadata ? change.localContextNote() : row.getLocalContextNote());
+    if (target != MasterDataLifecycleStatus.DELETED) {
+      boolean active = fresh || row.getStatus() == MasterDataLifecycleStatus.DELETED || (target == MasterDataLifecycleStatus.ACTIVE && row.getStatus() != target);
+      if (active) { rules.active(org.getStatus()); rules.active(subprocess.getStatus()); rules.active(contextStatus); rules.active(definition.getStatus()); }
+      else { rules.nonDeleted(org.getStatus()); rules.nonDeleted(subprocess.getStatus()); rules.nonDeleted(contextStatus); rules.nonDeleted(definition.getStatus()); }
+      validateReference(source, centralId, change.controlId(), context.getSubprocessId(), from, to, central, active);
+      if (ownerId != null && (metadata || active)) validateOwner(ownerId);
+    }
+    if (!fresh && target == MasterDataLifecycleStatus.DELETED) requireAggregateNoChildren(row.getId(), deleting);
+    if (fresh) row = LocalSubprocessControlScopeEntity.create(context.getId(), change.controlId(), centralId, source,
+        ownerId, frequency, execution, test, note, from, to, actor(), now());
+    var effective = new OrganizationLocalDtos.ControlChange(change.contextRef(), change.controlId(), change.operation(), change.scopeId(), change.version(), source, centralId,
+        ownerId, frequency, execution, test, note, from, to, change.requestedStatus());
+    return new AggregatePlan(row, context, effective, fresh, metadata, target);
+  }
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public RevisionContentResult applyAggregate(AggregatePlan plan) {
+    var row = plan.row(); var change = plan.change();
+    JsonNode before = plan.fresh() ? null : snapshot(row);
+    Long expected = plan.fresh() ? null : row.getVersion();
+    var initial = row.getStatus();
+    boolean changedMetadata = plan.metadata() && (
+        !java.util.Objects.equals(row.getActualOwnerId(), change.actualOwnerId())
+        || !java.util.Objects.equals(row.getFrequencyCode(), normalize(change.frequencyCode(), CentralControlOperationFrequency.class))
+        || !java.util.Objects.equals(row.getExecutionMethodCode(), normalize(change.executionMethodCode(), CentralControlAutomationType.class))
+        || !java.util.Objects.equals(row.getTestMethodCode(), normalize(change.testMethodCode(), CentralControlTestingTechnique.class))
+        || !java.util.Objects.equals(row.getLocalContextNote(), rules.note(change.localContextNote())) || !java.util.Objects.equals(row.getValidFrom(), change.validFrom()) || !java.util.Objects.equals(row.getValidTo(), change.validTo()));
+    if (!plan.fresh() && !changedMetadata && initial == plan.target()) return null;
+    RevisionOperationType operation = plan.fresh() ? RevisionOperationType.CREATE : initial == MasterDataLifecycleStatus.DELETED ? RevisionOperationType.RESTORE
+        : initial != plan.target() ? plan.target() == MasterDataLifecycleStatus.DELETED ? RevisionOperationType.DELETE
+        : plan.target() == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE : RevisionOperationType.UPDATE;
+    if (!plan.fresh()) {
+      if (initial == MasterDataLifecycleStatus.DELETED) row.restore(actor(), now());
+      if (changedMetadata) row.update(change.actualOwnerId(), normalize(change.frequencyCode(), CentralControlOperationFrequency.class),
+          normalize(change.executionMethodCode(), CentralControlAutomationType.class), normalize(change.testMethodCode(), CentralControlTestingTechnique.class), rules.note(change.localContextNote()), change.validFrom(), change.validTo(), actor(), now());
+      if (row.getStatus() != plan.target()) switch (plan.target()) {
+        case ACTIVE -> row.activate(actor(), now()); case INACTIVE -> row.inactivate(actor(), now()); case DELETED -> row.delete(actor(), now());
+      }
+    }
+    rows.saveAndFlush(row);
+    return RevisionContentResult.completed(RevisionEntityType.LOCAL_SUBPROCESS_CONTROL_SCOPE, row.getId(), operation,
+        expected, before, snapshot(row), row.getVersion(), mapper.valueToTree(Map.of("validated", true)));
+  }
+  public boolean changesAggregate(AggregatePlan plan) {
+    var row = plan.row(); var change = plan.change();
+    return plan.fresh() || row.getStatus() != plan.target() || (plan.metadata() && (
+        !java.util.Objects.equals(row.getActualOwnerId(), change.actualOwnerId())
+        || !java.util.Objects.equals(row.getFrequencyCode(), normalize(change.frequencyCode(), CentralControlOperationFrequency.class))
+        || !java.util.Objects.equals(row.getExecutionMethodCode(), normalize(change.executionMethodCode(), CentralControlAutomationType.class))
+        || !java.util.Objects.equals(row.getTestMethodCode(), normalize(change.testMethodCode(), CentralControlTestingTechnique.class))
+        || !java.util.Objects.equals(row.getLocalContextNote(), rules.note(change.localContextNote())) || !java.util.Objects.equals(row.getValidFrom(), change.validFrom()) || !java.util.Objects.equals(row.getValidTo(), change.validTo())));
+  }
+  public LocalControlDtos.Row canonical(AggregatePlan plan) { return map(plan.row()); }
+  private void requireAggregateNoChildren(UUID id, OrganizationLocalDeletions deleting) {
+    var deleted = MasterDataLifecycleStatus.DELETED;
+    if (riskControl.existsByLocalControlScopeIdAndStatusNot(id, deleted)
+        || controlObjective.existsByLocalControlScopeIdAndStatusNot(id, deleted)
+        || requirementControl.existsByLocalControlScopeIdAndStatusNot(id, deleted)
+        || policies.findByLocalControlScopeIdAndStatusIn(id, rules.statuses(null), org.springframework.data.domain.Pageable.unpaged()).stream().anyMatch(row -> !deleting.controlPolicies().contains(row.getId()))) throw rules.invalid("LOCAL_DEPENDENCY_EXISTS", "Local Scope has undeleted dependents");
   }
 
   private UUID actor() { return currentUser.getCurrentPrincipal().getUserId(); }

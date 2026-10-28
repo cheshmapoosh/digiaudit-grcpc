@@ -13,6 +13,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
+import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.api.mapper.CentralRegulationMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.*;
 import java.util.*;
@@ -33,6 +34,8 @@ public class CentralRegulationCommandService {
   private final DocumentCommandService documents;
   private final CatalogCommandSupport support;
   private final Clock clock;
+  private final CentralRegulationMapper mapper;
+  private final RegulationRequirementAggregateService requirementDrafts;
 
   public CentralRegulationCommandService(
       CentralRegulationRepository r,
@@ -44,7 +47,8 @@ public class CentralRegulationCommandService {
       RevisionMutationGuard guard,
       DocumentCommandService documents,
       CatalogCommandSupport support,
-      @Qualifier("masterDataRevisionClock") Clock clock) {
+      @Qualifier("masterDataRevisionClock") Clock clock, CentralRegulationMapper mapper,
+      RegulationRequirementAggregateService requirementDrafts) {
     repository = r;
     this.groups = groups;
     this.requirements = requirements;
@@ -55,19 +59,23 @@ public class CentralRegulationCommandService {
     this.documents = documents;
     this.support = support;
     this.clock = clock;
+    this.mapper = mapper;
+    this.requirementDrafts = requirementDrafts;
   }
 
-  public MasterDataAggregateMutationResponse create(CentralRegulationDtos.CreateRegulation r) {
+  public CentralRegulationDtos.RegulationAggregateResponse create(CentralRegulationDtos.CreateRegulation r) {
     String code = support.normalizeCode(r.code()),
         title = support.normalizeTitle(r.title()),
         description = support.normalizeDescription(r.description());
     int sort = support.normalizeSortOrder(r.sortOrder());
     support.validateValidity(r.validFrom(), r.validTo());
+    AtomicReference<CentralRegulationDtos.RegulationDetail> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
+    AtomicReference<List<CentralRegulationDtos.RequirementDetail>> childRows = new AtomicReference<>(List.of());
     try {
       var result =
           revisions.executeStructural(
-              MasterDataHierarchyKey.REGULATION,
+              guardKeys(r.requirementChanges()),
               RevisionRequest.central(
                   "Create regulation " + code, "Regulation structural create", null),
               c -> {
@@ -75,6 +83,10 @@ public class CentralRegulationCommandService {
                 requireGroup(r.regulationGroupId());
                 var prepared = documents.prepareAggregate(r.documents());
                 var e = repository.findByCode(code).orElse(null);
+                if (e != null && e.getStatus() == MasterDataLifecycleStatus.ACTIVE) throw support.duplicate(code);
+                if (e != null && !e.getRegulationGroupId().equals(r.regulationGroupId())) throw invalidParent();
+                UUID sourceId = e == null ? UUID.randomUUID() : e.getId();
+                var childPlan = requirementDrafts.prepare(sourceId, r.requirementChanges(), c);
                 RevisionOperationType op;
                 Long expected;
                 JsonNode before;
@@ -83,7 +95,7 @@ public class CentralRegulationCommandService {
                 if (e == null) {
                   e =
                       CentralRegulationEntity.create(
-                          UUID.randomUUID(),
+                          sourceId,
                           code,
                           title,
                           r.regulationGroupId(),
@@ -128,41 +140,61 @@ public class CentralRegulationCommandService {
                   }
                 }
                 var saved = repository.saveAndFlush(e);
+                var children = requirementDrafts.apply(childPlan, c);
+                childRows.set(children.requirements());
+              canonical.set(mapper.detail(saved));
                 docs.set(
                     documents.finalizePreparedAggregate(
                         prepared,
                         DocumentLinkTargetType.CENTRAL_REGULATION,
                         saved.getId(),
                         "MD_GOVERNANCE_MANAGE"));
-                return completed(c, saved, op, expected, before);
+                return combine(c, completed(c, saved, op, expected, before), children.contents());
               });
-      return support.aggregateResponse(result, docs.get());
+      return new CentralRegulationDtos.RegulationAggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
+          result.primaryResult().version(), docs.get(), canonical.get(), childRows.get());
     } catch (DataIntegrityViolationException e) {
       throw support.translateBusinessKeyViolation(e, "UK_CENTRAL_REGULATION_CODE", code);
     }
   }
 
-  public MasterDataAggregateMutationResponse update(
+  public CentralRegulationDtos.RegulationAggregateResponse update(
       UUID id, CentralRegulationDtos.UpdateRegulation r) {
     long expected = support.requireVersion(r.version());
     String title = support.normalizeTitle(r.title()),
         description = support.normalizeDescription(r.description());
     support.validateValidity(r.validFrom(), r.validTo());
+    AtomicReference<CentralRegulationDtos.RegulationDetail> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
+    AtomicReference<List<CentralRegulationDtos.RequirementDetail>> childRows = new AtomicReference<>(List.of());
     var result =
-        revisions.execute(
+        revisions.executeStructural(
+            guardKeys(r.requirementChanges()),
             RevisionRequest.central(
                 "Update regulation " + id, "Regulation definition update", null),
             c -> {
+              requireGuard(c);
               var prepared = documents.prepareAggregate(r.documents());
               var e = lock(id);
               support.assertVersion(e, expected);
               if (e.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
-              if (Objects.equals(e.getTitle(), title)
+              UUID parentId = r.parentChange() == null ? e.getRegulationGroupId() : r.parentChange().regulationGroupId();
+              int sortOrder = r.sortOrder() == null ? e.getSortOrder() : support.normalizeSortOrder(r.sortOrder());
+              MasterDataLifecycleStatus status = r.status() == null ? e.getStatus() : r.status();
+              if (status == MasterDataLifecycleStatus.DELETED) throw new UnprocessableEntityException(
+                  "INVALID_STATUS", "error.masterdata.v2.invalidLifecycleTransition", "Update accepts ACTIVE or INACTIVE only");
+              if (parentId == null) throw invalidParent();
+              requireGroup(parentId);
+              var childPlan = requirementDrafts.prepare(id, r.requirementChanges(), c);
+
+              if (Objects.equals(e.getRegulationGroupId(), parentId)
+                  && e.getSortOrder() == sortOrder
+                  && e.getStatus() == status
+                  && Objects.equals(e.getTitle(), title)
                   && Objects.equals(e.getDescription(), description)
                   && Objects.equals(e.getValidFrom(), r.validFrom())
                   && Objects.equals(e.getValidTo(), r.validTo())
-                  && empty(r.documents())) throw noChange();
+                  && empty(r.documents()) && !childPlan.changed()) throw noChange();
               JsonNode before = snapshot(e);
               e.update(
                   title,
@@ -171,16 +203,26 @@ public class CentralRegulationCommandService {
                   r.validTo(),
                   actors.currentActorId(),
                   Instant.now(clock));
+              e.move(parentId, sortOrder, actors.currentActorId(), Instant.now(clock));
+              if (e.getStatus() != status) {
+                support.validateLifecycle(e, status == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE);
+                if (status == MasterDataLifecycleStatus.ACTIVE) e.activate(actors.currentActorId(), Instant.now(clock));
+                else e.inactivate(actors.currentActorId(), Instant.now(clock));
+              }
               var saved = repository.saveAndFlush(e);
+              var children = requirementDrafts.apply(childPlan, c);
+              childRows.set(children.requirements());
+              canonical.set(mapper.detail(saved));
               docs.set(
                   documents.finalizePreparedAggregate(
                       prepared,
                       DocumentLinkTargetType.CENTRAL_REGULATION,
                       id,
                       "MD_GOVERNANCE_MANAGE"));
-              return completed(c, saved, RevisionOperationType.UPDATE, expected, before);
+              return combine(c, completed(c, saved, RevisionOperationType.UPDATE, expected, before), children.contents());
             });
-    return support.aggregateResponse(result, docs.get());
+    return new CentralRegulationDtos.RegulationAggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
+          result.primaryResult().version(), docs.get(), canonical.get(), childRows.get());
   }
 
   public MasterDataRevisionMutationResponse move(UUID id, CentralRegulationDtos.MoveRegulation r) {
@@ -279,6 +321,18 @@ public class CentralRegulationCommandService {
 
   private void requireGuard(RevisionExecutionContext c) {
     guard.requireHierarchyGuard(c, MasterDataHierarchyKey.REGULATION);
+  }
+
+  private List<MasterDataHierarchyKey> guardKeys(List<CentralRegulationDtos.RequirementChange> changes) {
+    return changes == null || changes.isEmpty() ? List.of(MasterDataHierarchyKey.REGULATION)
+        : List.of(MasterDataHierarchyKey.CONTROL, MasterDataHierarchyKey.REGULATION);
+  }
+
+  private RevisionOperationResult combine(RevisionExecutionContext context, RevisionOperationResult owner,
+      List<RevisionContentResult> children) {
+    var contents = new ArrayList<>(owner.contentResults());
+    contents.addAll(children);
+    return RevisionOperationResult.completed(context, owner.primaryResult(), contents);
   }
 
   private CentralRegulationEntity lock(UUID id) {

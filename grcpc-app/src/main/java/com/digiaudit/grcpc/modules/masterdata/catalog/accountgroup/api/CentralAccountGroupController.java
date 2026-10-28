@@ -50,14 +50,14 @@ public class CentralAccountGroupController {
 
   @PostMapping
   @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
-  public MasterDataAggregateMutationResponse create(
+  public CentralAccountGroupDtos.AggregateResponse create(
       @Valid @RequestBody CentralAccountGroupDtos.Create request) {
     return commands.create(request);
   }
 
   @PatchMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
-  public MasterDataAggregateMutationResponse update(
+  public CentralAccountGroupDtos.AggregateResponse update(
       @PathVariable UUID id, @Valid @RequestBody CentralAccountGroupDtos.Update request) {
     return commands.update(id, request);
   }

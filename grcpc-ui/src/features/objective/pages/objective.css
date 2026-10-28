@@ -10,8 +10,7 @@
 .objectiveTreeLabel { gap: var(--sapContent_Space_Tiny); width: 100%; min-width: 0; box-sizing: border-box; }
 .objectiveTreeTitle { min-width: 0; }
 .objectiveTreeType { flex: none; white-space: nowrap; }
-.objectiveDialog { width: 90vw; max-width: 90vw; }
-.objectiveDialogContent { width: 86vw; max-width: 86vw; display: grid; gap: .75rem; padding: 1rem; box-sizing: border-box; }
+.objectiveDialogContent { display: grid; gap: .75rem; padding: 1rem; box-sizing: border-box; }
 .objectiveForm { padding: 1rem; max-height: 60vh; overflow: auto; }
 .objectiveDocumentTab { padding: 1rem; max-height: 75vh; overflow: auto; }
 .objectiveOrganizationTab { padding: 1rem; max-height: 75vh; overflow: auto; }
@@ -26,4 +25,7 @@
 .objectivePickerField { gap: .5rem; width: 100%; }
 .objectivePickerField ui5-input { flex: 1; min-width: 0; }
 .objectiveDialogActions { justify-content: center; padding: .75rem 1rem; }
-@media (max-width: 720px) { .objectiveFcl { min-height: 30rem; } .objectiveDialog { width: 96vw; max-width: 96vw; } .objectiveDialogContent { width: 92vw; max-width: 92vw; } .objectiveOrganizationToolbar { flex-wrap: wrap; } .objectiveOrganizationStatus { flex: 1 1 10rem; } }
+@media (max-width: 720px) { .objectiveFcl { min-height: 30rem; } .objectiveOrganizationToolbar { flex-wrap: wrap; } .objectiveOrganizationStatus { flex: 1 1 10rem; } }
+
+.objectiveDialogContent, .objectiveOrganizationTab { min-width: 0; }
+.objectiveOrganizationTab { max-height: none; overflow: visible; }

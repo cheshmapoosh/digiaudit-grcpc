@@ -63,6 +63,9 @@ export interface CreateCentralRiskCategoryCommand {
 }
 
 export interface UpdateCentralRiskCategoryCommand {
+  parentChange?: { parentCategoryId: string | null };
+  sortOrder?: number;
+  status?: "ACTIVE" | "INACTIVE";
   version: number;
   title: string;
   description: string | null;
@@ -96,6 +99,9 @@ export interface CreateCentralRiskTemplateCommand {
 }
 
 export interface UpdateCentralRiskTemplateCommand {
+  parentChange?: { riskCategoryId: string };
+  sortOrder?: number;
+  status?: "ACTIVE" | "INACTIVE";
   version: number;
   title: string;
   riskType: CentralRiskType;
@@ -118,6 +124,7 @@ export interface MoveCentralRiskTemplateCommand {
 }
 
 export interface CentralRiskMutationResponse {
+  entity: CentralRiskCategoryDetail | CentralRiskTemplateDetail;
   entityId: string;
   revisionId: string;
   version: number;

@@ -42,7 +42,7 @@ export interface GlobalControlCreate {
   code: string; name: string; description: string | null; controlGroupId: string;
   controlType: string; testRequired: boolean; validFrom: string | null; validTo: string | null;
   documents: DocumentAggregateRequest;
-  regulationIds: string[];
+  regulationChanges: GlobalControlRegulationChange[];
 }
 export type GlobalControlUpdate = Omit<GlobalControlCreate, "code"> & { version: number };
 
@@ -54,4 +54,15 @@ export interface RegulationSelectionOptions {
 export interface GlobalControlRegulation {
   id: string; globalControlId: string; regulationId: string;
   regulationCode: string; regulationName: string; version: number;
+  status: "ACTIVE" | "INACTIVE" | "DELETED";
+  regulationStatus: "ACTIVE" | "INACTIVE" | "DELETED";
+}
+export interface GlobalControlRegulationChange {
+  regulationId: string;
+  operation: "CREATE_OR_RESTORE" | "ACTIVATE" | "INACTIVATE" | "DELETE" | "RESTORE";
+  relationId?: string; version?: number;
+}
+export interface GlobalControlMutation {
+  entityId: string; version: number; revisionId: string;
+  control: GlobalControl; regulations: GlobalControlRegulation[];
 }

@@ -54,13 +54,8 @@ export default function CentralControlDialog({ controlId, initialSubprocess, onC
         ? await centralControlApi.create({ ...payload as CreateCentralControlCommand, initialSubprocess })
         : await centralControlApi.update(value!.id, payload as UpdateCentralControlCommand);
       onDirtyChange(false);
-      try {
-        const [detail] = await Promise.all([centralControlApi.detail(result.entityId), onSaved()]);
-        setValue(detail); setMode("view");
-      } catch {
-        // Saving succeeded: never leave a submitted Create draft available for a second Save.
-        onRefreshFailed();
-      }
+      setValue({ ...result.entity, relations: result }); setMode("view");
+      try { await onSaved(); } catch { onRefreshFailed(); }
       return true;
     } catch (failure) {
       const code = (failure as { code?: string })?.code;
@@ -82,11 +77,11 @@ export default function CentralControlDialog({ controlId, initialSubprocess, onC
   const close = () => { if (!saving) onClose(); };
   const title = t(`control.${mode}.title`);
 
-  return <Dialog open={open} accessibleName={title} className="controlObjectDialog" onClose={event => {
+  return <Dialog open={open} accessibleName={title} className="controlObjectDialog catalogObjectDialog" onClose={event => {
     if (event.target === event.currentTarget) close();
   }}>
     <ModalDialogHeader title={title} onClose={close} />
-    <div className="controlDialogContent">
+    <div data-catalog-dialog-content className="controlDialogContent">
       {loading ? <BusyIndicator active /> : !loaded ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> :
         <CentralControlObjectPage key={`${mode}:${value?.id ?? "new"}`} mode={mode} value={value}
           initialControlGroupId={null} groups={groups} activeTab={activeTab} busy={saving}

@@ -52,7 +52,7 @@ export default function CentralControlGroupObjectPage({
   const [title, setTitle] = useState(value?.title ?? "");
   const [description, setDescription] = useState(value?.description ?? "");
   const [parentGroupId, setParentGroupId] = useState<string | null>(value?.parentGroupId ?? initialParentId);
-  const [status, setStatus] = useState<CentralControlEditableStatus>(value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE");
+  const [status, setStatus] = useState<CentralControlEditableStatus>(mode !== "create" && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE");
   const [validFrom, setValidFrom] = useState(value?.validFrom ?? "");
   const [validTo, setValidTo] = useState(value?.validTo ?? "");
   const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
@@ -74,11 +74,11 @@ export default function CentralControlGroupObjectPage({
     title: value?.title ?? "",
     description: value?.description ?? "",
     parentGroupId: value?.parentGroupId ?? initialParentId,
-    status: value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+    status: mode !== "create" && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     validFrom: value?.validFrom ?? "",
     validTo: value?.validTo ?? "",
-  }), [initialParentId, value]);
-  const dirty = normalized !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
+  }), [initialParentId, mode, value]);
+  const dirty = normalized !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty || valueHelpOpen;
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
@@ -114,7 +114,7 @@ export default function CentralControlGroupObjectPage({
       <CatalogParentHeader objectTitle={title || t("control.nodeType.group")} label={t("control.fields.parentGroup")} parentId={parentGroupId}
         busy={busy} onClearParent={!readOnly ? () => setParentGroupId(null) : undefined}
         parent={parent ? { code: parent.code, title: parent.title, type: t("control.nodeType.group"), status: parent.status } : null}
-        selection={!readOnly ? <Button disabled={busy} onClick={() => setValueHelpOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+        selection={!readOnly ? <Button design="Emphasized" disabled={busy} onClick={() => setValueHelpOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
       {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
       {validationError ? <MessageStrip design="Negative" onClose={() => setValidationError(null)}>{validationError}</MessageStrip> : null}
@@ -122,7 +122,7 @@ export default function CentralControlGroupObjectPage({
         <div className="controlField"><Label showColon required>{t("control.fields.code")}</Label>{readOnly ? <Text className="objectPageValue">{(code) || "—"}</Text> : <Input value={code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(e) => setCode(e.target.value)} />}</div>
         <div className="controlField"><Label showColon required>{t("control.fields.name")}</Label>{readOnly ? <Text className="objectPageValue">{(title) || "—"}</Text> : <Input value={title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => setTitle(e.target.value)} />}</div>
 
-        <div className="controlField"><Label showColon>{t("control.fields.status")}</Label>{readOnly ? <ObjectStatus state={status === "ACTIVE" ? "Positive" : "None"}>{t("control.status." + status)}</ObjectStatus> : <Select value={status} disabled={mode !== "edit" || busy} onChange={(e) => setStatus(e.target.value as CentralControlEditableStatus)}><Option value="ACTIVE">{t("control.status.ACTIVE")}</Option><Option value="INACTIVE">{t("control.status.INACTIVE")}</Option></Select>}</div>
+        <div className="controlField"><Label showColon>{t("control.fields.status")}</Label>{mode === "create" ? <ObjectStatus state="Positive">{t("common.active")}</ObjectStatus> : readOnly ? <ObjectStatus state={status === "ACTIVE" ? "Positive" : "None"}>{t("control.status." + status)}</ObjectStatus> : <Select value={status} disabled={mode !== "edit" || busy} onChange={(e) => setStatus(e.target.value as CentralControlEditableStatus)}><Option value="ACTIVE">{t("control.status.ACTIVE")}</Option><Option value="INACTIVE">{t("control.status.INACTIVE")}</Option></Select>}</div>
         <div className="controlDateRangeRow">
           <div className="controlField"><Label showColon>{t("control.fields.validFrom")}</Label>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(validFrom)) || "—"}</Text> : <PersianDatePicker value={validFrom} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validFrom")} invalidValueMessage={t("control.validation.invalidDate")} onChange={setValidFrom} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} />}</div>
           <div className="controlField"><Label showColon>{t("control.fields.validTo")}</Label>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(validTo)) || "—"}</Text> : <PersianDatePicker value={validTo} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validTo")} invalidValueMessage={t("control.validation.invalidDate")} onChange={setValidTo} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))} />}</div>
@@ -133,7 +133,7 @@ export default function CentralControlGroupObjectPage({
         {mode === "view" ? (
           <><Button design="Emphasized" disabled={busy} onClick={onEdit}>{t("common.edit", { defaultValue: "ویرایش" })}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.close", { defaultValue: "بستن" })}</Button></>
         ) : (
-          <><Button design="Emphasized" disabled={busy || invalidDate || !dirty} onClick={submit}>{t("control.actions.submit")}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.cancel", { defaultValue: "انصراف" })}</Button></>
+          <><Button design="Emphasized" disabled={busy || valueHelpOpen || invalidDate || !dirty} onClick={submit}>{t("control.actions.submit")}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.cancel", { defaultValue: "انصراف" })}</Button></>
         )}
       </DialogFooter>
       <ControlGroupValueHelpDialog

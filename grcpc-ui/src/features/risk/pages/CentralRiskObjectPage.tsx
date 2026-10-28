@@ -99,6 +99,7 @@ function toForm(
   kind: CentralRiskNodeKind,
   value: RiskDetail | null,
   initialParentCategoryId: string | null,
+  creating = false,
 ): FormState {
   const template = templateValue(kind, value);
   return {
@@ -107,7 +108,7 @@ function toForm(
     description: value?.description ?? "",
     parentCategoryId: resolveParentCategoryId(kind, value, initialParentCategoryId),
     riskType: template?.riskType ?? "",
-    status: value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+    status: !creating && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     validFrom: value?.validFrom ?? "",
     validTo: value?.validTo ?? "",
   };
@@ -170,8 +171,8 @@ export default function CentralRiskObjectPage({
   const { t } = useTranslation();
   const controlAssignmentPermissions = useRiskControlAssignmentPermissions();
   const objectiveAssignmentPermissions = useRiskControlObjectiveAssignmentPermissions();
-  const [form, setForm] = useState<FormState>(() => toForm(kind, value, initialParentCategoryId));
-  const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(kind, value, initialParentCategoryId))));
+  const [form, setForm] = useState<FormState>(() => toForm(kind, value, initialParentCategoryId, mode === "create"));
+  const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(kind, value, initialParentCategoryId, mode === "create"))));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [parentDialogOpen, setParentDialogOpen] = useState(false);
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
@@ -181,13 +182,13 @@ export default function CentralRiskObjectPage({
   const readOnly = mode === "view";
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const generalDirty = JSON.stringify(normalized(form)) !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
-  const dirty = generalDirty || documents.dirty || documents.uploading;
+  const dirty = generalDirty || documents.dirty || documents.uploading || parentDialogOpen;
   const canChangeParent = !readOnly && (mode === "create" || permissions.move);
   const canChangeStatus = mode === "edit" && permissions.lifecycle;
 
   useEffect(() => {
     if (scopeRef.current === scope && dirty) return;
-    const next = toForm(kind, value, initialParentCategoryId);
+    const next = toForm(kind, value, initialParentCategoryId, mode === "create");
     const timer = window.setTimeout(() => {
       setForm(next);
       setBaseline(JSON.stringify(normalized(next)));
@@ -197,7 +198,7 @@ export default function CentralRiskObjectPage({
       scopeRef.current = scope;
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [dirty, initialParentCategoryId, kind, scope, value]);
+  }, [dirty, initialParentCategoryId, kind, mode, scope, value]);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -313,7 +314,7 @@ export default function CentralRiskObjectPage({
   };
 
   const saveDisabled =
-    busy ||
+    busy || parentDialogOpen ||
     invalidDate ||
     documents.uploading ||
     documents.invalid ||
@@ -356,7 +357,7 @@ export default function CentralRiskObjectPage({
           parentId={form.parentCategoryId} required={kind === "template"}
           busy={busy} onClearParent={canChangeParent && kind === "category" ? () => change("parentCategoryId", null) : undefined}
           parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t("risk.nodeType.category"), status: selectedParent.status } : null}
-          selection={canChangeParent ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+          selection={canChangeParent ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
         <DetailTabContainer
           onTabSelect={(event) => {
@@ -417,7 +418,7 @@ export default function CentralRiskObjectPage({
                 </Field>
               ) : null}
               <Field label={t("risk.fields.status")}>
-                {readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("risk.status." + form.status)}</ObjectStatus> : <Select
+                {mode === "create" ? <ObjectStatus state="Positive">{t("common.active")}</ObjectStatus> : readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("risk.status." + form.status)}</ObjectStatus> : <Select
                   value={form.status}
                   disabled={!canChangeStatus || busy}
                   accessibleName={t("risk.fields.status")}

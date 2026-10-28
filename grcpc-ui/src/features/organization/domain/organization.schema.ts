@@ -55,7 +55,7 @@ const baseValiditySchema = z
     });
 
 const ownerChangeSchema = z.object({
-    operation: z.enum(["CREATE_OR_RESTORE", "DELETE"]), userId: z.string().uuid(),
+    operation: z.enum(["CREATE_OR_RESTORE", "ACTIVATE", "INACTIVATE", "DELETE", "RESTORE"]), userId: z.string().uuid(),
     assignmentId: z.string().trim().min(1).optional(), version: z.number().int().min(0).optional(),
 });
 const subprocessChangeSchema = z.object({
@@ -64,6 +64,31 @@ const subprocessChangeSchema = z.object({
     contextId: z.string().uuid().optional(),
     version: z.number().int().min(0).optional(),
 });
+
+const relationOperationSchema = z.enum(["CREATE_OR_RESTORE", "UPDATE", "ACTIVATE", "INACTIVATE", "DELETE", "RESTORE"]);
+const optionalUuid = z.string().uuid().nullable().optional();
+const contextRefSchema = z.object({ contextId: optionalUuid, subprocessId: optionalUuid })
+    .refine(value => Boolean(value.contextId) !== Boolean(value.subprocessId));
+const controlScopeRefSchema = z.object({ localControlScopeId: optionalUuid, contextRef: contextRefSchema.optional(), controlId: z.string().uuid().optional() })
+    .refine(value => Boolean(value.localControlScopeId) !== Boolean(value.contextRef && value.controlId));
+const requirementScopeRefSchema = z.object({ localRequirementScopeId: optionalUuid, contextRef: contextRefSchema.optional(), requirementId: z.string().uuid().optional() })
+    .refine(value => Boolean(value.localRequirementScopeId) !== Boolean(value.contextRef && value.requirementId));
+const relationChangeShape = { operation: relationOperationSchema, version: z.number().int().min(0).optional(), validFrom: dateSchema, validTo: dateSchema, requestedStatus: organizationEditableStatusSchema.optional() };
+const sourcedChangeShape = { ...relationChangeShape, contextRef: contextRefSchema, scopeId: z.string().uuid().optional(), sourceType: z.enum(["LOCAL_ADDED", "INHERITED_FROM_CENTRAL"]).optional() };
+const policyChangeShape = { ...relationChangeShape, policyId: z.string().uuid(), relationId: z.string().uuid().optional(), scopeAction: z.enum(["INCLUDE", "EXCLUDE"]).optional() };
+const localDraftSchemas = {
+    localControlScopeChanges: z.array(z.object({ ...sourcedChangeShape, controlId: z.string().uuid(), centralControlScopeId: optionalUuid, actualOwnerId: optionalUuid,
+        frequencyCode: optionalDescriptionSchema, executionMethodCode: optionalDescriptionSchema, testMethodCode: optionalDescriptionSchema, localContextNote: optionalDescriptionSchema })).optional(),
+    localRiskScopeChanges: z.array(z.object({ ...sourcedChangeShape, riskTemplateId: z.string().uuid(), centralRiskScopeId: optionalUuid })).optional(),
+    localControlObjectiveScopeChanges: z.array(z.object({ ...sourcedChangeShape, controlObjectiveId: z.string().uuid(), centralControlObjectiveScopeId: optionalUuid })).optional(),
+    localRequirementScopeChanges: z.array(z.object({ ...sourcedChangeShape, requirementId: z.string().uuid(), centralRequirementScopeId: optionalUuid })).optional(),
+    localOrganizationPolicyChanges: z.array(z.object({ ...policyChangeShape, propagationMode: z.enum(["DIRECT_ONLY", "INCLUDE_DESCENDANTS"]).optional() })).optional(),
+    localContextPolicyChanges: z.array(z.object({ ...policyChangeShape, contextRef: contextRefSchema })).optional(),
+    localControlPolicyChanges: z.array(z.object({ ...policyChangeShape, controlScopeRef: controlScopeRefSchema })).optional(),
+    localRequirementPolicyChanges: z.array(z.object({ ...policyChangeShape, requirementScopeRef: requirementScopeRefSchema })).optional(),
+    organizationObjectiveChanges: z.array(z.object({ ...relationChangeShape, assignmentId: z.string().uuid().optional(), objectiveId: z.string().uuid(),
+        name: optionalDescriptionSchema, description: optionalDescriptionSchema, owner: optionalDescriptionSchema })).optional(),
+};
 
 export const organizationCreateSchema = baseValiditySchema.extend({
     code: z
@@ -81,6 +106,7 @@ export const organizationCreateSchema = baseValiditySchema.extend({
     organizationTypeId: z.string().trim().min(1),
     ownerAssignments: z.array(ownerChangeSchema).optional(),
     subprocesses: z.array(subprocessChangeSchema).optional(),
+    ...localDraftSchemas,
     parentOrganizationId: z.string().trim().min(1).nullable().optional(),
     location: optionalLocationSchema,
     description: optionalDescriptionSchema,
@@ -95,6 +121,7 @@ export const organizationUpdateSchema = baseValiditySchema.extend({
     status: organizationEditableStatusSchema,
     ownerAssignments: z.array(ownerChangeSchema).optional(),
     subprocesses: z.array(subprocessChangeSchema).optional(),
+    ...localDraftSchemas,
     parentOrganizationId: z.string().trim().min(1).nullable().optional(),
     location: optionalLocationSchema,
     description: optionalDescriptionSchema,

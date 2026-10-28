@@ -97,6 +97,18 @@ public class GlobalControlRegulationEntity implements com.digiaudit.grcpc.common
     this.updatedBy = actor;
   }
 
+  public void activate(UUID actor, Instant now) {
+    this.status = MasterDataLifecycleStatus.ACTIVE;
+    this.updatedAt = now;
+    this.updatedBy = actor;
+  }
+
+  public void inactivate(UUID actor, Instant now) {
+    this.status = MasterDataLifecycleStatus.INACTIVE;
+    this.updatedAt = now;
+    this.updatedBy = actor;
+  }
+
   public UUID getId() { return id; }
   public UUID getGlobalControlId() { return globalControlId; }
   public UUID getRegulationId() { return regulationId; }

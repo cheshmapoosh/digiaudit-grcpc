@@ -8,6 +8,7 @@ import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
 import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.CatalogCommandSupport;
 import com.digiaudit.grcpc.modules.masterdata.globalcontrol.api.GlobalControlDtos;
+import com.digiaudit.grcpc.modules.masterdata.globalcontrol.api.GlobalControlRegulationDtos;
 import com.digiaudit.grcpc.modules.masterdata.globalcontrol.api.GlobalControlMapper;
 import com.digiaudit.grcpc.modules.masterdata.globalcontrol.domain.ControlGroupRepository;
 import com.digiaudit.grcpc.modules.masterdata.globalcontrol.domain.GlobalControlEntity;
@@ -85,7 +86,8 @@ public class GlobalControlService {
     return mapper.control(entity);
   }
 
-  public MasterDataAggregateMutationResponse create(GlobalControlDtos.Create request) {
+  @Transactional
+  public GlobalControlDtos.AggregateResponse create(GlobalControlDtos.Create request) {
     String code = support.normalizeCode(request.code());
     String name = support.normalizeTitle(request.name());
     String type = normalizeType(request.controlType());
@@ -104,17 +106,21 @@ public class GlobalControlService {
               support.normalizeDescription(request.description()), request.controlGroupId(), type,
               Boolean.TRUE.equals(request.testRequired()), request.validFrom(), request.validTo(),
               actors.currentActorId(), Instant.now(clock));
+          var relationPlan = regulationRelations.prepare(entity,
+              regulationChanges(entity.getId(), request.regulationIds(), request.regulationChanges()));
           entity = controls.saveAndFlush(entity);
-          synchronizeRegulations(entity.getId(), request.regulationIds());
+          var relationContents = regulationRelations.apply(relationPlan);
           finalized.set(documents.finalizePreparedAggregate(prepared,
               DocumentLinkTargetType.GLOBAL_CONTROL, entity.getId(), "MD_CONTROL_MANAGE"));
-          return support.completed(context, entity, RevisionEntityType.GLOBAL_CONTROL,
+          var ownerResult = support.completed(context, entity, RevisionEntityType.GLOBAL_CONTROL,
               RevisionOperationType.CREATE, null, null, typed(entity));
+          return combined(context, ownerResult, relationContents);
         });
-    return support.aggregateResponse(result, finalized.get());
+    return aggregateResponse(result, finalized.get());
   }
 
-  public MasterDataAggregateMutationResponse update(UUID id, GlobalControlDtos.Update request) {
+  @Transactional
+  public GlobalControlDtos.AggregateResponse update(UUID id, GlobalControlDtos.Update request) {
     long expected = support.requireVersion(request.version());
     String name = support.normalizeTitle(request.name());
     String type = normalizeType(request.controlType());
@@ -128,20 +134,33 @@ public class GlobalControlService {
           guard.requireHierarchyGuard(context, MasterDataHierarchyKey.REGULATION);
           var prepared = documents.prepareAggregate(request.documents());
           requireGroup(request.controlGroupId());
-          GlobalControlEntity entity = requireControl(id);
+          GlobalControlEntity entity = controls.lockById(id).orElseThrow(() -> notFound(id));
+          if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
           support.assertVersion(entity, expected);
+          var relationPlan = regulationRelations.prepare(entity,
+              regulationChanges(id, request.regulationIds(), request.regulationChanges()));
+          if (relationPlan.isEmpty() && !hasDocuments(request.documents())
+              && java.util.Objects.equals(entity.getName(), name)
+              && java.util.Objects.equals(entity.getDescription(), support.normalizeDescription(request.description()))
+              && java.util.Objects.equals(entity.getControlGroupId(), request.controlGroupId())
+              && java.util.Objects.equals(entity.getControlType(), type)
+              && entity.getTestRequired() == Boolean.TRUE.equals(request.testRequired())
+              && java.util.Objects.equals(entity.getValidFrom(), request.validFrom())
+              && java.util.Objects.equals(entity.getValidTo(), request.validTo()))
+            throw new UnprocessableEntityException("NO_CHANGE", "error.masterdata.v2.noChange", "The command contains no change");
           JsonNode before = support.snapshot(entity, typed(entity));
           entity.update(name, support.normalizeDescription(request.description()),
               request.controlGroupId(), type, Boolean.TRUE.equals(request.testRequired()),
               request.validFrom(), request.validTo(), actors.currentActorId(), Instant.now(clock));
           entity = controls.saveAndFlush(entity);
-          synchronizeRegulations(entity.getId(), request.regulationIds());
+          var relationContents = regulationRelations.apply(relationPlan);
           finalized.set(documents.finalizePreparedAggregate(prepared,
               DocumentLinkTargetType.GLOBAL_CONTROL, entity.getId(), "MD_CONTROL_MANAGE"));
-          return support.completed(context, entity, RevisionEntityType.GLOBAL_CONTROL,
+          var ownerResult = support.completed(context, entity, RevisionEntityType.GLOBAL_CONTROL,
               RevisionOperationType.UPDATE, expected, before, typed(entity));
+          return combined(context, ownerResult, relationContents);
         });
-    return support.aggregateResponse(result, finalized.get());
+    return aggregateResponse(result, finalized.get());
   }
 
   public MasterDataRevisionMutationResponse delete(UUID id, Long version) {
@@ -188,8 +207,11 @@ public class GlobalControlService {
     if (group.getStatus() != MasterDataLifecycleStatus.ACTIVE) throw invalidGroup(id);
   }
 
-  private void synchronizeRegulations(UUID controlId, List<UUID> requestedIds) {
-    if (requestedIds == null) return;
+  private List<GlobalControlRegulationDtos.Change> regulationChanges(UUID controlId, List<UUID> requestedIds,
+      List<GlobalControlRegulationDtos.Change> changes) {
+    if (requestedIds != null && changes != null) throw new UnprocessableEntityException("INVALID_REGULATION_SELECTION",
+        "error.masterdata.globalControl.regulationSelection", "Use exactly one regulation change format");
+    if (requestedIds == null) return changes;
     Set<UUID> desired = new LinkedHashSet<>(requestedIds);
     if (desired.contains(null) || desired.size() != requestedIds.size())
       throw new UnprocessableEntityException("INVALID_REGULATION_SELECTION",
@@ -198,19 +220,49 @@ public class GlobalControlService {
         controlId, MasterDataLifecycleStatus.DELETED);
     Set<UUID> current = new LinkedHashSet<>();
     existing.forEach(link -> current.add(link.getRegulationId()));
+    var result = new java.util.ArrayList<GlobalControlRegulationDtos.Change>();
     for (var link : existing) {
       if (!desired.contains(link.getRegulationId()))
-        regulationRelations.remove(controlId, link.getRegulationId(), link.getVersion());
+        result.add(new GlobalControlRegulationDtos.Change(link.getRegulationId(),
+            GlobalControlRegulationDtos.Operation.DELETE, link.getId(), link.getVersion()));
     }
     for (UUID regulationId : desired) {
-      if (!current.contains(regulationId)) regulationRelations.attach(controlId, regulationId);
+      if (!current.contains(regulationId)) {
+        var deleted = relations.findByGlobalControlIdAndRegulationId(controlId, regulationId).orElse(null);
+        result.add(new GlobalControlRegulationDtos.Change(regulationId,
+            GlobalControlRegulationDtos.Operation.CREATE_OR_RESTORE,
+            deleted == null ? null : deleted.getId(), deleted == null ? null : deleted.getVersion()));
+      }
     }
+    return result;
+  }
+
+  private com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionOperationResult combined(
+      com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionContext context,
+      com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionOperationResult owner,
+      List<com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentResult> relations) {
+    var contents = new java.util.ArrayList<>(owner.contentResults());
+    contents.addAll(relations);
+    return com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionOperationResult.completed(
+        context, owner.primaryResult(), contents);
+  }
+
+  private GlobalControlDtos.AggregateResponse aggregateResponse(
+      com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionResult result,
+      List<DocumentCommandResponse> finalized) {
+    var primary = result.primaryResult();
+    return new GlobalControlDtos.AggregateResponse(primary.entityId(), primary.revisionId(), primary.version(),
+        finalized, mapper.control(requireControl(primary.entityId())), regulationRelations.list(primary.entityId()));
   }
 
   private GlobalControlEntity requireControl(UUID id) {
     GlobalControlEntity entity = controls.findById(id).orElseThrow(() -> notFound(id));
     if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
     return entity;
+  }
+
+  private boolean hasDocuments(com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest batch) {
+    return batch != null && (!batch.newDocuments().isEmpty() || !batch.newVersions().isEmpty() || !batch.metadataUpdates().isEmpty());
   }
 
   private String normalizeType(String value) {

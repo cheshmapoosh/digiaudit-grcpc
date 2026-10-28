@@ -1,5 +1,12 @@
 # Organization owner Assignments — 2026-10-28
 
+Later same-day correction: [Governance modal relationship drafts](2026-10-28-governance-modal-relations.md)
+extends O1 to ACTIVE/INACTIVE/DELETED with forward V1202, current non-DELETED
+reads/internal deleted lookup, typed prepare/apply and batch main-modal Save.
+It removes row Undo and makes every non-DELETED link block Organization deletion.
+The eligibility, management authority, profile boundary and effective ACTIVE-only
+ownership rules below remain binding; two-state/Undo statements are historical.
+
 The project owner approved many-to-many Organization ownership as a typed
 Assignment, a separate Owners tab immediately before Documents, and a new
 Organization Data Manager role. This supersedes only the scalar owner and

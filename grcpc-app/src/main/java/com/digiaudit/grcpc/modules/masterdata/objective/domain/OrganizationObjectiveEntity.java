@@ -114,6 +114,18 @@ public class OrganizationObjectiveEntity implements com.digiaudit.grcpc.common.p
     this.updatedBy = actor;
   }
 
+  public void activate(UUID actor, Instant now) {
+    this.status = MasterDataLifecycleStatus.ACTIVE;
+    this.updatedAt = now;
+    this.updatedBy = actor;
+  }
+
+  public void inactivate(UUID actor, Instant now) {
+    this.status = MasterDataLifecycleStatus.INACTIVE;
+    this.updatedAt = now;
+    this.updatedBy = actor;
+  }
+
   public UUID getId() { return id; }
   public UUID getOrganizationId() { return organizationId; }
   public UUID getObjectiveId() { return objectiveId; }

@@ -43,6 +43,11 @@
       "controls": "Controls",
       "documents": "Documents"
     },
+    "requirements": {
+      "draftHint": "Requirement changes are drafts and are committed by the main law Save.",
+      "invalidDraft": "Requirement drafts are invalid. Resolve duplicate codes or incomplete details.",
+      "draftActive": "Active draft"
+    },
     "import": {
       "title": "Import requirements from Excel",
       "action": "Import from Excel",
@@ -52,16 +57,16 @@
       "chooseFile": "Choose Excel file",
       "validate": "Validate and preview",
       "preview": "Requirements preview",
-      "previewReady": "The file is valid. {{count}} requirements are ready to save.",
-      "confirmHelp": "Saving applies every row to this law. The last column shows each row's operation. No changes are saved before confirmation.",
-      "save": "Save requirements for this law",
-      "success": "{{count}} requirements were saved for this law.",
+      "previewReady": "The file is valid. {{count}} requirements are ready to join the law draft.",
+      "confirmHelp": "Confirmation adds these rows to this law's table as active drafts. Database changes are committed only by the main law Save.",
+      "save": "Add requirement drafts",
+      "success": "{{count}} requirements were added to the law draft.",
       "invalid": "The file has {{count}} errors. Correct the following cells in Excel and select the file again.",
       "validationErrors": "Excel validation errors",
       "column": "Column",
       "problem": "Problem",
       "processing": "Processing file",
-      "finishEdit": "Save or leave law editing before importing an Excel file.",
+      "finishEdit": "Open the law in Edit mode to import an Excel file.",
       "emptyList": "No requirements have been registered for this law.",
       "stale": "The file or records changed after preview. Validate and preview again.",
       "hierarchyBusy": "The law structure is being changed. Validate again shortly.",
@@ -106,7 +111,7 @@
         "DATE": "Enter a valid Persian date as text, such as 1405/08/06, or Gregorian date text such as 2026-10-28.",
         "DATE_RANGE": "Valid to must not precede valid from.",
         "DUPLICATE_FILE_CODE": "This code is repeated in another row of this file.",
-        "DUPLICATE_CODE": "An active requirement with this code already exists. Correct the code or remove the row.",
+        "DUPLICATE_CODE": "This code is already registered or present in the law draft. Active, inactive and deleted records all reserve their codes.",
         "OTHER_REGULATION": "This code belongs to a requirement of a different law. Enter another code."
       }
     },
@@ -141,7 +146,10 @@
       "notFound": "The record or its parent was not found.",
       "versionConflict": "The record has changed. Refresh and try again.",
       "invalidParent": "The selected parent is not valid for this record.",
-      "dependencies": "This record has non-deleted children or active dependencies and cannot be deleted."
+      "dependencies": "This record has non-deleted children or active dependencies and cannot be deleted.",
+      "profileBusy": "Profile administration is busy. Save again shortly.",
+      "profileReadOnly": "Write access to this profile has changed. Your draft is retained.",
+      "hierarchyBusy": "The catalog structure is busy. Save again shortly."
     }
   }
 }

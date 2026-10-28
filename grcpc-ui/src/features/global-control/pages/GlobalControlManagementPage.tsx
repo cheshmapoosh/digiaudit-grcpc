@@ -10,8 +10,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
-  Bar, BusyIndicator, Dialog, Input, Label, Link, MessageStrip, ObjectStatus, Option, Select, Tab, Table,
-  TableCell, TableHeaderCell, TableHeaderRow, TableRow, Text, TextArea, Title, Tree,
+  Bar, BusyIndicator, Dialog, Input, Label, Link, MessageStrip, Option, Select, Tab,
+  Text, TextArea, Title, Tree,
 } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
 import {
@@ -22,7 +22,7 @@ import { useMasterDataAccess } from "@/features/master-data/security/masterDataA
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
-import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
+import { GlobalControlRegulationsTab } from "../components/GlobalControlRegulationsTab";
 import { MasterDataFormField } from "@/shared/components/MasterDataObjectHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
@@ -30,7 +30,7 @@ import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.ut
 import GlobalControlCreateMenu from "../components/GlobalControlCreateMenu";
 import type {
   ControlGroup, ControlGroupCreate, ControlGroupUpdate, GlobalControl,
-  GlobalControlCreate, GlobalControlUpdate, GlobalControlRegulation, RegulationSelectionOptions,
+  GlobalControlCreate, GlobalControlUpdate, GlobalControlRegulation, GlobalControlRegulationChange,
 } from "../domain/global-control.model";
 import { globalControlApi } from "../infra/global-control.api.repo";
 import { useGlobalControlState } from "../state/global-control.state";
@@ -158,13 +158,11 @@ export default function GlobalControlManagementPage() {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"general" | "regulations" | "documents">("general");
   const [related, setRelated] = useState<GlobalControlRegulation[]>([]);
-  const [regulationOptions, setRegulationOptions] = useState<RegulationSelectionOptions>({ groups: [], regulations: [] });
-  const [selectedRegulationIds, setSelectedRegulationIds] = useState<Set<string>>(new Set());
-  const [regulationPickerOpen, setRegulationPickerOpen] = useState(false);
-  const [regulationSearch, setRegulationSearch] = useState("");
-  const [regulationStatusFilter, setRegulationStatusFilter] = useState("ALL");
+  const [regulationChanges, setRegulationChanges] = useState<GlobalControlRegulationChange[]>([]);
+  const [regulationDirty, setRegulationDirty] = useState(false);
+  const [regulationReady, setRegulationReady] = useState(true);
+  const [parentPicker, setParentPicker] = useState(false);
   const [relationsLoading, setRelationsLoading] = useState(false);
-  const [relationsLoadFailed, setRelationsLoadFailed] = useState(false);
 
   const selectedGroup = selected?.kind === "group"
     ? groups.find((item) => item.id === selected.id) ?? null : null;
@@ -176,46 +174,23 @@ export default function GlobalControlManagementPage() {
     ? descendants(groups, selectedGroup.id) : new Set<string>(), [groups, selectedGroup, editor]);
   const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const currentForm = editor?.startsWith("group") ? groupForm : controlForm;
-  const regulationDraftDirty = [...selectedRegulationIds].sort().join("|")
-    !== related.map((link) => link.regulationId).sort().join("|");
   const dirty = editor !== null && (JSON.stringify(currentForm) !== baseline
-    || invalidDateDraft || (!editor.startsWith("group") && (documents.dirty || regulationDraftDirty)));
+    || invalidDateDraft || parentPicker || (!editor.startsWith("group") && (documents.dirty || regulationDirty)));
   const { blocker } = useUnsavedChangesGuard(dirty);
 
   useEffect(() => { void load().catch((cause: unknown) => setError(message(cause))); }, [load]);
   useEffect(() => {
-    if (editor === "controlCreate") {
-      let current = true;
-      void globalControlApi.regulationSelection().then((options) => {
-        if (current) { setRegulationOptions(options); setRelationsLoadFailed(false); }
-      }).catch((cause: unknown) => {
-        if (current) { setError(message(cause)); setRelationsLoadFailed(true); }
-      })
-        .finally(() => { if (current) setRelationsLoading(false); });
-      return () => { current = false; };
-    }
     if (!selectedControlId) return;
     let current = true;
-    void Promise.all([
-      globalControlApi.relatedRegulations(selectedControlId),
-      editor === "controlEdit" ? globalControlApi.regulationSelection()
-        : Promise.resolve({ groups: [], regulations: [] } as RegulationSelectionOptions),
-    ]).then(([links, options]) => {
-      if (current) {
-        setRelated(links); setRegulationOptions(options);
-        setRelationsLoadFailed(false);
-        if (editor === "controlEdit") setSelectedRegulationIds(new Set(links.map((link) => link.regulationId)));
-      }
-    }).catch((cause: unknown) => {
-      if (current) { setError(message(cause)); setRelationsLoadFailed(true); }
-    })
+    void globalControlApi.relatedRegulations(selectedControlId).then(links => {
+      if (current) setRelated(links);
+    }).catch((cause: unknown) => { if (current) setError(message(cause)); })
       .finally(() => { if (current) setRelationsLoading(false); });
     return () => { current = false; };
-  }, [selectedControlId, editor]);
+  }, [selectedControlId]);
 
   const choose = (selection: Selection) => {
     if (selection?.id === selected?.id && selection?.kind === selected?.kind) {
-      setActiveTab("general");
       return;
     }
     if (selection?.kind === "control") { setRelationsLoading(true); setRelated([]); }
@@ -242,7 +217,9 @@ export default function GlobalControlManagementPage() {
   const beginControl = (edit: boolean, preserveTab = false) => {
     setViewOpen(false);
     setEditorTab(preserveTab ? activeTab : "general");
-    if (!preserveTab) { setRegulationSearch(""); setRegulationStatusFilter("ALL"); }
+    setRegulationChanges([]);
+    setRegulationDirty(false);
+    setRegulationReady(true);
     setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
     setDraftGeneration((value) => value + 1);
     const next = edit && selectedControl ? {
@@ -262,8 +239,7 @@ export default function GlobalControlManagementPage() {
     setBaseline(JSON.stringify(next));
     setDateDrafts(cleanDates());
     setRelationsLoading(true);
-    setRelationsLoadFailed(false);
-    if (!edit) { setRelated([]); setSelectedRegulationIds(new Set()); }
+    if (!edit) { setRelated([]); setRegulationChanges([]); }
     setEditor(edit ? "controlEdit" : "controlCreate");
     setError(null);
   };
@@ -275,7 +251,7 @@ export default function GlobalControlManagementPage() {
     !invalidDateDraft && !(form.validFrom && form.validTo && form.validFrom > form.validTo);
 
   const save = async () => {
-    if (!editor || !currentForm.name.trim() || !validDates(currentForm)) {
+    if (!editor || parentPicker || (!editor.startsWith("group") && !regulationReady) || !currentForm.name.trim() || !validDates(currentForm)) {
       setError(t(!validDates(currentForm) ? "globalControl.errors.dates" : "globalControl.errors.required"));
       return;
     }
@@ -313,22 +289,24 @@ export default function GlobalControlManagementPage() {
           controlType: controlForm.controlType.trim(),
           testRequired: controlForm.testRequired === "true",
           validFrom: controlForm.validFrom || null, validTo: controlForm.validTo || null,
-          regulationIds: [...selectedRegulationIds],
+          regulationChanges,
           documents: toDocumentAggregateRequest(documents),
         };
         if (editor === "controlCreate") {
-          const id = await createControl({
+          const result = await createControl({
             ...fields, code: controlForm.code.trim(),
           } satisfies GlobalControlCreate);
-          choose({ kind: "control", id });
+          choose({ kind: "control", id: result.entityId });
+          setRelated(result.regulations);
           setExpanded((old) => new Set(old).add(fields.controlGroupId));
         } else if (selectedControl) {
-          await updateControl(selectedControl.id, {
+          const result = await updateControl(selectedControl.id, {
             ...fields, version: selectedControl.version,
           } satisfies GlobalControlUpdate);
+          setRelated(result.regulations);
         }
       }
-      if (!editor.startsWith("group")) setRelationsLoading(true);
+      if (!editor.startsWith("group")) { setRelationsLoading(false); setRegulationChanges([]); setRegulationDirty(false); }
       setActiveTab(editorTab);
       setViewOpen(true);
       setEditor(null);
@@ -351,11 +329,6 @@ export default function GlobalControlManagementPage() {
     } catch (cause) { setError(message(cause)); }
     finally { setBusy(false); }
   };
-  const toggleRegulation = (id: string) => setSelectedRegulationIds((previous) => {
-    const next = new Set(previous);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    return next;
-  });
   const onTreeSelect = (event: TreeEvent) => {
     const id = event.detail?.item?.dataset?.nodeId;
     const kind = event.detail?.item?.dataset?.nodeKind;
@@ -378,29 +351,6 @@ export default function GlobalControlManagementPage() {
     ...controls.map((item) => ({ item, kind: "control" as const })),
   ].filter(({ item }) => (item.code + " " + item.name).toLocaleLowerCase("fa").includes(needle)) : [];
   const groupOptions = groups.filter((group) => group.status === "ACTIVE");
-  const regulationRows = [
-    ...related.map((link) => ({ id: link.regulationId, code: link.regulationCode,
-      name: link.regulationName,
-      status: !editor?.startsWith("control") || selectedRegulationIds.has(link.regulationId)
-        ? "FINAL" as const : "DRAFT_PENDING_DELETE" as const })),
-    ...[...(editor?.startsWith("control") ? selectedRegulationIds : new Set<string>())]
-      .filter((id) => !related.some((link) => link.regulationId === id))
-      .map((id) => {
-        const option = regulationOptions.regulations.find((item) => item.id === id);
-        return { id, code: option?.code ?? "", name: option?.name ?? "", status: "DRAFT_NEW" as const };
-      }),
-  ];
-  const regulationQuery = regulationSearch.trim().toLocaleLowerCase("fa");
-  const visibleRegulationRows = regulationRows.filter((row) =>
-    (regulationStatusFilter === "ALL" || row.status === regulationStatusFilter)
-    && (!regulationQuery || `${row.code} ${row.name}`.toLocaleLowerCase("fa").includes(regulationQuery)));
-  const regulationNodes: HierarchySelectionNode[] = [
-    ...regulationOptions.groups.map((item) => ({ id: item.id, parentId: item.parentId,
-      code: item.code, name: item.name, selectable: false })),
-    ...regulationOptions.regulations.map((item) => ({ id: item.id, parentId: item.groupId,
-      code: item.code, name: item.name, selectable: true })),
-  ];
-
   const startColumn = createElement("div", { slot: "startColumn", className: "globalControlFclColumn" }, <div className="globalControlListReport">
     <Bar startContent={<Title level="H4">{t("globalControl.title")}</Title>}
       endContent={<>
@@ -442,50 +392,12 @@ export default function GlobalControlManagementPage() {
   </div>);
 
   const details = selectedGroup || selectedControl;
-  const regulationPanel = <div className="globalControlRelationTab">
-      <div className="globalControlRegulationToolbar">
-        <div className="globalControlRegulationSearch">
-          <Label showColon>{t("globalControl.tabs.regulations")}</Label>
-
-        </div>
-        <div className="globalControlRegulationStatus">
-          <Label showColon>{t("common.status")}</Label>
-          <Select value={regulationStatusFilter} accessibleName={t("common.status")}
-            onChange={(event) => setRegulationStatusFilter(event.target.value)}>
-            <Option value="ALL">{t("common.all")}</Option>
-            <Option value="FINAL">{t("common.relationStatus.FINAL")}</Option>
-            <Option value="DRAFT_NEW">{t("common.relationStatus.DRAFT_NEW")}</Option>
-            <Option value="DRAFT_PENDING_DELETE">{t("common.relationStatus.DRAFT_PENDING_DELETE")}</Option>
-          </Select>
-        </div>
-        <HeaderSearch value={regulationSearch} onChange={(value) => setRegulationSearch(value)} accessibleName={t("globalControl.regulations.search")} />
-        {editor?.startsWith("control") ? <Button design="Emphasized"
-          disabled={!manage || busy || relationsLoading || relationsLoadFailed}
-          onClick={() => setRegulationPickerOpen(true)}>{t("common.select")}</Button> : null}
-
-      </div>
-      {relationsLoading ? <BusyIndicator active delay={0} /> : <>
-      <Table headerRow={<TableHeaderRow>
-        <TableHeaderCell>{t("globalControl.code")}</TableHeaderCell>
-        <TableHeaderCell>{t("globalControl.name")}</TableHeaderCell>
-        <TableHeaderCell>{t("common.status")}</TableHeaderCell>
-        {editor?.startsWith("control") ? <TableHeaderCell>{t("globalControl.actions")}</TableHeaderCell> : null}
-      </TableHeaderRow>}>
-        {visibleRegulationRows.map((row) => <TableRow key={row.id}>
-          <TableCell>{row.code}</TableCell>
-          <TableCell>{row.name}</TableCell>
-          <TableCell><ObjectStatus state={row.status === "FINAL" ? "Positive" : "Information"}>
-            {t(`common.relationStatus.${row.status}`)}</ObjectStatus></TableCell>
-          {editor?.startsWith("control") ? <TableCell><Button design="Transparent" disabled={!manage || busy}
-            onClick={() => toggleRegulation(row.id)}>{t(row.status === "DRAFT_PENDING_DELETE" ? "common.undo" : "common.remove")}</Button></TableCell> : null}
-        </TableRow>)}
-      </Table>
-      {visibleRegulationRows.length === 0 ? <MessageStrip design="Information" hideCloseButton>
-        {t(regulationRows.length ? "common.noData" : "globalControl.regulations.empty")}</MessageStrip> : null}
-      </>}
-    </div>;
+  const regulationPanel = <GlobalControlRegulationsTab ownerId={editor === "controlCreate" ? null : selectedControlId ?? null}
+    rows={related} changes={regulationChanges} onChangesChange={setRegulationChanges}
+    manage={Boolean(editor?.startsWith("control")) && manage} busy={busy} resetKey={draftGeneration}
+    onDirtyChange={setRegulationDirty} onReadinessChange={setRegulationReady} onRowsChange={setRelated} />;
   const viewParent = groups.find((item) => item.id === (selectedGroup ? selectedGroup.parentId : selectedControl?.controlGroupId));
-  const viewDetails = details ? <div className="globalControlDialogContent">
+  const viewDetails = details ? <div className="globalControlDialogContent" data-catalog-dialog-content>
     <CatalogParentHeader objectTitle={details.name} label={t(selectedGroup ? "globalControl.group.parent" : "globalControl.group.select")}
       parentId={selectedGroup ? selectedGroup.parentId : selectedControl?.controlGroupId} required={Boolean(selectedControl)}
       parent={viewParent ? { code: viewParent.code, title: viewParent.name, type: t("globalControl.group.menu"), status: viewParent.status } : null} />
@@ -582,29 +494,12 @@ export default function GlobalControlManagementPage() {
       onClose={editor ? closeEditor : () => setViewOpen(false)}>
       <ModalDialogHeader title={editor ? editorTitle : details?.name || t("globalControl.title")}
         onClose={editor ? closeEditor : () => setViewOpen(false)} />
-      {editor ? <div className="globalControlDialogContent">
+      {editor ? <div className="globalControlDialogContent" data-catalog-dialog-content>
       <CatalogParentHeader objectTitle={form.name || editorTitle} label={t(groupEditor ? "globalControl.group.parent" : "globalControl.group.select")}
         parentId={groupEditor ? groupForm.parentId : controlForm.controlGroupId} required={!groupEditor}
         busy={busy} onClearParent={groupEditor && manage ? () => setGroupForm((old) => ({ ...old, parentId: "" })) : undefined}
         parent={editorParent ? { code: editorParent.code, title: editorParent.name, type: t("globalControl.group.menu"), status: editorParent.status } : null}
-        selection={groupEditor ? <Select value={groupForm.parentId} disabled={busy}
-            accessibleName={t("globalControl.group.parent")}
-            onChange={(event) => setGroupForm((old) => ({
-              ...old, parentId: event.target.value,
-            }))}>
-            <Option value="">{t("globalControl.group.none")}</Option>
-            {groupOptions.filter((item) => (editor !== "groupEdit" || item.id !== selectedGroup?.id)
-              && !blockedParents.has(item.id)).map((item) =>
-              <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-          </Select> : <Select value={controlForm.controlGroupId} disabled={busy}
-            accessibleName={t("globalControl.group.select")}
-            onChange={(event) => setControlForm((old) => ({
-              ...old, controlGroupId: event.target.value,
-            }))}>
-            <Option value="">{t("globalControl.group.select")}</Option>
-            {groupOptions.map((item) =>
-              <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-          </Select>} />
+        selection={<Button design="Emphasized" disabled={busy} onClick={() => setParentPicker(true)}>{t("catalogRelation.select")}</Button>} />
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key");
         if (key === "general" || key === "regulations" || key === "documents") setEditorTab(key);
@@ -667,7 +562,7 @@ export default function GlobalControlManagementPage() {
             : setControlForm((old) => ({ ...old, description: event.target.value }))} /></MasterDataFormField>
         </div>
       </div>
-      {!groupEditor && editorTab === "regulations" ? regulationPanel : null}
+      {!groupEditor ? <div className={editorTab === "regulations" ? "globalControlRelationTab" : "globalControlRelationTab globalControlHidden"}>{regulationPanel}</div> : null}
       {!groupEditor && editor ? <div className={editorTab === "documents"
         ? "globalControlDocumentTab" : "globalControlDocumentTab globalControlHidden"}>
         <DocumentManager targetType="GLOBAL_CONTROL"
@@ -677,12 +572,37 @@ export default function GlobalControlManagementPage() {
           draftResetKey={draftGeneration} onDraftStateChange={setDocuments} />
       </div> : null}
       <DialogFooter>
-        <Button design="Emphasized" disabled={busy || (!groupEditor && (relationsLoading || relationsLoadFailed)) || !dirty || invalidDateDraft
+        <Button design="Emphasized" disabled={busy || parentPicker || (!groupEditor && !regulationReady) || !dirty || invalidDateDraft
           || (!groupEditor && (!documents.ready || documents.invalid || documents.uploading))}
           onClick={() => void save()}>{t("common.save")}</Button>
         <Button design="Transparent" onClick={closeEditor}>{t("common.cancel")}</Button>
       </DialogFooter>
       </div> : viewDetails}
+    </Dialog>
+    <Dialog open={parentPicker} className="globalControlDialog" accessibleName={t(groupEditor ? "globalControl.group.parent" : "globalControl.group.select")} onClose={() => setParentPicker(false)}>
+      <ModalDialogHeader title={t(groupEditor ? "globalControl.group.parent" : "globalControl.group.select")} onClose={() => setParentPicker(false)} />
+      {groupEditor ? <Select value={groupForm.parentId} disabled={busy}
+            accessibleName={t("globalControl.group.parent")}
+            onChange={(event) => setGroupForm((old) => ({
+              ...old, parentId: event.target.value,
+            }))}>
+            {!groupForm.parentId ? <Option value="">{t("globalControl.group.none")}</Option> : null}
+            {groupOptions.filter((item) => (editor !== "groupEdit" || item.id !== selectedGroup?.id)
+              && !blockedParents.has(item.id)).map((item) =>
+              <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
+          </Select> : <Select value={controlForm.controlGroupId} disabled={busy}
+            accessibleName={t("globalControl.group.select")}
+            onChange={(event) => setControlForm((old) => ({
+              ...old, controlGroupId: event.target.value,
+            }))}>
+            {!controlForm.controlGroupId ? <Option value="">{t("globalControl.group.select")}</Option> : null}
+            {groupOptions.map((item) =>
+              <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
+          </Select>}
+      <DialogFooter>
+        {groupEditor && groupForm.parentId ? <Button design="Negative" disabled={busy} onClick={() => setGroupForm(old => ({ ...old, parentId: "" }))}>{t("catalog.parentHeader.clear")}</Button> : null}
+        <Button design="Emphasized" disabled={busy || (!groupEditor && !controlForm.controlGroupId)} onClick={() => setParentPicker(false)}>{t("catalogRelation.select")}</Button>
+      </DialogFooter>
     </Dialog>
     <DeleteConfirmDialog open={Boolean(deleteCandidate)}
       title={t(deleteCandidate?.kind === "group"
@@ -692,12 +612,6 @@ export default function GlobalControlManagementPage() {
         { name: deleteCandidate?.name ?? "" })}
       confirmText={t("common.delete")} cancelText={t("common.cancel")} loading={busy}
       onClose={() => setDeleteCandidate(null)} onConfirm={() => void confirmDelete()} />
-    <HierarchyMultiSelectionDialog open={regulationPickerOpen}
-      title={t("globalControl.regulations.select")} searchAccessibleName={t("globalControl.regulations.search")}
-      nodes={regulationNodes} selectedIds={selectedRegulationIds} busy={busy}
-      confirmText={t("common.confirm")} cancelText={t("common.cancel")}
-      onConfirm={(ids) => { setSelectedRegulationIds(ids); setRegulationPickerOpen(false); }}
-      onClose={() => setRegulationPickerOpen(false)} />
     <DeleteConfirmDialog open={leaveOpen || blocker.state === "blocked"}
       title={t("common.unsavedChanges.title")} message={t("common.unsavedChanges.message")}
       confirmText={t("common.unsavedChanges.leave")} cancelText={t("common.unsavedChanges.stay")}
@@ -708,6 +622,7 @@ export default function GlobalControlManagementPage() {
       }}
       onConfirm={() => {
         setLeaveOpen(false);
+        setParentPicker(false);
         setEditor(null);
         if (blocker.state === "blocked") blocker.proceed();
       }} />

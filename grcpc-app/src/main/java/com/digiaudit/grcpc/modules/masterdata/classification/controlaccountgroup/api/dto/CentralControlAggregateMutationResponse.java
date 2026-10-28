@@ -4,6 +4,7 @@ import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
 import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrol.api.dto.CentralRiskControlAssignmentResponse;
 import com.digiaudit.grcpc.modules.masterdata.assignment.controlcontrolobjective.api.dto.CentralControlControlObjectiveAssignmentResponse;
 import com.digiaudit.grcpc.modules.masterdata.assignment.requirementcontrol.api.dto.CentralRequirementControlAssignmentResponse;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.api.dto.CentralControlResponse;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,7 +14,7 @@ public record CentralControlAggregateMutationResponse(
     List<CentralControlAccountGroupResponse> accountGroupClassifications,
     List<CentralRiskControlAssignmentResponse> riskAssignments,
     List<CentralControlControlObjectiveAssignmentResponse> controlObjectiveAssignments,
-    List<CentralRequirementControlAssignmentResponse> requirementAssignments) {
+    List<CentralRequirementControlAssignmentResponse> requirementAssignments, CentralControlResponse entity) {
   public CentralControlAggregateMutationResponse {
     riskAssignments = riskAssignments == null ? List.of() : List.copyOf(riskAssignments);
     controlObjectiveAssignments = controlObjectiveAssignments == null ? List.of() : List.copyOf(controlObjectiveAssignments);

@@ -160,7 +160,7 @@ export default function ControlObjectiveAccountGroupSelectionDialog({
       <div className="controlObjectiveAccountGroupDialogBody">
 
         <div className="controlObjectiveAccountGroupTreeFrame">
-          <Tree accessibleName={t("controlObjectiveAccountGroup.selection.title")}>
+          <Tree accessibleName={t("controlObjectiveAccountGroup.selection.title")} noDataText={t("common.noData")}>
             {tree.map((node) => (
               <OptionItem
                 key={node.id}

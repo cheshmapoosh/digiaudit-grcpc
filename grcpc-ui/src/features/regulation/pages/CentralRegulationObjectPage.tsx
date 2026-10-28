@@ -3,7 +3,6 @@ import { DialogFooter } from "@/shared/components/DialogFooter";
 import { RequirementControlAssignmentsTab, useRequirementControlAssignmentPermissions } from "@/features/requirement-control-assignment";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { LocalReverseList } from "@/features/local-master-data";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { Text, ObjectStatus, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
@@ -24,6 +23,7 @@ import RegulationParentValueHelpDialog, {
   type RegulationParentCandidate,
 } from "../components/RegulationParentValueHelpDialog";
 import RegulationRequirementsTab from "../components/RegulationRequirementsTab";
+import { toRegulationRequirementChanges, type RegulationRequirementChange, type RegulationRequirementDraft } from "../domain/regulationRequirementDrafts.model";
 import type {
   CentralRegulationAnyDetail,
   CentralRegulationNodeType,
@@ -45,6 +45,7 @@ export interface CentralRegulationObjectDraft {
   documents: DocumentAggregateRequest;
   definitionDirty: boolean;
   documentsDirty: boolean;
+  requirementChanges: RegulationRequirementChange[];
 }
 
 interface FormState {
@@ -75,7 +76,6 @@ interface Props {
   onActiveTabChange: (tab: CentralRegulationTabKey) => void;
   onDirtyChange: (dirty: boolean) => void;
   requirements?: CentralRegulationRequirementSummary[];
-  onRequirementsImported?: () => Promise<boolean>;
 }
 
 const EMPTY_DATE_DRAFT: PersianDateDraftState = {
@@ -93,12 +93,13 @@ const documentTargetByType: Record<CentralRegulationNodeType, DocumentLinkTarget
 function toForm(
   value: CentralRegulationAnyDetail | null,
   initialParentId: string | null,
+  creating = false,
 ): FormState {
   return {
     code: value?.code ?? "",
     title: value?.title ?? "",
     parentId: initialParentId,
-    status: value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+    status: !creating && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     description: value?.description ?? "",
     validFrom: value?.validFrom ?? "",
     validTo: value?.validTo ?? "",
@@ -160,17 +161,19 @@ export default function CentralRegulationObjectPage({
   onActiveTabChange,
   onDirtyChange,
   requirements = [],
-  onRequirementsImported,
 }: Props) {
   const { t } = useTranslation();
   const assignmentPermissions = useRequirementControlAssignmentPermissions();
-  const [form, setForm] = useState<FormState>(() => toForm(value, initialParentId));
+  const [form, setForm] = useState<FormState>(() => toForm(value, initialParentId, mode === "create"));
   const [baseline, setBaseline] = useState(() =>
-    JSON.stringify(normalized(toForm(value, initialParentId))),
+    JSON.stringify(normalized(toForm(value, initialParentId, mode === "create"))),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
   const [parentDialogOpen, setParentDialogOpen] = useState(false);
-  const [importPending, setImportPending] = useState(false);
+  const [requirementsPending, setRequirementsPending] = useState(false);
+  const [requirementsReady, setRequirementsReady] = useState(true);
+  const [requirementsDirty, setRequirementsDirty] = useState(false);
+  const [requirementChanges, setRequirementChanges] = useState<RegulationRequirementDraft[]>([]);
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(
     EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE,
   );
@@ -186,23 +189,28 @@ export default function CentralRegulationObjectPage({
     JSON.stringify(normalized(form)) !== baseline ||
     dateDrafts.validFrom.dirty ||
     dateDrafts.validTo.dirty;
-  const dirty = definitionDirty || documents.dirty || documents.uploading || importPending;
+  const dirty = definitionDirty || documents.dirty || documents.uploading || parentDialogOpen
+    || requirementsPending || requirementsDirty || requirementChanges.length > 0;
   const canChangeStatus = mode === "edit" && permissions.lifecycle;
   const canChangeParent = !readOnly && (mode === "create" || permissions.move);
 
   useEffect(() => {
     if (scopeRef.current === scope && dirty) return;
-    const next = toForm(value, initialParentId);
+    const next = toForm(value, initialParentId, mode === "create");
     const timer = window.setTimeout(() => {
       setForm(next);
       setBaseline(JSON.stringify(normalized(next)));
       setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
       setDateDrafts({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
       setValidationError(null);
+      setRequirementChanges([]);
+      setRequirementsPending(false);
+      setRequirementsReady(true);
+      setRequirementsDirty(false);
       scopeRef.current = scope;
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [dirty, initialParentId, scope, value]);
+  }, [dirty, initialParentId, mode, scope, value]);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -250,6 +258,10 @@ export default function CentralRegulationObjectPage({
       onActiveTabChange("documents");
       return false;
     }
+    if (requirementsPending || !requirementsReady) {
+      onActiveTabChange("requirements");
+      return false;
+    }
     setValidationError(null);
     return true;
   };
@@ -260,13 +272,14 @@ export default function CentralRegulationObjectPage({
       code: form.code.trim().toUpperCase(),
       title: form.title.trim(),
       parentId: form.parentId,
-      status: form.status,
+      status: mode === "create" ? "ACTIVE" : form.status,
       description: form.description.trim() || null,
       validFrom: form.validFrom || null,
       validTo: form.validTo || null,
       documents: toDocumentAggregateRequest(documents),
       definitionDirty,
       documentsDirty: documents.dirty,
+      requirementChanges: nodeType === "REGULATION" ? toRegulationRequirementChanges(requirementChanges) : [],
     };
     if (await onSubmit(draft)) {
       setBaseline(JSON.stringify(normalized(form)));
@@ -281,12 +294,13 @@ export default function CentralRegulationObjectPage({
         ? "regulation"
         : "requirement";
   const saveDisabled =
-    busy ||
+    busy || parentDialogOpen || requirementsPending || !requirementsReady ||
     invalidDate ||
     documents.uploading ||
     documents.invalid ||
     !documents.ready ||
-    (!definitionDirty && !documents.dirty);
+    (!definitionDirty && !documents.dirty && !requirementChanges.length);
+  const displayedStatus = mode === "create" ? "ACTIVE" : readOnly ? value?.status ?? form.status : form.status;
 
   return (
     <>
@@ -294,14 +308,14 @@ export default function CentralRegulationObjectPage({
         <CatalogParentHeader objectTitle={form.title || t(`regulation.nodeType.${typeKey}`)} label={t("regulation.fields.parent")} parentId={form.parentId} required={nodeType !== "GROUP"}
           busy={busy} onClearParent={canChangeParent && nodeType === "GROUP" ? () => change("parentId", null) : undefined}
           parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t(nodeType === "REQUIREMENT" ? "regulation.nodeType.regulation" : "regulation.nodeType.group"), status: selectedParent.status } : null}
-          selection={canChangeParent ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+          selection={canChangeParent ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
         <DetailTabContainer
           onTabSelect={(event) => {
             const key = event.detail.tab.getAttribute("data-tab-key") as CentralRegulationTabKey | null;
             if (key === "general" || key === "documents"
               || (key === "requirements" && nodeType === "REGULATION" && mode !== "create")
-              || (key === "controls" && nodeType === "REQUIREMENT" && mode !== "create" && assignmentPermissions.view)) {
+              || (key === "controls" && nodeType === "REQUIREMENT" && value?.id && mode !== "create" && assignmentPermissions.view)) {
               onActiveTabChange(key);
             }
           }}
@@ -319,7 +333,7 @@ export default function CentralRegulationObjectPage({
             <Tab
               text={t("regulation.tabs.controls")}
               selected={activeTab === "controls"}
-              disabled={mode === "create" || !assignmentPermissions.view}
+              disabled={mode === "create" || !value?.id || !assignmentPermissions.view}
               data-tab-key="controls"
             />
           ) : null}
@@ -372,7 +386,7 @@ export default function CentralRegulationObjectPage({
                 {readOnly ? <Text className="objectPageValue">{(t(`regulation.nodeType.${typeKey}`)) || "—"}</Text> : <Input value={t(`regulation.nodeType.${typeKey}`)} readonly />}
               </Field>
               <Field label={t("regulation.fields.status")}>
-                {readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("regulation.status." + form.status)}</ObjectStatus> : <Select
+                {mode === "create" || readOnly ? <ObjectStatus state={displayedStatus === "ACTIVE" ? "Positive" : "None"}>{t("regulation.status." + displayedStatus)}</ObjectStatus> : <Select
                   value={form.status}
                   disabled={!canChangeStatus || busy}
                   onChange={(event) =>
@@ -425,11 +439,12 @@ export default function CentralRegulationObjectPage({
             </div>
           </div>
 
-          {nodeType === "REGULATION" && value?.id && mode !== "create" && onRequirementsImported ? (
+          {nodeType === "REGULATION" && value?.id && mode !== "create" ? (
             <div className={activeTab === "requirements" ? "regulationTabPanel" : "regulationTabPanel regulationTabPanelHidden"}>
-              <RegulationRequirementsTab regulationId={value.id} regulationTitle={value.title}
-                requirements={requirements} canImport={permissions.create} editable={!readOnly} busy={busy}
-                onImported={onRequirementsImported} onPendingChange={setImportPending} />
+              <RegulationRequirementsTab regulationId={value.id} regulationTitle={value.title} requirements={requirements} busy={busy}
+                canImport={permissions.create && value.status !== "DELETED"} editable={!readOnly && permissions.update}
+                changes={requirementChanges} onChange={setRequirementChanges}
+                onPendingChange={setRequirementsPending} onReadyChange={setRequirementsReady} onDirtyChange={setRequirementsDirty} />
             </div>
           ) : null}
 
@@ -465,13 +480,6 @@ export default function CentralRegulationObjectPage({
             />
           </div>
         </div>
-
-        {nodeType === "REQUIREMENT" && value?.id && mode === "view" ? <LocalReverseList
-          parentId={value.id}
-          path={`central/requirements/${value.id}/requirement-scopes`}
-          section="requirement-scopes"
-          titleKey="local.reverse.requirementScopes" titleFa="انتساب‌های محلی این الزام"
-          areas={["PROCESS", "GOVERNANCE"]} /> : null}
 
         <DialogFooter>
           {mode === "view" && permissions.update ? (

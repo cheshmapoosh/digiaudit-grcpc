@@ -12,6 +12,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.api.mapper.CentralPolicyMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.*;
 import java.util.*;
@@ -33,6 +34,7 @@ public class CentralPolicyGroupCommandService {
   private final CatalogCommandSupport support;
   private final CatalogHierarchySupport hierarchySupport;
   private final Clock clock;
+  private final CentralPolicyMapper mapper;
 
   public CentralPolicyGroupCommandService(
       CentralPolicyGroupRepository r,
@@ -43,7 +45,7 @@ public class CentralPolicyGroupCommandService {
       DocumentCommandService d,
       CatalogCommandSupport s,
       CatalogHierarchySupport h,
-      @Qualifier("masterDataRevisionClock") Clock c) {
+      @Qualifier("masterDataRevisionClock") Clock c, CentralPolicyMapper mapper) {
     repository = r;
     policies = p;
     revisions = rev;
@@ -53,14 +55,16 @@ public class CentralPolicyGroupCommandService {
     support = s;
     hierarchySupport = h;
     clock = c;
+    this.mapper = mapper;
   }
 
-  public MasterDataAggregateMutationResponse create(CentralPolicyDtos.CreateGroup r) {
+  public CentralPolicyDtos.GroupAggregateResponse create(CentralPolicyDtos.CreateGroup r) {
     String code = support.normalizeCode(r.code()),
         title = support.normalizeTitle(r.title()),
         description = support.normalizeDescription(r.description());
     int sort = support.normalizeSortOrder(r.sortOrder());
     support.validateValidity(r.validFrom(), r.validTo());
+    AtomicReference<CentralPolicyDtos.GroupDetail> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
     try {
       var result =
@@ -130,6 +134,7 @@ public class CentralPolicyGroupCommandService {
                   }
                 }
                 var saved = repository.saveAndFlush(e);
+              canonical.set(mapper.detail(saved));
                 docs.set(
                     documents.finalizePreparedAggregate(
                         prepared,
@@ -138,28 +143,44 @@ public class CentralPolicyGroupCommandService {
                         "MD_GOVERNANCE_MANAGE"));
                 return completed(c, saved, op, expected, before);
               });
-      return support.aggregateResponse(result, docs.get());
+      return new CentralPolicyDtos.GroupAggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
+          result.primaryResult().version(), docs.get(), canonical.get());
     } catch (DataIntegrityViolationException e) {
       throw support.translateBusinessKeyViolation(e, "UK_CENTRAL_POLICY_GROUP_CODE", code);
     }
   }
 
-  public MasterDataAggregateMutationResponse update(UUID id, CentralPolicyDtos.UpdateGroup r) {
+  public CentralPolicyDtos.GroupAggregateResponse update(UUID id, CentralPolicyDtos.UpdateGroup r) {
     long expected = support.requireVersion(r.version());
     String title = support.normalizeTitle(r.title()),
         description = support.normalizeDescription(r.description());
     support.validateValidity(r.validFrom(), r.validTo());
+    AtomicReference<CentralPolicyDtos.GroupDetail> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
     var result =
-        revisions.execute(
+        revisions.executeStructural(
+            MasterDataHierarchyKey.POLICY,
             RevisionRequest.central(
                 "Update policy group " + id, "Policy Group definition update", null),
             c -> {
+              requireGuard(c);
               var prepared = documents.prepareAggregate(r.documents());
               var e = lock(id);
               support.assertVersion(e, expected);
               if (e.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
-              if (Objects.equals(e.getTitle(), title)
+              UUID parentId = r.parentChange() == null ? e.getParentGroupId() : r.parentChange().parentGroupId();
+              int sortOrder = r.sortOrder() == null ? e.getSortOrder() : support.normalizeSortOrder(r.sortOrder());
+              MasterDataLifecycleStatus status = r.status() == null ? e.getStatus() : r.status();
+              if (status == MasterDataLifecycleStatus.DELETED) throw new UnprocessableEntityException(
+                  "INVALID_STATUS", "error.masterdata.v2.invalidLifecycleTransition", "Update accepts ACTIVE or INACTIVE only");
+              var parents = tree();
+              hierarchySupport.requireParent(id, parentId, parents, "POLICY parent");
+              hierarchySupport.rejectCycle(id, parentId, parents, CentralPolicyGroupEntity::getParentGroupId);
+
+              if (Objects.equals(e.getParentGroupId(), parentId)
+                  && e.getSortOrder() == sortOrder
+                  && e.getStatus() == status
+                  && Objects.equals(e.getTitle(), title)
                   && Objects.equals(e.getDescription(), description)
                   && Objects.equals(e.getValidFrom(), r.validFrom())
                   && Objects.equals(e.getValidTo(), r.validTo())
@@ -172,7 +193,14 @@ public class CentralPolicyGroupCommandService {
                   r.validTo(),
                   actors.currentActorId(),
                   Instant.now(clock));
+              e.move(parentId, sortOrder, actors.currentActorId(), Instant.now(clock));
+              if (e.getStatus() != status) {
+                support.validateLifecycle(e, status == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE);
+                if (status == MasterDataLifecycleStatus.ACTIVE) e.activate(actors.currentActorId(), Instant.now(clock));
+                else e.inactivate(actors.currentActorId(), Instant.now(clock));
+              }
               var saved = repository.saveAndFlush(e);
+              canonical.set(mapper.detail(saved));
               docs.set(
                   documents.finalizePreparedAggregate(
                       prepared,
@@ -181,7 +209,8 @@ public class CentralPolicyGroupCommandService {
                       "MD_GOVERNANCE_MANAGE"));
               return completed(c, saved, RevisionOperationType.UPDATE, expected, before);
             });
-    return support.aggregateResponse(result, docs.get());
+    return new CentralPolicyDtos.GroupAggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
+          result.primaryResult().version(), docs.get(), canonical.get());
   }
 
   public MasterDataRevisionMutationResponse move(UUID id, CentralPolicyDtos.MoveGroup r) {

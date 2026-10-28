@@ -63,6 +63,24 @@ public class CentralSubprocessRiskScopeQueryService {
   }
 
   @Transactional(readOnly = true)
+  public List<CentralSubprocessRiskScopeResponse> deletedForSubprocess(UUID subprocessId) {
+    CentralSubprocessEntity subprocess = requireSubprocess(subprocessId);
+    List<CentralSubprocessRiskScopeEntity> rows =
+        scopes.findBySubprocessIdAndStatus(subprocessId, MasterDataLifecycleStatus.DELETED);
+    Map<UUID, CentralRiskTemplateEntity> byId =
+        riskTemplates.findAllById(
+                rows.stream().map(CentralSubprocessRiskScopeEntity::getRiskTemplateId).toList())
+            .stream()
+            .collect(Collectors.toMap(CentralRiskTemplateEntity::getId, Function.identity()));
+    return rows.stream()
+        .map(row -> mapper.toResponse(row, subprocess, requireRiskTemplate(byId, row.getRiskTemplateId())))
+        .sorted(
+            Comparator.comparing(CentralSubprocessRiskScopeResponse::riskTemplateCode)
+                .thenComparing(CentralSubprocessRiskScopeResponse::id))
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
   public List<CentralSubprocessRiskScopeResponse> listForRiskTemplate(
       UUID riskTemplateId, MasterDataLifecycleStatus status, String search) {
     validateNormalStatus(status);

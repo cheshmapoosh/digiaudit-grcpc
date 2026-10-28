@@ -1,6 +1,6 @@
 # پرامپت اجرایی Codex: یکسان‌سازی تب‌های مودال‌های حاکمیت و کنترل
 
-تاریخ بررسی سورس: ۲۰۲۶-۱۰-۲۸. مبنای Git: `f5fb950` به‌علاوهٔ تغییرات موجود و ثبت‌نشدهٔ workspace در زمان این بررسی. این فایل دستور **پیاده‌سازی** است؛ در مرحلهٔ تهیهٔ آن فقط سورس و مستندات بررسی شده‌اند و کد برنامه تغییر نکرده است.
+تاریخ بررسی سورس: ۲۰۲۶-۱۰-۲۸. مبنای سورس در پایان ممیزی: `8b3885b` به‌علاوهٔ ویرایش نهایی همین سند. این فایل دستور **پیاده‌سازی** است؛ در مرحلهٔ تهیهٔ آن فقط سورس و مستندات بررسی شده‌اند و کد برنامه تغییر نکرده است.
 
 ## ۱. دستور اجرا و حدود اختیار
 
@@ -55,7 +55,7 @@
 - `D/accepted-corrections/2026-10-28-main-catalog-display-order.md`: DnD فقط روی درخت‌های اصلی؛ هیچ provider ترتیب نمایشی در مودال، picker یا تب رابطه mount نشود.
 - `D/implementation-contract.md`، `D/table-catalog.md`، `D/api-conventions.md`، `D/hierarchy-guard-row-contract.md` و `grcpc-docs/architecture/decisions/ADR-0001-database-hierarchy-guard-row.md`.
 
-تغییرات ثبت‌نشدهٔ موجود شامل کارهای قبلی همین محصول است. `git reset/clean`، برگرداندن جمعی فایل‌ها، تغییر migration قدیمی و جایگزینی سورس با HEAD مجاز نیست. کد فعال `M/catalog/...` را با ماژول‌های legacy هم‌نام اشتباه نگیر.
+تغییرات ثبت‌نشدهٔ موجود شامل کارهای قبلی همین محصول است. `git reset/clean`، برگرداندن جمعی فایل‌ها، تغییر migration قدیمی و جایگزینی سورس با HEAD مجاز نیست. کد فعال زیر `M/catalog/` را با ماژول‌های legacy هم‌نام اشتباه نگیر.
 
 ## ۴. نقشهٔ کامل مودال‌ها و تب‌ها
 
@@ -123,6 +123,8 @@ L2–L9 را فقط با مخفی کردن footer `LocalSectionPane` اصلاح 
 
 S1–S4، A1–A4، C1–C2 و P1–P4 از قبل draftهای aggregate دارند؛ آنها را دوباره با command/framework عمومی ننویس. مشکل فعلی عمدتاً renderer، ActionSheet/ویرایش ردیفی، picker، فیلتر، وضعیت، چندانتخابی و حفاظت pending است. readهای deleted برای بازیابی داخلی حفظ شوند ولی در جدول اصلی نمایش داده نشوند.
 
+برای S1–S4، repo فعلی UI readِ deleted ندارد؛ چهار GET داخلی‌مصرف با پسوند `/deleted` در owner pathهای `/api/master-data/central/subprocesses/{id}/control-scopes`، `/risk-scopes`، `/control-objective-scopes` و `/requirement-scopes` اضافه کن، با همان view permission/profile شرط read فعلی. controller/queryهای هر خانواده زیر `M/scope/` هستند. این GETها فقط lookup بازیابی را تغذیه می‌کنند و entry نمایشی Deleted ایجاد نمی‌کنند. A/C و Policy readهای deleted موجود دارند؛ از آنها استفاده کن. mapperهایی که status حذف‌شده را به ACTIVE پیش‌فرض می‌کنند برای deleted pool استفاده نشوند؛ baseline واقعی حذف‌شده و metadata/نسخهٔ آن حفظ شود.
+
 ## ۶. inverse، projection و فرزندان ساختاری
 
 این موارد فقط renderer/وضعیت/فیلتر/اسکرول می‌گیرند؛ checkbox عملیاتی، Select، Activate، Inactivate، Delete یا change set ندارند:
@@ -188,6 +190,8 @@ Pickerهای والد موجود را تطبیق بده: Organization `ParentVal
 
 metadata قابل حفظ و ویرایش:
 
+این دستور مخصوص جدول روابط است؛ attributeهای فرم عمومی مانند `control_relevance` در MultiComboBox، فیلدهای lifecycle خود تعریف، sortOrder موجود و enumهای تخصصی به جدول رابطه تبدیل نشوند.
+
 | خانواده | فیلدهای تخصصی |
 | --- | --- |
 | S1 | recommendedFrequencyCode، recommendedExecutionMethodCode، recommendedTestMethodCode، validFrom/validTo |
@@ -236,11 +240,13 @@ metadata قابل حفظ و ویرایش:
 
 وجود کل زوج‌ها مهم است: دادهٔ paginated Local را به صفحهٔ اول/۲۵ یا ۱۰۰ ردیف محدود نکن. deleted rows را فقط برای occupied-pair lookup، metadata و restore داخلی بخوان. آنها وارد گزینهٔ فیلتر، جدول اصلی یا انتخاب فعال تکراری نشوند. `allContexts` در `local.api.repo.ts` نمونهٔ پیمایش تمام صفحات است، نه مجوز ساخت read همه‌منظورهٔ بدون profile.
 
+deep link قدیمی با `localStatus=DELETED` به فیلتر خالی canonical شود؛ اگر `localRowId/contextId` به رکورد حذف‌شده اشاره می‌کند، آن رکورد را برای نمایش وارد جدول نکن و selection ناسازگار را با رعایت dirty guard پاک کن. context/target دیگر Organization یا پروفایل را از query قبول نکن. این اصلاح با حذف read داخلی deleted که برای restore لازم است اشتباه گرفته نشود.
+
 ## ۹. ارتفاع و اسکرول مشترک همهٔ مودال‌های واقعی
 
 الگوی فعلی `U/features/local-master-data/hooks/useOrganizationTableViewport.ts` فقط با `.organizationObjectDialogContent` کار می‌کند و اکنون فقط Organization سقف `70dvh` دارد؛ کپی کردن CSS جدول در بقیه تب‌ها کافی نیست.
 
-1. رفتار را به helper مشترک `U/shared/hooks/useCatalogTableViewport.ts` و ظرف نمایشی `U/shared/components/CatalogTableViewport.tsx` تعمیم بده. نام کلاس Organization را از lookup مشترک حذف کن؛ wrapper محتوای مودال‌های کاتالوگ یک marker مانند `data-catalog-dialog-content` بگیرد.
+1. رفتار را به helper مشترک `U/shared/hooks/useCatalogTableViewport.ts` و ظرف نمایشی `U/shared/components/CatalogTableViewport.tsx` تعمیم بده؛ این دو فایل جدید پیشنهادی هستند. نام کلاس Organization را از lookup مشترک حذف کن؛ wrapper محتوای مودال‌های کاتالوگ یک marker مانند `data-catalog-dialog-content` بگیرد.
 2. max-height کل host Dialog برابر `70dvh`، با fallback معتبر `70vh` باشد. height ثابت ۷۰٪ نگذار؛ مودال کوچک باید کوچک بماند. قاب جدول `min-width:0; max-width:100%; overflow:auto` داشته باشد؛ Table با `overflowMode="Scroll"`. اندازه‌گیری ظرف باید ارتفاع header، تب‌ها، toolbar، پیام‌ها، padding و footer اصلی را کم کند.
 3. ارتفاع ثابت header را حدس نزن. تغییر عرض، شکستن toolbar در RTL، viewport resize/visualViewport، ظاهر شدن پیام draft/error و تغییر View/Edit با ResizeObserver پوشش داده شود. در تب display:none اندازهٔ صفر را baseline نکن؛ با برگشت به تب اندازه دوباره معتبر شود. observer/listener/animation cleanup داشته باشد و loop بی‌پایان resize نسازد.
 4. در مودالی با چند جدول، مجموع قاب‌های فعال از فضای باقیمانده بیشتر نشود؛ بودجه را بین جدول‌های visible تقسیم کن یا یک قاب مشترک برای مجموعهٔ جدول‌های همان تب بساز. بودجهٔ کامل را به هر جدول جداگانه نده. Control Center دو inverse و Policy reverseها مصداق‌اند.
@@ -264,9 +270,11 @@ hostهای لازم نسبت به `U/features/`:
 
 ## ۱۰. استثنای ساختاری Regulation Requirements و Import موجود
 
+**اصلاح صریح مالک پروژه، ۲۰۲۶-۱۰-۲۸:** آپلود Excel الزامات باید در همان تب «الزام‌ها»ی مودال قانون باقی بماند. هر دستور نسخهٔ قبلی این پرامپت برای انتقال آن به منوی ایجاد صفحهٔ قوانین لغو است. این اصلاح بر دستور عمومی حذف دکمه‌های اضافی و ذخیرهٔ اصلی روابط تقدم دارد.
+
 `RegulationRequirementsTab.tsx` فهرست فرزندان واقعی Regulation است، نه زوج Assignment. Requirement فقط یک regulationId دارد. برای آن DELETE یک «ارتباط» جدا، جدول join، reselect برای restore رابطه یا چندوالدی نساز. تغییر والد/حذف خود Requirement از فرم و درخت Requirement و Guard REGULATION انجام می‌شود. جدول این تب فقط‌خواندنی است و وضعیت/کد/نام/اعتبار و scroll را حفظ می‌کند.
 
-دکمهٔ Import Excel فعلی عملیات مستقل ساختاری است و نباید از داخل تب، الگوی Save رابطه را دور بزند. قابلیت را حذف نکن: entry آن را از toolbar تب به منوی ایجاد صفحهٔ Regulation منتقل کن (`RegulationCreateMenu.tsx`، `CentralRegulationListReport.tsx` و `CentralRegulationsPage.tsx`). فقط با Regulation منتخب یا Requirementی که Regulation والدش مشخص است، GOVERNANCE manage و وضعیت مناسب فعال شود. پیش از ترک draft مودال، guard فعلی برقرار باشد. `RequirementImportDialog.tsx`، preview، تأیید Import، template و command/Revision موجود حفظ شوند؛ Import به Save رابطه یا mutation پنهان در SearchDialog تبدیل نشود. بررسی اسکرول preview نیز لازم است، بدون تغییر قالب Excel یا اجرای Import.
+دکمهٔ Import Excel در toolbar همان `RegulationRequirementsTab.tsx` حفظ شود؛ محل آن را به `RegulationCreateMenu.tsx`، صفحهٔ فهرست یا مودال الزام منتقل نکن. اگر اجرای نسخهٔ قبلی این دستور دکمه را منتقل کرده، فقط همین جابه‌جایی را برگردان و محل اصلی را بازیابی کن؛ تغییرات نامرتبط اجرای جاری حفظ شوند. Import عملیات مستقل ساختاری برای قانونِ ذخیره‌شدهٔ همان مودال است، نه ویرایش یک رابطه. مجوز GOVERNANCE manage، وضعیت مجاز قانون و جلوگیری فعلی از Import هنگام ویرایش/وجود draft ذخیره‌نشدهٔ مودال حفظ شود. قانون مقصد از همان مودال گرفته شود، نه از انتخاب احتمالی دیگری در درخت صفحه. `RequirementImportDialog.tsx`، انتخاب فایل، preview، تأیید Import، template و command/Revision موجود حفظ شوند؛ دکمه‌های تأیید و انصراف این پنجره از ممنوعیت Save مستقل جدول روابط مستثنا هستند. Import به Save رابطه، ذخیرهٔ اصلی قانون یا mutation پنهان در SearchDialog تبدیل نشود. پس از موفقیت، فهرست الزامات همان قانون تازه‌سازی و تب «الزام‌ها» حفظ شود. بررسی اسکرول preview نیز لازم است، بدون تغییر قالب Excel یا اجرای Import.
 
 ## ۱۱. ذخیرهٔ اتمیک: یافته‌های backend و تغییرات لازم
 
@@ -482,7 +490,7 @@ unique occupied pair در تمام statusها حفظ شود. DELETE نرم، aud
 5. Organization: کنترل‌شده کردن تمام draftها در ObjectPage، حذف `localWorkspaceDirty` به عنوان مانعِ «اول در تب خودش Save کن»، و اتصال dirty/readiness هر table به Save اصلی. جایگزینی LocalSectionPane editor مستقل در mountهای مربوط؛ DocumentManager آن را خراب نکن. بخش‌های اسناد خود ردیف Local، اگر همچنان سطح مجاز موجود هستند، با همان رفتار مستندات نگه داشته شوند و به API رابطه تبدیل نشوند؛ draft رابطهٔ جدید تا داشتن ID سندِ مستقل ندارد.
 6. چهار Scope، چهار Assignment، دو classification و چهار Policy collection را با toolbar جمعی، metadata editor بدون Save ردیف، picker چندانتخابی و filter/status مشترک تطبیق بده.
 7. Owners، Organization Objectives، Objective Organizations و Global Control Regulations را کامل کن؛ restored ID و سه lifecycle canonical واقعی باشند.
-8. تمام inverseها، projection محاسباتی، structural Requirements و LocalReverseListها را فقط در نمایش یکسان کن؛ Import مستقل را طبق بند ۱۰ منتقل کن.
+8. تمام inverseها، projection محاسباتی، structural Requirements و LocalReverseListها را فقط در نمایش یکسان کن؛ دکمه و جریان Import مستقل Excel الزامات را طبق بند ۱۰ در تب «الزام‌ها»ی مودال قانون حفظ کن.
 9. parent header/value helpهای همهٔ نوع‌ها، activeTab preservation و 70٪ viewport همهٔ hostها و مودال Control توکار را تکمیل کن. Main tree DnD، cache نسخه و expansion/selection حفظ شوند.
 10. dead prop/import/translation را فقط در مسیر واقعاً بدون مصرف حذف کن؛ فایل‌های unrelated/کاربر و Coverage source نگهداری‌شده را دست نزن. AGENTS و accepted correction مرتبط را با قرارداد نهایی هماهنگ کن؛ گزارش پوشش ۲۶ family و همهٔ inverseها تولید کن.
 
@@ -498,7 +506,7 @@ unique occupied pair در تمام statusها حفظ شود. DELETE نرم، aud
 - `U/shared/infra/http.client.ts`: امضای `post(url, body, options)` است؛ body را داخل `{ body: ... }` نپیچ.
 - `M/revision/application/TransactionalMasterDataRevisionCoordinator.java` و `RevisionMutationGuard.java`؛ `M/shared/infrastructure/persistence/JpaMasterDataHierarchyGuard.java`؛ `A/datasetprofile/application/ProfileTransactionPolicy.java`؛ generic command framework جای آنها نساز.
 
-Feature exportها از `index.ts` نگه داشته شوند. i18n سطح feature (fa/en) و root `U/i18n/locales/fa.json/en.json` به اندازهٔ موردنیاز هماهنگ شوند. metadata enum labels فارسی باقی بمانند؛ نام‌های مدیریتی Basic Data را با enum ثابت جایگزین نکن. migration V1201 نام‌های پیش‌فرض Organization Type را اصلاح می‌کند و خارج از تغییر حاضر دست‌نخورده بماند.
+Feature exportها از `index.ts` نگه داشته شوند. i18n سطح feature (fa/en) و root `U/i18n/locales/fa.json` و `U/i18n/locales/en.json` به اندازهٔ موردنیاز هماهنگ شوند. metadata enum labels فارسی باقی بمانند؛ نام‌های مدیریتی Basic Data را با enum ثابت جایگزین نکن. migration V1201 نام‌های پیش‌فرض Organization Type را اصلاح می‌کند و خارج از تغییر حاضر دست‌نخورده بماند.
 
 ## ۱۵. معیار پذیرش ایستا؛ بدون ایجاد یا اجرای تست
 
@@ -506,6 +514,7 @@ Feature exportها از `index.ts` نگه داشته شوند. i18n سطح featu
 
 - برای تک‌تک L1–L9، B1، O1، S1–S4، A1–A4، C1–C2، P1–P4، G1 در گزارش بگو مالک Save، فایل UI، DTO، canonical response و وضعیت پیاده‌سازی چیست. جدول فقط‌خواندنی بند ۶ نیز پوشش صریح داشته باشد. یک family را به عنوان نمونه تحویل نده و باقی را TODO نگذار.
 - در UIهای editable هیچ write فوری relation، Edit/Save/Cancel مستقل، Restore یا row Undo mount نشود. تأیید/انصراف SearchDialog و Save/Cancel اصلی و ابزار Import مستقل استثناهای صریح‌اند.
+- دکمهٔ آپلود Excel الزامات در toolbar تب «الزام‌ها»ی مودال قانون باقی بماند؛ به منوی ایجاد یا مودال الزام منتقل نشود. preview/تأیید Import مستقل و refresh همان قانون/همان تب با مجوز و جلوگیری از تداخل draft حفظ شوند.
 - persisted ACTIVE/INACTIVE درست نمایش داده شوند؛ persisted DELETED غایب؛ pending DELETE آبی؛ restored pair همان ID؛ new-delete بدون درخواست؛ batch مخلوط فقط ردیف متفاوت را تغییر دهد؛ بازگشت به baseline draft را حذف کند.
 - فیلترها انتخاب نشده/فعال/غیرفعال؛ pending row از دید کاربر گم نشود. inverseها mutation نداشته باشند. derived Account Groups جدول یا changes مستقیم جدید نداشته باشد.
 - picker جستجو، چندانتخاب، hierarchy، duplicate exclusion، loading/error، صفحه‌بندی کامل و pending dirty/readiness داشته باشد. uncheck در picker حذف رابطه ایجاد نکند. والد ساختاری تک‌انتخاب بماند.

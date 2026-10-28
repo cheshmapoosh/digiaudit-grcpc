@@ -87,6 +87,7 @@ export interface CentralControlSummary {
 }
 
 export interface CentralControlDetail extends CentralControlSummary {
+  relations?: Pick<CentralControlMutationResponse, "accountGroupClassifications" | "riskAssignments" | "controlObjectiveAssignments" | "requirementAssignments">;
   description: string | null;
   controlClass: CentralControlClass | null;
   importance: CentralControlImportance | null;
@@ -166,6 +167,7 @@ export interface UpdateCentralControlCommand extends Omit<CreateCentralControlCo
 }
 
 export interface CentralControlMutationResponse {
+  entity: CentralControlDetail;
   entityId: string;
   revisionId: string;
   version: number;

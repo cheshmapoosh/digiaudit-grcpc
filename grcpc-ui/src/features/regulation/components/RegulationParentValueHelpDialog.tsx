@@ -1,9 +1,9 @@
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Button,
   Dialog,
   List,
   ListItemStandard,
@@ -53,6 +53,7 @@ export default function RegulationParentValueHelpDialog({
   const title = t("regulation.parent.dialogTitle", { defaultValue: "انتخاب والد" });
 
   const select = (parentId: string | null) => {
+    if (busy) return;
     onSelect(parentId);
     onClose();
   };
@@ -61,7 +62,7 @@ export default function RegulationParentValueHelpDialog({
     <Dialog
       open={open}
       accessibleName={title}
-      className="regulationParentDialog"
+      className="regulationParentDialog catalogObjectDialog"
       onClose={onClose}
     >
       <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} disabled={busy} accessibleName={t("regulation.parent.search", {
@@ -70,15 +71,7 @@ export default function RegulationParentValueHelpDialog({
       <div className="regulationParentDialogContent">
 
         <div className="regulationParentList">
-          <List separators="Inner">
-            {allowNoParent ? (
-              <ListItemStandard
-                selected={!selectedParentId}
-                onClick={() => select(null)}
-              >
-                {t("regulation.parent.none")}
-              </ListItemStandard>
-            ) : null}
+          <List separators="Inner" noDataText={t("common.noData")}>
             {filteredCandidates.map((candidate) => (
               <ListItemStandard
                 key={candidate.id}
@@ -93,6 +86,7 @@ export default function RegulationParentValueHelpDialog({
           </List>
         </div>
         <DialogFooter>
+          {allowNoParent && selectedParentId ? <Button design="Negative" disabled={busy} onClick={() => select(null)}>{t("catalog.parentHeader.clear")}</Button> : null}
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.close", { defaultValue: "بستن" })}
           </Button>

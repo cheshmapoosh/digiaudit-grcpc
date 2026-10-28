@@ -68,15 +68,7 @@
   align-items: start;
 }
 
-.controlObjectDialog {
-  width: 90vw;
-  max-width: 90vw;
-}
-
 .controlDialogContent {
-  width: 86vw;
-  max-width: 86vw;
-  min-width: 44rem;
   padding: 0.75rem;
   box-sizing: border-box;
 }
@@ -163,11 +155,6 @@
 }
 
 @media (max-width: 900px) {
-  .controlDialogContent {
-    min-width: 0;
-    width: 84vw;
-  }
-
   .controlHeaderGrid,
   .controlFormGrid,
   .controlSummaryRow,
@@ -184,8 +171,10 @@
   .controlHeaderGrid, .controlFormGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem 1rem; }
 }
 .controlGroupValueHelp {
-  width: 48rem;
-  max-width: 80vw;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: .75rem;
   display: grid;
   gap: .75rem;

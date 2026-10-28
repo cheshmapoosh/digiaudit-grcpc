@@ -68,18 +68,18 @@ export default function ParentValueHelpDialog({
 
     return (
         <Dialog
+            className="catalogObjectDialog"
             open={open}
             accessibleName={dialogTitle}
-            style={{ width: "90vw", maxWidth: "90vw" }}
             onClose={onClose}
         >
             <ModalDialogHeader title={dialogTitle} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} accessibleName={t("organization.parent.dialog.search", {
                         defaultValue: "جستجو بر اساس کد",
                     })} />} />
-            <div style={{ display: "grid", gap: "1rem", minWidth: "32rem", maxWidth: "90vw" }}>
+            <div style={{ display: "grid", gap: "1rem", width: "100%", minWidth: 0, maxWidth: "100%" }}>
 
 
-                <List separators="Inner" inert={busy}>
+                <List separators="Inner" inert={busy} noDataText={t("common.noData")}>
                     <ListItemStandard type="Active" selected={!selectedParentId} onClick={() => { if (!busy) onSelect(null); }}>
                         {t("organization.parent.none", { defaultValue: "بدون والد" })}
                     </ListItemStandard>

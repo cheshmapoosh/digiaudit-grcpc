@@ -183,9 +183,9 @@ export default function CentralControlObjectivesFclShellPage() {
       if (request !== detailGeneration.current) return null;
       if (destination === "summary") {
         setSelectedId(id);
-        setSelectedDetail(detail);
+        setSelectedDetail(current => current?.id === detail.id && current.version === detail.version ? { ...detail, relations: current.relations } : detail);
       } else {
-        setRouteDetail(detail);
+        setRouteDetail(current => current?.id === detail.id && current.version === detail.version ? { ...detail, relations: current.relations } : detail);
       }
       return detail;
     } catch (error) {
@@ -289,22 +289,11 @@ export default function CentralControlObjectivesFclShellPage() {
     }
 
     setDirty(false);
-    try {
-      const listLoaded = await loadList(result.entityId);
-      if (!listLoaded) throw new Error("CONTROL_OBJECTIVE_LIST_REFRESH_FAILED");
-      const detail = await centralControlObjectiveApi.detail(result.entityId);
-      setSelectedId(result.entityId);
-      setSelectedDetail(detail);
-      setRouteDetail(detail);
-      runWithNavigationBypass(() => navigate(`/control-objectives/${result.entityId}`, { replace: true }));
-    } catch {
-      setRouteDetail(null);
-      setObjectError(null);
-      setPageError(t("controlObjective.errors.savedRefreshFailed"));
-      runWithNavigationBypass(() => navigate("/control-objectives", { replace: true }));
-    } finally {
-      setBusy(false);
-    }
+    const detail: CentralControlObjectiveDetail = { ...result.entity, relations: result };
+    setSelectedId(result.entityId); setSelectedDetail(detail); setRouteDetail(detail);
+    runWithNavigationBypass(() => navigate(`/control-objectives/${result.entityId}`, { replace: true }));
+    void loadList(result.entityId);
+    setBusy(false);
     return result;
   }, [controlObjectiveId, loadList, navigate, routeMode, runWithNavigationBypass, t]);
 
@@ -401,11 +390,11 @@ export default function CentralControlObjectivesFclShellPage() {
       <Dialog
         open={showModal}
         accessibleName={dialogTitle}
-        className="controlObjectiveObjectDialog"
+        className="controlObjectiveObjectDialog catalogObjectDialog"
         onClose={handleDialogClose}
       >
         <ModalDialogHeader title={dialogTitle} onClose={closeObject} />
-        <div className="controlObjectiveDialogContent" dir={appDir}>
+        <div data-catalog-dialog-content className="controlObjectiveDialogContent" dir={appDir}>
           {routeMode === "create" || routeDetailReady ? (
             <CentralControlObjectiveObjectPage
               key={routeMode === "create" ? "controlObjective:create" : `controlObjective:${controlObjectiveId}:${routeMode}`}

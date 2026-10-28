@@ -10,6 +10,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
 import com.digiaudit.grcpc.modules.organization.domain.repository.OrganizationRepository;
+import com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
@@ -395,6 +396,66 @@ public class LocalContextService {
         subprocess.getTitle(), row.getContextNote(), row.getStatus(), row.getValidFrom(),
         row.getValidTo(), row.getVersion(), row.getCreatedAt(), row.getCreatedBy(),
         row.getUpdatedAt(), row.getUpdatedBy(), row.getDeletedAt(), row.getDeletedBy());
+  }
+
+
+  public record AggregatePlan(LocalOrganizationSubprocessScopeEntity row, LocalContextDtos.ContextChange change,
+      boolean fresh, MasterDataLifecycleStatus target) {}
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public List<AggregatePlan> prepareAggregate(UUID organizationId, List<LocalContextDtos.ContextChange> changes, OrganizationLocalDeletions deleting) {
+    if (changes == null || changes.isEmpty()) return List.of();
+    rules.requireWrite("PROCESS");
+    var org = organizations.findById(organizationId).orElseThrow(() -> rules.referenceNotFound(organizationId));
+    var seen = new java.util.HashSet<UUID>(); var plans = new java.util.ArrayList<AggregatePlan>();
+    for (var change : changes.stream().sorted(java.util.Comparator.comparing(item -> item.subprocessId().toString())).toList()) {
+      if (change == null || change.subprocessId() == null || change.operation() == null || !seen.add(change.subprocessId())) throw rules.bad("Distinct Context changes are required");
+      var subprocess = subprocesses.findById(change.subprocessId()).orElseThrow(() -> rules.referenceNotFound(change.subprocessId()));
+      var found = rows.findByOrganizationIdAndSubprocessId(organizationId, change.subprocessId()).orElse(null);
+      var row = found == null ? null : rows.lockById(found.getId()).orElseThrow(() -> rules.notFound(found.getId()));
+      var target = rules.aggregateTarget(row == null ? null : row.getStatus(), OrganizationLocalDtos.Operation.valueOf(change.operation().name()), null,
+          row == null ? null : row.getId(), row == null ? null : row.getVersion(), change.contextId(), change.version());
+      boolean fresh = row == null;
+      if (fresh || (target == MasterDataLifecycleStatus.ACTIVE && row.getStatus() != target)) { rules.active(org.getStatus()); rules.active(subprocess.getStatus()); }
+      if (!fresh && target == MasterDataLifecycleStatus.DELETED) requireAggregateNoChildren(row.getId(), deleting);
+      if (fresh) row = LocalOrganizationSubprocessScopeEntity.create(organizationId, change.subprocessId(), null, null, null, actor(), now());
+      plans.add(new AggregatePlan(row, change, fresh, target));
+    }
+    return List.copyOf(plans);
+  }
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public LocalOrganizationSubprocessScopeEntity resolveAggregate(UUID orgId, OrganizationLocalDtos.ContextRef ref, List<AggregatePlan> plans) {
+    if (ref == null || (ref.contextId() == null) == (ref.subprocessId() == null)) throw rules.bad("Exactly one Context reference is required");
+    var planned = plans.stream().filter(plan -> ref.contextId() != null ? plan.row().getId().equals(ref.contextId())
+        : plan.row().getSubprocessId().equals(ref.subprocessId()) && plan.change().operation() == LocalContextDtos.ContextOperation.CREATE_OR_RESTORE).findFirst().orElse(null);
+    if (planned != null) return planned.row();
+    if (ref.contextId() == null) throw rules.bad("Context reference has no create/restore draft");
+    var row = rows.lockById(ref.contextId()).orElseThrow(() -> rules.notFound(ref.contextId()));
+    rules.assertOwner(orgId, row.getOrganizationId()); rules.nonDeleted(row.getStatus()); return row;
+  }
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public RevisionContentResult applyAggregate(AggregatePlan plan) {
+    var row = plan.row(); var initial = row.getStatus();
+    if (!plan.fresh() && initial == plan.target()) return null;
+    JsonNode before = plan.fresh() ? null : snapshot(row); Long expected = plan.fresh() ? null : row.getVersion();
+    RevisionOperationType operation = plan.fresh() ? RevisionOperationType.CREATE : initial == MasterDataLifecycleStatus.DELETED ? RevisionOperationType.RESTORE
+        : plan.target() == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE : plan.target() == MasterDataLifecycleStatus.INACTIVE ? RevisionOperationType.INACTIVATE : RevisionOperationType.DELETE;
+    if (!plan.fresh()) switch (operation) { case RESTORE -> row.restore(actor(), now()); case ACTIVATE -> row.activate(actor(), now()); case INACTIVATE -> row.inactivate(actor(), now()); case DELETE -> row.delete(actor(), now()); default -> throw new IllegalStateException(); }
+    rows.saveAndFlush(row);
+    return RevisionContentResult.completed(RevisionEntityType.LOCAL_ORGANIZATION_SUBPROCESS_SCOPE, row.getId(), operation,
+        expected, before, snapshot(row), row.getVersion(), mapper.valueToTree(Map.of("validated", true)));
+  }
+  public LocalContextDtos.Row canonical(AggregatePlan plan) { return map(plan.row()); }
+  private void requireAggregateNoChildren(UUID id, OrganizationLocalDeletions deleting) {
+    var deleted = MasterDataLifecycleStatus.DELETED;
+    var page = org.springframework.data.domain.Pageable.unpaged();
+    if (controls.findByOrganizationSubprocessScopeIdAndStatusIn(id, rules.statuses(null), page).stream().anyMatch(row -> !deleting.controls().contains(row.getId()))
+        || risks.findByOrganizationSubprocessScopeIdAndStatusIn(id, rules.statuses(null), page).stream().anyMatch(row -> !deleting.risks().contains(row.getId()))
+        || objectives.findByOrganizationSubprocessScopeIdAndStatusIn(id, rules.statuses(null), page).stream().anyMatch(row -> !deleting.controlObjectives().contains(row.getId()))
+        || requirements.findByOrganizationSubprocessScopeIdAndStatusIn(id, rules.statuses(null), page).stream().anyMatch(row -> !deleting.requirements().contains(row.getId()))
+        || policies.findByOrganizationSubprocessScopeIdAndStatusIn(id, rules.statuses(null), page).stream().anyMatch(row -> !deleting.contextPolicies().contains(row.getId()))
+        || riskControls.existsByOrganizationSubprocessScopeIdAndStatusNot(id, deleted) || riskObjectives.existsByOrganizationSubprocessScopeIdAndStatusNot(id, deleted)
+        || controlObjectives.existsByOrganizationSubprocessScopeIdAndStatusNot(id, deleted) || requirementControls.existsByOrganizationSubprocessScopeIdAndStatusNot(id, deleted))
+      throw rules.invalid("LOCAL_DEPENDENCY_EXISTS", "Context has undeleted dependents");
   }
 
   private UUID actor() { return currentUser.getCurrentPrincipal().getUserId(); }

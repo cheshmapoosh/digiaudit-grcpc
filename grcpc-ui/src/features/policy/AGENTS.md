@@ -24,6 +24,7 @@ Policies are tree-based master data with policy groups and policy leaf nodes.
 - Policy Group documents use target `CENTRAL_POLICY_GROUP` with the same parent-save UX.
 - Do not create a technical Policy Version baseline or expose version selection/publication.
 - Keep Subprocess, Organization, Control, and Requirement relation drafts in the Policy Create/Edit modal and submit them with one Policy Save. Control and Requirement selections use exact Central Scope IDs.
+- Follow `grcpc-docs/master-data/accepted-corrections/2026-10-29-policy-modal-alignment.md`: Policy/Group Create status is fixed ACTIVE; Policy uses the same responsive three-column General Information grid/date pair as Organization. Relation toolbars supply their per-kind title for common RTL left alignment. Selection uses the Organization Subprocess native hierarchy pattern with kind-specific copy and only relevant option ancestors; Control/Requirement leaves retain exact Scope IDs and Organization parent choices retain their eligibility. Keep drafts/main Save and historical restore metadata intact.
 
 ## Verification
 - Run `npm run lint` and `npm run build` from `grcpc-ui` when an execution environment is available.

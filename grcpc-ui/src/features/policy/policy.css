@@ -101,8 +101,6 @@
 }
 
 .policyDialogContent {
-  width: min(92vw, 90rem);
-  min-width: min(70vw, 58rem);
   max-height: 82vh;
   overflow: auto;
   padding: 1rem;
@@ -127,12 +125,6 @@
   padding: 1rem;
 }
 
-.policyFormGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
-
 .policyFormField {
   display: grid;
   gap: 0.35rem;
@@ -141,13 +133,6 @@
 
 .policyFormFieldFull {
   grid-column: 1 / -1;
-}
-
-.policyDateRange {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
 }
 
 .policyParentField {
@@ -167,7 +152,10 @@
 }
 
 .policyParentDialogContent {
-  width: min(44rem, 80vw);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   max-height: 65vh;
   padding: 1rem;
   overflow: auto;
@@ -181,6 +169,7 @@
 .policyRelationTab {
   display: grid;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .policyRelationToolbar,
@@ -196,9 +185,7 @@
 }
 
 @media (max-width: 900px) {
-  .policyObjectHeaderGrid,
-  .policyFormGrid,
-  .policyDateRange {
+  .policyObjectHeaderGrid {
     grid-template-columns: 1fr;
   }
 
@@ -206,12 +193,8 @@
     grid-template-columns: 1fr;
   }
 
-  .policyDialogContent {
-    min-width: 0;
-    width: 94vw;
-  }
 }
 
 @media (min-width: 1101px) {
-  .policyObjectHeaderGrid, .policyFormGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem 1rem; }
+  .policyObjectHeaderGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem 1rem; }
 }

@@ -35,7 +35,7 @@ export interface ControlObjectiveAccountGroupOption {
   title: string;
   parentAccountGroupId: string | null;
   sortOrder: number;
-  status: ControlObjectiveClassificationEditableStatus;
+  status: ControlObjectiveClassificationStatus;
   children: ControlObjectiveAccountGroupOption[];
 }
 
@@ -69,7 +69,7 @@ export interface ControlObjectiveClassificationDraftRow {
   accountGroupTitle: string;
   parentAccountGroupId: string | null;
   accountGroupStatus: ControlObjectiveClassificationStatus;
-  status: ControlObjectiveClassificationEditableStatus;
+  status: ControlObjectiveClassificationStatus;
   validFrom: string | null;
   validTo: string | null;
   version: number | null;

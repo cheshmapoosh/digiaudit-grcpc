@@ -1,8 +1,9 @@
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Dialog } from "@ui5/webcomponents-react";
+import { Dialog } from "@ui5/webcomponents-react";
 
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import type { CentralRiskCategorySummary } from "../domain/centralRisk.model";
@@ -49,27 +50,13 @@ export default function RiskCategoryValueHelpDialog({
 
   return (
     <Dialog
+      className="catalogObjectDialog"
       open={open}
       accessibleName={title}
-      style={{ width: "70vw", maxWidth: "70vw" }}
       onClose={onClose}
     >
       <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} disabled={busy} accessibleName={t("risk.parent.search")} />} />
       <div className="riskParentDialogContent">
-
-
-        {!requiredParent ? (
-          <Button
-            design={!selectedCategoryId ? "Emphasized" : "Default"}
-            disabled={busy}
-            onClick={() => {
-              onSelect(null);
-              onClose();
-            }}
-          >
-            {t("risk.parent.none")}
-          </Button>
-        ) : null}
 
         <div className="riskParentTreeFrame">
           <CentralRiskTree
@@ -79,6 +66,7 @@ export default function RiskCategoryValueHelpDialog({
             searchText={searchText}
             busy={busy}
             onSelect={(node) => {
+              if (busy) return;
               onSelect(node.id);
               onClose();
             }}
@@ -86,6 +74,7 @@ export default function RiskCategoryValueHelpDialog({
         </div>
 
         <DialogFooter>
+          {!requiredParent && selectedCategoryId ? <Button design="Negative" disabled={busy} onClick={() => { onSelect(null); onClose(); }}>{t("catalog.parentHeader.clear")}</Button> : null}
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.close", { defaultValue: "بستن" })}
           </Button>

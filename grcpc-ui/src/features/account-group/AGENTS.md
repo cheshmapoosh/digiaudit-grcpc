@@ -17,7 +17,7 @@ Account groups are hierarchical Master Data V2 definitions backed by `CentralAcc
 - Prompt 7.5 adds a read-only `Controls` inverse tab for the exact Account Group node. Account Group Save never owns Control classification mutations.
 - Prompt 7.6 adds a separate read-only `Control Objectives` inverse tab for the exact Account Group node. Account Group Save never owns Control Objective classification mutations.
 - Do not restore legacy assertions, objectives, account ranges, or risk relationship persistence in this feature.
-- Parent changes must reject self-parent and descendants and use the existing structural move API.
+- Parent changes reject self-parent and descendants and join the existing aggregate Update through typed `parentChange`. The modal sends General Information, parent, status, sortOrder and Documents in one request; it does not chain Update, Move and lifecycle writes.
 - Lifecycle editing is limited to ACTIVE / INACTIVE; DELETED is command-only.
 - Put feature labels/messages in `i18n/fa.account-group.json` and `i18n/en.account-group.json`.
 

@@ -1,8 +1,9 @@
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Dialog, List, ListItemStandard } from "@ui5/webcomponents-react";
+import { Dialog, List, ListItemStandard } from "@ui5/webcomponents-react";
 
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
@@ -43,21 +44,17 @@ export default function PolicyParentValueHelpDialog({
   }, [candidates, searchText]);
   const title = t("policy.parent.dialogTitle", { defaultValue: "انتخاب والد" });
   const select = (parentId: string | null) => {
+    if (busy) return;
     onSelect(parentId);
     onClose();
   };
 
   return (
-    <Dialog open={open} accessibleName={title} onClose={onClose}>
+    <Dialog className="catalogObjectDialog" open={open} accessibleName={title} onClose={onClose}>
       <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} disabled={busy} accessibleName={t("policy.parent.search", { defaultValue: "جستجو بر اساس شناسه یا نام" })} />} />
       <div className="policyParentDialogContent">
 
-        <List separators="Inner">
-          {allowNoParent ? (
-            <ListItemStandard selected={!selectedParentId} onClick={() => select(null)}>
-              {t("policy.parent.none", { defaultValue: "بدون والد" })}
-            </ListItemStandard>
-          ) : null}
+        <List separators="Inner" noDataText={t("common.noData")}>
           {filteredCandidates.map((candidate) => (
             <ListItemStandard
               key={candidate.id}
@@ -71,6 +68,7 @@ export default function PolicyParentValueHelpDialog({
           ))}
         </List>
         <DialogFooter>
+          {allowNoParent && selectedParentId ? <Button design="Negative" disabled={busy} onClick={() => select(null)}>{t("catalog.parentHeader.clear")}</Button> : null}
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.close", { defaultValue: "بستن" })}
           </Button>

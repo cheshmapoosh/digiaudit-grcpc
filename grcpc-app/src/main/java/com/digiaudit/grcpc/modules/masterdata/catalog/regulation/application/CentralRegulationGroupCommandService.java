@@ -12,6 +12,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
+import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.api.mapper.CentralRegulationMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.*;
 import java.util.*;
@@ -33,6 +34,7 @@ public class CentralRegulationGroupCommandService {
   private final CatalogCommandSupport support;
   private final CatalogHierarchySupport hierarchySupport;
   private final Clock clock;
+  private final CentralRegulationMapper mapper;
 
   public CentralRegulationGroupCommandService(
       CentralRegulationGroupRepository r,
@@ -43,7 +45,7 @@ public class CentralRegulationGroupCommandService {
       DocumentCommandService documents,
       CatalogCommandSupport support,
       CatalogHierarchySupport hierarchySupport,
-      @Qualifier("masterDataRevisionClock") Clock clock) {
+      @Qualifier("masterDataRevisionClock") Clock clock, CentralRegulationMapper mapper) {
     repository = r;
     this.regulations = regulations;
     this.revisions = revisions;
@@ -53,14 +55,16 @@ public class CentralRegulationGroupCommandService {
     this.support = support;
     this.hierarchySupport = hierarchySupport;
     this.clock = clock;
+    this.mapper = mapper;
   }
 
-  public MasterDataAggregateMutationResponse create(CentralRegulationDtos.CreateGroup r) {
+  public CentralRegulationDtos.GroupAggregateResponse create(CentralRegulationDtos.CreateGroup r) {
     String code = support.normalizeCode(r.code()),
         title = support.normalizeTitle(r.title()),
         description = support.normalizeDescription(r.description());
     int sort = support.normalizeSortOrder(r.sortOrder());
     support.validateValidity(r.validFrom(), r.validTo());
+    AtomicReference<CentralRegulationDtos.GroupDetail> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
     try {
       var result =
@@ -131,6 +135,7 @@ public class CentralRegulationGroupCommandService {
                   }
                 }
                 var saved = repository.saveAndFlush(e);
+              canonical.set(mapper.detail(saved));
                 docs.set(
                     documents.finalizePreparedAggregate(
                         prepared,
@@ -139,28 +144,44 @@ public class CentralRegulationGroupCommandService {
                         "MD_GOVERNANCE_MANAGE"));
                 return completed(c, saved, op, expected, before);
               });
-      return support.aggregateResponse(result, docs.get());
+      return new CentralRegulationDtos.GroupAggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
+          result.primaryResult().version(), docs.get(), canonical.get());
     } catch (DataIntegrityViolationException e) {
       throw support.translateBusinessKeyViolation(e, "UK_CENTRAL_REG_GROUP_CODE", code);
     }
   }
 
-  public MasterDataAggregateMutationResponse update(UUID id, CentralRegulationDtos.UpdateGroup r) {
+  public CentralRegulationDtos.GroupAggregateResponse update(UUID id, CentralRegulationDtos.UpdateGroup r) {
     long expected = support.requireVersion(r.version());
     String title = support.normalizeTitle(r.title()),
         description = support.normalizeDescription(r.description());
     support.validateValidity(r.validFrom(), r.validTo());
+    AtomicReference<CentralRegulationDtos.GroupDetail> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> docs = new AtomicReference<>(List.of());
     var result =
-        revisions.execute(
+        revisions.executeStructural(
+            MasterDataHierarchyKey.REGULATION,
             RevisionRequest.central(
                 "Update regulation group " + id, "Regulation Group definition update", null),
             c -> {
+              requireGuard(c);
               var prepared = documents.prepareAggregate(r.documents());
               var e = lock(id);
               support.assertVersion(e, expected);
               if (e.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
-              if (Objects.equals(e.getTitle(), title)
+              UUID parentId = r.parentChange() == null ? e.getParentGroupId() : r.parentChange().parentGroupId();
+              int sortOrder = r.sortOrder() == null ? e.getSortOrder() : support.normalizeSortOrder(r.sortOrder());
+              MasterDataLifecycleStatus status = r.status() == null ? e.getStatus() : r.status();
+              if (status == MasterDataLifecycleStatus.DELETED) throw new UnprocessableEntityException(
+                  "INVALID_STATUS", "error.masterdata.v2.invalidLifecycleTransition", "Update accepts ACTIVE or INACTIVE only");
+              var parents = tree();
+              hierarchySupport.requireParent(id, parentId, parents, "REGULATION parent");
+              hierarchySupport.rejectCycle(id, parentId, parents, CentralRegulationGroupEntity::getParentGroupId);
+
+              if (Objects.equals(e.getParentGroupId(), parentId)
+                  && e.getSortOrder() == sortOrder
+                  && e.getStatus() == status
+                  && Objects.equals(e.getTitle(), title)
                   && Objects.equals(e.getDescription(), description)
                   && Objects.equals(e.getValidFrom(), r.validFrom())
                   && Objects.equals(e.getValidTo(), r.validTo())
@@ -173,7 +194,14 @@ public class CentralRegulationGroupCommandService {
                   r.validTo(),
                   actors.currentActorId(),
                   Instant.now(clock));
+              e.move(parentId, sortOrder, actors.currentActorId(), Instant.now(clock));
+              if (e.getStatus() != status) {
+                support.validateLifecycle(e, status == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE);
+                if (status == MasterDataLifecycleStatus.ACTIVE) e.activate(actors.currentActorId(), Instant.now(clock));
+                else e.inactivate(actors.currentActorId(), Instant.now(clock));
+              }
               var saved = repository.saveAndFlush(e);
+              canonical.set(mapper.detail(saved));
               docs.set(
                   documents.finalizePreparedAggregate(
                       prepared,
@@ -182,7 +210,8 @@ public class CentralRegulationGroupCommandService {
                       "MD_GOVERNANCE_MANAGE"));
               return completed(c, saved, RevisionOperationType.UPDATE, expected, before);
             });
-    return support.aggregateResponse(result, docs.get());
+    return new CentralRegulationDtos.GroupAggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
+          result.primaryResult().version(), docs.get(), canonical.get());
   }
 
   public MasterDataRevisionMutationResponse move(UUID id, CentralRegulationDtos.MoveGroup r) {

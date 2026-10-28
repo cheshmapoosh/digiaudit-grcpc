@@ -83,15 +83,7 @@
   padding-block-start: 0.5rem;
 }
 
-.riskObjectDialog {
-  width: 90vw;
-  max-width: 90vw;
-}
-
 .riskDialogContent {
-  width: 86vw;
-  max-width: 86vw;
-  min-width: 44rem;
   padding: 0.75rem;
   box-sizing: border-box;
 }
@@ -153,8 +145,9 @@
 .riskParentDialogContent {
   display: grid;
   gap: 1rem;
-  min-width: 36rem;
-  max-width: 68vw;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: 0.75rem;
   box-sizing: border-box;
 }
@@ -173,11 +166,6 @@
 }
 
 @media (max-width: 900px) {
-  .riskDialogContent {
-    min-width: 0;
-    width: 84vw;
-  }
-
   .riskHeaderGrid,
   .riskFormGrid,
   .riskDateRange,
@@ -190,11 +178,6 @@
     gap: 0.25rem;
   }
 
-  .riskParentDialogContent {
-    min-width: 0;
-    width: 82vw;
-    max-width: 82vw;
-  }
 }
 
 @media (min-width: 1101px) {

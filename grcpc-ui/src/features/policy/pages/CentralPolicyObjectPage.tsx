@@ -166,7 +166,7 @@ export default function CentralPolicyObjectPage({
   const [title, setTitle] = useState(value?.title ?? "");
   const [parentId, setParentId] = useState(initialParentId);
   const [status, setStatus] = useState<"ACTIVE" | "INACTIVE">(
-    value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+    mode !== "create" && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
   );
   const [policyType, setPolicyType] = useState<CentralPolicyType>(policyValue?.policyType ?? "POLICY");
   const [responsibleOrganization, setResponsibleOrganization] = useState(
@@ -204,7 +204,7 @@ export default function CentralPolicyObjectPage({
         code: value?.code ?? "",
         title: value?.title ?? "",
         parentId: initialParentId,
-        status: value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+        status: mode !== "create" && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
         policyType: policyValue?.policyType ?? "POLICY",
         responsibleOrganization: policyValue?.responsibleOrganization ?? "",
         communicationMethod: policyValue?.communicationMethod ?? "",
@@ -215,7 +215,7 @@ export default function CentralPolicyObjectPage({
         validFrom: value?.validFrom ?? "",
         validTo: value?.validTo ?? "",
       }),
-    [initialParentId, policyValue, value],
+    [initialParentId, mode, policyValue, value],
   );
 
   const invalidDate =
@@ -245,8 +245,8 @@ export default function CentralPolicyObjectPage({
   const documentsInvalid = !documentDraft.ready || documentDraft.invalid || documentDraft.uploading;
   const relationsDirty = Object.values(relationChanges).some((changes) => changes.length > 0);
   const relationsInvalid = Object.values(relationInvalid).some(Boolean);
-  const dirty = generalDirty || relationsDirty || relationsInvalid || documentDraft.dirty || documentDraft.uploading;
-  const canChangeStatus = mode === "create" || (mode === "edit" && permissions.lifecycle);
+  const dirty = generalDirty || relationsDirty || relationsInvalid || documentDraft.dirty || documentDraft.uploading || parentDialogOpen;
+  const canChangeStatus = mode === "edit" && permissions.lifecycle;
   const canChangeParent = !readOnly && (mode === "create" || permissions.move);
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -296,7 +296,7 @@ export default function CentralPolicyObjectPage({
       code: code.trim().toUpperCase(),
       title: title.trim(),
       parentId,
-      status,
+      status: mode === "create" ? "ACTIVE" : status,
       policyType,
       responsibleOrganization: nodeType === "POLICY" ? responsibleOrganization.trim() || null : null,
       communicationMethod: nodeType === "POLICY" && communicationMethod ? communicationMethod : null,
@@ -330,7 +330,7 @@ export default function CentralPolicyObjectPage({
           { key: "documents", label: t("policy.tabs.documents", { defaultValue: "مستندات" }) },
         ];
   const saveDisabled =
-    busy ||
+    busy || parentDialogOpen ||
     invalidDate ||
     documentsBusy ||
     documentsInvalid ||
@@ -342,7 +342,7 @@ export default function CentralPolicyObjectPage({
       <CatalogParentHeader objectTitle={title || t(nodeType === "GROUP" ? "policy.nodeType.group" : "policy.nodeType.policy")} label={t("policy.fields.parent")} parentId={parentId} required={nodeType === "POLICY"}
         busy={busy} onClearParent={canChangeParent && nodeType === "GROUP" ? () => setParentId(null) : undefined}
         parent={parent ? { code: parent.code, title: parent.title, type: t("policy.nodeType.group"), status: parent.status } : null}
-        selection={canChangeParent ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+        selection={canChangeParent ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
       <DetailTabContainer
         onTabSelect={(event) => {
@@ -370,7 +370,7 @@ export default function CentralPolicyObjectPage({
 
       <div className="policyObjectBody">
         <div style={{ display: activeTab === "general" ? "block" : "none" }}>
-          <div className={nodeType === "GROUP" ? "policyFormGrid modalTwoColumnGrid" : "policyFormGrid"}>
+          <div className={nodeType === "GROUP" ? "modalTwoColumnGrid" : "modalThreeColumnGrid"}>
             <FormField label={t("policy.fields.identifier", { defaultValue: "شناسه" })} required>
               {readOnly ? <Text className="objectPageValue">{(code) || "—"}</Text> : <Input
                 value={code}
@@ -390,7 +390,8 @@ export default function CentralPolicyObjectPage({
               />}
             </FormField>
             <FormField label={t("policy.fields.status", { defaultValue: "وضعیت" })}>
-              {readOnly ? <ObjectStatus state={status === "ACTIVE" ? "Positive" : "None"}>{t(status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select
+              {mode === "create" ? <ObjectStatus state="Positive">{t("common.active")}</ObjectStatus>
+                : readOnly ? <ObjectStatus state={status === "ACTIVE" ? "Positive" : "None"}>{t(status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select
                 value={status}
                 disabled={!canChangeStatus || busy}
                 onChange={(event) => setStatus(selectedValue(event) as "ACTIVE" | "INACTIVE")}
@@ -454,7 +455,7 @@ export default function CentralPolicyObjectPage({
               </>
             ) : null}
 
-            <div className="policyDateRange">
+            <div className="modalDateRange">
               <FormField label={t("policy.fields.validFrom", { defaultValue: "تاریخ اعتبار از" })}>
                 {readOnly ? <Text className="objectPageValue">{(formatPersianDate(validFrom)) || "—"}</Text> : <PersianDatePicker
                   value={validFrom}
@@ -517,7 +518,7 @@ export default function CentralPolicyObjectPage({
           ["requirements", "requirement"],
         ] as const).map(([tab, kind]) => (
           <div key={tab} style={{ display: activeTab === tab ? "block" : "none" }}>
-            <PolicyRelationTab kind={kind} policyId={value?.id ?? null}
+            <PolicyRelationTab kind={kind} policyId={value?.id ?? null} canonicalRows={policyValue?.relationRows?.[kind]}
               policyValidFrom={validFrom || null} policyValidTo={validTo || null} readOnly={readOnly}
               canView={relationAccess[kind]} canManage={permissions.update && relationAccess[kind]}
               busy={busy}

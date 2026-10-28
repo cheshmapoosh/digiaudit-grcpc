@@ -34,6 +34,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 @Service
 public class GlobalControlRegulationService {
@@ -47,13 +48,15 @@ public class GlobalControlRegulationService {
   private final CatalogCommandSupport support;
   private final ObjectMapper objectMapper;
   private final Clock clock;
+  private final com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService authorization;
 
   public GlobalControlRegulationService(GlobalControlRegulationRepository links,
       GlobalControlRepository controls, CentralRegulationRepository regulations,
       CentralRegulationGroupRepository regulationGroups,
       MasterDataRevisionCoordinator revisions, MasterDataRevisionActorProvider actors,
       RevisionMutationGuard guard, CatalogCommandSupport support, ObjectMapper objectMapper,
-      @Qualifier("masterDataRevisionClock") Clock clock) {
+      @Qualifier("masterDataRevisionClock") Clock clock,
+      com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService authorization) {
     this.links = links;
     this.controls = controls;
     this.regulations = regulations;
@@ -64,12 +67,20 @@ public class GlobalControlRegulationService {
     this.support = support;
     this.objectMapper = objectMapper;
     this.clock = clock;
+    this.authorization = authorization;
   }
 
   @Transactional(readOnly = true)
   public List<GlobalControlRegulationDtos.Link> list(UUID controlId) {
+    return list(controlId, null);
+  }
+
+  @Transactional(readOnly = true)
+  public List<GlobalControlRegulationDtos.Link> list(UUID controlId, MasterDataLifecycleStatus status) {
     requireControl(controlId);
-    return links.findByGlobalControlIdAndStatusNot(controlId, MasterDataLifecycleStatus.DELETED)
+    return (status == MasterDataLifecycleStatus.DELETED
+        ? links.findByGlobalControlIdAndStatus(controlId, status)
+        : links.findByGlobalControlIdAndStatusNot(controlId, MasterDataLifecycleStatus.DELETED))
         .stream().map(this::detail).toList();
   }
 
@@ -86,7 +97,6 @@ public class GlobalControlRegulationService {
   public GlobalControlRegulationDtos.SelectionOptions selectionOptions() {
     var groups = regulationGroups.findByStatusNotOrderBySortOrderAscTitleAscIdAsc(
         MasterDataLifecycleStatus.DELETED).stream()
-        .filter(group -> group.getStatus() == MasterDataLifecycleStatus.ACTIVE)
         .map(group -> new GlobalControlRegulationDtos.SelectionGroup(group.getId(),
             group.getParentGroupId(), group.getCode(), group.getTitle())).toList();
     var selectedGroupIds = groups.stream().map(GlobalControlRegulationDtos.SelectionGroup::id)
@@ -162,6 +172,99 @@ public class GlobalControlRegulationService {
     return MasterDataRevisionMutationResponse.from(result.primaryResult());
   }
 
+  public record PlannedChange(UUID regulationId, GlobalControlRegulationEntity row,
+      RevisionOperationType operation, Long expected, JsonNode before) {}
+  public record Plan(UUID controlId, List<PlannedChange> changes) {
+    public Plan { changes = List.copyOf(changes); }
+    public boolean isEmpty() { return changes.isEmpty(); }
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public Plan prepare(GlobalControlEntity control, List<GlobalControlRegulationDtos.Change> changes) {
+    requireAggregatePermission();
+    if (changes == null || changes.isEmpty()) return new Plan(control.getId(), List.of());
+    if (changes.stream().anyMatch(java.util.Objects::isNull)) throw invalidChange();
+    var sorted = changes.stream().sorted(java.util.Comparator.comparing(c ->
+        c.regulationId() == null ? "" : c.regulationId().toString())).toList();
+    var seen = new java.util.HashSet<UUID>();
+    var endpoints = new java.util.LinkedHashMap<UUID, CentralRegulationEntity>();
+    for (var change : sorted) {
+      if (change.regulationId() == null || change.operation() == null || !seen.add(change.regulationId()))
+        throw invalidChange();
+      endpoints.put(change.regulationId(), regulations.lockById(change.regulationId())
+          .orElseThrow(() -> regulationNotFound(change.regulationId())));
+    }
+    var plan = new java.util.ArrayList<PlannedChange>();
+    for (var change : sorted) {
+      var row = links.lockPair(control.getId(), change.regulationId()).orElse(null);
+      if (change.operation() == GlobalControlRegulationDtos.Operation.CREATE_OR_RESTORE) {
+        if (row == null && (change.relationId() != null || change.version() != null)) throw invalidChange();
+        if (row != null && row.getStatus() != MasterDataLifecycleStatus.DELETED) throw support.duplicate(change.regulationId().toString());
+        if (row != null) {
+          if (!row.getId().equals(change.relationId())) throw linkNotFound(change.regulationId());
+          if (row.getVersion() != support.requireVersion(change.version())) throw new ConflictException("VERSION_CONFLICT",
+              "error.masterdata.v2.versionConflict", "Global Control regulation has changed", row.getId());
+        }
+      } else {
+        if (row == null || !row.getId().equals(change.relationId())) throw linkNotFound(change.regulationId());
+        long expected = support.requireVersion(change.version());
+        if (row.getVersion() != expected) throw new ConflictException("VERSION_CONFLICT",
+            "error.masterdata.v2.versionConflict", "Global Control regulation has changed", row.getId());
+        if ((change.operation() == GlobalControlRegulationDtos.Operation.RESTORE)
+            != (row.getStatus() == MasterDataLifecycleStatus.DELETED)) throw invalidChange();
+      }
+      var target = switch (change.operation()) {
+        case CREATE_OR_RESTORE, RESTORE, ACTIVATE -> MasterDataLifecycleStatus.ACTIVE;
+        case INACTIVATE -> MasterDataLifecycleStatus.INACTIVE;
+        case DELETE -> MasterDataLifecycleStatus.DELETED;
+      };
+      if (target == MasterDataLifecycleStatus.ACTIVE && (control.getStatus() != MasterDataLifecycleStatus.ACTIVE
+          || endpoints.get(change.regulationId()).getStatus() != MasterDataLifecycleStatus.ACTIVE))
+        throw regulationNotFound(change.regulationId());
+      if (row != null && row.getStatus() == target) continue;
+      var operation = row == null ? RevisionOperationType.CREATE
+          : row.getStatus() == MasterDataLifecycleStatus.DELETED ? RevisionOperationType.RESTORE
+          : target == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE
+          : target == MasterDataLifecycleStatus.INACTIVE ? RevisionOperationType.INACTIVATE : RevisionOperationType.DELETE;
+      plan.add(new PlannedChange(change.regulationId(), row, operation,
+          row == null ? null : row.getVersion(), row == null ? null : snapshot(row)));
+    }
+    return new Plan(control.getId(), plan);
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public List<RevisionContentResult> apply(Plan plan) {
+    requireAggregatePermission();
+    var contents = new java.util.ArrayList<RevisionContentResult>();
+    UUID actor = actors.currentActorId(); Instant now = Instant.now(clock);
+    for (var change : plan.changes()) {
+      var row = change.row();
+      if (row == null) row = new GlobalControlRegulationEntity(UUID.randomUUID(), plan.controlId(), change.regulationId(), actor, now);
+      else switch (change.operation()) {
+        case RESTORE -> row.restore(actor, now);
+        case ACTIVATE -> row.activate(actor, now);
+        case INACTIVATE -> row.inactivate(actor, now);
+        case DELETE -> row.delete(actor, now);
+        default -> throw invalidChange();
+      }
+      row = links.saveAndFlush(row);
+      contents.add(RevisionContentResult.completed(RevisionEntityType.GLOBAL_CONTROL_REGULATION,
+          row.getId(), change.operation(), change.expected(), change.before(), snapshot(row), row.getVersion(),
+          objectMapper.valueToTree(Map.of("validated", true))));
+    }
+    return List.copyOf(contents);
+  }
+
+  private void requireAggregatePermission() {
+    com.digiaudit.grcpc.modules.datasetprofile.application.ProfileTransactionPolicy.requireProtectedMutation();
+    if (!authorization.canManage("CONTROL")) throw new org.springframework.security.access.AccessDeniedException("Global Control regulations require CONTROL manage");
+  }
+
+  private com.digiaudit.grcpc.common.exception.UnprocessableEntityException invalidChange() {
+    return new com.digiaudit.grcpc.common.exception.UnprocessableEntityException("INVALID_REGULATION_SELECTION",
+        "error.masterdata.globalControl.regulationSelection", "Global Control regulation changes are invalid");
+  }
+
   private RevisionOperationResult completed(RevisionExecutionContext context,
       GlobalControlRegulationEntity entity, RevisionOperationType operation, Long expected,
       JsonNode before) {
@@ -187,7 +290,8 @@ public class GlobalControlRegulationService {
     CentralRegulationEntity regulation = regulations.findById(entity.getRegulationId())
         .orElseThrow(() -> linkNotFound(entity.getRegulationId()));
     return new GlobalControlRegulationDtos.Link(entity.getId(), entity.getGlobalControlId(),
-        entity.getRegulationId(), regulation.getCode(), regulation.getTitle(), entity.getVersion());
+        entity.getRegulationId(), regulation.getCode(), regulation.getTitle(), entity.getStatus(),
+        regulation.getStatus(), entity.getVersion());
   }
 
   private void requireGuards(RevisionExecutionContext context) {

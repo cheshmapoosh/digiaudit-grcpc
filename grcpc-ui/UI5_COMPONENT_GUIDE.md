@@ -146,6 +146,12 @@ component, or - there is a documented limitation.
   DialogFooter to portal their locally owned actions into that same native slot.
   Center the actions in Bar's default slot so they remain visible while content
   scrolls. Do not put action footers inside scrollable content or use CSS sticky.
+- Governance detail/editor dialogs, parent pickers and hierarchy selectors use
+  the shared `catalogObjectDialog` host rule in `modal-layout.css`: 90vw,
+  increasing to 96vw below 720px. Keep their content at 100% of that host;
+  feature CSS and inline styles must not define competing viewport widths or
+  minimum content widths. The shared 70dvh height cap and native Dialog slots
+  remain independent of this width rule. Confirmation dialogs keep native sizing.
 - Management detail/editor dialogs share the catalog width (90vw). Users,
   Profiles and short catalog/group forms use two columns; larger forms use
   three columns on wide screens and two on medium screens. Collapse to one
@@ -159,6 +165,10 @@ component, or - there is a documented limitation.
   lifecycle status. Mount editors only after Edit, preserving the same draft,
   validity and aggregate Save behavior. Independently saved Local rows start
   in View and expose their own permission-checked Edit action.
+- Governance catalog Create mode presents a fixed ACTIVE ObjectStatus. An
+  editable status Select belongs only to an authorized Edit flow. Policy's
+  General Information uses Organization's shared responsive three-column grid
+  and paired validity-date layout; compact group forms keep two columns.
 - Governance catalog dialogs use `CatalogParentHeader` in the native Dialog
   header, retaining the current item's title and at most four parent fields:
   code, title, type and lifecycle status. Parent/owner selection belongs in
@@ -171,6 +181,10 @@ component, or - there is a documented limitation.
   is currently set. Clearing changes the existing draft; aggregate Save and
   navigation protection still own persistence. Hide removal for required
   parents, standalone catalogs and View mode, and disable it while busy.
+- Governance dialog tabs use `DetailTabContainer` with its unused native content
+  area collapsed. Keep the existing panels outside the tab strip so drafts stay
+  mounted, without an empty band between tabs and tables. Table, List and Tree
+  empty states must use application translations, including Persian.
 - The governance hub uses a simple Title without a hero avatar or repeated
   introductory copy or a Back button. Card descriptions belong in native Text in the Card body:
   CardHeader in UI5 2.18 limits subtitle lines and has no public wrapping option.

@@ -20,6 +20,7 @@ import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionM
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
+import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.api.mapper.CentralAccountGroupMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Clock;
 import java.time.Instant;
@@ -42,6 +43,7 @@ public class CentralAccountGroupCommandService {
   private final CatalogHierarchySupport hierarchySupport;
   private final MasterDataStructuralDependencyChecker dependencyChecker;
   private final Clock clock;
+  private final CentralAccountGroupMapper mapper;
 
   public CentralAccountGroupCommandService(
       CentralAccountGroupRepository repository,
@@ -52,7 +54,7 @@ public class CentralAccountGroupCommandService {
       CatalogCommandSupport support,
       CatalogHierarchySupport hierarchySupport,
       MasterDataStructuralDependencyChecker dependencyChecker,
-      @Qualifier("masterDataRevisionClock") Clock clock) {
+      @Qualifier("masterDataRevisionClock") Clock clock, CentralAccountGroupMapper mapper) {
     this.repository = repository;
     this.revisions = revisions;
     this.actors = actors;
@@ -62,15 +64,17 @@ public class CentralAccountGroupCommandService {
     this.hierarchySupport = hierarchySupport;
     this.dependencyChecker = dependencyChecker;
     this.clock = clock;
+    this.mapper = mapper;
   }
 
-  public MasterDataAggregateMutationResponse create(CentralAccountGroupDtos.Create request) {
+  public CentralAccountGroupDtos.AggregateResponse create(CentralAccountGroupDtos.Create request) {
     String code = support.normalizeCode(request.code()),
         title = support.normalizeTitle(request.title()),
         description = support.normalizeDescription(request.description());
     int sortOrder = support.normalizeSortOrder(request.sortOrder());
     boolean reasonableAssurance = Boolean.TRUE.equals(request.reasonableAssurance());
     support.validateValidity(request.validFrom(), request.validTo());
+    AtomicReference<CentralAccountGroupDtos.Detail> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     try {
       RevisionExecutionResult result =
@@ -151,6 +155,7 @@ public class CentralAccountGroupCommandService {
                   }
                 }
                 var saved = repository.saveAndFlush(entity);
+              canonical.set(mapper.detail(saved));
                 finalized.set(
                     documents.finalizePreparedAggregate(
                         prepared,
@@ -159,30 +164,46 @@ public class CentralAccountGroupCommandService {
                         "MD_REFERENCE_MANAGE"));
                 return completed(context, saved, operation, expected, before);
               });
-      return support.aggregateResponse(result, finalized.get());
+      return new CentralAccountGroupDtos.AggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
+          result.primaryResult().version(), finalized.get(), canonical.get());
     } catch (DataIntegrityViolationException e) {
       throw support.translateBusinessKeyViolation(e, "UK_CENTRAL_ACCOUNT_GROUP_CODE", code);
     }
   }
 
-  public MasterDataAggregateMutationResponse update(
+  public CentralAccountGroupDtos.AggregateResponse update(
       UUID id, CentralAccountGroupDtos.Update request) {
     long expected = support.requireVersion(request.version());
     String title = support.normalizeTitle(request.title()),
         description = support.normalizeDescription(request.description());
     boolean reasonableAssurance = Boolean.TRUE.equals(request.reasonableAssurance());
     support.validateValidity(request.validFrom(), request.validTo());
+    AtomicReference<CentralAccountGroupDtos.Detail> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     RevisionExecutionResult result =
-        revisions.execute(
+        revisions.executeStructural(
+            MasterDataHierarchyKey.ACCOUNT_GROUP,
             RevisionRequest.central(
                 "Update account group " + id, "Account Group definition update", null),
             context -> {
+              requireGuard(context);
               var prepared = documents.prepareAggregate(request.documents());
               var entity = lock(id);
               support.assertVersion(entity, expected);
               if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
-              if (Objects.equals(entity.getTitle(), title)
+              UUID parentId = request.parentChange() == null ? entity.getParentAccountGroupId() : request.parentChange().parentAccountGroupId();
+              int sortOrder = request.sortOrder() == null ? entity.getSortOrder() : support.normalizeSortOrder(request.sortOrder());
+              MasterDataLifecycleStatus status = request.status() == null ? entity.getStatus() : request.status();
+              if (status == MasterDataLifecycleStatus.DELETED) throw new UnprocessableEntityException(
+                  "INVALID_STATUS", "error.masterdata.v2.invalidLifecycleTransition", "Update accepts ACTIVE or INACTIVE only");
+              var parents = hierarchy();
+              hierarchySupport.requireParent(id, parentId, parents, "ACCOUNT_GROUP parent");
+              hierarchySupport.rejectCycle(id, parentId, parents, CentralAccountGroupEntity::getParentAccountGroupId);
+
+              if (Objects.equals(entity.getParentAccountGroupId(), parentId)
+                  && entity.getSortOrder() == sortOrder
+                  && entity.getStatus() == status
+                  && Objects.equals(entity.getTitle(), title)
                   && Objects.equals(entity.getDescription(), description)
                   && entity.getImportance() == request.importance()
                   && entity.isReasonableAssurance() == reasonableAssurance
@@ -199,7 +220,14 @@ public class CentralAccountGroupCommandService {
                   request.validTo(),
                   actors.currentActorId(),
                   Instant.now(clock));
+              entity.move(parentId, sortOrder, actors.currentActorId(), Instant.now(clock));
+              if (entity.getStatus() != status) {
+                support.validateLifecycle(entity, status == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE);
+                if (status == MasterDataLifecycleStatus.ACTIVE) entity.activate(actors.currentActorId(), Instant.now(clock));
+                else entity.inactivate(actors.currentActorId(), Instant.now(clock));
+              }
               var saved = repository.saveAndFlush(entity);
+              canonical.set(mapper.detail(saved));
               finalized.set(
                   documents.finalizePreparedAggregate(
                       prepared,
@@ -208,7 +236,8 @@ public class CentralAccountGroupCommandService {
                       "MD_REFERENCE_MANAGE"));
               return completed(context, saved, RevisionOperationType.UPDATE, expected, before);
             });
-    return support.aggregateResponse(result, finalized.get());
+    return new CentralAccountGroupDtos.AggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
+          result.primaryResult().version(), finalized.get(), canonical.get());
   }
 
   public MasterDataRevisionMutationResponse move(UUID id, CentralAccountGroupDtos.Move request) {

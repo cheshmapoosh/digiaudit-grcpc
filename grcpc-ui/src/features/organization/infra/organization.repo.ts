@@ -10,6 +10,7 @@ import type {
 
 export interface OrganizationRepo {
     ownerOptions(): Promise<OrganizationOwnerOption[]>;
+    deletedOwners(id: string): Promise<import("../domain/organization.model").OrganizationOwnerAssignment[]>;
     list(): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
     create(payload: OrganizationNodeCreate): Promise<MasterDataAggregateMutationResponse>;

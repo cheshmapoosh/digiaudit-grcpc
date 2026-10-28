@@ -1,5 +1,12 @@
 export { default as LocalOrganizationWorkspace } from "./components/LocalOrganizationWorkspace";
 export { default as OrganizationSubprocessTable } from "./components/OrganizationSubprocessTable";
+export { default as OrganizationLocalDraftWorkspace } from "./components/OrganizationLocalDraftWorkspace";
+export { default as OrganizationRisksTab } from "./components/OrganizationRisksTab";
+export { default as OrganizationScopesTab } from "./components/OrganizationScopesTab";
+export type { OrganizationScopeContext, OrganizationScopeSection } from "./domain/organizationScopes.model";
+export type { OrganizationRiskContext } from "./domain/organizationRisks.model";
+export { toOrganizationLocalPayload } from "./domain/organizationLocal.model";
+export type { OrganizationLocalDraft, OrganizationLocalDraftFields, OrganizationLocalResult } from "./domain/organizationLocal.model";
 export { default as LocalContextAssignmentDialog } from "./components/LocalContextAssignmentDialog";
 export { default as LocalControlAssignmentDialog } from "./components/LocalControlAssignmentDialog";
 export { default as LocalReverseList } from "./components/LocalReverseList";

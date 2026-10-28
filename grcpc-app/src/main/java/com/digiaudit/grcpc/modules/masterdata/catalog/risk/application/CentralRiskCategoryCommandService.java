@@ -28,6 +28,9 @@ import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregate
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
+import com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.mapper.CentralRiskMapper;
+import com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.dto.CentralRiskCategoryAggregateResponse;
+import com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.dto.CentralRiskCategoryResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Clock;
 import java.time.Instant;
@@ -54,6 +57,7 @@ public class CentralRiskCategoryCommandService {
   private final CatalogCommandSupport support;
   private final CatalogHierarchySupport hierarchySupport;
   private final Clock clock;
+  private final CentralRiskMapper mapper;
 
   public CentralRiskCategoryCommandService(
       CentralRiskCategoryRepository repository,
@@ -64,7 +68,7 @@ public class CentralRiskCategoryCommandService {
       DocumentCommandService documents,
       CatalogCommandSupport support,
       CatalogHierarchySupport hierarchySupport,
-      @Qualifier("masterDataRevisionClock") Clock clock) {
+      @Qualifier("masterDataRevisionClock") Clock clock, CentralRiskMapper mapper) {
     this.repository = repository;
     this.templateRepository = templateRepository;
     this.revisions = revisions;
@@ -74,14 +78,16 @@ public class CentralRiskCategoryCommandService {
     this.support = support;
     this.hierarchySupport = hierarchySupport;
     this.clock = clock;
+    this.mapper = mapper;
   }
 
-  public MasterDataAggregateMutationResponse create(CreateCentralRiskCategoryRequest request) {
+  public CentralRiskCategoryAggregateResponse create(CreateCentralRiskCategoryRequest request) {
     String code = support.normalizeCode(request.code());
     String title = support.normalizeTitle(request.title());
     String description = support.normalizeDescription(request.description());
     int sortOrder = support.normalizeSortOrder(request.sortOrder());
     support.validateValidity(request.validFrom(), request.validTo());
+    AtomicReference<CentralRiskCategoryResponse> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     try {
       RevisionExecutionResult result =
@@ -155,6 +161,7 @@ public class CentralRiskCategoryCommandService {
                   }
                 }
                 CentralRiskCategoryEntity saved = repository.saveAndFlush(entity);
+              canonical.set(mapper.toResponse(saved));
                 finalized.set(
                     documents.finalizePreparedAggregate(
                         prepared,
@@ -163,29 +170,45 @@ public class CentralRiskCategoryCommandService {
                         "MD_RISK_MANAGE"));
                 return completed(context, saved, operationType, expectedVersion, before);
               });
-      return support.aggregateResponse(result, finalized.get());
+      return new CentralRiskCategoryAggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
+          result.primaryResult().version(), finalized.get(), canonical.get());
     } catch (DataIntegrityViolationException exception) {
       throw support.translateBusinessKeyViolation(exception, "UK_CENTRAL_RISK_CATEGORY_CODE", code);
     }
   }
 
-  public MasterDataAggregateMutationResponse update(
+  public CentralRiskCategoryAggregateResponse update(
       UUID id, UpdateCentralRiskCategoryRequest request) {
     long expectedVersion = support.requireVersion(request.version());
     String title = support.normalizeTitle(request.title());
     String description = support.normalizeDescription(request.description());
     support.validateValidity(request.validFrom(), request.validTo());
+    AtomicReference<CentralRiskCategoryResponse> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     RevisionExecutionResult result =
-        revisions.execute(
+        revisions.executeStructural(
+            MasterDataHierarchyKey.RISK,
             RevisionRequest.central(
                 "Update risk category " + id, "Risk Category definition update", null),
             context -> {
+              requireGuard(context);
               var prepared = documents.prepareAggregate(request.documents());
               CentralRiskCategoryEntity entity = lock(id);
               support.assertVersion(entity, expectedVersion);
               if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
-              if (same(entity, title, description, request) && empty(request.documents()))
+              UUID parentId = request.parentChange() == null ? entity.getParentCategoryId() : request.parentChange().parentCategoryId();
+              int sortOrder = request.sortOrder() == null ? entity.getSortOrder() : support.normalizeSortOrder(request.sortOrder());
+              MasterDataLifecycleStatus status = request.status() == null ? entity.getStatus() : request.status();
+              if (status == MasterDataLifecycleStatus.DELETED) throw new UnprocessableEntityException(
+                  "INVALID_STATUS", "error.masterdata.v2.invalidLifecycleTransition", "Update accepts ACTIVE or INACTIVE only");
+              var parents = hierarchy();
+              hierarchySupport.requireParent(id, parentId, parents, "RISK parent");
+              hierarchySupport.rejectCycle(id, parentId, parents, CentralRiskCategoryEntity::getParentCategoryId);
+
+              if (Objects.equals(entity.getParentCategoryId(), parentId)
+                  && entity.getSortOrder() == sortOrder
+                  && entity.getStatus() == status
+                  && same(entity, title, description, request) && empty(request.documents()))
                 throw noChange();
               JsonNode before = snapshot(entity);
               entity.update(
@@ -195,7 +218,14 @@ public class CentralRiskCategoryCommandService {
                   request.validTo(),
                   actors.currentActorId(),
                   Instant.now(clock));
+              entity.move(parentId, sortOrder, actors.currentActorId(), Instant.now(clock));
+              if (entity.getStatus() != status) {
+                support.validateLifecycle(entity, status == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE);
+                if (status == MasterDataLifecycleStatus.ACTIVE) entity.activate(actors.currentActorId(), Instant.now(clock));
+                else entity.inactivate(actors.currentActorId(), Instant.now(clock));
+              }
               CentralRiskCategoryEntity saved = repository.saveAndFlush(entity);
+              canonical.set(mapper.toResponse(saved));
               finalized.set(
                   documents.finalizePreparedAggregate(
                       prepared,
@@ -205,7 +235,8 @@ public class CentralRiskCategoryCommandService {
               return completed(
                   context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
             });
-    return support.aggregateResponse(result, finalized.get());
+    return new CentralRiskCategoryAggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
+          result.primaryResult().version(), finalized.get(), canonical.get());
   }
 
   public MasterDataRevisionMutationResponse move(UUID id, MoveCentralRiskCategoryRequest request) {

@@ -78,16 +78,7 @@
   padding-block-start: 0.5rem;
 }
 
-.accountGroupObjectDialog,
-.accountGroupParentDialog {
-  width: 90vw;
-  max-width: 90vw;
-}
-
 .accountGroupDialogContent {
-  width: 86vw;
-  max-width: 86vw;
-  min-width: 44rem;
   padding: 0.75rem;
   box-sizing: border-box;
 }
@@ -148,9 +139,9 @@
 }
 
 .accountGroupParentDialogContent {
-  width: 72vw;
-  min-width: 36rem;
-  max-width: 72vw;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   height: 65vh;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -169,13 +160,6 @@
 }
 
 @media (max-width: 900px) {
-  .accountGroupDialogContent,
-  .accountGroupParentDialogContent {
-    min-width: 0;
-    width: 84vw;
-    max-width: 84vw;
-  }
-
   .accountGroupHeaderGrid,
   .accountGroupFormGrid,
   .accountGroupSummaryRow,

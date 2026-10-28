@@ -9,8 +9,7 @@
 .regulationSummaryGrid { display: grid; gap: 0.875rem; align-content: start; padding: 1rem; }
 .regulationSummaryRow { display: grid; grid-template-columns: 10rem minmax(0, 1fr); gap: 0.75rem; align-items: start; }
 .regulationSummaryActions, .regulationObjectFooter { display: flex; justify-content: center; gap: 1rem; padding-block-start: 0.5rem; }
-.regulationObjectDialog, .regulationParentDialog { width: 90vw; max-width: 90vw; }
-.regulationDialogContent { width: 86vw; max-width: 86vw; min-width: 44rem; padding: 0.75rem; box-sizing: border-box; }
+.regulationDialogContent { padding: 0.75rem; box-sizing: border-box; }
 .regulationObjectPage { display: grid; gap: 0.75rem; min-width: 0; }
 .regulationObjectHeader { display: grid; gap: 0.75rem; padding: 0.75rem 1rem; }
 .regulationHeaderGrid, .regulationFormGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1.25rem; }
@@ -21,14 +20,13 @@
 .regulationTabPanel { min-height: 22rem; }
 .regulationTabPanelHidden { display: none; }
 .regulationFieldWide { grid-column: 1 / -1; }
-.regulationParentDialogContent { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 0.75rem; width: 72vw; min-width: 36rem; max-width: 72vw; max-height: 70vh; padding: 0.75rem; box-sizing: border-box; }
+.regulationParentDialogContent { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 0.75rem; width: 100%; min-width: 0; max-width: 100%; max-height: 70vh; padding: 0.75rem; box-sizing: border-box; }
 .regulationParentList { min-height: 20rem; overflow: auto; }
 .regulationParentDialogFooter { display: flex; justify-content: flex-end; gap: 0.5rem; }
-.regulationImportDialog { width: 90vw; max-width: 90vw; }
-.regulationImportContent { width: 84vw; max-width: 84vw; gap: var(--sapContent_Space_Small); padding: var(--sapContent_Space_Small); box-sizing: border-box; }
+.regulationImportContent { gap: var(--sapContent_Space_Small); padding: var(--sapContent_Space_Small); box-sizing: border-box; }
 .regulationImportActions, .regulationRequirementsTab { gap: var(--sapContent_Space_Small); }
 .regulationImportTableFrame { max-height: 50vh; overflow: auto; min-width: 0; }
-@media (max-width: 900px) { .regulationDialogContent, .regulationParentDialogContent { min-width: 0; width: 84vw; max-width: 84vw; } .regulationHeaderGrid, .regulationFormGrid, .regulationSummaryRow { grid-template-columns: 1fr; } .regulationTreeItemContent { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; } }
+@media (max-width: 900px) { .regulationHeaderGrid, .regulationFormGrid, .regulationSummaryRow { grid-template-columns: 1fr; } .regulationTreeItemContent { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; } }
 
 @media (min-width: 1101px) {
   .regulationHeaderGrid, .regulationFormGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem 1rem; }

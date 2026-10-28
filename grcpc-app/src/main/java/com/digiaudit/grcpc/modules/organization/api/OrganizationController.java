@@ -57,6 +57,12 @@ public class OrganizationController {
         return organizationService.ownedOrganizationIds(((com.digiaudit.grcpc.common.security.CurrentUser) authentication.getPrincipal()).getUserId());
     }
 
+    @GetMapping("/{organizationId}/owner-assignments/deleted")
+    @PreAuthorize("@masterDataAuthorization.canView('ORGANIZATION')")
+    public List<com.digiaudit.grcpc.modules.organization.api.dto.OrganizationOwnerView> deletedOwners(@PathVariable UUID organizationId) {
+        return organizationService.deletedOwners(organizationId);
+    }
+
     @GetMapping("/tree")
     @PreAuthorize("@masterDataAuthorization.canView('ORGANIZATION')")
     public List<OrganizationTreeNodeResponse> findTree() {

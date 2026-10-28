@@ -42,14 +42,14 @@ public class CentralRegulationController {
 
   @PostMapping
   @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
-  public MasterDataAggregateMutationResponse create(
+  public CentralRegulationDtos.RegulationAggregateResponse create(
       @Valid @RequestBody CentralRegulationDtos.CreateRegulation r) {
     return commands.create(r);
   }
 
   @PatchMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canManage('GOVERNANCE')")
-  public MasterDataAggregateMutationResponse update(
+  public CentralRegulationDtos.RegulationAggregateResponse update(
       @PathVariable UUID id, @Valid @RequestBody CentralRegulationDtos.UpdateRegulation r) {
     return commands.update(id, r);
   }

@@ -16,7 +16,6 @@ import type {
   CentralAccountGroupSummary,
   CreateCentralAccountGroupCommand,
   EditCentralAccountGroupCommand,
-  UpdateCentralAccountGroupCommand,
 } from "../domain/centralAccountGroup.model";
 import { centralAccountGroupApi } from "../infra/centralAccountGroup.api";
 import type { CentralAccountGroupTreeNode } from "../utils/centralAccountGroup.tree";
@@ -56,12 +55,6 @@ function isOwnDialogCloseEvent(event: unknown): boolean {
   return Boolean(closeEvent.target && closeEvent.currentTarget && closeEvent.target === closeEvent.currentTarget);
 }
 
-function hasDocumentChanges(command: UpdateCentralAccountGroupCommand) {
-  return command.documents.newDocuments.length > 0
-    || command.documents.newVersions.length > 0
-    || command.documents.metadataUpdates.length > 0;
-}
-
 export default function CentralAccountGroupsPage() {
   const { t } = useTranslation();
   const appDir = useResolvedUiDir();
@@ -92,6 +85,10 @@ export default function CentralAccountGroupsPage() {
     const candidate = error as { code?: string; message?: string } | null;
     const code = candidate?.code ?? candidate?.message;
     switch (code) {
+      case "HIERARCHY_BUSY": return t("accountGroup.errors.hierarchyBusy");
+      case "PROFILE_BUSY": return t("accountGroup.errors.profileBusy");
+      case "PROFILE_READ_ONLY":
+      case "PROFILE_ACCESS_DENIED": return t("accountGroup.errors.profileReadOnly");
       case "DUPLICATE_BUSINESS_KEY":
         return t("accountGroup.errors.duplicateCode");
       case "MASTER_DATA_NOT_FOUND":
@@ -244,60 +241,19 @@ export default function CentralAccountGroupsPage() {
     setObjectError(null);
     setDocumentError(null);
     try {
-      let entityId: string;
+      let detail: CentralAccountGroupDetail;
       if (modalMode === "create") {
-        const result = await centralAccountGroupApi.create(payload as CreateCentralAccountGroupCommand);
-        entityId = result.entityId;
+        detail = (await centralAccountGroupApi.create(payload as CreateCentralAccountGroupCommand)).entity;
       } else {
-        const current = modalValue!;
         const command = payload as EditCentralAccountGroupCommand;
-        let version = current.version;
-        const definitionChanged =
-          current.title !== command.title
-          || (current.description ?? null) !== command.description
-          || current.importance !== command.importance
-          || current.reasonableAssurance !== command.reasonableAssurance
-          || (current.validFrom ?? null) !== command.validFrom
-          || (current.validTo ?? null) !== command.validTo
-          || hasDocumentChanges(command);
-        if (definitionChanged) {
-          const updateResult = await centralAccountGroupApi.update(current.id, {
-            version,
-            title: command.title,
-            importance: command.importance,
-            reasonableAssurance: command.reasonableAssurance,
-            description: command.description,
-            validFrom: command.validFrom,
-            validTo: command.validTo,
-            documents: command.documents,
-          });
-          version = updateResult.version;
-        }
-        if (
-          current.parentAccountGroupId !== command.parentAccountGroupId
-          || current.sortOrder !== command.sortOrder
-        ) {
-          const moveResult = await centralAccountGroupApi.move(current.id, {
-            version,
-            parentAccountGroupId: command.parentAccountGroupId,
-            sortOrder: command.sortOrder,
-          });
-          version = moveResult.version;
-        }
-        if (current.status !== command.status) {
-          const lifecycleResult = await centralAccountGroupApi.lifecycle(
-            current.id,
-            command.status === "ACTIVE" ? "activate" : "inactivate",
-            version,
-          );
-          version = lifecycleResult.version;
-        }
-        entityId = current.id;
+        detail = (await centralAccountGroupApi.update(modalValue!.id, {
+          ...command, version: modalValue!.version,
+          parentChange: { parentAccountGroupId: command.parentAccountGroupId },
+          status: command.status, sortOrder: command.sortOrder,
+        })).entity;
       }
-
       setDirty(false);
-      await loadRows();
-      const detail = await centralAccountGroupApi.detail(entityId);
+      void loadRows();
       const node: CentralAccountGroupTreeNode = { ...detail, children: [] };
       setSelectedNode(node);
       setSelectedDetail(detail);
@@ -412,11 +368,11 @@ export default function CentralAccountGroupsPage() {
       <Dialog
         open={modalOpen}
         accessibleName={dialogTitle}
-        className="accountGroupObjectDialog"
+        className="accountGroupObjectDialog catalogObjectDialog"
         onClose={handleDialogClose}
       >
         <ModalDialogHeader title={dialogTitle} onClose={closeObject} />
-        <div className="accountGroupDialogContent" dir={appDir}>
+        <div data-catalog-dialog-content className="accountGroupDialogContent" dir={appDir}>
           {modalMode === "create" || modalValue ? (
             <CentralAccountGroupObjectPage
               key={`${modalMode === "create" ? "create" : modalValue?.id}:${modalMode}`}

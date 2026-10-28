@@ -1,3 +1,5 @@
+import type { OrganizationLocalDraftFields, OrganizationLocalResult } from "@/features/local-master-data/domain/organizationLocal.model";
+import type { OrganizationObjectiveChange } from "@/features/objective";
 import type { AuditFields } from "@/shared/domain/audit.model";
 import type { DocumentAggregateRequest, DocumentCommandResponse } from "@/features/document";
 import type { LocalContextChange, LocalContextRow } from "@/features/local-master-data";
@@ -24,10 +26,10 @@ export type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
 export interface OrganizationOwnerOption { id: string; displayLabel: string; username: string; roleCode: string }
 export interface OrganizationOwnerAssignment {
     assignmentId: string; profileId: string; organizationId: string; userId: string;
-    displayLabel: string; username: string; roleCode: string | null; eligible: boolean; version: number;
+    displayLabel: string; username: string; roleCode: string | null; eligible: boolean; status: OrganizationStatus; version: number;
 }
 export interface OrganizationOwnerChange {
-    operation: "CREATE_OR_RESTORE" | "DELETE"; userId: string; assignmentId?: string; version?: number;
+    operation: "CREATE_OR_RESTORE" | "ACTIVATE" | "INACTIVATE" | "DELETE" | "RESTORE"; userId: string; assignmentId?: string; version?: number;
 }
 
 export interface MasterDataRevisionMutationResponse {
@@ -39,10 +41,12 @@ export interface MasterDataRevisionMutationResponse {
 export interface MasterDataAggregateMutationResponse extends MasterDataRevisionMutationResponse {
     finalizedDocuments: DocumentCommandResponse[];
     organization: OrganizationNode;
+    localRelationships?: OrganizationLocalResult | null;
     subprocesses?: { revisionId: string; rows: LocalContextRow[] } | null;
 }
 
 export interface OrganizationNode extends AuditFields {
+    localRelationships?: OrganizationLocalResult | null;
     id: string;
     code: string;
     name: string;
@@ -71,7 +75,8 @@ export type OrganizationReadonlyKeys =
     | "deletedAt"
     | "deletedBy";
 
-export interface OrganizationNodeCreate {
+export interface OrganizationNodeCreate extends OrganizationLocalDraftFields {
+    organizationObjectiveChanges?: OrganizationObjectiveChange[];
     code: string;
     name: string;
     organizationType: OrganizationType;
@@ -86,7 +91,8 @@ export interface OrganizationNodeCreate {
     documents: DocumentAggregateRequest;
 }
 
-export interface OrganizationNodeUpdate {
+export interface OrganizationNodeUpdate extends OrganizationLocalDraftFields {
+    organizationObjectiveChanges?: OrganizationObjectiveChange[];
     version: number;
     name: string;
     organizationType: OrganizationType;

@@ -10,8 +10,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
-  Bar, BusyIndicator, Dialog, FlexBox, Input, Label, Link, MessageStrip, ObjectStatus, Option, Select, Tab,
-  Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow, Text, TextArea, Title, Tree,
+  Bar, BusyIndicator, Dialog, FlexBox, Input, Label, Link, MessageStrip, Option, Select, Tab,
+  Text, TextArea, Title, Tree,
 } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
 import {
@@ -22,12 +22,12 @@ import { useMasterDataAccess } from "@/features/master-data/security/masterDataA
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
-import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
+import { OrganizationObjectiveRelations } from "../components/OrganizationObjectiveRelations";
 import { MasterDataFormField } from "@/shared/components/MasterDataObjectHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
-import type { Objective, ObjectiveCreate, ObjectiveKind, ObjectiveOrganizationLink, ObjectiveOrganizationOption, ObjectiveUpdate } from "../domain/objective.model";
+import type { Objective, ObjectiveCreate, ObjectiveKind, ObjectiveOrganizationLink, ObjectiveUpdate, OrganizationObjectiveChange } from "../domain/objective.model";
 import ObjectiveCreateMenu from "../components/ObjectiveCreateMenu";
 import { objectiveApi } from "../infra/objective.api.repo";
 import { useObjectiveState } from "../state/objective.state";
@@ -117,20 +117,18 @@ export default function ObjectiveManagementPage() {
   const create = useObjectiveState((state) => state.create);
   const update = useObjectiveState((state) => state.update);
   const remove = useObjectiveState((state) => state.remove);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("objectiveId"));
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [filterCollapsedIds, setFilterCollapsedIds] = useState<Set<string>>(new Set());
   const [mode, setMode] = useState<"create" | "view" | "edit" | null>(null);
   const [activeTab, setActiveTab] = useState<"general" | "organizations" | "documents">("general");
   const [organizations, setOrganizations] = useState<ObjectiveOrganizationLink[]>([]);
-  const [organizationOptions, setOrganizationOptions] = useState<ObjectiveOrganizationOption[]>([]);
-  const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<Set<string>>(new Set());
-  const [organizationPickerOpen, setOrganizationPickerOpen] = useState(false);
-  const [organizationSearch, setOrganizationSearch] = useState("");
-  const [organizationStatusFilter, setOrganizationStatusFilter] = useState("ALL");
+  const [organizationChanges, setOrganizationChanges] = useState<OrganizationObjectiveChange[]>([]);
+  const [organizationDirty, setOrganizationDirty] = useState(false);
+  const [organizationReady, setOrganizationReady] = useState(true);
+  const [strategyPicker, setStrategyPicker] = useState(false);
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
-  const [organizationLoadFailed, setOrganizationLoadFailed] = useState(false);
   const [form, setForm] = useState<Form>(emptyForm);
   const [baseline, setBaseline] = useState("");
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
@@ -195,41 +193,20 @@ export default function ObjectiveManagementPage() {
         ? "objective.errors.hasChildren"
         : isStrategy && mode === "edit" && items.some((item) => item.kind === "STRATEGY"
           && item.parentObjectiveId === selectedId) ? "objective.errors.strategyChildren" : null;
-  const organizationDraftDirty = !isStrategy && [...selectedOrganizationIds].sort().join("|")
-    !== organizations.map((link) => link.organizationId).sort().join("|");
   const dirty = (mode === "create" || mode === "edit")
-    && (JSON.stringify(form) !== baseline || documents.dirty || invalidDateDraft || organizationDraftDirty);
+    && (JSON.stringify(form) !== baseline || documents.dirty || invalidDateDraft || organizationDirty || strategyPicker);
   const { blocker } = useUnsavedChangesGuard(dirty);
 
   useEffect(() => { void load().catch((cause: unknown) => setError(errorText(cause))); }, [load]);
   useEffect(() => {
-    if (displayedKind === "STRATEGY") return;
-    if (mode === "create") {
-      let current = true;
-      void objectiveApi.organizationOptions().then((options) => {
-        if (current) { setOrganizationOptions(options); setOrganizationLoadFailed(false); }
-      }).catch((cause: unknown) => {
-        if (current) { setError(errorText(cause)); setOrganizationLoadFailed(true); }
-      })
-        .finally(() => { if (current) setOrganizationsLoading(false); });
-      return () => { current = false; };
-    }
-    if (!selectedId) return;
+    if (displayedKind === "STRATEGY" || !selectedId) return;
     let current = true;
-    void Promise.all([objectiveApi.organizations(selectedId), mode
-      ? objectiveApi.organizationOptions() : Promise.resolve([] as ObjectiveOrganizationOption[])])
-      .then(([links, options]) => {
-      if (current) {
-        setOrganizations(links);
-        setOrganizationLoadFailed(false);
-        if (mode) { setOrganizationOptions(options); setSelectedOrganizationIds(new Set(links.map((link) => link.organizationId))); }
-      }
-    }).catch((cause: unknown) => {
-      if (current) { setError(errorText(cause)); setOrganizationLoadFailed(true); }
-    })
+    void objectiveApi.organizations(selectedId).then(rows => {
+      if (current) setOrganizations(rows);
+    }).catch((cause: unknown) => { if (current) setError(errorText(cause)); })
       .finally(() => { if (current) setOrganizationsLoading(false); });
     return () => { current = false; };
-  }, [selectedId, mode, displayedKind]);
+  }, [selectedId, displayedKind]);
 
   const begin = (nextMode: "create" | "view" | "edit", preserveTab = false,
     kind: ObjectiveKind = "OBJECTIVE") => {
@@ -237,15 +214,16 @@ export default function ObjectiveManagementPage() {
       setError(t("objective.createSelectStrategy"));
       return;
     }
-    setOrganizationLoadFailed(false);
-    if (!preserveTab) { setOrganizationSearch(""); setOrganizationStatusFilter("ALL"); }
-    if (nextMode === "create") { setOrganizations([]); setSelectedOrganizationIds(new Set()); }
+    setOrganizationChanges([]);
+    setOrganizationDirty(false);
+    setOrganizationReady(true);
+    if (nextMode === "create") { setOrganizations([]); setOrganizationChanges([]); }
     const initial = nextMode === "create"
       ? { ...emptyForm, kind, parentObjectiveId: kind === "OBJECTIVE" ? creationStrategy!.id : "" }
       : toForm(selected);
     const next = normalizeStrategyForm(initial);
     setOrganizationsLoading(next.kind === "OBJECTIVE");
-    if (next.kind === "STRATEGY") { setOrganizations([]); setSelectedOrganizationIds(new Set()); }
+    if (next.kind === "STRATEGY") { setOrganizations([]); setOrganizationChanges([]); }
     setForm(next);
     setBaseline(JSON.stringify(initial));
     setDocuments(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
@@ -265,7 +243,7 @@ export default function ObjectiveManagementPage() {
   };
 
   const save = async () => {
-    if (!form.code.trim() || !form.name.trim() || !documents.ready || documents.invalid || documents.uploading) {
+    if (strategyPicker || (!isStrategy && !organizationReady) || !form.code.trim() || !form.name.trim() || !documents.ready || documents.invalid || documents.uploading) {
       setError(t("objective.errors.required"));
       return;
     }
@@ -284,20 +262,28 @@ export default function ObjectiveManagementPage() {
       parentObjectiveId: isStrategy ? null : form.parentObjectiveId || null,
       validFrom: isStrategy ? null : form.validFrom || null,
       validTo: isStrategy ? null : form.validTo || null,
-      organizationIds: isStrategy ? undefined : [...selectedOrganizationIds],
+      organizationChanges: isStrategy ? undefined : organizationChanges,
       documents: toDocumentAggregateRequest(documents),
     };
     setBusy(true);
     try {
       if (mode === "create") {
-        const id = await create({ ...common, code: form.code.trim() } satisfies ObjectiveCreate);
-        setSelectedId(id);
+        const result = await create({ ...common, code: form.code.trim() } satisfies ObjectiveCreate);
+        setSelectedId(result.entityId);
+        setOrganizations(result.organizations);
+        const canonical = normalizeStrategyForm(toForm(result.objective));
+        setForm(canonical); setBaseline(JSON.stringify(canonical));
         if (common.parentObjectiveId) setExpandedIds((previous) => new Set(previous).add(common.parentObjectiveId!));
       } else if (selected) {
-        await update(selected.id, { ...common, version: selected.version } satisfies ObjectiveUpdate);
+        const result = await update(selected.id, { ...common, version: selected.version } satisfies ObjectiveUpdate);
+        setOrganizations(result.organizations);
+        const canonical = normalizeStrategyForm(toForm(result.objective));
+        setForm(canonical); setBaseline(JSON.stringify(canonical));
       }
       setDraftGeneration((value) => value + 1);
-      setOrganizationsLoading(true);
+      setOrganizationsLoading(false);
+      setOrganizationChanges([]);
+      setOrganizationDirty(false);
       setMode("view");
       setError(null);
     } catch (cause) { setError(errorText(cause)); }
@@ -315,12 +301,6 @@ export default function ObjectiveManagementPage() {
     } catch (cause) { setError(errorText(cause)); }
     finally { setBusy(false); }
   };
-
-  const toggleOrganization = (id: string) => setSelectedOrganizationIds((previous) => {
-    const next = new Set(previous);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    return next;
-  });
 
   const onTreeSelect = (event: TreeEvent) => {
     const id = event.detail?.item?.dataset?.objectiveId;
@@ -345,28 +325,6 @@ export default function ObjectiveManagementPage() {
     });
   };
 
-  const organizationRows = [
-    ...organizations.map((link) => ({
-      id: link.organizationId, code: link.organizationCode, organizationName: link.organizationName,
-      assignmentName: link.name, owner: link.owner,
-      status: selectedOrganizationIds.has(link.organizationId) ? "FINAL" as const : "DRAFT_PENDING_DELETE" as const,
-    })),
-    ...[...selectedOrganizationIds].filter((id) => !organizations.some((link) => link.organizationId === id))
-      .map((id) => {
-        const option = organizationOptions.find((item) => item.id === id);
-        return { id, code: option?.code ?? "", organizationName: option?.name ?? "",
-          assignmentName: form.name, owner: null, status: "DRAFT_NEW" as const };
-      }),
-  ];
-  const organizationQuery = organizationSearch.trim().toLocaleLowerCase("fa");
-  const visibleOrganizationRows = organizationRows.filter((row) =>
-    (organizationStatusFilter === "ALL" || row.status === organizationStatusFilter)
-    && (!organizationQuery || `${row.code} ${row.organizationName} ${row.assignmentName} ${row.owner ?? ""}`
-      .toLocaleLowerCase("fa").includes(organizationQuery)));
-  const organizationNodes: HierarchySelectionNode[] = organizationOptions
-    .filter((item) => item.status === "ACTIVE")
-    .map((item) => ({ id: item.id, parentId: item.parentOrganizationId,
-      code: item.code, name: item.name, selectable: true }));
   const dialogTitle = t(form.kind === "STRATEGY"
     ? mode === "create" ? "objective.strategy.create" : mode === "edit" ? "objective.strategy.edit" : "objective.strategy.view"
     : mode === "create" ? "objective.create" : mode === "edit" ? "objective.edit" : "objective.view");
@@ -410,8 +368,8 @@ export default function ObjectiveManagementPage() {
         <Label showColon>{t("objective.description")}</Label><Text>{selected.description || "—"}</Text>
         {selected.kind === "OBJECTIVE" ? <>
         <Label showColon>{t("objective.tabs.organizations")}</Label>
-        <Text>{organizationsLoading ? t("common.loading") : organizations.length
-          ? organizations.map((link) => link.organizationName).join("، ") : "—"}</Text>
+        <Text>{organizationsLoading ? t("common.loading") : organizations.some(link => link.status !== "DELETED")
+          ? organizations.filter(link => link.status !== "DELETED").map((link) => link.organizationName).join("، ") : "—"}</Text>
         <Label showColon>{t("objective.createdAt")}</Label><Text>{formatPersianDateTime(selected.createdAt)}</Text>
         </> : null}
       </div>
@@ -439,16 +397,11 @@ export default function ObjectiveManagementPage() {
     <Dialog open={mode !== null} className="objectiveDialog" onClose={close}
       accessibleName={dialogTitle}>
       <ModalDialogHeader title={dialogTitle} onClose={close} />
-      <div className="objectiveDialogContent">
+      <div className="objectiveDialogContent" data-catalog-dialog-content>
       <CatalogParentHeader objectTitle={form.name || dialogTitle} label={t("objective.strategy.label")} parentId={form.parentObjectiveId} required={!isStrategy}
         parent={chosenStrategy ? { code: chosenStrategy.code, title: chosenStrategy.name, type: t("objective.kind.STRATEGY"), status: chosenStrategy.status } : null}
-        selection={!isStrategy && !readOnly && manage ? <Select value={chosenStrategy ? form.parentObjectiveId : ""} disabled={busy || readOnly}
-              accessibleName={t("objective.strategy.label")}
-            onChange={(event) => setForm((old) => ({ ...old, parentObjectiveId: event.target.value }))}>
-            <Option value="">{t("objective.strategy.choose")}</Option>
-            {rootStrategies.filter((item) => (mode !== "edit" || item.id !== selectedId) && !blockedParents.has(item.id))
-              .map((item) => <Option key={item.id} value={item.id}>{item.code} · {strategyLabels.get(item.id)}</Option>)}
-          </Select> : null} />
+        selection={!isStrategy && !readOnly && manage ? <Button design="Emphasized" disabled={busy}
+          onClick={() => setStrategyPicker(true)}>{t("catalogRelation.select")}</Button> : null} />
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key");
         if (key === "general" || key === "organizations" || key === "documents") setActiveTab(key);
@@ -484,47 +437,11 @@ export default function ObjectiveManagementPage() {
             onInput={(event) => setForm((old) => ({ ...old, description: event.target.value }))} />}</MasterDataFormField>
         </div>
       </div>
-      {!isStrategy ? <div className={activeTab === "organizations" ? "objectiveOrganizationTab" : "objectiveOrganizationTab objectiveTabHidden"}>
-        <div className="objectiveOrganizationToolbar">
-          <div className="objectiveOrganizationSearch">
-            <Label showColon>{t("objective.organizations.unit")}</Label>
-
-          </div>
-          <div className="objectiveOrganizationStatus">
-            <Label showColon>{t("common.status")}</Label>
-            <Select value={organizationStatusFilter} accessibleName={t("common.status")}
-              onChange={(event) => setOrganizationStatusFilter(event.target.value)}>
-              <Option value="ALL">{t("common.all")}</Option>
-              <Option value="FINAL">{t("common.relationStatus.FINAL")}</Option>
-              <Option value="DRAFT_NEW">{t("common.relationStatus.DRAFT_NEW")}</Option>
-              <Option value="DRAFT_PENDING_DELETE">{t("common.relationStatus.DRAFT_PENDING_DELETE")}</Option>
-            </Select>
-          </div>
-          <HeaderSearch value={organizationSearch} onChange={(value) => setOrganizationSearch(value)} accessibleName={t("objective.organizations.search")} />
-          {!readOnly && form.kind === "OBJECTIVE" ? <Button design="Emphasized" disabled={!manage || busy || organizationsLoading || organizationLoadFailed}
-            onClick={() => setOrganizationPickerOpen(true)}>{t("common.select")}</Button> : null}
-
-        </div>
-        {organizationsLoading ? <BusyIndicator active delay={0} /> : <>
-              {visibleOrganizationRows.length ? <Table headerRow={<TableHeaderRow>
-              <TableHeaderCell>{t("objective.organizations.unit")}</TableHeaderCell>
-              <TableHeaderCell>{t("objective.organizations.assignment")}</TableHeaderCell>
-              <TableHeaderCell>{t("objective.owner")}</TableHeaderCell>
-              <TableHeaderCell>{t("common.status")}</TableHeaderCell>
-              {!readOnly ? <TableHeaderCell>{t("objective.actions")}</TableHeaderCell> : null}
-            </TableHeaderRow>}>
-              {visibleOrganizationRows.map((row) => <TableRow key={row.id}>
-                <TableCell>{row.code} · {row.organizationName}</TableCell>
-                <TableCell>{row.assignmentName}</TableCell>
-                <TableCell>{row.owner || "—"}</TableCell>
-                <TableCell><ObjectStatus state={row.status === "FINAL" ? "Positive" : "Information"}>
-                  {t(`common.relationStatus.${row.status}`)}</ObjectStatus></TableCell>
-                {!readOnly ? <TableCell><Button design="Transparent" disabled={!manage || busy}
-                  onClick={() => toggleOrganization(row.id)}>{t(row.status === "DRAFT_PENDING_DELETE" ? "common.undo" : "common.remove")}</Button></TableCell> : null}
-              </TableRow>)}
-            </Table> : <MessageStrip design="Information" hideCloseButton>{t(organizationRows.length
-              ? "common.noData" : "objective.organizations.empty")}</MessageStrip>}
-            </>}
+      {!isStrategy && mode ? <div className={activeTab === "organizations" ? "objectiveOrganizationTab" : "objectiveOrganizationTab objectiveTabHidden"}>
+        <OrganizationObjectiveRelations side="objective" ownerId={mode === "create" ? null : selectedId}
+          ownerName={form.name} manage={!readOnly && manage} busy={busy} resetKey={draftGeneration}
+          canonicalRows={organizations} onRowsChange={setOrganizations} changes={organizationChanges}
+          onChangesChange={setOrganizationChanges} onDirtyChange={setOrganizationDirty} onReadinessChange={setOrganizationReady} />
       </div> : null}
       <div className={activeTab === "documents" ? "objectiveDocumentTab" : "objectiveDocumentTab objectiveTabHidden"}>
         {mode === "view" ? <DocumentManager targetType="OBJECTIVE" targetId={selectedId}
@@ -536,7 +453,7 @@ export default function ObjectiveManagementPage() {
       <DialogFooter>
         {readOnly ? <Button design="Emphasized" disabled={!manage || busy}
           onClick={() => begin("edit", true)}>{t("common.edit")}</Button>
-          : <Button design="Emphasized" disabled={busy || (!isStrategy && (organizationsLoading || organizationLoadFailed)) || !dirty || Boolean(structureError) || invalidDateDraft || !documents.ready || documents.invalid || documents.uploading}
+          : <Button design="Emphasized" disabled={busy || strategyPicker || (!isStrategy && !organizationReady) || !dirty || Boolean(structureError) || invalidDateDraft || !documents.ready || documents.invalid || documents.uploading}
             onClick={() => void save()}>{t("common.save")}</Button>}
         <Button design="Transparent" onClick={close}>{t(readOnly ? "common.close" : "common.cancel")}</Button>
       </DialogFooter>
@@ -548,16 +465,20 @@ export default function ObjectiveManagementPage() {
         { name: deleteCandidate?.name ?? "" })}
       confirmText={t("common.delete")} cancelText={t("common.cancel")} loading={busy}
       onClose={() => setDeleteCandidate(null)} onConfirm={() => void confirmDelete()} />
-    {!isStrategy ? <HierarchyMultiSelectionDialog open={organizationPickerOpen}
-      title={t("objective.organizations.select")} searchAccessibleName={t("objective.organizations.search")}
-      nodes={organizationNodes} selectedIds={selectedOrganizationIds} busy={busy}
-      confirmText={t("common.confirm")} cancelText={t("common.cancel")}
-      onConfirm={(ids) => { setSelectedOrganizationIds(ids); setOrganizationPickerOpen(false); }}
-      onClose={() => setOrganizationPickerOpen(false)} /> : null}
+    <Dialog open={strategyPicker} className="objectiveDialog" accessibleName={t("objective.strategy.label")} onClose={() => setStrategyPicker(false)}>
+      <ModalDialogHeader title={t("objective.strategy.label")} onClose={() => setStrategyPicker(false)} />
+      <Select value={chosenStrategy ? form.parentObjectiveId : ""} disabled={busy} accessibleName={t("objective.strategy.label")}
+        onChange={event => setForm(old => ({ ...old, parentObjectiveId: event.target.value }))}>
+        {!chosenStrategy ? <Option value="">{t("objective.strategy.choose")}</Option> : null}
+        {rootStrategies.filter(item => item.id !== selectedId && !blockedParents.has(item.id)).map(item =>
+          <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
+      </Select>
+      <DialogFooter><Button design="Emphasized" disabled={busy || !chosenStrategy} onClick={() => setStrategyPicker(false)}>{t("catalogRelation.select")}</Button></DialogFooter>
+    </Dialog>
     <DeleteConfirmDialog open={leaveOpen || blocker.state === "blocked"}
       title={t("common.unsavedChanges.title")} message={t("common.unsavedChanges.message")}
       confirmText={t("common.unsavedChanges.leave")} cancelText={t("common.unsavedChanges.stay")}
       loading={false} onClose={() => { setLeaveOpen(false); if (blocker.state === "blocked") blocker.reset(); }}
-      onConfirm={() => { setLeaveOpen(false); setMode(null); if (blocker.state === "blocked") blocker.proceed(); }} />
+      onConfirm={() => { setLeaveOpen(false); setStrategyPicker(false); setMode(null); if (blocker.state === "blocked") blocker.proceed(); }} />
   </section></CatalogSelectionProvider>;
 }

@@ -1,12 +1,10 @@
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Button,
   Dialog,
-  List,
-  ListItemStandard,
   Tree,
   TreeItemCustom,
 } from "@ui5/webcomponents-react";
@@ -86,21 +84,17 @@ export default function AccountGroupParentValueHelpDialog({
   const title = t("accountGroup.parent.dialogTitle");
 
   return (
-    <Dialog open={open} accessibleName={title} className="accountGroupParentDialog" onClose={onClose}>
+    <Dialog open={open} accessibleName={title} className="accountGroupParentDialog catalogObjectDialog" onClose={onClose}>
       <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} disabled={busy} accessibleName={t("accountGroup.parent.search")} />} />
       <div className="accountGroupParentDialogContent">
 
-        <List separators="Inner">
-          <ListItemStandard selected={!selectedParentId} onClick={() => onSelect(null)}>
-            {t("accountGroup.parent.none")}
-          </ListItemStandard>
-        </List>
         <div className="accountGroupParentTreeFrame">
           <Tree
             accessibleName={title}
+            noDataText={t("common.noData")}
             onItemClick={(event: TreeEvent) => {
               const id = event.detail?.item?.dataset?.nodeId;
-              if (id) onSelect(id);
+              if (id && !busy) onSelect(id);
             }}
           >
             {tree.map((node) => (
@@ -109,6 +103,7 @@ export default function AccountGroupParentValueHelpDialog({
           </Tree>
         </div>
         <DialogFooter>
+          {selectedParentId ? <Button design="Negative" disabled={busy} onClick={() => { onSelect(null); onClose(); }}>{t("catalog.parentHeader.clear")}</Button> : null}
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.close", { defaultValue: "بستن" })}
           </Button>

@@ -234,7 +234,7 @@ export default function CentralControlsFclShellPage() {
   const editSelected = useCallback(() => {
     if (!selectedNode || !selectedDetail) return;
     setDirty(false);
-    setModalType(selectedNode.type); setModalParentId(selectedNode.parentId); setModalValue(selectedDetail); setModalMode("edit"); setActiveTab("general"); setObjectError(null); setDocumentError(null); setModalOpen(true);
+    setModalType(selectedNode.type); setModalParentId(selectedNode.parentId); setModalValue(selectedDetail); setModalMode("edit"); setObjectError(null); setDocumentError(null); setModalOpen(true);
   }, [selectedDetail, selectedNode]);
 
   const closeObject = useCallback(() => requestLeave(() => {
@@ -254,25 +254,25 @@ export default function CentralControlsFclShellPage() {
     setBusy(true); setObjectError(null); setDocumentError(null);
     try {
       const result = modalMode === "create" ? await centralControlApi.create(payload as CreateCentralControlCommand) : await centralControlApi.update((modalValue as CentralControlDetail).id, payload as UpdateCentralControlCommand);
-      setDirty(false);
-      try {
-        await refreshSelection("CONTROL", result.entityId);
-        setModalMode("view");
-      } catch {
-        setModalOpen(false);
-        setPageError(t("control.errors.savedRefreshFailed"));
-      }
+      const detail: CentralControlDetail = { ...result.entity, relations: result };
+      const node: CentralControlTreeNode = { id: detail.id, code: detail.code, title: detail.title, type: "CONTROL", status: detail.status, parentId: detail.controlGroupId, sortOrder: Number.MAX_SAFE_INTEGER, children: [] };
+      setDirty(false); setSelectedNode(node); setSelectedDetail(detail); setExpansionAnchorId(node.parentId ?? node.id);
+      setModalValue(detail); setModalParentId(node.parentId); setModalMode("view");
+      void loadRows();
       return true;
     } catch (error) {
       setDocumentError(toDocumentAggregateDraftError(error)); setObjectError(mapError(error, t(modalMode === "create" ? "control.errors.create" : "control.errors.update"))); return false;
     } finally { setBusy(false); }
-  }, [mapError, modalMode, modalValue, refreshSelection, t]);
+  }, [loadRows, mapError, modalMode, modalValue, t]);
 
   const submitGroup = useCallback(async (payload: CreateCentralControlGroupCommand | UpdateCentralControlGroupCommand) => {
     setBusy(true); setObjectError(null);
     try {
       const result = modalMode === "create" ? await centralControlApi.createGroup(payload as CreateCentralControlGroupCommand) : await centralControlApi.updateGroup((modalValue as CentralControlGroupDetail).id, payload as UpdateCentralControlGroupCommand);
-      setDirty(false); await refreshSelection("GROUP", result.entityId); setModalMode("view"); return true;
+      setDirty(false);
+      try { await refreshSelection("GROUP", result.entityId); setModalMode("view"); }
+      catch { setModalOpen(false); setPageError(t("control.errors.savedRefreshFailed")); }
+      return true;
     } catch (error) { setObjectError(mapError(error, t(modalMode === "create" ? "control.errors.createGroup" : "control.errors.updateGroup"))); return false; }
     finally { setBusy(false); }
   }, [mapError, modalMode, modalValue, refreshSelection, t]);
@@ -308,9 +308,9 @@ export default function CentralControlsFclShellPage() {
         if (expansionAnchorId && keys.has(expansionAnchorId)) setExpansionAnchorId(null);
       }}>
     {createElement("ui5-flexible-column-layout", { layout: fclLayout, dir: appDir, "disable-resizing": true, className: "controlFcl" }, listColumn, midColumn)}
-    <Dialog open={modalOpen} accessibleName={dialogTitle} className="controlObjectDialog" onClose={(event) => { if (isOwnDialogCloseEvent(event)) closeObject(); }}>
+    <Dialog open={modalOpen} accessibleName={dialogTitle} className="controlObjectDialog catalogObjectDialog" onClose={(event) => { if (isOwnDialogCloseEvent(event)) closeObject(); }}>
       <ModalDialogHeader title={dialogTitle} onClose={closeObject} />
-      <div className="controlDialogContent" dir={appDir}>
+      <div data-catalog-dialog-content className="controlDialogContent" dir={appDir}>
         {modalOpen && modalContentReady ? (
           modalType === "GROUP" ? (
             <CentralControlGroupObjectPage

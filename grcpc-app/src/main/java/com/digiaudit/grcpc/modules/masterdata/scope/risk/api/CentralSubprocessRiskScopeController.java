@@ -30,6 +30,12 @@ public class CentralSubprocessRiskScopeController {
     return queries.listForSubprocess(subprocessId, status, search);
   }
 
+  @GetMapping("/deleted")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('RISK')")
+  public List<CentralSubprocessRiskScopeResponse> deleted(@PathVariable UUID subprocessId) {
+    return queries.deletedForSubprocess(subprocessId);
+  }
+
   @GetMapping("/{scopeId}")
   @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('RISK')")
   public CentralSubprocessRiskScopeResponse detail(

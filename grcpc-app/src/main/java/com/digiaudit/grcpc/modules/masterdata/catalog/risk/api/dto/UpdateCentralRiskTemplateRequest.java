@@ -2,6 +2,8 @@ package com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.dto;
 
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
 import com.digiaudit.grcpc.modules.masterdata.catalog.risk.domain.enums.CentralRiskType;
+import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
+import java.util.UUID;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -14,4 +16,9 @@ public record UpdateCentralRiskTemplateRequest(
     String description,
     LocalDate validFrom,
     LocalDate validTo,
-    @Valid DocumentAggregateBatchRequest documents) {}
+    @Valid DocumentAggregateBatchRequest documents,
+    @Valid ParentChange parentChange,
+    MasterDataLifecycleStatus status,
+    Integer sortOrder) {
+  public record ParentChange(@NotNull UUID riskCategoryId) {}
+}

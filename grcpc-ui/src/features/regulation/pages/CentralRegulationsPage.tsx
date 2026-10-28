@@ -1,5 +1,6 @@
 import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { BusyIndicator, Dialog, MessageStrip } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
@@ -104,6 +105,10 @@ function detailToNode(
 
 export default function CentralRegulationsPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const linkedRegulationId = searchParams.get("regulationId");
+  const linkedRequirementId = searchParams.get("requirementId");
+  const openedLinkedRegulation = useRef<string | null>(null);
   const appDir = useResolvedUiDir();
   const permissions = useCatalogActionPermissions("CENTRAL_REGULATION");
   const [groups, setGroups] = useState<CentralRegulationGroupSummary[]>([]);
@@ -136,8 +141,14 @@ export default function CentralRegulationsPage() {
       const candidate = error as { code?: string; message?: string } | null;
       const code = candidate?.code ?? candidate?.message;
       switch (code) {
-        case "DUPLICATE_BUSINESS_KEY":
+        case "HIERARCHY_BUSY": return t("regulation.errors.hierarchyBusy");
+      case "PROFILE_BUSY": return t("regulation.errors.profileBusy");
+      case "PROFILE_READ_ONLY":
+      case "PROFILE_ACCESS_DENIED": return t("regulation.errors.profileReadOnly");
+      case "DUPLICATE_BUSINESS_KEY":
           return t("regulation.errors.duplicateCode");
+        case "INVALID_REQUIREMENT_DRAFT":
+          return t("regulation.requirements.invalidDraft");
         case "MASTER_DATA_NOT_FOUND":
         case "NOT_FOUND":
         case "PARENT_NOT_FOUND":
@@ -270,6 +281,26 @@ export default function CentralRegulationsPage() {
     [loadDetail, requestLeave],
   );
 
+  useEffect(() => {
+    const linkedId = linkedRequirementId ?? linkedRegulationId;
+    if (!linkedId || openedLinkedRegulation.current === linkedId) return;
+    const requirement = linkedRequirementId ? requirements.find(item => item.id === linkedRequirementId) : null;
+    const regulation = !linkedRequirementId ? regulations.find(item => item.id === linkedRegulationId) : null;
+    if (!requirement && !regulation) return;
+    openedLinkedRegulation.current = linkedId;
+    const node: CentralRegulationTreeNode = requirement
+      ? { ...requirement, type: "REQUIREMENT", parentId: requirement.regulationId, children: [] }
+      : { ...regulation!, type: "REGULATION", parentId: regulation!.regulationGroupId, children: [] };
+    requestLeave(() => {
+      setSelectedNode(node); setExpansionAnchorId(node.id);
+      void loadDetail(node).then(detail => {
+        if (!detail) return;
+        setSelectedDetail(detail); setModalValue(detail); setModalType(node.type);
+        setModalParentId(node.parentId); setModalMode("view"); setActiveTab("general"); setModalOpen(true);
+      });
+    });
+  }, [linkedRegulationId, linkedRequirementId, loadDetail, regulations, requestLeave, requirements]);
+
   const allowedCreateTypes = useMemo<CentralRegulationNodeType[]>(() => {
     if (!selectedNode) return ["GROUP"];
     if (selectedNode.type === "GROUP") return ["GROUP", "REGULATION"];
@@ -329,7 +360,6 @@ export default function CentralRegulationsPage() {
     setModalParentId(selectedNode.parentId);
     setModalValue(selectedDetail);
     setModalMode("edit");
-    setActiveTab("general");
     setObjectError(null);
     setDocumentError(null);
     setModalOpen(true);
@@ -352,117 +382,38 @@ export default function CentralRegulationsPage() {
       setObjectError(null);
       setDocumentError(null);
       try {
-        let entityId: string;
+        let detail: CentralRegulationAnyDetail;
+        let changedRequirements: CentralRegulationRequirementDetail[] = [];
+        const base = { title: draft.title, description: draft.description, validFrom: draft.validFrom, validTo: draft.validTo, documents: draft.documents };
         if (modalMode === "create") {
-          if (modalType === "GROUP") {
-            const result = await centralRegulationApi.createGroup({
-              code: draft.code,
-              title: draft.title,
-              parentGroupId: draft.parentId,
-              description: draft.description,
-              sortOrder: 0,
-              validFrom: draft.validFrom,
-              validTo: draft.validTo,
-              documents: draft.documents,
-            });
-            entityId = result.entityId;
-          } else if (modalType === "REGULATION") {
+          const command = { ...base, code: draft.code, sortOrder: 0 };
+          if (modalType === "GROUP") detail = (await centralRegulationApi.createGroup({ ...command, parentGroupId: draft.parentId })).entity;
+          else {
             if (!draft.parentId) throw new Error("PARENT_NOT_FOUND");
-            const result = await centralRegulationApi.createRegulation({
-              code: draft.code,
-              title: draft.title,
-              regulationGroupId: draft.parentId,
-              description: draft.description,
-              sortOrder: 0,
-              validFrom: draft.validFrom,
-              validTo: draft.validTo,
-              documents: draft.documents,
-            });
-            entityId = result.entityId;
-          } else {
-            if (!draft.parentId) throw new Error("PARENT_NOT_FOUND");
-            const result = await centralRegulationApi.createRequirement({
-              code: draft.code,
-              title: draft.title,
-              regulationId: draft.parentId,
-              description: draft.description,
-              sortOrder: 0,
-              validFrom: draft.validFrom,
-              validTo: draft.validTo,
-              documents: draft.documents,
-            });
-            entityId = result.entityId;
+            if (modalType === "REGULATION") {
+              const result = await centralRegulationApi.createRegulation({ ...command, regulationGroupId: draft.parentId, requirementChanges: draft.requirementChanges });
+              detail = result.entity; changedRequirements = result.requirements ?? [];
+            } else detail = (await centralRegulationApi.createRequirement({ ...command, regulationId: draft.parentId })).entity;
           }
         } else {
           const current = modalValue!;
-          let version = current.version;
-          const definitionChanged =
-            current.title !== draft.title ||
-            (current.description ?? null) !== draft.description ||
-            (current.validFrom ?? null) !== draft.validFrom ||
-            (current.validTo ?? null) !== draft.validTo ||
-            draft.documentsDirty;
-          if (definitionChanged) {
-            const command = {
-              version,
-              title: draft.title,
-              description: draft.description,
-              validFrom: draft.validFrom,
-              validTo: draft.validTo,
-              documents: draft.documents,
-            };
-            const result =
-              modalType === "GROUP"
-                ? await centralRegulationApi.updateGroup(current.id, command)
-                : modalType === "REGULATION"
-                  ? await centralRegulationApi.updateRegulation(current.id, command)
-                  : await centralRegulationApi.updateRequirement(current.id, command);
-            version = result.version;
+          const command = { ...base, version: current.version, status: draft.status, sortOrder: current.sortOrder };
+          if (modalType === "GROUP") detail = (await centralRegulationApi.updateGroup(current.id, { ...command, parentChange: { parentGroupId: draft.parentId } })).entity;
+          else {
+            if (!draft.parentId) throw new Error("PARENT_NOT_FOUND");
+            if (modalType === "REGULATION") {
+              const result = await centralRegulationApi.updateRegulation(current.id, { ...command, parentChange: { regulationGroupId: draft.parentId }, requirementChanges: draft.requirementChanges });
+              detail = result.entity; changedRequirements = result.requirements ?? [];
+            } else detail = (await centralRegulationApi.updateRequirement(current.id, { ...command, parentChange: { regulationId: draft.parentId } })).entity;
           }
-
-          const currentParentId = detailParentId(modalType, current);
-          if (currentParentId !== draft.parentId) {
-            let result;
-            if (modalType === "GROUP") {
-              result = await centralRegulationApi.moveGroup(current.id, {
-                version,
-                parentGroupId: draft.parentId,
-                sortOrder: current.sortOrder,
-              });
-            } else if (modalType === "REGULATION") {
-              if (!draft.parentId) throw new Error("PARENT_NOT_FOUND");
-              result = await centralRegulationApi.moveRegulation(current.id, {
-                version,
-                regulationGroupId: draft.parentId,
-                sortOrder: current.sortOrder,
-              });
-            } else {
-              if (!draft.parentId) throw new Error("PARENT_NOT_FOUND");
-              result = await centralRegulationApi.moveRequirement(current.id, {
-                version,
-                regulationId: draft.parentId,
-                sortOrder: current.sortOrder,
-              });
-            }
-            version = result.version;
-          }
-
-          if (current.status !== draft.status) {
-            const action = draft.status === "ACTIVE" ? "activate" : "inactivate";
-            const result =
-              modalType === "GROUP"
-                ? await centralRegulationApi.groupLifecycle(current.id, action, version)
-                : modalType === "REGULATION"
-                  ? await centralRegulationApi.regulationLifecycle(current.id, action, version)
-                  : await centralRegulationApi.requirementLifecycle(current.id, action, version);
-            version = result.version;
-          }
-          entityId = current.id;
         }
-
         setDirty(false);
-        await loadRows();
-        const detail = await fetchDetail(modalType, entityId);
+        if (changedRequirements.length) setRequirements(previous => {
+          const merged = new Map(previous.map(row => [row.id, row]));
+          for (const row of changedRequirements) if (!merged.has(row.id) || merged.get(row.id)!.version <= row.version) merged.set(row.id, row);
+          return [...merged.values()].filter(row => row.status !== "DELETED");
+        });
+        void loadRows();
         const node = detailToNode(modalType, detail);
         setSelectedNode(node);
         setSelectedDetail(detail);
@@ -486,7 +437,7 @@ export default function CentralRegulationsPage() {
         setBusy(false);
       }
     },
-    [fetchDetail, loadRows, mapError, modalMode, modalType, modalValue],
+    [loadRows, mapError, modalMode, modalType, modalValue],
   );
 
   const clearSelection = useCallback(() => {
@@ -656,11 +607,11 @@ export default function CentralRegulationsPage() {
       <Dialog
         open={modalOpen}
         accessibleName={dialogTitle}
-        className="regulationObjectDialog"
+        className="regulationObjectDialog catalogObjectDialog"
         onClose={handleDialogClose}
       >
         <ModalDialogHeader title={dialogTitle} onClose={closeObject} />
-        <div className="regulationDialogContent" dir={appDir}>
+        <div data-catalog-dialog-content className="regulationDialogContent" dir={appDir}>
           {modalMode === "create" || modalValue ? (
             <CentralRegulationObjectPage
               key={`${modalMode === "create" ? "create" : modalValue?.id}:${modalType}:${modalMode}`}
@@ -681,7 +632,6 @@ export default function CentralRegulationsPage() {
               onActiveTabChange={setActiveTab}
               onDirtyChange={setDirty}
               requirements={requirements.filter(row => row.regulationId === modalValue?.id)}
-              onRequirementsImported={loadRows}
             />
           ) : busy ? (
             <BusyIndicator active delay={0} />

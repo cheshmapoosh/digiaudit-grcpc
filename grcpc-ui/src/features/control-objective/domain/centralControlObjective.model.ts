@@ -20,6 +20,7 @@ export interface CentralControlObjectiveSummary {
 }
 
 export interface CentralControlObjectiveDetail extends CentralControlObjectiveSummary {
+  relations?: Pick<CentralControlObjectiveMutationResponse, "accountGroupClassifications" | "riskAssignments">;
   description: string | null;
   createdAt: string;
   createdBy: string;
@@ -55,6 +56,7 @@ export interface UpdateCentralControlObjectiveCommand {
 }
 
 export interface CentralControlObjectiveMutationResponse {
+  entity: CentralControlObjectiveDetail;
   entityId: string;
   revisionId: string;
   version: number;

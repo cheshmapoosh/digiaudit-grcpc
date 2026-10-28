@@ -31,6 +31,12 @@ public class CentralSubprocessControlScopeController {
     return queries.listForSubprocess(subprocessId, status, search);
   }
 
+  @GetMapping("/deleted")
+  @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('CONTROL')")
+  public List<CentralSubprocessControlScopeResponse> deleted(@PathVariable UUID subprocessId) {
+    return queries.deletedForSubprocess(subprocessId);
+  }
+
   @GetMapping("/{scopeId}")
   @PreAuthorize("@masterDataAuthorization.canView('PROCESS') and @masterDataAuthorization.canView('CONTROL')")
   public CentralSubprocessControlScopeResponse detail(

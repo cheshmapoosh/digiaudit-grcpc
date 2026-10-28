@@ -16,6 +16,9 @@ import java.util.UUID;
 public final class CentralPolicyDtos {
   private CentralPolicyDtos() {}
 
+  public record GroupAggregateResponse(UUID entityId, UUID revisionId, long version,
+      List<DocumentCommandResponse> finalizedDocuments, GroupDetail entity) {}
+
   public record CreateGroup(
       @NotBlank String code,
       @NotBlank String title,
@@ -53,7 +56,12 @@ public final class CentralPolicyDtos {
       LocalDate validFrom,
       LocalDate validTo,
       @NotNull Long version,
-      @Valid DocumentAggregateBatchRequest documents) {}
+      @Valid DocumentAggregateBatchRequest documents,
+      @Valid GroupParentChange parentChange,
+      MasterDataLifecycleStatus status,
+      Integer sortOrder) {}
+
+  public record GroupParentChange(UUID parentGroupId) {}
 
   public record UpdatePolicy(
       @NotBlank String title,
@@ -212,6 +220,7 @@ public final class CentralPolicyDtos {
       List<PolicySubprocessScopeResponse> subprocessScopes,
       List<PolicyOrganizationScopeResponse> organizationScopes,
       List<PolicyControlScopeResponse> controlScopes,
-      List<PolicyRequirementScopeResponse> requirementScopes) {}
+      List<PolicyRequirementScopeResponse> requirementScopes,
+      PolicyDetail entity) {}
 
 }

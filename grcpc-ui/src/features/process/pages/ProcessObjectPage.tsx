@@ -59,11 +59,11 @@ const ROOT_STYLE: CSSProperties = { display: "grid", gap: "0.75rem", minWidth: 0
 const FIELD_STYLE: CSSProperties = { display: "grid", gap: "0.35rem" };
 const BODY_STYLE: CSSProperties = { minHeight: 0, padding: "0.75rem" };
 
-function toFormState(value: ProcessNode | null, parent: ProcessNode | null | undefined, requestedNodeType: ProcessNodeType | undefined): ProcessFormState {
+function toFormState(value: ProcessNode | null, parent: ProcessNode | null | undefined, requestedNodeType: ProcessNodeType | undefined, creating = false): ProcessFormState {
     return {
         code: value?.code ?? "",
         title: value?.title ?? "",
-        status: value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+        status: !creating && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
         nodeType: value?.nodeType ?? requestedNodeType ?? "PROCESS",
         parentId: value?.parentId ?? parent?.id ?? null,
         sortOrder: String(value?.sortOrder ?? 0),
@@ -101,7 +101,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const riskScopePermissions = useRiskScopePermissions();
     const controlObjectiveScopePermissions = useControlObjectiveScopePermissions();
     const requirementScopePermissions = useRequirementScopePermissions();
-    const initial = toFormState(value, parent, requestedNodeType);
+    const initial = toFormState(value, parent, requestedNodeType, mode === "create");
     const [form, setForm] = useState(initial);
     const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(initial, mode)));
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -120,13 +120,13 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const scopeRef = useRef(scope);
     const generalInformationDirty = JSON.stringify(normalized(form, mode)) !== baseline;
     const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
-    const dirty = generalInformationDirty || invalidDateDraft || documentDraft.dirty || controlScopeDraft.dirty || riskScopeDraft.dirty || controlObjectiveScopeDraft.dirty || requirementScopeDraft.dirty;
+    const dirty = generalInformationDirty || invalidDateDraft || documentDraft.dirty || controlScopeDraft.dirty || riskScopeDraft.dirty || controlObjectiveScopeDraft.dirty || requirementScopeDraft.dirty || parentDialogOpen;
     const activeTab = controlledTab ?? internalTab;
     const readOnly = mode === "view";
 
     useEffect(() => {
         if (scopeRef.current !== scope || !dirty) {
-            const next = toFormState(value, parent, requestedNodeType);
+            const next = toFormState(value, parent, requestedNodeType, mode === "create");
             let cancelled = false;
             queueMicrotask(() => {
                 if (cancelled) return;
@@ -174,7 +174,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     };
 
 
-    const saveDisabled = busy || invalidDateDraft || documentDraft.uploading || documentDraft.invalid || !documentDraft.ready
+    const saveDisabled = busy || parentDialogOpen || invalidDateDraft || documentDraft.uploading || documentDraft.invalid || !documentDraft.ready
         || (form.nodeType === "SUBPROCESS" && [controlScopeDraft, riskScopeDraft, controlObjectiveScopeDraft, requirementScopeDraft].some(draft => !draft.ready || draft.invalid))
         || (!generalInformationDirty && !documentDraft.dirty && !controlScopeDraft.dirty && !riskScopeDraft.dirty && !controlObjectiveScopeDraft.dirty && !requirementScopeDraft.dirty);
 
@@ -185,7 +185,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                     parentId={form.parentId} required={form.nodeType === "SUBPROCESS"}
                     busy={busy} onClearParent={!readOnly && manage && form.nodeType === "PROCESS" ? () => change("parentId", null) : undefined}
                     parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: nodeTypeLabel(selectedParent.nodeType, t), status: selectedParent.status } : null}
-                    selection={!readOnly && manage ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+                    selection={!readOnly && manage ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
                 <DetailTabContainer onTabSelect={(event) => { const key = event.detail.tab.getAttribute("data-tab-key") as ProcessTabKey | null; if (key) { if (!controlledTab) setInternalTab(key); onActiveTabChange?.(key); } }}>
                     <Tab text={t("process.tabs.general", { defaultValue: "General Information" })} selected={activeTab === "general"} data-tab-key="general" />
@@ -208,23 +208,23 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                         <FormField label={t("process.fields.code", { defaultValue: "Code" })} required>{readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} onInput={(e) => change("code", readValue(e))} />}</FormField>
                         <FormField label={t("process.fields.name", { defaultValue: "Title" })} required>{readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", readValue(e))} />}</FormField>
                         <FormField label={t("process.fields.nodeType", { defaultValue: "Node type" })}>{readOnly ? <Text className="objectPageValue">{(nodeTypeLabel(form.nodeType, t)) || "—"}</Text> : <Input value={nodeTypeLabel(form.nodeType, t)} readonly />}</FormField>
-                        <FormField label={t("process.fields.status", { defaultValue: "Status" })}>{readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t(form.status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select value={form.status} disabled={mode !== "edit" || busy} accessibleName={t("process.fields.status", { defaultValue: "Status" })} onChange={(e) => change("status", readValue(e) as "ACTIVE" | "INACTIVE")}><Option value="ACTIVE">{t("common.active", { defaultValue: "Active" })}</Option><Option value="INACTIVE">{t("common.inactive", { defaultValue: "Inactive" })}</Option></Select>}</FormField>
+                        <FormField label={t("process.fields.status", { defaultValue: "Status" })}>{mode === "create" ? <ObjectStatus state="Positive">{t("common.active")}</ObjectStatus> : readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t(form.status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select value={form.status} disabled={mode !== "edit" || busy} accessibleName={t("process.fields.status", { defaultValue: "Status" })} onChange={(e) => change("status", readValue(e) as "ACTIVE" | "INACTIVE")}><Option value="ACTIVE">{t("common.active", { defaultValue: "Active" })}</Option><Option value="INACTIVE">{t("common.inactive", { defaultValue: "Inactive" })}</Option></Select>}</FormField>
                         <FormField label={t("process.fields.sortOrder", { defaultValue: "Sort order" })}>{readOnly ? <Text className="objectPageValue">{(form.sortOrder) || "—"}</Text> : <Input value={form.sortOrder} readonly={readOnly} disabled={busy} onInput={(e) => change("sortOrder", readValue(e))} />}</FormField>
                         <div className="modalDateRange"><FormField label={t("process.fields.validFrom", { defaultValue: "Valid from" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validFrom", { defaultValue: "Valid from" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validFrom", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validFrom.valid === state.valid && current.validFrom.draftValue === state.draftValue && current.validFrom.dirty === state.dirty ? current : { ...current, validFrom: state })} />}</FormField>
                         <FormField label={t("process.fields.validTo", { defaultValue: "Valid to" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validTo", { defaultValue: "Valid to" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validTo", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validTo.valid === state.valid && current.validTo.draftValue === state.draftValue && current.validTo.dirty === state.dirty ? current : { ...current, validTo: state })} />}</FormField></div>
                         <FormField label={t("process.fields.description", { defaultValue: "Description" })} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", readValue(e))} />}</FormField>
                     </div></div>
                     <div style={{ display: activeTab === "controls" ? "block" : "none" }}>
-                        {form.nodeType === "SUBPROCESS" ? <SubprocessControlScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlScopeDraft} /> : null}
+                        {form.nodeType === "SUBPROCESS" ? <SubprocessControlScopesTab canonicalRows={value?.controlScopes} subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlScopeDraft} /> : null}
                     </div>
                     <div style={{ display: activeTab === "riskTemplates" ? "block" : "none" }}>
-                        {form.nodeType === "SUBPROCESS" ? <SubprocessRiskScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskScopeDraft} /> : null}
+                        {form.nodeType === "SUBPROCESS" ? <SubprocessRiskScopesTab canonicalRows={value?.riskScopes} subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskScopeDraft} /> : null}
                     </div>
                     <div style={{ display: activeTab === "controlObjectives" ? "block" : "none" }}>
-                        {form.nodeType === "SUBPROCESS" ? <SubprocessControlObjectiveScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlObjectiveScopeDraft} /> : null}
+                        {form.nodeType === "SUBPROCESS" ? <SubprocessControlObjectiveScopesTab canonicalRows={value?.controlObjectiveScopes} subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlObjectiveScopeDraft} /> : null}
                     </div>
                     <div style={{ display: activeTab === "requirements" ? "block" : "none" }}>
-                        {form.nodeType === "SUBPROCESS" ? <SubprocessRequirementScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRequirementScopeDraft} /> : null}
+                        {form.nodeType === "SUBPROCESS" ? <SubprocessRequirementScopesTab canonicalRows={value?.requirementScopes} subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setRequirementScopeDraft} /> : null}
                     </div>
                     <div style={{ display: activeTab === "accountGroups" ? "block" : "none" }}>
                         {form.nodeType === "SUBPROCESS" && value?.id ? <SubprocessAccountGroupsTab subprocessId={value.id} /> : null}

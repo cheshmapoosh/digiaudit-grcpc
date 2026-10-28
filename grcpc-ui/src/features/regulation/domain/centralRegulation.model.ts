@@ -1,4 +1,5 @@
 import type { DocumentAggregateRequest } from "@/features/document";
+import type { RegulationRequirementChange } from "./regulationRequirementDrafts.model";
 import type {
   DefinitionDetailFields,
   MutationResponse,
@@ -83,7 +84,11 @@ export interface CreateCentralRegulationGroupCommand extends CreateBase {
   parentGroupId: string | null;
 }
 
-export type UpdateCentralRegulationGroupCommand = UpdateBase;
+export interface UpdateCentralRegulationGroupCommand extends UpdateBase {
+  parentChange?: { parentGroupId: string | null };
+  status?: "ACTIVE" | "INACTIVE";
+  sortOrder?: number;
+}
 
 export interface MoveCentralRegulationGroupCommand {
   version: number;
@@ -93,9 +98,15 @@ export interface MoveCentralRegulationGroupCommand {
 
 export interface CreateCentralRegulationCommand extends CreateBase {
   regulationGroupId: string;
+  requirementChanges?: RegulationRequirementChange[];
 }
 
-export type UpdateCentralRegulationCommand = UpdateBase;
+export interface UpdateCentralRegulationCommand extends UpdateBase {
+  parentChange?: { regulationGroupId: string };
+  status?: "ACTIVE" | "INACTIVE";
+  sortOrder?: number;
+  requirementChanges?: RegulationRequirementChange[];
+}
 
 export interface MoveCentralRegulationCommand {
   version: number;
@@ -107,7 +118,11 @@ export interface CreateCentralRegulationRequirementCommand extends CreateBase {
   regulationId: string;
 }
 
-export type UpdateCentralRegulationRequirementCommand = UpdateBase;
+export interface UpdateCentralRegulationRequirementCommand extends UpdateBase {
+  parentChange?: { regulationId: string };
+  status?: "ACTIVE" | "INACTIVE";
+  sortOrder?: number;
+}
 
 export interface MoveCentralRegulationRequirementCommand {
   version: number;
@@ -115,5 +130,8 @@ export interface MoveCentralRegulationRequirementCommand {
   sortOrder: number;
 }
 
-export type CentralRegulationMutationResponse = MutationResponse;
+export type CentralRegulationMutationResponse = MutationResponse & {
+  entity: CentralRegulationAnyDetail;
+  requirements?: CentralRegulationRequirementDetail[];
+};
 export type CentralRegulationRevisionResponse = RevisionMutationResponse;

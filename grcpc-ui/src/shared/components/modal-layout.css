@@ -23,3 +23,16 @@ div.modalTwoColumnGrid > :is(.controlFieldWide, .controlObjectiveFieldWide, .pol
 @media (min-width: 1101px) { .modalThreeColumnGrid > .modalDateRange { grid-column: span 2; } }
 @media (max-width: 1100px) { .modalThreeColumnGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .modalThreeColumnGrid, div.modalTwoColumnGrid { grid-template-columns: minmax(0, 1fr); } .modalDateRange { grid-column: 1 / -1; } }
+
+/* One host-width rule for Governance dialogs, independent of feature CSS load order. */
+:root { --catalog-dialog-inline-size: 90vw; }
+@media (max-width: 720px) { :root { --catalog-dialog-inline-size: 96vw; } }
+ui5-dialog:is(.catalogObjectDialog, .objectiveDialog, .globalControlDialog) {
+    width: var(--catalog-dialog-inline-size);
+    max-width: var(--catalog-dialog-inline-size);
+    min-width: 0;
+    max-height: 70vh;
+    max-height: 70dvh;
+}
+/* Native Dialog slots keep catalog chrome outside content scrolling. */
+[data-catalog-dialog-content] { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }

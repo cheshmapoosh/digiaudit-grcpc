@@ -1,5 +1,6 @@
 import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { BusyIndicator, Dialog, MessageStrip } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
@@ -8,7 +9,6 @@ import { useCatalogActionPermissions } from "@/features/central-catalog/security
 import {
   toDocumentAggregateDraftError,
   type DocumentAggregateDraftError,
-  type DocumentAggregateRequest,
 } from "@/features/document";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
@@ -26,8 +26,6 @@ import type {
   CreateCentralRiskTemplateCommand,
   EditCentralRiskCategoryCommand,
   EditCentralRiskTemplateCommand,
-  UpdateCentralRiskCategoryCommand,
-  UpdateCentralRiskTemplateCommand,
 } from "../domain/centralRisk.model";
 import { centralRiskApi } from "../infra/centralRisk.api";
 import { riskNodeKey, type CentralRiskTreeNode } from "../utils/centralRisk.tree";
@@ -69,37 +67,11 @@ function isOwnDialogCloseEvent(event: unknown): boolean {
   return Boolean(closeEvent.target && closeEvent.currentTarget && closeEvent.target === closeEvent.currentTarget);
 }
 
-function hasDocumentChanges(documents: DocumentAggregateRequest): boolean {
-  return documents.newDocuments.length > 0
-    || documents.newVersions.length > 0
-    || documents.metadataUpdates.length > 0;
-}
-
-function categoryDefinitionChanged(
-  current: CentralRiskCategoryDetail,
-  edit: EditCentralRiskCategoryCommand,
-): boolean {
-  return current.title !== edit.title
-    || (current.description ?? null) !== edit.description
-    || (current.validFrom ?? null) !== edit.validFrom
-    || (current.validTo ?? null) !== edit.validTo
-    || hasDocumentChanges(edit.documents);
-}
-
-function templateDefinitionChanged(
-  current: CentralRiskTemplateDetail,
-  edit: EditCentralRiskTemplateCommand,
-): boolean {
-  return current.title !== edit.title
-    || current.riskType !== edit.riskType
-    || (current.description ?? null) !== edit.description
-    || (current.validFrom ?? null) !== edit.validFrom
-    || (current.validTo ?? null) !== edit.validTo
-    || hasDocumentChanges(edit.documents);
-}
-
 export default function CentralRiskPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const linkedId = searchParams.get("riskTemplateId");
+  const openedLinkedId = useRef<string | null>(null);
   const appDir = useResolvedUiDir();
   const permissions = useCatalogActionPermissions("CENTRAL_RISK");
   const [categories, setCategories] = useState<CentralRiskCategorySummary[]>([]);
@@ -130,6 +102,10 @@ export default function CentralRiskPage() {
     const candidate = error as { code?: string; message?: string } | null;
     const code = candidate?.code ?? candidate?.message;
     switch (code) {
+      case "HIERARCHY_BUSY": return t("risk.errors.hierarchyBusy");
+      case "PROFILE_BUSY": return t("risk.errors.profileBusy");
+      case "PROFILE_READ_ONLY":
+      case "PROFILE_ACCESS_DENIED": return t("risk.errors.profileReadOnly");
       case "DUPLICATE_BUSINESS_KEY":
         return t("risk.errors.duplicateCode");
       case "MASTER_DATA_NOT_FOUND":
@@ -243,6 +219,21 @@ export default function CentralRiskPage() {
     });
   }, [loadDetail, requestLeave]);
 
+  useEffect(() => {
+    if (!linkedId || openedLinkedId.current === linkedId) return;
+    const row = templates.find(item => item.id === linkedId); if (!row) return;
+    openedLinkedId.current = linkedId;
+    requestLeave(() => {
+      const node: CentralRiskTreeNode = { ...row, key: riskNodeKey("template", row.id), kind: "template", parentCategoryId: row.riskCategoryId, children: [] };
+      setSelectedNode(node); setExpansionAnchorKey(node.key);
+      void loadDetail("template", row.id).then(detail => {
+        if (!detail) return;
+        setSelectedDetail(detail); setModalValue(detail); setModalKind("template");
+        setCreateParentCategoryId(row.riskCategoryId); setModalMode("view"); setActiveTab("general"); setModalOpen(true);
+      });
+    });
+  }, [linkedId, loadDetail, requestLeave, templates]);
+
   const startCreate = useCallback((kind: CentralRiskCreateKind) => {
     requestLeave(() => {
       const parentCategoryId = selectedNode
@@ -311,93 +302,24 @@ export default function CentralRiskPage() {
     setObjectError(null);
     setDocumentError(null);
     try {
-      let entityId: string;
-
+      let detail: RiskDetail;
       if (modalMode === "create") {
-        const result = modalKind === "category"
+        detail = (modalKind === "category"
           ? await centralRiskApi.createCategory(payload as CreateCentralRiskCategoryCommand)
-          : await centralRiskApi.createTemplate(payload as CreateCentralRiskTemplateCommand);
-        entityId = result.entityId;
+          : await centralRiskApi.createTemplate(payload as CreateCentralRiskTemplateCommand)).entity;
       } else if (modalKind === "category") {
-        const current = modalValue as CentralRiskCategoryDetail;
         const edit = payload as EditCentralRiskCategoryCommand;
-        let version = current.version;
-
-        if (categoryDefinitionChanged(current, edit)) {
-          const definition: UpdateCentralRiskCategoryCommand = {
-            version,
-            title: edit.title,
-            description: edit.description,
-            validFrom: edit.validFrom,
-            validTo: edit.validTo,
-            documents: edit.documents,
-          };
-          const result = await centralRiskApi.updateCategory(current.id, definition);
-          version = result.version;
-        }
-
-        if (current.parentCategoryId !== edit.parentCategoryId) {
-          const result = await centralRiskApi.moveCategory(current.id, {
-            version,
-            parentCategoryId: edit.parentCategoryId,
-            sortOrder: edit.sortOrder,
-          });
-          version = result.version;
-        }
-
-        if (current.status !== edit.status) {
-          const result = await centralRiskApi.categoryLifecycle(
-            current.id,
-            edit.status === "ACTIVE" ? "activate" : "inactivate",
-            version,
-          );
-          version = result.version;
-        }
-        entityId = current.id;
+        detail = (await centralRiskApi.updateCategory(modalValue!.id, {
+          ...edit, version: modalValue!.version, parentChange: { parentCategoryId: edit.parentCategoryId },
+        })).entity;
       } else {
-        const current = modalValue as CentralRiskTemplateDetail;
         const edit = payload as EditCentralRiskTemplateCommand;
-        let version = current.version;
-
-        if (templateDefinitionChanged(current, edit)) {
-          const definition: UpdateCentralRiskTemplateCommand = {
-            version,
-            title: edit.title,
-            riskType: edit.riskType,
-            description: edit.description,
-            validFrom: edit.validFrom,
-            validTo: edit.validTo,
-            documents: edit.documents,
-          };
-          const result = await centralRiskApi.updateTemplate(current.id, definition);
-          version = result.version;
-        }
-
-        if (current.riskCategoryId !== edit.riskCategoryId) {
-          const result = await centralRiskApi.moveTemplate(current.id, {
-            version,
-            riskCategoryId: edit.riskCategoryId,
-            sortOrder: edit.sortOrder,
-          });
-          version = result.version;
-        }
-
-        if (current.status !== edit.status) {
-          const result = await centralRiskApi.templateLifecycle(
-            current.id,
-            edit.status === "ACTIVE" ? "activate" : "inactivate",
-            version,
-          );
-          version = result.version;
-        }
-        entityId = current.id;
+        detail = (await centralRiskApi.updateTemplate(modalValue!.id, {
+          ...edit, version: modalValue!.version, parentChange: { riskCategoryId: edit.riskCategoryId },
+        })).entity;
       }
-
       setDirty(false);
-      await loadLists();
-      const detail = modalKind === "category"
-        ? await centralRiskApi.category(entityId)
-        : await centralRiskApi.template(entityId);
+      void loadLists();
       const node: CentralRiskTreeNode = modalKind === "category"
         ? {
             key: riskNodeKey("category", detail.id),
@@ -558,11 +480,11 @@ export default function CentralRiskPage() {
       <Dialog
         open={modalOpen}
         accessibleName={dialogTitle}
-        className="riskObjectDialog"
+        className="riskObjectDialog catalogObjectDialog"
         onClose={handleDialogClose}
       >
         <ModalDialogHeader title={dialogTitle} onClose={closeObject} />
-        <div className="riskDialogContent" dir={appDir}>
+        <div data-catalog-dialog-content className="riskDialogContent" dir={appDir}>
           {modalMode === "create" || modalValue ? (
             <CentralRiskObjectPage
               key={`${modalKind}:${modalMode === "create" ? "create" : modalValue?.id}:${modalMode}`}

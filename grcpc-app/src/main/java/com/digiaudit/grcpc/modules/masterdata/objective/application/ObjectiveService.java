@@ -11,6 +11,7 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.Catalog
 import com.digiaudit.grcpc.modules.masterdata.objective.api.ObjectiveDtos;
 import com.digiaudit.grcpc.modules.masterdata.objective.api.ObjectiveMapper;
 import com.digiaudit.grcpc.modules.masterdata.objective.api.OrganizationObjectiveDtos;
+import com.digiaudit.grcpc.modules.masterdata.objective.api.OrganizationObjectiveChange;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveEntity;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveKind;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveRepository;
@@ -87,12 +88,14 @@ public class ObjectiveService {
     return e;
   }
 
-  public MasterDataAggregateMutationResponse create(ObjectiveDtos.Create request) {
+  @Transactional
+  public ObjectiveDtos.AggregateResponse create(ObjectiveDtos.Create request) {
     ObjectiveKind kind = request.kind() == null ? ObjectiveKind.OBJECTIVE : request.kind();
     String code = support.normalizeCode(request.code());
     String name = support.normalizeTitle(request.name());
     if (kind == ObjectiveKind.OBJECTIVE) support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
+    AtomicReference<OrganizationObjectiveService.Plan> relationPlan = new AtomicReference<>();
     RevisionExecutionResult result = revisions.executeStructural(
         List.of(MasterDataHierarchyKey.OBJECTIVE, MasterDataHierarchyKey.ORGANIZATION),
         RevisionRequest.central("Create objective " + code, "Objective create", null),
@@ -105,26 +108,35 @@ public class ObjectiveService {
           UUID id = UUID.randomUUID();
           validateStructure(id, kind, request.parentObjectiveId(), hierarchy);
           validateStrategyOrganizations(id, kind, request.organizationIds());
+          if (kind == ObjectiveKind.STRATEGY && request.organizationChanges() != null && !request.organizationChanges().isEmpty())
+            throw invalidOrganizationChanges();
           ObjectiveEntity entity = new ObjectiveEntity(id, code, name,
               support.normalizeDescription(request.description()),
               kind == ObjectiveKind.STRATEGY ? null : normalizeType(request.objectiveType()),
               request.parentObjectiveId(), kind == ObjectiveKind.STRATEGY ? null : request.validFrom(),
               kind == ObjectiveKind.STRATEGY ? null : request.validTo(),
               actors.currentActorId(), Instant.now(clock), kind);
+          var relations = organizationObjectives.prepareForObjective(entity,
+              organizationChanges(id, request.organizationIds(), request.organizationChanges(), name));
+          relationPlan.set(relations);
           entity = objectives.saveAndFlush(entity);
-          synchronizeOrganizations(id, request.organizationIds());
           finalized.set(documents.finalizePreparedAggregate(prepared, DocumentLinkTargetType.OBJECTIVE,
               id, "MD_REFERENCE_MANAGE"));
           return support.completed(context, entity, RevisionEntityType.OBJECTIVE,
               RevisionOperationType.CREATE, null, null, typed(entity));
         });
-    return support.aggregateResponse(result, finalized.get());
+    // The immediate caused-by FK requires the CENTRAL header to exist before LOCAL is flushed.
+    // Both coordinators still join this protected outer transaction and retain all endpoint locks.
+    applyOrganizationChanges(relationPlan.get(), result.primaryResult().revisionId());
+    return aggregateResponse(result, finalized.get());
   }
 
-  public MasterDataAggregateMutationResponse update(UUID id, ObjectiveDtos.Update request) {
+  @Transactional
+  public ObjectiveDtos.AggregateResponse update(UUID id, ObjectiveDtos.Update request) {
     long expected = support.requireVersion(request.version());
     String name = support.normalizeTitle(request.name());
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
+    AtomicReference<OrganizationObjectiveService.Plan> relationPlan = new AtomicReference<>();
     RevisionExecutionResult result = revisions.executeStructural(
         List.of(MasterDataHierarchyKey.OBJECTIVE, MasterDataHierarchyKey.ORGANIZATION),
         RevisionRequest.central("Update objective " + id, "Objective update", null),
@@ -140,19 +152,40 @@ public class ObjectiveService {
           if (kind == ObjectiveKind.OBJECTIVE) support.validateValidity(request.validFrom(), request.validTo());
           validateStructure(id, kind, request.parentObjectiveId(), hierarchy);
           validateStrategyOrganizations(id, kind, request.organizationIds());
+          if (kind == ObjectiveKind.STRATEGY && request.organizationChanges() != null && !request.organizationChanges().isEmpty())
+            throw invalidOrganizationChanges();
+          var projectedOwner = new ObjectiveEntity(id, entity.getCode(), name,
+              support.normalizeDescription(request.description()),
+              kind == ObjectiveKind.STRATEGY ? null : normalizeType(request.objectiveType()),
+              request.parentObjectiveId(), kind == ObjectiveKind.STRATEGY ? null : request.validFrom(),
+              kind == ObjectiveKind.STRATEGY ? null : request.validTo(), actors.currentActorId(), Instant.now(clock), kind);
+          if (entity.getStatus() == MasterDataLifecycleStatus.INACTIVE)
+            projectedOwner.inactivate(actors.currentActorId(), Instant.now(clock));
+          var relations = organizationObjectives.prepareForObjective(projectedOwner,
+              organizationChanges(id, request.organizationIds(), request.organizationChanges(), name));
+          relationPlan.set(relations);
+          if (relations.isEmpty() && !hasDocuments(request.documents())
+              && Objects.equals(entity.getName(), projectedOwner.getName())
+              && Objects.equals(entity.getDescription(), projectedOwner.getDescription())
+              && Objects.equals(entity.getObjectiveType(), projectedOwner.getObjectiveType())
+              && Objects.equals(entity.getParentObjectiveId(), projectedOwner.getParentObjectiveId())
+              && entity.getKind() == projectedOwner.getKind()
+              && Objects.equals(entity.getValidFrom(), projectedOwner.getValidFrom())
+              && Objects.equals(entity.getValidTo(), projectedOwner.getValidTo()))
+            throw new UnprocessableEntityException("NO_CHANGE", "error.masterdata.v2.noChange", "The command contains no change");
           JsonNode before = support.snapshot(entity, typed(entity));
           entity.update(name, support.normalizeDescription(request.description()),
               kind == ObjectiveKind.STRATEGY ? null : normalizeType(request.objectiveType()), request.parentObjectiveId(),
               kind == ObjectiveKind.STRATEGY ? null : request.validFrom(),
               kind == ObjectiveKind.STRATEGY ? null : request.validTo(), actors.currentActorId(), Instant.now(clock), kind);
           entity = objectives.saveAndFlush(entity);
-          synchronizeOrganizations(id, request.organizationIds());
           finalized.set(documents.finalizePreparedAggregate(prepared, DocumentLinkTargetType.OBJECTIVE,
               id, "MD_REFERENCE_MANAGE"));
           return support.completed(context, entity, RevisionEntityType.OBJECTIVE,
               RevisionOperationType.UPDATE, expected, before, typed(entity));
         });
-    return support.aggregateResponse(result, finalized.get());
+    applyOrganizationChanges(relationPlan.get(), result.primaryResult().revisionId());
+    return aggregateResponse(result, finalized.get());
   }
 
   public MasterDataRevisionMutationResponse delete(UUID id, Long version) {
@@ -252,8 +285,10 @@ public class ObjectiveService {
     }
   }
 
-  private void synchronizeOrganizations(UUID objectiveId, List<UUID> requestedIds) {
-    if (requestedIds == null) return;
+  private List<OrganizationObjectiveChange> organizationChanges(UUID objectiveId, List<UUID> requestedIds,
+      List<OrganizationObjectiveChange> changes, String objectiveName) {
+    if (requestedIds != null && changes != null) throw invalidOrganizationChanges();
+    if (requestedIds == null) return changes;
     Set<UUID> desired = new LinkedHashSet<>(requestedIds);
     if (desired.contains(null) || desired.size() != requestedIds.size())
       throw new UnprocessableEntityException("INVALID_ORGANIZATION_SELECTION",
@@ -262,16 +297,53 @@ public class ObjectiveService {
         objectiveId, MasterDataLifecycleStatus.DELETED);
     Set<UUID> current = existing.stream().map(e -> e.getOrganizationId())
         .collect(Collectors.toSet());
+    var result = new ArrayList<OrganizationObjectiveChange>();
     for (var assignment : existing) {
       if (!desired.contains(assignment.getOrganizationId()))
-        organizationObjectives.remove(assignment.getOrganizationId(), objectiveId,
-            assignment.getVersion());
+        result.add(new OrganizationObjectiveChange(OrganizationObjectiveChange.Operation.DELETE,
+            assignment.getId(), assignment.getVersion(), null, assignment.getOrganizationId(),
+            null, null, null, null, null, null));
     }
     for (UUID organizationId : desired) {
-      if (!current.contains(organizationId))
-        organizationObjectives.assign(organizationId,
-            new OrganizationObjectiveDtos.Create(objectiveId, null, null, null, null, null));
+      if (!current.contains(organizationId)) {
+        var deleted = assignments.findByOrganizationIdAndObjectiveId(organizationId, objectiveId).orElse(null);
+        result.add(new OrganizationObjectiveChange(OrganizationObjectiveChange.Operation.CREATE_OR_RESTORE,
+            deleted == null ? null : deleted.getId(), deleted == null ? null : deleted.getVersion(),
+            null, organizationId, deleted == null ? objectiveName : null, null, null, null, null, null));
+      }
     }
+    return result;
+  }
+
+  private void applyOrganizationChanges(OrganizationObjectiveService.Plan plan, UUID centralRevisionId) {
+    for (UUID organizationId : plan.organizationIds()) {
+      revisions.execute(RevisionRequest.local(organizationId, "Objective organization changes",
+          "Objective organization aggregate", centralRevisionId), local -> {
+        var contents = organizationObjectives.apply(plan.forOrganization(organizationId));
+        var first = contents.getFirst();
+        return RevisionOperationResult.completed(local,
+            new com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataMutationResult(
+                first.entityId(), local.revisionId(), first.appliedEntityVersion()), contents);
+      });
+    }
+  }
+
+  private ObjectiveDtos.AggregateResponse aggregateResponse(RevisionExecutionResult result,
+      List<DocumentCommandResponse> finalized) {
+    var primary = result.primaryResult();
+    var entity = objectives.findById(primary.entityId()).orElseThrow(() -> notFound(primary.entityId()));
+    return new ObjectiveDtos.AggregateResponse(primary.entityId(), primary.revisionId(), primary.version(),
+        finalized, mapper.detail(entity), entity.getKind() == ObjectiveKind.STRATEGY ? List.of()
+            : organizationObjectives.canonicalForObjective(entity.getId()));
+  }
+
+  private UnprocessableEntityException invalidOrganizationChanges() {
+    return new UnprocessableEntityException("INVALID_ORGANIZATION_SELECTION",
+        "error.masterdata.objective.organizationSelection", "Organization changes are invalid");
+  }
+
+  private boolean hasDocuments(com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest batch) {
+    return batch != null && (!batch.newDocuments().isEmpty() || !batch.newVersions().isEmpty() || !batch.metadataUpdates().isEmpty());
   }
 
   private Map<String, ?> typed(ObjectiveEntity e) {

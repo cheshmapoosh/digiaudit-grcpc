@@ -226,6 +226,8 @@ export interface LocalMutation<T> {
     row: T;
 }
 export interface LocalOption {
+    status?: LocalStatus; validFrom?: string | null; validTo?: string | null;
+    definitionId?: string; controlId?: string; riskTemplateId?: string; controlObjectiveId?: string; requirementId?: string;
     id: string;
     code?: string;
     displayLabel?: string;

@@ -87,7 +87,9 @@ async function runActiveRead(
         const indexes = buildIndexes(await organizationService.list());
         if (capturedGeneration !== stateGeneration || requestSequence !== activeReadSequence) return;
         set((state) => ({
-            ...indexes,
+            ...buildIndexes(Object.values(indexes.nodesById).map(node => ({ ...node,
+                localRelationships: node.version === state.nodesById[node.id]?.version ? state.nodesById[node.id]?.localRelationships : undefined,
+            }))),
             loadedChildren: { ...state.loadedChildren, [parentId]: true },
         }));
     } finally {
@@ -133,7 +135,8 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
         const loadingEpoch = beginMutation(set);
         try {
             const result = await organizationService.create(payload);
-            const confirmed = result.organization;
+            const confirmed = { ...result.organization, localRelationships: result.localRelationships };
+            result.organization = confirmed;
             set((state) => withActiveNodes(state, {
                 ...state.nodesById,
                 [confirmed.id]: confirmed,
@@ -163,6 +166,7 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
         const loadingEpoch = beginMutation(set);
         try {
             const result = await organizationService.update(id, payload);
+            result.organization = { ...result.organization, localRelationships: result.localRelationships };
             set((state) => withActiveNodes(state, {
                 ...state.nodesById,
                 [id]: result.organization,

@@ -14,7 +14,7 @@ export interface ControlAccountGroupClassification {
 
 export interface AccountGroupOption {
   id: string; code: string; title: string; parentAccountGroupId: string | null;
-  sortOrder: number; status: ClassificationEditableStatus; children: AccountGroupOption[];
+  sortOrder: number; status: ClassificationStatus; children: AccountGroupOption[];
 }
 export interface ControlAccountGroupOptions { accountGroups: AccountGroupOption[]; }
 
@@ -28,7 +28,7 @@ export interface ControlAccountGroupChange {
 export interface ClassificationDraftRow {
   key: string; classificationId: string | null; accountGroupId: string; accountGroupCode: string;
   accountGroupTitle: string; parentAccountGroupId: string | null; accountGroupStatus: ClassificationStatus;
-  status: ClassificationEditableStatus; validFrom: string | null; validTo: string | null;
+  status: ClassificationStatus; validFrom: string | null; validTo: string | null;
   version: number | null; editState: ClassificationEditState; original: ControlAccountGroupClassification | null;
 }
 export interface ClassificationDraftState { changes: ControlAccountGroupChange[]; dirty: boolean; ready: boolean; invalid: boolean; }

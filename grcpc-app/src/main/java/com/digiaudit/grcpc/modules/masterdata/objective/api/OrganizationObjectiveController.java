@@ -16,8 +16,9 @@ public class OrganizationObjectiveController {
 
   @GetMapping
   @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
-  public List<OrganizationObjectiveDtos.Detail> list(@PathVariable UUID organizationId) {
-    return service.list(organizationId);
+  public List<OrganizationObjectiveDtos.Detail> list(@PathVariable UUID organizationId,
+      @RequestParam(required = false) com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus lifecycleStatus) {
+    return service.list(organizationId, lifecycleStatus);
   }
 
   @PostMapping
@@ -39,5 +40,19 @@ public class OrganizationObjectiveController {
   public MasterDataRevisionMutationResponse remove(@PathVariable UUID organizationId,
       @PathVariable UUID objectiveId, @RequestParam Long version) {
     return service.remove(organizationId, objectiveId, version);
+  }
+
+  @PostMapping("/{objectiveId}/activate")
+  @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
+  public MasterDataRevisionMutationResponse activate(@PathVariable UUID organizationId,
+      @PathVariable UUID objectiveId, @RequestParam Long version) {
+    return service.activate(organizationId, objectiveId, version);
+  }
+
+  @PostMapping("/{objectiveId}/inactivate")
+  @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
+  public MasterDataRevisionMutationResponse inactivate(@PathVariable UUID organizationId,
+      @PathVariable UUID objectiveId, @RequestParam Long version) {
+    return service.inactivate(organizationId, objectiveId, version);
   }
 }

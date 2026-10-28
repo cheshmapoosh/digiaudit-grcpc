@@ -110,7 +110,7 @@ const TEST_AUTOMATION: CentralControlTestAutomationType[] = ["AUTOMATED", "MANUA
 const TESTING_TECHNIQUES: CentralControlTestingTechnique[] = ["ATTRIBUTE_SAMPLING", "DOCUMENT_INSPECTION_WITH_INQUIRY", "CONTROL_OBSERVATION_WITH_INQUIRY", "CONTROL_REPERFORMANCE_WITH_INQUIRY"];
 const EVIDENCE_LEVELS: CentralControlEvidenceLevel[] = ["NO_TESTING", "SELF_ASSESSMENT", "CONTROL_DESIGN_AND_EFFECTIVENESS", "NOT_APPLICABLE"];
 
-function toForm(value: CentralControlDetail | null, initialControlGroupId?: string | null): FormState {
+function toForm(value: CentralControlDetail | null, initialControlGroupId?: string | null, creating = false): FormState {
   return {
     code: value?.code ?? "",
     title: value?.title ?? "",
@@ -130,7 +130,7 @@ function toForm(value: CentralControlDetail | null, initialControlGroupId?: stri
     testAutomationType: value?.testAutomationType ?? "",
     testingTechnique: value?.testingTechnique ?? "",
     evidenceLevel: value?.evidenceLevel ?? "",
-    status: value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+    status: !creating && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     validFrom: value?.validFrom ?? "",
     validTo: value?.validTo ?? "",
   };
@@ -179,8 +179,8 @@ export default function CentralControlObjectPage({
   const riskAssignmentPermissions = useRiskControlAssignmentPermissions();
   const requirementAssignmentPermissions = useRequirementControlAssignmentPermissions();
   const objectiveAssignmentPermissions = useControlControlObjectiveAssignmentPermissions();
-  const [form, setForm] = useState<FormState>(() => toForm(value, initialControlGroupId));
-  const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, initialControlGroupId))));
+  const [form, setForm] = useState<FormState>(() => toForm(value, initialControlGroupId, mode === "create"));
+  const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, initialControlGroupId, mode === "create"))));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
   const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
@@ -193,13 +193,13 @@ export default function CentralControlObjectPage({
   const readOnly = mode === "view";
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const generalDirty = JSON.stringify(normalized(form)) !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
-  const dirty = generalDirty || documents.dirty || documents.uploading || accountGroupDraft.dirty || riskAssignmentDraft.dirty || objectiveAssignmentDraft.dirty || requirementAssignmentDraft.dirty;
+  const dirty = generalDirty || documents.dirty || documents.uploading || accountGroupDraft.dirty || riskAssignmentDraft.dirty || objectiveAssignmentDraft.dirty || requirementAssignmentDraft.dirty || groupHelpOpen;
   const scope = mode === "create" ? "CREATE" : value?.id ?? "EMPTY";
   const allRelevanceSelected = form.controlRelevance.length === RELEVANCE_VALUES.length;
 
   useEffect(() => {
     if (scopeRef.current === scope && dirty) return;
-    const next = toForm(value, initialControlGroupId);
+    const next = toForm(value, initialControlGroupId, mode === "create");
     const timer = window.setTimeout(() => {
       setForm(next);
       setBaseline(JSON.stringify(normalized(next)));
@@ -212,7 +212,7 @@ export default function CentralControlObjectPage({
       scopeRef.current = scope;
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [dirty, initialControlGroupId, scope, value]);
+  }, [dirty, initialControlGroupId, mode, scope, value]);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -289,7 +289,7 @@ export default function CentralControlObjectPage({
     }
   };
 
-  const saveDisabled = busy || invalidDate || documents.uploading || documents.invalid || !documents.ready || !accountGroupDraft.ready || accountGroupDraft.invalid || [riskAssignmentDraft, objectiveAssignmentDraft, requirementAssignmentDraft].some(draft => !draft.ready || draft.invalid) || (!generalDirty && !documents.dirty && !accountGroupDraft.dirty && !riskAssignmentDraft.dirty && !objectiveAssignmentDraft.dirty && !requirementAssignmentDraft.dirty);
+  const saveDisabled = busy || groupHelpOpen || invalidDate || documents.uploading || documents.invalid || !documents.ready || !accountGroupDraft.ready || accountGroupDraft.invalid || [riskAssignmentDraft, objectiveAssignmentDraft, requirementAssignmentDraft].some(draft => !draft.ready || draft.invalid) || (!generalDirty && !documents.dirty && !accountGroupDraft.dirty && !riskAssignmentDraft.dirty && !objectiveAssignmentDraft.dirty && !requirementAssignmentDraft.dirty);
 
   const selectField = <T extends string>(label: string, selectedValue: T | "", values: readonly T[], key: keyof FormState, prefix: string) => (
     <Field label={label}>{readOnly ? <Text className="objectPageValue">{(selectedValue ? t(prefix + "." + selectedValue) : "—") || "—"}</Text> : <Select value={selectedValue} disabled={readOnly || busy} onChange={(event) => change(key, readValue(event) as never)}><Option value="">{t("common.notSpecified", { defaultValue: "تعیین نشده" })}</Option>{values.map((item) => <Option key={item} value={item}>{t(`${prefix}.${item}`)}</Option>)}</Select>}</Field>
@@ -299,7 +299,7 @@ export default function CentralControlObjectPage({
     <div className="controlObjectPage">
       <CatalogParentHeader objectTitle={form.title || t("control.object.title")} label={t("control.fields.controlGroup")} parentId={form.controlGroupId} required
         parent={selectedGroup ? { code: selectedGroup.code, title: selectedGroup.title, type: t("control.nodeType.group"), status: selectedGroup.status } : null}
-        selection={!readOnly ? <Button disabled={busy} onClick={() => setGroupHelpOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+        selection={!readOnly ? <Button design="Emphasized" disabled={busy} onClick={() => setGroupHelpOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key") as CentralControlTabKey | null;
@@ -377,7 +377,7 @@ export default function CentralControlObjectPage({
             {selectField(t("control.fields.testingTechnique"), form.testingTechnique, TESTING_TECHNIQUES, "testingTechnique", "control.testingTechnique")}
             {selectField(t("control.fields.evidenceLevel"), form.evidenceLevel, EVIDENCE_LEVELS, "evidenceLevel", "control.evidenceLevel")}
             <Field label={t("control.fields.testPlan")}>{readOnly ? <Text className="objectPageValue">{"—"}</Text> : <Input value="" disabled accessibleName={t("control.fields.testPlan")} />}<Text>{t("control.testPlan.deferred")}</Text></Field>
-            <Field label={t("control.fields.status")}>{readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("control.status." + form.status)}</ObjectStatus> : <Select value={form.status} disabled={mode !== "edit" || busy} onChange={(e) => change("status", e.target.value as CentralControlEditableStatus)}><Option value="ACTIVE">{t("control.status.ACTIVE")}</Option><Option value="INACTIVE">{t("control.status.INACTIVE")}</Option></Select>}</Field>
+            <Field label={t("control.fields.status")}>{mode === "create" ? <ObjectStatus state="Positive">{t("common.active")}</ObjectStatus> : readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("control.status." + form.status)}</ObjectStatus> : <Select value={form.status} disabled={mode !== "edit" || busy} onChange={(e) => change("status", e.target.value as CentralControlEditableStatus)}><Option value="ACTIVE">{t("control.status.ACTIVE")}</Option><Option value="INACTIVE">{t("control.status.INACTIVE")}</Option></Select>}</Field>
             <Field label={t("control.fields.createdAt")}>{readOnly ? <Text className="objectPageValue">{(formatPersianDateTime(value?.createdAt)) || "—"}</Text> : <Input value={formatPersianDateTime(value?.createdAt)} readonly />}</Field>
             <div className="controlDateRangeRow">
               <Field label={t("control.fields.validFrom")}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validFrom")} invalidValueMessage={t("control.validation.invalidDate")} onChange={(next) => change("validFrom", next)} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} />}</Field>
@@ -392,12 +392,12 @@ export default function CentralControlObjectPage({
         </div>
 
         <div className={activeTab === "accountGroups" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>
-          {accountGroupPermissions.view ? <ControlAccountGroupsTab controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setAccountGroupDraft} /> : null}
+          {accountGroupPermissions.view ? <ControlAccountGroupsTab canonicalRows={value?.relations?.accountGroupClassifications} controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setAccountGroupDraft} /> : null}
         </div>
 
-        <div className={activeTab === "risks" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{riskAssignmentPermissions.view ? <ControlRiskTemplateAssignmentsTab controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskAssignmentDraft} /> : null}</div>
-        <div className={activeTab === "requirements" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{requirementAssignmentPermissions.view ? <ControlRequirementAssignmentsTab controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setRequirementAssignmentDraft} /> : null}</div>
-        <div className={activeTab === "controlObjectives" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{objectiveAssignmentPermissions.view ? <ControlControlObjectiveAssignmentsTab controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setObjectiveAssignmentDraft} /> : null}</div>
+        <div className={activeTab === "risks" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{riskAssignmentPermissions.view ? <ControlRiskTemplateAssignmentsTab canonicalRows={value?.relations?.riskAssignments} controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskAssignmentDraft} /> : null}</div>
+        <div className={activeTab === "requirements" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{requirementAssignmentPermissions.view ? <ControlRequirementAssignmentsTab canonicalRows={value?.relations?.requirementAssignments} controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setRequirementAssignmentDraft} /> : null}</div>
+        <div className={activeTab === "controlObjectives" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>{objectiveAssignmentPermissions.view ? <ControlControlObjectiveAssignmentsTab canonicalRows={value?.relations?.controlObjectiveAssignments} controlId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setObjectiveAssignmentDraft} /> : null}</div>
 
         <div className={activeTab === "documents" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>
           <DocumentManager targetType="CENTRAL_CONTROL" targetId={value?.id ?? null} readOnly={readOnly || !permissions.documentUpload} showActions={!readOnly && permissions.documentUpload} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentError} onDraftStateChange={setDocuments} title={t("control.tabs.documents")} />

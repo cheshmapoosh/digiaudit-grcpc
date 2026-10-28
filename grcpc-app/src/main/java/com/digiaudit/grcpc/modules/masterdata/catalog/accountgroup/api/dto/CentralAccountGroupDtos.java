@@ -1,6 +1,7 @@
 package com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.api.dto;
 
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.enums.CentralAccountGroupImportance;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import jakarta.validation.Valid;
@@ -13,6 +14,9 @@ import java.util.UUID;
 
 public final class CentralAccountGroupDtos {
   private CentralAccountGroupDtos() {}
+
+  public record AggregateResponse(UUID entityId, UUID revisionId, long version,
+      List<DocumentCommandResponse> finalizedDocuments, Detail entity) {}
 
   public record Create(
       @NotBlank String code,
@@ -34,7 +38,12 @@ public final class CentralAccountGroupDtos {
       LocalDate validFrom,
       LocalDate validTo,
       @NotNull Long version,
-      @Valid DocumentAggregateBatchRequest documents) {}
+      @Valid DocumentAggregateBatchRequest documents,
+      @Valid ParentChange parentChange,
+      MasterDataLifecycleStatus status,
+      Integer sortOrder) {}
+
+  public record ParentChange(UUID parentAccountGroupId) {}
 
   public record Move(UUID parentAccountGroupId, Integer sortOrder, @NotNull Long version) {}
 

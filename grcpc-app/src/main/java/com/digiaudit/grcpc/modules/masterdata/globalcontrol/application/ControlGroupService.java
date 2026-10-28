@@ -73,7 +73,8 @@ public class ControlGroupService {
     return mapper.group(entity);
   }
 
-  public MasterDataRevisionMutationResponse create(ControlGroupDtos.Create request) {
+  @Transactional
+  public ControlGroupDtos.MutationResponse create(ControlGroupDtos.Create request) {
     String code = support.normalizeCode(request.code());
     String name = support.normalizeTitle(request.name());
     support.validateValidity(request.validFrom(), request.validTo());
@@ -92,10 +93,13 @@ public class ControlGroupService {
           return support.completed(context, entity, RevisionEntityType.CONTROL_GROUP,
               RevisionOperationType.CREATE, null, null, typed(entity));
         });
-    return MasterDataRevisionMutationResponse.from(result.primaryResult());
+    var primary = result.primaryResult();
+    return new ControlGroupDtos.MutationResponse(primary.entityId(), primary.revisionId(), primary.version(),
+        mapper.group(groups.findById(primary.entityId()).orElseThrow(() -> notFound(primary.entityId()))));
   }
 
-  public MasterDataRevisionMutationResponse update(UUID id, ControlGroupDtos.Update request) {
+  @Transactional
+  public ControlGroupDtos.MutationResponse update(UUID id, ControlGroupDtos.Update request) {
     long expected = support.requireVersion(request.version());
     String name = support.normalizeTitle(request.name());
     support.validateValidity(request.validFrom(), request.validTo());
@@ -117,7 +121,9 @@ public class ControlGroupService {
           return support.completed(context, entity, RevisionEntityType.CONTROL_GROUP,
               RevisionOperationType.UPDATE, expected, before, typed(entity));
         });
-    return MasterDataRevisionMutationResponse.from(result.primaryResult());
+    var primary = result.primaryResult();
+    return new ControlGroupDtos.MutationResponse(primary.entityId(), primary.revisionId(), primary.version(),
+        mapper.group(groups.findById(primary.entityId()).orElseThrow(() -> notFound(primary.entityId()))));
   }
 
   public MasterDataRevisionMutationResponse delete(UUID id, Long version) {

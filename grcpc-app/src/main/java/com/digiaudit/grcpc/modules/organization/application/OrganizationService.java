@@ -73,7 +73,7 @@ public class OrganizationService {
     private final RevisionMutationGuard mutationGuard;
     private final DocumentCommandService documentCommandService;
     private final OrganizationOwnerAssignmentService owners;
-    private final LocalContextService subprocessContexts;
+    private final com.digiaudit.grcpc.modules.masterdata.local.application.OrganizationLocalAggregateService localAggregate;
 
     public OrganizationService(
             com.digiaudit.grcpc.modules.basicdata.application.BasicDataService basicData,
@@ -86,7 +86,7 @@ public class OrganizationService {
             RevisionMutationGuard mutationGuard,
             DocumentCommandService documentCommandService,
             OrganizationOwnerAssignmentService owners,
-            LocalContextService subprocessContexts
+            com.digiaudit.grcpc.modules.masterdata.local.application.OrganizationLocalAggregateService localAggregate
     ) {
         this.basicData = basicData;
         this.organizationRepository = Objects.requireNonNull(organizationRepository, "organizationRepository is required");
@@ -98,7 +98,7 @@ public class OrganizationService {
         this.mutationGuard = Objects.requireNonNull(mutationGuard, "mutationGuard is required");
         this.documentCommandService = Objects.requireNonNull(documentCommandService, "documentCommandService is required");
         this.owners = owners;
-        this.subprocessContexts = subprocessContexts;
+        this.localAggregate = localAggregate;
     }
 
     @Transactional(readOnly = true)
@@ -126,7 +126,7 @@ public class OrganizationService {
 
     @Transactional
     public OrganizationAggregateMutationResponse create(CreateOrganizationRequest request) {
-        if (hasSubprocessChanges(request.subprocesses())) subprocessContexts.prepareOrganizationSave();
+        localAggregate.lock(request);
         String code = normalizeCode(request.code());
         OrganizationGeneralInformation generalInformation = normalizeGeneralInformation(
                 request.name(),
@@ -139,36 +139,43 @@ public class OrganizationService {
                 request.validTo()
         );
         AtomicReference<List<DocumentCommandResponse>> finalizedDocuments = new AtomicReference<>(List.of());
+        AtomicReference<DocumentCommandService.PreparedAggregateContext> preparedDocumentState = new AtomicReference<>();
         AtomicReference<OrganizationResponse> confirmed = new AtomicReference<>();
+        AtomicReference<com.digiaudit.grcpc.modules.masterdata.local.application.OrganizationLocalAggregateService.Plan> preparedLocal = new AtomicReference<>();
         RevisionExecutionResult result = revisionCoordinator.executeStructural(
-                    MasterDataHierarchyKey.ORGANIZATION,
+                    localAggregate.guards(request),
                     RevisionRequest.central("Create organization " + code, "Organization structural create", null),
                     context -> {
                         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
                         DocumentCommandService.PreparedAggregateContext preparedDocuments =
                                 documentCommandService.prepareAggregate(request.documents());
+                        preparedDocumentState.set(preparedDocuments);
                         RevisionOperationResult operation = createInsideRevision(
                                 context,
                                 code,
                                 request.parentOrganizationId(),
-                                request.ownerAssignments(),
+                                List.of(),
                                 generalInformation
                         );
-                        finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
-                                preparedDocuments,
-                                DocumentLinkTargetType.ORGANIZATION,
-                                operation.primaryResult().entityId()
-                        ));
+                        localAggregate.lockEndpoints(operation.primaryResult().entityId(), request);
+                        var preparedOwners = owners.prepare(context, operation.primaryResult().entityId(), request.ownerAssignments());
+                        preparedLocal.set(localAggregate.prepare(operation.primaryResult().entityId(), request));
+                        operation = appendOwners(context, operation, preparedOwners);
                         confirmed.set(toResponse(findActiveReadable(operation.primaryResult().entityId())));
                         return operation;
                     }
         );
-        return aggregateResponse(result, finalizedDocuments.get(), confirmed.get(), request.subprocesses());
+        // The CENTRAL header must exist before the immediate caused_by_revision FK is flushed by LOCAL.
+        // Both coordinator calls still participate in this protected outer transaction.
+        var local = localAggregate.apply(preparedLocal.get(), result.primaryResult().revisionId());
+        finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(preparedDocumentState.get(),
+                DocumentLinkTargetType.ORGANIZATION, result.primaryResult().entityId()));
+        return aggregateResponse(result, finalizedDocuments.get(), confirmed.get(), local);
     }
 
     @Transactional
     public OrganizationAggregateMutationResponse update(UUID organizationId, UpdateOrganizationRequest request) {
-        if (hasSubprocessChanges(request.subprocesses())) subprocessContexts.prepareOrganizationSave();
+        localAggregate.lock(request);
         long expectedVersion = requireVersion(request.version());
         OrganizationGeneralInformation generalInformation = normalizeGeneralInformation(
                 request.name(),
@@ -181,9 +188,11 @@ public class OrganizationService {
                 request.validTo()
         );
         AtomicReference<List<DocumentCommandResponse>> finalizedDocuments = new AtomicReference<>(List.of());
+        AtomicReference<DocumentCommandService.PreparedAggregateContext> preparedDocumentState = new AtomicReference<>();
         AtomicReference<OrganizationResponse> confirmed = new AtomicReference<>();
+        AtomicReference<com.digiaudit.grcpc.modules.masterdata.local.application.OrganizationLocalAggregateService.Plan> preparedLocal = new AtomicReference<>();
         RevisionExecutionResult result = revisionCoordinator.executeStructural(
-                MasterDataHierarchyKey.ORGANIZATION,
+                localAggregate.guards(request),
                 RevisionRequest.central(
                         "Update organization " + organizationId,
                         "Organization General Information update",
@@ -193,24 +202,29 @@ public class OrganizationService {
                     mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
                     DocumentCommandService.PreparedAggregateContext preparedDocuments =
                             documentCommandService.prepareAggregate(request.documents());
+                        preparedDocumentState.set(preparedDocuments);
                     RevisionOperationResult operation = updateInsideRevision(
                             context,
                             organizationId,
                             expectedVersion,
                             request.parentOrganizationId(),
-                            request.ownerAssignments(),
+                            List.of(),
                             generalInformation
                     );
-                    finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
-                            preparedDocuments,
-                            DocumentLinkTargetType.ORGANIZATION,
-                            organizationId
-                    ));
+                    localAggregate.lockEndpoints(organizationId, request);
+                    var preparedOwners = owners.prepare(context, organizationId, request.ownerAssignments());
+                    preparedLocal.set(localAggregate.prepare(organizationId, request));
+                    operation = appendOwners(context, operation, preparedOwners);
                     confirmed.set(toResponse(findActiveReadable(organizationId)));
                     return operation;
                 }
         );
-        return aggregateResponse(result, finalizedDocuments.get(), confirmed.get(), request.subprocesses());
+        // The CENTRAL header must exist before the immediate caused_by_revision FK is flushed by LOCAL.
+        // Both coordinator calls still participate in this protected outer transaction.
+        var local = localAggregate.apply(preparedLocal.get(), result.primaryResult().revisionId());
+        finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(preparedDocumentState.get(),
+                DocumentLinkTargetType.ORGANIZATION, result.primaryResult().entityId()));
+        return aggregateResponse(result, finalizedDocuments.get(), confirmed.get(), local);
     }
 
     public MasterDataRevisionMutationResponse move(UUID organizationId, MoveOrganizationRequest request) {
@@ -349,25 +363,24 @@ public class OrganizationService {
         return completed(context, saved, RevisionOperationType.UPDATE, expectedVersion, before, ownerAssignments);
     }
 
-    private OrganizationAggregateMutationResponse aggregateResponse(
-            RevisionExecutionResult result,
-            List<DocumentCommandResponse> finalizedDocuments,
-            OrganizationResponse organization,
-            List<LocalContextDtos.ContextChange> subprocesses
-    ) {
-        MasterDataMutationResult primary = result.primaryResult();
-        return new OrganizationAggregateMutationResponse(
-                primary.entityId(),
-                primary.revisionId(),
-                primary.version(),
-                finalizedDocuments, organization,
-                hasSubprocessChanges(subprocesses) ? subprocessContexts.saveSubprocesses(
-                        primary.entityId(), new LocalContextDtos.SaveContexts(subprocesses), primary.revisionId()) : null
-        );
+    private RevisionOperationResult appendOwners(RevisionExecutionContext context, RevisionOperationResult operation, OrganizationOwnerAssignmentService.Plan plan) {
+        var ownerContents = owners.apply(context, plan);
+        if (ownerContents.isEmpty()) return operation;
+        var source = operation.contentResults().get(0);
+        var entity = findActiveReadable(operation.primaryResult().entityId());
+        var contents = new ArrayList<RevisionContentResult>();
+        contents.add(RevisionContentResult.completed(source.entityType(), source.entityId(), source.operationType(), source.expectedVersion(),
+            source.beforeSnapshot(), snapshot(entity), entity.getVersion(), validationSnapshot()));
+        contents.addAll(ownerContents);
+        return RevisionOperationResult.completed(context, operation.primaryResult(), contents);
     }
 
-    private boolean hasSubprocessChanges(List<LocalContextDtos.ContextChange> changes) {
-        return changes != null && !changes.isEmpty();
+    private OrganizationAggregateMutationResponse aggregateResponse(RevisionExecutionResult result,
+            List<DocumentCommandResponse> documents, OrganizationResponse organization,
+            com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos.Result local) {
+        var primary = result.primaryResult();
+        return new OrganizationAggregateMutationResponse(primary.entityId(), primary.revisionId(), primary.version(), documents, organization,
+            local == null || local.contexts().isEmpty() ? null : new LocalContextDtos.Selection(local.revisionId(), local.contexts()), local);
     }
 
     private RevisionOperationResult moveInsideRevision(
@@ -867,6 +880,11 @@ public class OrganizationService {
 
 
     public record OwnerOption(UUID id, String displayLabel, String username, String roleCode) {}
+    @Transactional(readOnly = true)
+    public List<com.digiaudit.grcpc.modules.organization.api.dto.OrganizationOwnerView> deletedOwners(UUID organizationId) {
+        findActiveReadable(organizationId);
+        return owners.list(organizationId, true);
+    }
     @Transactional(readOnly = true)
     public List<OwnerOption> ownerOptions() {
         return owners.options().stream().map(option -> new OwnerOption(option.id(), option.displayLabel(), option.username(), option.roleCode())).toList();

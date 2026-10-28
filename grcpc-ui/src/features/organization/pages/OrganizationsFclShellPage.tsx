@@ -38,7 +38,6 @@ type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 
-const DIALOG_WIDTH = "90vw";
 
 function useOrganizationRouteMode(): RouteMode {
     const { organizationId } = useParams();
@@ -59,7 +58,7 @@ function useOrganizationRouteMode(): RouteMode {
     return "list";
 }
 
-function mapError(
+function mapCoreError(
     error: unknown,
     fallback: string,
     t: ReturnType<typeof useTranslation>["t"],
@@ -69,6 +68,14 @@ function mapError(
     const errorCode = knownError?.code ?? code;
 
     switch (errorCode) {
+        case "PROFILE_BUSY": return t("catalogRelation.error.profileBusy");
+        case "HIERARCHY_BUSY": return t("catalogRelation.error.hierarchyBusy");
+        case "LOCAL_REFERENCE_NOT_ELIGIBLE":
+        case "LOCAL_OWNER_NOT_ELIGIBLE": return t("catalogRelation.error.ineligible");
+        case "LOCAL_INHERITED_REFERENCE_MISMATCH": return t("catalogRelation.error.sourceMismatch");
+        case "LOCAL_VALIDITY_OUTSIDE_CENTRAL_VALIDITY":
+        case "LOCAL_POLICY_VALIDITY_OUTSIDE_ENDPOINTS": return t("catalogRelation.error.validity");
+        case "LOCAL_COMMAND_INVALID": return t("catalogRelation.invalid");
         case "LOCAL_DEPENDENCY_EXISTS":
             return t("local.subprocessTable.dependencies");
         case "LOCAL_RESTORE_REQUIRED":
@@ -126,6 +133,7 @@ function mapError(
             return t("organization.errors.versionConflict", {
                 defaultValue: "رکورد توسط کاربر دیگری تغییر کرده است. صفحه را دوباره بارگذاری کنید.",
             });
+        case "DATE_RANGE_INVALID":
         case "INVALID_VALIDITY_RANGE":
             return t("organization.validation.invalidValidityRange", {
                 defaultValue: "بازه اعتبار معتبر نیست",
@@ -133,6 +141,15 @@ function mapError(
         default:
             return fallback;
     }
+}
+
+function mapError(error: unknown, fallback: string, t: ReturnType<typeof useTranslation>["t"]): string {
+    const message = mapCoreError(error, fallback, t);
+    const data = error && typeof error === "object" && "data" in error ? error.data : null;
+    const details = data && typeof data === "object" && "details" in data && Array.isArray(data.details) ? data.details : [];
+    const marker = details.find((detail: unknown): detail is string => typeof detail === "string" && detail.startsWith("relationFamily="));
+    const family = marker?.slice("relationFamily=".length);
+    return family && /^(L[1-9]|B1|O1)$/.test(family) ? t("catalogRelation.error.family", { family: t(`catalogRelation.family.${family}`), message }) : message;
 }
 
 function resolveUiDir(): UiDir {
@@ -645,15 +662,6 @@ export default function OrganizationsFclShellPage() {
         [appDir],
     );
 
-    const dialogStyle = useMemo<CSSProperties>(
-        () => ({
-            width: DIALOG_WIDTH,
-            maxWidth: DIALOG_WIDTH,
-            maxHeight: "70dvh",
-        }),
-        [],
-    );
-
     const listColumn = createElement(
         "div",
         {
@@ -736,12 +744,11 @@ export default function OrganizationsFclShellPage() {
             <Dialog
                 open={showModal}
                 accessibleName={dialogTitle}
-                className="organizationObjectDialog"
-                style={dialogStyle}
+                className="organizationObjectDialog catalogObjectDialog"
                 onClose={handleObjectDialogClose}
             >
                 <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
-                <div className="organizationObjectDialogContent" style={dialogContentStyle}>
+                <div data-catalog-dialog-content className="organizationObjectDialogContent" style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <OrganizationObjectPage
                             key={routeMode === "create" ? objectTabScopeKey : `org:${objectValue?.id ?? "none"}:${objectMode}`}

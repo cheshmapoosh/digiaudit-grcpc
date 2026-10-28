@@ -126,6 +126,11 @@ public class ApiExceptionHandler {
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, BusinessException ex, Locale locale, List<String> details) {
+        String relationFamily = stringContext(ex.getErrorContext(), "relationFamily");
+        if (relationFamily != null) {
+            details = new java.util.ArrayList<>(details);
+            details.add("relationFamily=" + relationFamily);
+        }
         String code = ex.getErrorCode();
         String messageCode = ex.getMessageCode();
         String userMessage = messageCode == null

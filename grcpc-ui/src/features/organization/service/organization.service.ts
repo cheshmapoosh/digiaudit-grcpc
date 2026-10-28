@@ -45,6 +45,15 @@ function normalizeCreatePayload(payload: OrganizationNodeCreate): OrganizationNo
         parentOrganizationId: parsed.parentOrganizationId?.trim() || null,
         ownerAssignments: parsed.ownerAssignments ?? [],
         subprocesses: parsed.subprocesses ?? [],
+        localControlScopeChanges: parsed.localControlScopeChanges ?? [],
+        localRiskScopeChanges: parsed.localRiskScopeChanges ?? [],
+        localControlObjectiveScopeChanges: parsed.localControlObjectiveScopeChanges ?? [],
+        localRequirementScopeChanges: parsed.localRequirementScopeChanges ?? [],
+        localOrganizationPolicyChanges: parsed.localOrganizationPolicyChanges ?? [],
+        localContextPolicyChanges: parsed.localContextPolicyChanges ?? [],
+        localControlPolicyChanges: parsed.localControlPolicyChanges ?? [],
+        localRequirementPolicyChanges: parsed.localRequirementPolicyChanges ?? [],
+        organizationObjectiveChanges: parsed.organizationObjectiveChanges ?? [],
         location: normalizeOptionalText(parsed.location),
         description: normalizeOptionalText(parsed.description),
         validFrom: normalizeOptionalDate(parsed.validFrom),
@@ -65,6 +74,15 @@ function normalizeUpdatePayload(payload: OrganizationNodeUpdate): OrganizationNo
         parentOrganizationId: parsed.parentOrganizationId?.trim() || null,
         ownerAssignments: parsed.ownerAssignments ?? [],
         subprocesses: parsed.subprocesses ?? [],
+        localControlScopeChanges: parsed.localControlScopeChanges ?? [],
+        localRiskScopeChanges: parsed.localRiskScopeChanges ?? [],
+        localControlObjectiveScopeChanges: parsed.localControlObjectiveScopeChanges ?? [],
+        localRequirementScopeChanges: parsed.localRequirementScopeChanges ?? [],
+        localOrganizationPolicyChanges: parsed.localOrganizationPolicyChanges ?? [],
+        localContextPolicyChanges: parsed.localContextPolicyChanges ?? [],
+        localControlPolicyChanges: parsed.localControlPolicyChanges ?? [],
+        localRequirementPolicyChanges: parsed.localRequirementPolicyChanges ?? [],
+        organizationObjectiveChanges: parsed.organizationObjectiveChanges ?? [],
         location: normalizeOptionalText(parsed.location),
         description: normalizeOptionalText(parsed.description),
         validFrom: normalizeOptionalDate(parsed.validFrom),
@@ -81,6 +99,7 @@ function normalizeLifecyclePayload(
 
 export interface OrganizationService {
     ownerOptions(): Promise<OrganizationOwnerOption[]>;
+    deletedOwners(id: string): Promise<import("../domain/organization.model").OrganizationOwnerAssignment[]>;
     list(): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
     create(payload: OrganizationNodeCreate): Promise<MasterDataAggregateMutationResponse>;
@@ -99,6 +118,7 @@ export function createOrganizationService(
 ): OrganizationService {
     return {
         ownerOptions: () => repo.ownerOptions(),
+        deletedOwners: (id) => repo.deletedOwners(id),
         async list() {
             const items = await repo.list();
             return sortOrganizations(items);

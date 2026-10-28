@@ -1,5 +1,13 @@
 # Organization Subprocess draft table — 2026-10-28
 
+Later same-day correction: [Governance modal relationship drafts](2026-10-28-governance-modal-relations.md)
+extends this main-Save ownership to all L1–L9 and B1 drafts. Other Local tabs no
+longer mount independent relationship editors/writers. The complete family
+Guard union precedes Organization reads, and every changed Local collection
+shares one linked LOCAL Revision in the same protected outer transaction.
+Shared table rendering/viewport replaces the Organization-only helper. The
+L1 identity/lifecycle and existing Documents exceptions below remain binding.
+
 The project owner's latest follow-up supersedes both immediate persistence on
 selection and the earlier choice of independent tab Edit/Save.
 The Organization Subprocess tab is a native UI5 table with exactly three business

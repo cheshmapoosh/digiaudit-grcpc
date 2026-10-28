@@ -14,6 +14,9 @@ function query(status: ControlObjectiveScopeStatusFilter, search: string): strin
 }
 
 export const controlObjectiveScopeApi = {
+  deletedForSubprocess: (subprocessId: string, signal?: AbortSignal) =>
+    httpClient.get<CentralSubprocessControlObjectiveScope[]>(
+      `/api/master-data/central/subprocesses/${subprocessId}/control-objective-scopes/deleted`, { signal }),
   listForSubprocess: (
     subprocessId: string,
     status: ControlObjectiveScopeStatusFilter = "ALL",

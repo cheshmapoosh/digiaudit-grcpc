@@ -1,10 +1,12 @@
 package com.digiaudit.grcpc.modules.masterdata.catalog.regulation.api.dto;
 
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchRequest;
+import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -12,6 +14,16 @@ import java.util.UUID;
 
 public final class CentralRegulationDtos {
   private CentralRegulationDtos() {}
+
+  public record RequirementAggregateResponse(UUID entityId, UUID revisionId, long version,
+      List<DocumentCommandResponse> finalizedDocuments, RequirementDetail entity) {}
+
+  public record RegulationAggregateResponse(UUID entityId, UUID revisionId, long version,
+      List<DocumentCommandResponse> finalizedDocuments, RegulationDetail entity,
+      List<RequirementDetail> requirements) {}
+
+  public record GroupAggregateResponse(UUID entityId, UUID revisionId, long version,
+      List<DocumentCommandResponse> finalizedDocuments, GroupDetail entity) {}
 
   public record CreateGroup(
       @NotBlank String code,
@@ -31,7 +43,8 @@ public final class CentralRegulationDtos {
       Integer sortOrder,
       LocalDate validFrom,
       LocalDate validTo,
-      @Valid DocumentAggregateBatchRequest documents) {}
+      @Valid DocumentAggregateBatchRequest documents,
+      @Valid @Size(max = 5000) List<@Valid RequirementChange> requirementChanges) {}
 
   public record CreateRequirement(
       @NotBlank String code,
@@ -49,7 +62,12 @@ public final class CentralRegulationDtos {
       LocalDate validFrom,
       LocalDate validTo,
       @NotNull Long version,
-      @Valid DocumentAggregateBatchRequest documents) {}
+      @Valid DocumentAggregateBatchRequest documents,
+      @Valid GroupParentChange parentChange,
+      MasterDataLifecycleStatus status,
+      Integer sortOrder) {}
+
+  public record GroupParentChange(UUID parentGroupId) {}
 
   public record UpdateRegulation(
       @NotBlank String title,
@@ -57,7 +75,28 @@ public final class CentralRegulationDtos {
       LocalDate validFrom,
       LocalDate validTo,
       @NotNull Long version,
-      @Valid DocumentAggregateBatchRequest documents) {}
+      @Valid DocumentAggregateBatchRequest documents,
+      @Valid RegulationParentChange parentChange,
+      MasterDataLifecycleStatus status,
+      Integer sortOrder,
+      @Valid @Size(max = 5000) List<@Valid RequirementChange> requirementChanges) {}
+
+  public enum RequirementChangeOperation { CREATE, UPDATE, ACTIVATE, INACTIVATE, DELETE }
+
+  /** Structural Requirement children; the parent Regulation remains server-owned. */
+  public record RequirementChange(
+      @NotNull RequirementChangeOperation operation,
+      UUID requirementId,
+      Long version,
+      String code,
+      String title,
+      String description,
+      Integer sortOrder,
+      LocalDate validFrom,
+      LocalDate validTo,
+      MasterDataLifecycleStatus requestedStatus) {}
+
+  public record RegulationParentChange(@NotNull UUID regulationGroupId) {}
 
   public record UpdateRequirement(
       @NotBlank String title,
@@ -65,7 +104,12 @@ public final class CentralRegulationDtos {
       LocalDate validFrom,
       LocalDate validTo,
       @NotNull Long version,
-      @Valid DocumentAggregateBatchRequest documents) {}
+      @Valid DocumentAggregateBatchRequest documents,
+      @Valid RequirementParentChange parentChange,
+      MasterDataLifecycleStatus status,
+      Integer sortOrder) {}
+
+  public record RequirementParentChange(@NotNull UUID regulationId) {}
 
   public record MoveGroup(UUID parentGroupId, Integer sortOrder, @NotNull Long version) {}
 

@@ -53,13 +53,13 @@ public class GlobalControlController {
 
   @PostMapping
   @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
-  public MasterDataAggregateMutationResponse create(@Valid @RequestBody GlobalControlDtos.Create request) {
+  public GlobalControlDtos.AggregateResponse create(@Valid @RequestBody GlobalControlDtos.Create request) {
     return controls.create(request);
   }
 
   @PutMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
-  public MasterDataAggregateMutationResponse update(@PathVariable UUID id,
+  public GlobalControlDtos.AggregateResponse update(@PathVariable UUID id,
       @Valid @RequestBody GlobalControlDtos.Update request) {
     return controls.update(id, request);
   }
@@ -79,8 +79,9 @@ public class GlobalControlController {
 
   @GetMapping("/{id}/regulations")
   @PreAuthorize("@masterDataAuthorization.canView('CONTROL')")
-  public List<GlobalControlRegulationDtos.Link> relatedRegulations(@PathVariable UUID id) {
-    return regulations.list(id);
+  public List<GlobalControlRegulationDtos.Link> relatedRegulations(@PathVariable UUID id,
+      @RequestParam(required = false) com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus lifecycleStatus) {
+    return regulations.list(id, lifecycleStatus);
   }
 
   @PostMapping("/{id}/regulations")

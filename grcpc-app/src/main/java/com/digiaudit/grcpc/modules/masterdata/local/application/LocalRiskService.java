@@ -14,6 +14,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.*;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.*;
 import com.digiaudit.grcpc.modules.organization.domain.repository.OrganizationRepository;
+import com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
@@ -292,6 +293,97 @@ public class LocalRiskService {
         row.getStatus(), row.getValidFrom(), row.getValidTo(), row.getVersion(),
         row.getCreatedAt(), row.getCreatedBy(), row.getUpdatedAt(), row.getUpdatedBy(),
         row.getDeletedAt(), row.getDeletedBy());
+  }
+
+
+  /** Lock exact Central Scope endpoints before any Local relation-row locks in the aggregate. */
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public void lockAggregateReferences(List<OrganizationLocalDtos.RiskChange> changes) {
+    var ids = new java.util.TreeSet<UUID>(java.util.Comparator.comparing(UUID::toString));
+    if (changes == null) return;
+    for (var change : changes) {
+      if (change == null) throw rules.bad("Local Risk change is required");
+      if (change.centralRiskScopeId() != null) ids.add(change.centralRiskScopeId());
+      if (change.scopeId() != null) {
+        var retained = rows.findById(change.scopeId()).orElseThrow(() -> rules.notFound(change.scopeId()));
+        if (retained.getCentralRiskScopeId() != null) ids.add(retained.getCentralRiskScopeId());
+      }
+    }
+    for (var id : ids) centralReferences.lockById(id).orElseThrow(() -> rules.referenceNotFound(id));
+  }
+
+  public record AggregatePlan(LocalSubprocessRiskScopeEntity row, LocalOrganizationSubprocessScopeEntity context,
+      OrganizationLocalDtos.RiskChange change, boolean fresh, boolean metadata, MasterDataLifecycleStatus target) {}
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public AggregatePlan prepareAggregate(UUID organizationId, LocalOrganizationSubprocessScopeEntity context,
+      OrganizationLocalDtos.RiskChange change, MasterDataLifecycleStatus contextStatus, OrganizationLocalDeletions deleting) {
+    rules.requireWrite("PROCESS", "RISK");
+    rules.assertOwner(organizationId, context.getOrganizationId());
+    var org = organizations.findById(organizationId).orElseThrow(() -> rules.referenceNotFound(organizationId));
+    var subprocess = subprocesses.findById(context.getSubprocessId()).orElseThrow(() -> rules.referenceNotFound(context.getSubprocessId()));
+    var definition = definitions.findById(change.riskTemplateId()).orElseThrow(() -> rules.referenceNotFound(change.riskTemplateId()));
+    var occupied = rows.findByOrganizationSubprocessScopeIdAndRiskTemplateId(context.getId(), change.riskTemplateId()).orElse(null);
+    var row = occupied == null ? null : rows.lockById(occupied.getId()).orElseThrow(() -> rules.notFound(occupied.getId()));
+    boolean fresh = row == null;
+    var target = rules.aggregateTarget(row == null ? null : row.getStatus(), change.operation(), change.requestedStatus(),
+        row == null ? null : row.getId(), row == null ? null : row.getVersion(), change.scopeId(), change.version());
+    boolean retainedRestore = !fresh && row.getStatus() == MasterDataLifecycleStatus.DELETED
+        && change.operation() == OrganizationLocalDtos.Operation.CREATE_OR_RESTORE
+        && change.sourceType() == null && change.centralRiskScopeId() == null
+        && change.validFrom() == null && change.validTo() == null;
+    boolean metadata = !retainedRestore && (fresh || change.operation() == OrganizationLocalDtos.Operation.UPDATE
+        || change.operation() == OrganizationLocalDtos.Operation.CREATE_OR_RESTORE);
+    if (row != null && ((change.sourceType() != null && change.sourceType() != row.getSourceType())
+        || (change.centralRiskScopeId() != null && !change.centralRiskScopeId().equals(row.getCentralRiskScopeId())))) throw rules.bad("Immutable Local source changed");
+    var source = fresh ? change.sourceType() : row.getSourceType();
+    UUID centralId = fresh ? change.centralRiskScopeId() : row.getCentralRiskScopeId();
+    var central = centralId == null ? null : centralReferences.lockById(centralId).orElseThrow(() -> rules.referenceNotFound(centralId));
+    LocalDate from = metadata ? change.validFrom() : row.getValidFrom();
+    LocalDate to = metadata ? change.validTo() : row.getValidTo();
+    if (target != MasterDataLifecycleStatus.DELETED) {
+      boolean active = fresh || row.getStatus() == MasterDataLifecycleStatus.DELETED || (target == MasterDataLifecycleStatus.ACTIVE && row.getStatus() != target);
+      if (active) { rules.active(org.getStatus()); rules.active(subprocess.getStatus()); rules.active(contextStatus); rules.active(definition.getStatus()); }
+      else { rules.nonDeleted(org.getStatus()); rules.nonDeleted(subprocess.getStatus()); rules.nonDeleted(contextStatus); rules.nonDeleted(definition.getStatus()); }
+      validateSource(source, centralId, change.riskTemplateId(), context.getSubprocessId(), from, to, central, active);
+    }
+    if (!fresh && target == MasterDataLifecycleStatus.DELETED) requireAggregateNoChildren(row.getId(), deleting);
+    if (fresh) row = LocalSubprocessRiskScopeEntity.create(context.getId(), change.riskTemplateId(), centralId, source,
+        from, to, actor(), now());
+    var effective = new OrganizationLocalDtos.RiskChange(change.contextRef(), change.riskTemplateId(), change.operation(), change.scopeId(), change.version(), source, centralId, from, to, change.requestedStatus());
+    return new AggregatePlan(row, context, effective, fresh, metadata, target);
+  }
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public RevisionContentResult applyAggregate(AggregatePlan plan) {
+    var row = plan.row(); var change = plan.change();
+    JsonNode before = plan.fresh() ? null : snapshot(row);
+    Long expected = plan.fresh() ? null : row.getVersion();
+    var initial = row.getStatus();
+    boolean changedMetadata = plan.metadata() && (
+        !java.util.Objects.equals(row.getValidFrom(), change.validFrom()) || !java.util.Objects.equals(row.getValidTo(), change.validTo()));
+    if (!plan.fresh() && !changedMetadata && initial == plan.target()) return null;
+    RevisionOperationType operation = plan.fresh() ? RevisionOperationType.CREATE : initial == MasterDataLifecycleStatus.DELETED ? RevisionOperationType.RESTORE
+        : initial != plan.target() ? plan.target() == MasterDataLifecycleStatus.DELETED ? RevisionOperationType.DELETE
+        : plan.target() == MasterDataLifecycleStatus.ACTIVE ? RevisionOperationType.ACTIVATE : RevisionOperationType.INACTIVATE : RevisionOperationType.UPDATE;
+    if (!plan.fresh()) {
+      if (initial == MasterDataLifecycleStatus.DELETED) row.restore(actor(), now());
+      if (changedMetadata) row.update(change.validFrom(), change.validTo(), actor(), now());
+      if (row.getStatus() != plan.target()) switch (plan.target()) {
+        case ACTIVE -> row.activate(actor(), now()); case INACTIVE -> row.inactivate(actor(), now()); case DELETED -> row.delete(actor(), now());
+      }
+    }
+    rows.saveAndFlush(row);
+    return RevisionContentResult.completed(RevisionEntityType.LOCAL_SUBPROCESS_RISK_SCOPE, row.getId(), operation,
+        expected, before, snapshot(row), row.getVersion(), mapper.valueToTree(Map.of("validated", true)));
+  }
+  public boolean changesAggregate(AggregatePlan plan) {
+    var row = plan.row(); var change = plan.change();
+    return plan.fresh() || row.getStatus() != plan.target() || (plan.metadata() && (
+        !java.util.Objects.equals(row.getValidFrom(), change.validFrom()) || !java.util.Objects.equals(row.getValidTo(), change.validTo())));
+  }
+  public LocalRiskDtos.Row canonical(AggregatePlan plan) { return map(plan.row()); }
+  private void requireAggregateNoChildren(UUID id, OrganizationLocalDeletions deleting) {
+    var deleted = MasterDataLifecycleStatus.DELETED;
+    if (dependent0.existsByLocalRiskScopeIdAndStatusNot(id, deleted) || dependent1.existsByLocalRiskScopeIdAndStatusNot(id, deleted)) throw rules.invalid("LOCAL_DEPENDENCY_EXISTS", "Local Scope has undeleted dependents");
   }
 
   private UUID actor() { return currentUser.getCurrentPrincipal().getUserId(); }

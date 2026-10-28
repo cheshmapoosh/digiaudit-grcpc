@@ -1,3 +1,2 @@
 .organizationOwnersTab { min-width: 0; gap: var(--sapContent_Space_Small); }
-.organizationOwnersDialog { width: 70vw; max-width: 90vw; }
 .organizationOwnersPicker { min-width: 0; gap: var(--sapContent_Space_Small); padding: var(--sapContent_Space_Small); }

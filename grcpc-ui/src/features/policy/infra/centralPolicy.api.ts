@@ -36,9 +36,9 @@ export const centralPolicyApi = {
   group: (id: string) =>
     httpClient.get<CentralPolicyGroupDetail>(`${GROUPS}/${id}`),
   createGroup: (body: CreateCentralPolicyGroupCommand) =>
-    httpClient.post<CentralPolicyMutationResponse>(GROUPS, body),
+    httpClient.post<CentralPolicyMutationResponse & { entity: CentralPolicyGroupDetail }>(GROUPS, body),
   updateGroup: (id: string, body: UpdateCentralPolicyGroupCommand) =>
-    httpClient.patch<CentralPolicyMutationResponse>(`${GROUPS}/${id}`, body),
+    httpClient.patch<CentralPolicyMutationResponse & { entity: CentralPolicyGroupDetail }>(`${GROUPS}/${id}`, body),
   moveGroup: (id: string, body: MoveCentralPolicyGroupCommand) =>
     httpClient.post<CentralPolicyRevisionResponse>(`${GROUPS}/${id}/move`, body),
   groupLifecycle: (

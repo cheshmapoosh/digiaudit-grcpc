@@ -16,6 +16,7 @@ These instructions apply to `grcpc-ui`. Feature-specific instructions under `src
 - Use SAP UI5 Web Components for React first. Avoid custom widgets where a UI5 component already fits.
 - Keep Persian as the default user-facing language and support RTL.
 - Use i18n for all user-facing text. Do not hardcode labels, messages, button text, tab text, or menu text in components.
+- Governance catalog Create forms show fixed ACTIVE with native ObjectStatus; status becomes editable only in an authorized Edit flow. Normalize Create drafts to ACTIVE and retain existing backend-owned Create contracts. Follow `grcpc-docs/master-data/accepted-corrections/2026-10-29-policy-modal-alignment.md` for the Policy form/picker alignment.
 - Prefer existing FCL/list-report/object-page patterns for master-detail pages.
 - Preserve tree expansion and selected node state during navigation, refresh, create, edit, and delete flows.
 - General Information, parent/owner, invalid visible dates, and Document draft state must feed one SPA-navigation and hard-unload guard; never synchronize form state during render.
@@ -76,3 +77,10 @@ use UI5 components when available.
 - Follow `grcpc-docs/master-data/accepted-corrections/2026-10-27-central-reference-assignments.md`. Four typed Assignment families use owner-local drafts and one existing catalog Save; inverse lists are read-only owner links.
 - No Coverage manager/inverse component may mount in this phase. Retain shared Scope components, including CoverageInverseTable in Control Objective Scope, and preserve Coverage backend APIs/data.
 - Pending Assignment selections and invalid visible date drafts join owner dirty/navigation protection and Save readiness. No PROCESS/Organization permission, Scope selector or Coverage label belongs to these central Assignments.
+
+## Governance modal relationship drafts
+
+- Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-governance-modal-relations.md`. Main modal Save owns every editable relation collection. Use the shared presentational CatalogRelationTable/Toolbar/Status/Date and CatalogTableViewport; keep domain state/payloads typed in each owning feature. Internal deleted pools preserve occupied IDs without Deleted filters/Restore UI.
+- Local Organization drafts, both B1 surfaces, O1 and G1 retain real lifecycle and metadata; no standalone relation write mounts in the modal. Preserve the explicit Documents/temporary-upload and structural Import exceptions. Keep all table drafts through tab changes and reconcile canonical response deltas before optional refresh.
+
+- The later `grcpc-docs/master-data/accepted-corrections/2026-10-28-regulation-requirement-aggregate.md` replaces the Regulation Requirements tab's Import exception with parent-owned CREATE/lifecycle drafts. Excel is enabled in Edit; confirmation stages only and main Save persists. The latest correction removes View and its nested dialog; the blue Excel action replaces Select in the same full-width toolbar as Organization Subprocesses. Shared `modal-layout.css` owns Governance widths; no feature/inline viewport widths.

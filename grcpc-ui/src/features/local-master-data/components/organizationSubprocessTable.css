@@ -1,3 +1,1 @@
 .organizationSubprocessTable { min-width: 0; gap: var(--sapContent_Space_Small); }
-.organizationSubprocessActions { gap: var(--sapContent_Space_Small); }
-.organizationSubprocessViewport { display: block; min-width: 0; max-width: 100%; max-block-size: var(--organization-table-height, 35dvh); overflow: auto; overscroll-behavior: contain; }

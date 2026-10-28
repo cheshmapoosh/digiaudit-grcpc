@@ -37,8 +37,10 @@ public class RegulationRequirementImportController {
   }
 
   @PostMapping(value = "/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public Preview preview(@PathVariable UUID regulationId, @RequestParam MultipartFile file) {
-    return service.preview(regulationId, file);
+  public Preview preview(@PathVariable UUID regulationId, @RequestParam MultipartFile file,
+      @RequestParam(defaultValue = "false") boolean draft,
+      @RequestParam(required = false) List<String> reservedCodes) {
+    return service.preview(regulationId, file, draft, reservedCodes);
   }
 
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

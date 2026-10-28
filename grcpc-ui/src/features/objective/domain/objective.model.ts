@@ -28,7 +28,7 @@ export interface ObjectiveCreate {
   parentObjectiveId: string | null;
   validFrom: string | null;
   validTo: string | null;
-  organizationIds?: string[];
+  organizationChanges?: OrganizationObjectiveChange[];
   documents: DocumentAggregateRequest;
 }
 
@@ -51,13 +51,38 @@ export interface OrganizationObjective {
 }
 
 export interface ObjectiveOrganizationLink {
+  id: string;
+  objectiveId: string;
   organizationId: string;
   organizationCode: string;
   organizationName: string;
   name: string;
+  description: string | null;
   owner: string | null;
+  validFrom: string | null;
+  validTo: string | null;
   status: "ACTIVE" | "INACTIVE" | "DELETED";
   version: number;
+}
+
+export interface OrganizationObjectiveChange {
+  operation: "CREATE_OR_RESTORE" | "UPDATE" | "ACTIVATE" | "INACTIVATE" | "DELETE" | "RESTORE";
+  assignmentId?: string;
+  version?: number;
+  objectiveId?: string;
+  organizationId?: string;
+  name?: string | null;
+  description?: string | null;
+  owner?: string | null;
+  validFrom?: string | null;
+  validTo?: string | null;
+  requestedStatus?: "ACTIVE" | "INACTIVE";
+}
+
+export interface ObjectiveMutation {
+  entityId: string; version: number; revisionId: string;
+  objective: Objective;
+  organizations: ObjectiveOrganizationLink[];
 }
 
 export interface ObjectiveOrganizationOption {

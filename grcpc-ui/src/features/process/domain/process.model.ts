@@ -33,6 +33,10 @@ export interface MasterDataAggregateMutationResponse extends MasterDataRevisionM
 }
 
 export interface ProcessNode extends AuditFields {
+    controlScopes?: CentralSubprocessControlScope[];
+    riskScopes?: CentralSubprocessRiskScope[];
+    controlObjectiveScopes?: CentralSubprocessControlObjectiveScope[];
+    requirementScopes?: CentralSubprocessRequirementScope[];
     id: string;
     code: string;
     title: string;

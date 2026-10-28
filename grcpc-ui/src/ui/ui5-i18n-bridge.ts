@@ -45,6 +45,8 @@ function translatedUi5Text(key: string, params: Array<number | string>): string 
     if (!isPersian()) return null;
 
     switch (key) {
+        case "TABLE_NO_DATA":
+            return i18n.t("common.noData");
         case "USER_MENU_SIGN_OUT_BUTTON_TXT":
             return i18n.t("user.logout");
         case "USER_MENU_CLOSE_BUTTON_TXT":

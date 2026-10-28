@@ -86,6 +86,23 @@ public class CentralSubprocessControlScopeQueryService {
   }
 
   @Transactional(readOnly = true)
+  public List<CentralSubprocessControlScopeResponse> deletedForSubprocess(UUID subprocessId) {
+    CentralSubprocessEntity subprocess = requireSubprocess(subprocessId);
+    List<CentralSubprocessControlScopeEntity> rows =
+        scopes.findBySubprocessIdAndStatus(subprocessId, MasterDataLifecycleStatus.DELETED);
+    Map<UUID, CentralControlEntity> byId =
+        controls.findAllById(rows.stream().map(CentralSubprocessControlScopeEntity::getControlId).toList())
+            .stream()
+            .collect(Collectors.toMap(CentralControlEntity::getId, Function.identity()));
+    return rows.stream()
+        .map(row -> mapper.toResponse(row, subprocess, requireControl(byId, row.getControlId())))
+        .sorted(
+            Comparator.comparing(CentralSubprocessControlScopeResponse::controlCode)
+                .thenComparing(CentralSubprocessControlScopeResponse::id))
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
   public List<CentralSubprocessControlScopeResponse> listForControl(
       UUID controlId, MasterDataLifecycleStatus status, String search) {
     validateNormalStatus(status);

@@ -14,6 +14,9 @@ function query(status: RiskScopeStatusFilter, search: string): string {
 }
 
 export const riskScopeApi = {
+  deletedForSubprocess: (subprocessId: string, signal?: AbortSignal) =>
+    httpClient.get<CentralSubprocessRiskScope[]>(
+      `/api/master-data/central/subprocesses/${subprocessId}/risk-scopes/deleted`, { signal }),
   listForSubprocess: (
     subprocessId: string,
     status: RiskScopeStatusFilter = "ALL",

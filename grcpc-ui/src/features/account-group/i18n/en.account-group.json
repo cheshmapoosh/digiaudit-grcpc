@@ -83,7 +83,10 @@
       "notFound": "The requested account group was not found.",
       "versionConflict": "The record was changed by another user. Reload and try again.",
       "invalidParent": "The selected parent hierarchy is invalid.",
-      "dependencies": "The account group has approved dependencies and cannot be deleted."
+      "dependencies": "The account group has approved dependencies and cannot be deleted.",
+      "profileBusy": "Profile administration is busy. Save again shortly.",
+      "profileReadOnly": "Write access to this profile has changed. Your draft is retained.",
+      "hierarchyBusy": "The catalog structure is busy. Save again shortly."
     }
   }
 }

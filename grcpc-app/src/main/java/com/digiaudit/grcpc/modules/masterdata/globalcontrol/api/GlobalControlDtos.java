@@ -16,24 +16,26 @@ public final class GlobalControlDtos {
   public record Create(@NotBlank String code, @NotBlank String name, String description,
       @NotNull UUID controlGroupId, @NotBlank String controlType, @NotNull Boolean testRequired,
       LocalDate validFrom, LocalDate validTo, List<@NotNull UUID> regulationIds,
-      @Valid DocumentAggregateBatchRequest documents) {
+      @Valid DocumentAggregateBatchRequest documents,
+      @Valid List<GlobalControlRegulationDtos.Change> regulationChanges) {
     public Create(String code, String name, String description, UUID controlGroupId,
         String controlType, Boolean testRequired, LocalDate validFrom, LocalDate validTo,
         DocumentAggregateBatchRequest documents) {
       this(code, name, description, controlGroupId, controlType, testRequired,
-          validFrom, validTo, null, documents);
+          validFrom, validTo, null, documents, null);
     }
   }
 
   public record Update(@NotBlank String name, String description, @NotNull UUID controlGroupId,
       @NotBlank String controlType, @NotNull Boolean testRequired, LocalDate validFrom,
       LocalDate validTo, @NotNull Long version, List<@NotNull UUID> regulationIds,
-      @Valid DocumentAggregateBatchRequest documents) {
+      @Valid DocumentAggregateBatchRequest documents,
+      @Valid List<GlobalControlRegulationDtos.Change> regulationChanges) {
     public Update(String name, String description, UUID controlGroupId, String controlType,
         Boolean testRequired, LocalDate validFrom, LocalDate validTo, Long version,
         DocumentAggregateBatchRequest documents) {
       this(name, description, controlGroupId, controlType, testRequired, validFrom,
-          validTo, version, null, documents);
+          validTo, version, null, documents, null);
     }
   }
 
@@ -41,4 +43,7 @@ public final class GlobalControlDtos {
       UUID controlGroupId, String controlType, boolean testRequired, LocalDate validFrom,
       LocalDate validTo, MasterDataLifecycleStatus status, long version,
       Instant createdAt, Instant updatedAt) {}
+  public record AggregateResponse(UUID entityId, UUID revisionId, long version,
+      List<com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse> finalizedDocuments,
+      Detail control, List<GlobalControlRegulationDtos.Link> regulations) {}
 }

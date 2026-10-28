@@ -37,6 +37,14 @@ public class LocalCommandRules {
     }
   }
 
+  public <T> T family(String family, java.util.function.Supplier<T> validation) {
+    try { return validation.get(); }
+    catch (com.digiaudit.grcpc.common.exception.BusinessException failure) {
+      failure.putErrorContext("relationFamily", family);
+      throw failure;
+    }
+  }
+
   public void requireWrite(String... additionalAreas) {
     if (!authorization.canManage("REFERENCE")
         || Arrays.stream(additionalAreas).anyMatch(area -> !authorization.canView(area))) {
@@ -108,6 +116,38 @@ public class LocalCommandRules {
       default -> false;
     };
     if (!valid) throw invalid("INVALID_LIFECYCLE_TRANSITION", "Invalid Local transition");
+  }
+
+  /** Scalar validation shared by the concrete typed Organization draft adapters. */
+  public MasterDataLifecycleStatus aggregateTarget(MasterDataLifecycleStatus current,
+      com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos.Operation operation,
+      MasterDataLifecycleStatus requested, UUID currentId, Long currentVersion, UUID id, Long version) {
+    if (operation == null) throw bad("Local operation is required");
+    if (operation != com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos.Operation.UPDATE && requested != null)
+      throw bad("Only UPDATE may request a Local lifecycle status");
+    if (current == null) {
+      if (operation != com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos.Operation.CREATE_OR_RESTORE
+          || id != null || version != null) throw bad("New Local identity is invalid");
+      return MasterDataLifecycleStatus.ACTIVE;
+    }
+    if (id == null || !currentId.equals(id)) throw bad("Local identity changed");
+    assertVersion(currentVersion, version);
+    if (operation == com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos.Operation.CREATE_OR_RESTORE
+        || operation == com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos.Operation.RESTORE) {
+      if (current != MasterDataLifecycleStatus.DELETED) throw duplicate(current);
+      return MasterDataLifecycleStatus.ACTIVE;
+    }
+    nonDeleted(current);
+    return switch (operation) {
+      case ACTIVATE -> MasterDataLifecycleStatus.ACTIVE;
+      case INACTIVATE -> MasterDataLifecycleStatus.INACTIVE;
+      case DELETE -> MasterDataLifecycleStatus.DELETED;
+      case UPDATE -> {
+        if (requested == MasterDataLifecycleStatus.DELETED) throw bad("UPDATE cannot delete a Local row");
+        yield requested == null ? current : requested;
+      }
+      default -> throw bad("Invalid Local operation");
+    };
   }
 
   public String note(String value) {

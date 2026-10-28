@@ -14,14 +14,26 @@
       "template": "Risk Template"
     },
     "category": {
-      "create": { "title": "Create Risk Category" },
-      "view": { "title": "View Risk Category" },
-      "edit": { "title": "Edit Risk Category" }
+      "create": {
+        "title": "Create Risk Category"
+      },
+      "view": {
+        "title": "View Risk Category"
+      },
+      "edit": {
+        "title": "Edit Risk Category"
+      }
     },
     "template": {
-      "create": { "title": "Create Risk Template" },
-      "view": { "title": "View Risk Template" },
-      "edit": { "title": "Edit Risk Template" }
+      "create": {
+        "title": "Create Risk Template"
+      },
+      "view": {
+        "title": "View Risk Template"
+      },
+      "edit": {
+        "title": "Edit Risk Template"
+      }
     },
     "tabs": {
       "general": "General Information",
@@ -91,7 +103,10 @@
       "notFound": "The requested record was not found.",
       "versionConflict": "The record was changed by another user. Reload and try again.",
       "invalidParent": "The selected parent structure is invalid.",
-      "dependencies": "The record has approved dependencies and cannot be deleted."
+      "dependencies": "The record has approved dependencies and cannot be deleted.",
+      "profileBusy": "Profile administration is busy. Save again shortly.",
+      "profileReadOnly": "Write access to this profile has changed. Your draft is retained.",
+      "hierarchyBusy": "The catalog structure is busy. Save again shortly."
     }
   }
 }

@@ -1,0 +1,9 @@
+.catalogTableViewport {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 4rem;
+    max-height: var(--catalog-table-height, 36dvh);
+    overflow: auto;
+    flex-shrink: 1;
+}
+.catalogTableViewport > ui5-table { min-width: 100%; flex-shrink: 0; }

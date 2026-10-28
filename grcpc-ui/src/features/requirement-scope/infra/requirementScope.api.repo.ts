@@ -14,6 +14,9 @@ function query(status: RequirementScopeStatusFilter, search: string): string {
 }
 
 export const requirementScopeApi = {
+  deletedForSubprocess: (subprocessId: string, signal?: AbortSignal) =>
+    httpClient.get<CentralSubprocessRequirementScope[]>(
+      `/api/master-data/central/subprocesses/${subprocessId}/requirement-scopes/deleted`, { signal }),
   listForSubprocess: (
     subprocessId: string,
     status: RequirementScopeStatusFilter = "ALL",

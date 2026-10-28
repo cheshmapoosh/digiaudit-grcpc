@@ -64,6 +64,11 @@ public class JdbcOrganizationOwnerAssignmentRepository implements OrganizationOw
         return jdbc.query("select * from organization_owner_assignment where profile_id = :profile and organization_id = :organization order by user_id",
             Map.of("profile", scope(profileId), "organization", ProfileContext.raw(organizationId)), ROW);
     }
+    public Optional<OrganizationOwnerAssignment> lockAssignment(UUID profileId, UUID organizationId, UUID userId) {
+        ProfileTransactionPolicy.requireProtectedMutation();
+        return jdbc.query("select * from organization_owner_assignment where profile_id = :profile and organization_id = :organization and user_id = :user for update wait 5",
+            Map.of("profile", scope(profileId), "organization", ProfileContext.raw(organizationId), "user", userId.toString()), ROW).stream().findFirst();
+    }
     public List<OrganizationOwnerAssignment> activeForUser(UUID profileId, UUID userId) {
         return jdbc.query("select * from organization_owner_assignment where profile_id = :profile and user_id = :user and status = 'ACTIVE' order by organization_id",
             Map.of("profile", scope(profileId), "user", userId.toString()), ROW);

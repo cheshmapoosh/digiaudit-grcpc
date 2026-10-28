@@ -1,23 +1,20 @@
-import { DialogFooter } from "@/shared/components/DialogFooter";
-import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ActionSheet, BusyIndicator, Button, CheckBox, Dialog, Link, List,
-  ListItemCustom, ListItemGroup, MessageStrip, ObjectStatus, Option, Select,
-  Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow,
-} from "@ui5/webcomponents-react";
-import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
-import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { formatPersianDate } from "@/shared/utils/date.utils";
+import { Link, MessageStrip } from "@ui5/webcomponents-react";
+import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
+import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
+import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
+import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
+import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
+import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
+import type { PersianDateDraftState } from "@/shared/components/PersianDatePicker";
+import { ProcessApiRepo } from "@/features/process/infra/process.api.repo";
+import { OrganizationApiRepo } from "@/features/organization/infra/organization.api.repo";
 import { centralPolicyApi } from "../infra/centralPolicy.api";
+import { policySelectionHierarchy, type PolicyHierarchyChoice } from "../domain/policySelectionHierarchy";
 import PolicyReferenceView from "./PolicyReferenceView";
-import type {
-  PolicyControlOption, PolicyControlScopeRow, PolicyOrganizationOption,
-  PolicyOrganizationScopeRow, PolicyRequirementOption, PolicyRequirementScopeRow,
-  PolicyScopeOperation, PolicySubprocessOption, PolicySubprocessScopeRow,
-} from "../domain/centralPolicy.model";
-
+import type { PolicyControlOption, PolicyControlScopeRow, PolicyOrganizationOption, PolicyOrganizationScopeRow, PolicyRequirementOption, PolicyRequirementScopeRow, PolicyScopeOperation, PolicySubprocessOption, PolicySubprocessScopeRow } from "../domain/centralPolicy.model";
+const EMPTY_SELECTION = new Set<string>();
 export type PolicyRelationKind = "subprocess" | "organization" | "control" | "requirement";
 export interface PolicyRelationDraft {
   endpointId: string;
@@ -40,7 +37,11 @@ interface Row {
   validFrom: string | null;
   validTo: string | null;
 }
-interface Choice extends Row { eligible: boolean; }
+interface Choice extends Row, PolicyHierarchyChoice {}
+const TAB_LABELS: Record<PolicyRelationKind, string> = {
+  subprocess: "policy.tabs.subprocess", organization: "policy.tabs.organization",
+  control: "policy.tabs.controls", requirement: "policy.tabs.requirements",
+};
 function displayStatus(row: Row, draft?: PolicyRelationDraft | null): Row["status"] {
   if (draft?.operation === "CREATE_OR_RESTORE" || draft?.operation === "ACTIVATE" || draft?.operation === "RESTORE") return "ACTIVE";
   if (draft?.operation === "INACTIVATE") return "INACTIVE";
@@ -61,13 +62,9 @@ interface Props {
   canView: boolean;
   canManage: boolean;
   busy: boolean;
+  canonicalRows?: unknown[];
   onChanges: (changes: PolicyRelationDraft[]) => void;
   onInvalid: (invalid: boolean) => void;
-}
-const emptyDate: PersianDateDraftState = { draftValue: "", valid: true, dirty: false };
-function isOwnClose(event: unknown) {
-  const e = event as { target?: EventTarget | null; currentTarget?: EventTarget | null };
-  return Boolean(e.target && e.target === e.currentTarget);
 }
 function normalizeRows(kind: PolicyRelationKind, source: unknown[]): Row[] {
   if (kind === "subprocess") return (source as PolicySubprocessScopeRow[]).map(r => ({
@@ -97,27 +94,41 @@ function normalizeRows(kind: PolicyRelationKind, source: unknown[]): Row[] {
 }
 function normalizeOptions(kind: PolicyRelationKind, source: unknown[]): Choice[] {
   if (kind === "subprocess") return (source as PolicySubprocessOption[]).map(o => ({
-    endpointId: o.subprocessId, objectId: o.subprocessId, relationId: null, version: null,
+    endpointId: o.subprocessId, objectId: o.subprocessId, parentNodeId: `node:${o.processId}`, relationId: null, version: null,
     code: o.code, title: o.title, context: `${o.processCode} — ${o.processTitle}`,
     status: "ACTIVE", validFrom: o.validFrom, validTo: o.validTo, eligible: o.status === "ACTIVE",
+    ancestors: [{ id: `node:${o.processId}`, parentId: null, code: o.processCode, name: o.processTitle, selectable: false }],
   }));
   if (kind === "organization") return (source as PolicyOrganizationOption[]).map(o => ({
-    endpointId: o.organizationId, objectId: o.organizationId, relationId: null, version: null,
+    endpointId: o.organizationId, objectId: o.organizationId, parentNodeId: o.parentOrganizationId, relationId: null, version: null,
     code: o.code, title: o.title,
     context: o.parentOrganizationCode ? `${o.parentOrganizationCode} — ${o.parentOrganizationTitle}` : "",
     status: "ACTIVE", validFrom: o.validFrom, validTo: o.validTo, eligible: o.status === "ACTIVE",
   }));
   if (kind === "control") return (source as PolicyControlOption[]).map(o => ({
-    endpointId: o.centralControlScopeId, objectId: o.controlId, relationId: null, version: null,
+    endpointId: o.centralControlScopeId, objectId: o.controlId,
+    parentNodeId: o.controlGroupCode ? `control-group:${o.subprocessId}:${encodeURIComponent(o.controlGroupCode)}` : `node:${o.subprocessId}`,
+    relationId: null, version: null,
     code: o.controlCode, title: o.controlTitle,
     context: `${o.controlGroupCode ? `${o.controlGroupCode} — ${o.controlGroupTitle} / ` : ""}${o.subprocessCode} — ${o.subprocessTitle}`,
     status: "ACTIVE", validFrom: o.validFrom, validTo: o.validTo, eligible: o.status === "ACTIVE",
+    ancestors: [
+      { id: `node:${o.subprocessId}`, parentId: null, code: o.subprocessCode, name: o.subprocessTitle, selectable: false },
+      ...(o.controlGroupCode ? [{ id: `control-group:${o.subprocessId}:${encodeURIComponent(o.controlGroupCode)}`,
+        parentId: `node:${o.subprocessId}`, code: o.controlGroupCode, name: o.controlGroupTitle ?? "", selectable: false }] : []),
+    ],
   }));
   return (source as PolicyRequirementOption[]).map(o => ({
-    endpointId: o.centralRequirementScopeId, objectId: o.requirementId, relationId: null, version: null,
+    endpointId: o.centralRequirementScopeId, objectId: o.requirementId,
+    parentNodeId: `regulation:${o.subprocessId}:${encodeURIComponent(o.regulationCode)}`, relationId: null, version: null,
     code: o.requirementCode, title: o.requirementTitle,
     context: `${o.regulationCode} — ${o.regulationTitle} / ${o.subprocessCode} — ${o.subprocessTitle}`,
     status: "ACTIVE", validFrom: o.validFrom, validTo: o.validTo, eligible: o.status === "ACTIVE",
+    ancestors: [
+      { id: `node:${o.subprocessId}`, parentId: null, code: o.subprocessCode, name: o.subprocessTitle, selectable: false },
+      { id: `regulation:${o.subprocessId}:${encodeURIComponent(o.regulationCode)}`, parentId: `node:${o.subprocessId}`,
+        code: o.regulationCode, name: o.regulationTitle, selectable: false },
+    ],
   }));
 }
 async function readRows(kind: PolicyRelationKind, id: string, deleted = false): Promise<unknown[]> {
@@ -136,236 +147,145 @@ async function readOptions(kind: PolicyRelationKind): Promise<unknown[]> {
     case "requirement": return centralPolicyApi.requirementOptions();
   }
 }
-export default function PolicyRelationTab({
-  kind, policyId, policyValidFrom, policyValidTo, readOnly, canView, canManage, busy, onChanges, onInvalid,
-}: Props) {
+
+export default function PolicyRelationTab({ kind, policyId, policyValidFrom, policyValidTo, readOnly, canView, canManage, busy, onChanges, onInvalid, canonicalRows }: Props) {
   const { t } = useTranslation();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [deletedRows, setDeletedRows] = useState<Row[]>([]);
-  const [options, setOptions] = useState<Choice[]>([]);
+  const [rows, setRows] = useState<Row[]>(() => canonicalRows ? normalizeRows(kind, canonicalRows) : []); const [options, setOptions] = useState<Choice[]>([]);
+  const [ancestors, setAncestors] = useState<HierarchySelectionNode[]>([]);
   const [drafts, setDrafts] = useState<Record<string, PolicyRelationDraft>>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("ALL");
-  const [selectionOpen, setSelectionOpen] = useState(false);
-  const [selectionSearch, setSelectionSearch] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [editor, setEditor] = useState<Row | null>(null);
-  const [editorFrom, setEditorFrom] = useState("");
-  const [editorTo, setEditorTo] = useState("");
-  const [fromDraft, setFromDraft] = useState<PersianDateDraftState>(emptyDate);
-  const [toDraft, setToDraft] = useState<PersianDateDraftState>(emptyDate);
-  const [view, setView] = useState<Row | null>(null);
-  const [actionId, setActionId] = useState<string | null>(null);
-  const [opener, setOpener] = useState<HTMLElement | null>(null);
-  const generation = useRef(0);
+  const beforeDelete = useRef<Record<string, PolicyRelationDraft | undefined>>({});
+  const [loading, setLoading] = useState(true); const [error, setError] = useState(false);
+  const [search, setSearch] = useState(""); const [filter, setFilter] = useState<CatalogRelationFilter>("ALL");
+  const [pickerOpen, setPickerOpen] = useState(false); const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pickerSelection, setPickerSelection] = useState<Set<string>>(EMPTY_SELECTION);
+  const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
+  const [view, setView] = useState<Row | null>(null); const generation = useRef(0);
+  const [reload, setReload] = useState(0);
   useEffect(() => {
-    if (!policyId || !canView) return;
+    if (!canView) return;
     const current = ++generation.current;
-    const load = async () => {
+    void Promise.resolve().then(async () => {
       setLoading(true);
       try {
-        const [live, deleted] = await Promise.all([
-          readRows(kind, policyId), readRows(kind, policyId, true),
+        const [live, deleted, choices, hierarchy] = await Promise.all([
+          canonicalRows ? Promise.resolve(canonicalRows) : policyId ? readRows(kind, policyId) : Promise.resolve([]), policyId ? readRows(kind, policyId, true) : Promise.resolve([]),
+          readOptions(kind), kind === "organization" ? new OrganizationApiRepo().list().then(nodes => nodes.filter(node => node.status !== "DELETED").map(node => ({ id: node.id, parentId: node.parentOrganizationId, code: node.code, name: node.name, selectable: false })))
+            : new ProcessApiRepo().list().then(nodes => nodes.filter(node => node.status !== "DELETED" && (kind !== "subprocess" || node.nodeType === "PROCESS")).map(node => ({ id: `node:${node.id}`, parentId: node.parentId ? `node:${node.parentId}` : null, code: node.code, name: node.title, selectable: false }))),
         ]);
         if (current !== generation.current) return;
-        setRows(normalizeRows(kind, live));
-        setDeletedRows(normalizeRows(kind, deleted));
-        setError(false);
-      } catch {
-        if (current === generation.current) setError(true);
-      } finally {
-        if (current === generation.current) setLoading(false);
-      }
-    };
-    void load();
+        const latest = new Map<string, Row>();
+        for (const row of [...normalizeRows(kind, live), ...normalizeRows(kind, deleted)]) {
+          const previous = latest.get(row.endpointId);
+          if (!previous || (previous.version ?? -1) <= (row.version ?? -1)) latest.set(row.endpointId, row);
+        }
+        setRows([...latest.values()]); setOptions(normalizeOptions(kind, choices)); setAncestors(hierarchy); setError(false);
+      } catch { if (current === generation.current) setError(true); }
+      finally { if (current === generation.current) setLoading(false); }
+    });
     return () => { generation.current += 1; };
-  }, [kind, policyId, canView]);
-  const change = (next: Record<string, PolicyRelationDraft>) => {
-    setDrafts(next);
-    onChanges(Object.values(next));
-  };
-  const put = (draft: PolicyRelationDraft) => change({ ...drafts, [draft.endpointId]: draft });
-  const undo = (id: string) => {
-    const next = { ...drafts }; delete next[id]; change(next);
-  };
+  }, [kind, policyId, canView, reload, canonicalRows]);
+  const change = (next: Record<string, PolicyRelationDraft>) => { setDrafts(next); onChanges(Object.values(next)); };
   const effective = useMemo(() => {
     const result = rows.map(row => ({ ...row, draft: drafts[row.endpointId] ?? null }));
-    const known = new Set(rows.map(row => row.endpointId));
     for (const draft of Object.values(drafts)) {
-      if (known.has(draft.endpointId) || draft.operation !== "CREATE_OR_RESTORE") continue;
-      const choice = options.find(o => o.endpointId === draft.endpointId)
-        ?? deletedRows.find(o => o.endpointId === draft.endpointId);
-      result.push({ ...(choice ?? { endpointId: draft.endpointId, objectId: draft.endpointId, relationId: null, version: null,
-        code: draft.endpointId, title: "", context: "", status: "ACTIVE" as const,
-        validFrom: null, validTo: null }), draft });
+      if (rows.some(row => row.endpointId === draft.endpointId)) continue;
+      const choice = options.find(option => option.endpointId === draft.endpointId);
+      if (choice) result.push({ ...choice, draft });
     }
     return result;
-  }, [rows, drafts, options, deletedRows]);
-  const visible = effective.filter(row => {
-    const status = displayStatus(row, row.draft);
-    return (filter === "ALL" || filter === status)
-      && `${row.code} ${row.title} ${row.context}`.toLowerCase().includes(search.trim().toLowerCase());
+  }, [rows, drafts, options]);
+  const pendingDates = Object.values(dateDrafts).some(draft => draft.dirty);
+  const invalid = Object.values(dateDrafts).some(draft => !draft.valid) || effective.some(row => {
+    if (row.draft?.operation === "DELETE") return false;
+    const dates = displayDates(row, row.draft); return Boolean(dates.from && dates.to && dates.from > dates.to);
   });
-  const openSelection = async () => {
-    setSelectionOpen(true);
-    setSelectionSearch("");
-    setSelected(new Set(effective.filter(r => r.draft?.operation !== "DELETE").map(r => r.endpointId)));
-    if (!canView) return;
-    try {
-      const source = await readOptions(kind);
-      setOptions(normalizeOptions(kind, source));
-      setError(false);
-    } catch { setError(true); }
+  useEffect(() => onInvalid(canView && (loading || error || pickerOpen || pendingDates || invalid)), [canView, loading, error, pickerOpen, pendingDates, invalid, onInvalid]);
+  const visible = effective.filter(row => dateDrafts[row.endpointId + ":validFrom"]?.dirty || dateDrafts[row.endpointId + ":validTo"]?.dirty || row.draft || row.status !== "DELETED" && (filter === "ALL" || row.status === filter) && `${row.code} ${row.title} ${row.context}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  const nodes = useMemo(() => {
+    const occupied = new Set(effective.filter(row => displayStatus(row, row.draft) !== "DELETED").map(row => row.endpointId));
+    return policySelectionHierarchy(ancestors, options, occupied, {
+      assigned: t("policy.relations.selection.assigned"), unavailable: t("catalogRelation.unavailable"),
+    });
+  }, [ancestors, effective, options, t]);
+  const eligibleSelection = new Set(nodes.filter(node => node.selectable).map(node => node.id));
+  const validSelection = pickerSelection.size > 0 && [...pickerSelection].every(id => eligibleSelection.has(id));
+  const openPicker = () => {
+    if (readOnly || !canManage || busy || loading || error) return;
+    setPickerSelection(EMPTY_SELECTION); setPickerOpen(true);
   };
-  const choices = useMemo(() => {
-    const map = new Map<string, Choice>();
-    for (const option of options) map.set(option.endpointId, option);
-    for (const row of [...rows, ...deletedRows]) {
-      if (!map.has(row.endpointId)) map.set(row.endpointId, { ...row, eligible: false });
+  const stage = (next: Record<string, PolicyRelationDraft>, row: Row, status: "ACTIVE" | "INACTIVE", from: string | null, to: string | null) => {
+    if (!row.relationId || row.status === "DELETED") next[row.endpointId] = { endpointId: row.endpointId, relationId: null, version: null, operation: "CREATE_OR_RESTORE", validFrom: from, validTo: to, requestedStatus: null };
+    else if (row.status === status && row.validFrom === from && row.validTo === to) delete next[row.endpointId];
+    else {
+      const metadata = row.validFrom !== from || row.validTo !== to;
+      next[row.endpointId] = { endpointId: row.endpointId, relationId: row.relationId, version: row.version,
+        operation: metadata ? "UPDATE" : status === "ACTIVE" ? "ACTIVATE" : "INACTIVATE", validFrom: metadata ? from : null, validTo: metadata ? to : null, requestedStatus: metadata ? status : null };
     }
-    for (const row of effective) {
-      if (!map.has(row.endpointId)) map.set(row.endpointId, { ...row, eligible: false });
-    }
-    return [...map.values()];
-  }, [options, rows, deletedRows, effective]);
-  const grouped = useMemo(() => {
-    const map = new Map<string, Choice[]>();
-    for (const choice of choices) {
-      if (!`${choice.code} ${choice.title} ${choice.context}`.toLowerCase().includes(selectionSearch.trim().toLowerCase())) continue;
-      const key = choice.context || t("policy.relations.ungrouped");
-      map.set(key, [...(map.get(key) ?? []), choice]);
-    }
-    return [...map.entries()];
-  }, [choices, selectionSearch, t]);
-  const confirmSelection = () => {
+  };
+  const confirmSelection = (ids: Set<string>) => {
+    if (readOnly || !canManage || busy || loading || error || !ids.size || [...ids].some(id => !eligibleSelection.has(id))) return;
     const next = { ...drafts };
-    const active = new Set(rows.map(r => r.endpointId));
-    for (const id of selected) {
-      if (active.has(id)) {
-        if (next[id]?.operation === "DELETE") delete next[id];
+    for (const id of ids) {
+      const baseline = rows.find(row => row.endpointId === id);
+      const choice = options.find(option => option.endpointId === id);
+      if (!choice?.eligible) continue;
+      if (baseline && baseline.status !== "DELETED") {
+        if (next[id]?.operation === "DELETE") { const previous = beforeDelete.current[id]; if (previous) next[id] = previous; else delete next[id]; delete beforeDelete.current[id]; }
       } else if (!next[id]) {
-        next[id] = { endpointId: id, relationId: null, version: null,
-          operation: "CREATE_OR_RESTORE", validFrom: policyValidFrom,
-          validTo: policyValidTo, requestedStatus: null };
+        const freshFrom = policyValidFrom && choice.validFrom ? (policyValidFrom > choice.validFrom ? policyValidFrom : choice.validFrom)
+          : policyValidFrom ?? choice.validFrom;
+        const freshTo = policyValidTo && choice.validTo ? (policyValidTo < choice.validTo ? policyValidTo : choice.validTo)
+          : policyValidTo ?? choice.validTo;
+        stage(next, baseline ?? choice, "ACTIVE", baseline ? baseline.validFrom : freshFrom, baseline ? baseline.validTo : freshTo);
       }
     }
-    for (const id of active) {
-      if (!selected.has(id)) {
-        const row = rows.find(r => r.endpointId === id)!;
-        next[id] = { endpointId: id, relationId: row.relationId, version: row.version,
-          operation: "DELETE", validFrom: null, validTo: null, requestedStatus: null };
-      }
+    change(next); setPickerOpen(false);
+  };
+  const affected = (status: "ACTIVE" | "INACTIVE" | "DELETED") => visible.filter(row => selected.has(row.endpointId) && (status === "DELETED"
+    ? displayStatus(row, row.draft) !== "DELETED" : Boolean(row.relationId && row.status !== "DELETED" && row.draft?.operation !== "DELETE" && displayStatus(row, row.draft) !== status)));
+  const batch = (status: "ACTIVE" | "INACTIVE" | "DELETED") => {
+    if (readOnly || !canManage || busy || loading || error) return;
+    const next = { ...drafts };
+    const affectedRows = affected(status);
+    if (status === "DELETED") setDateDrafts(current => Object.fromEntries(Object.entries(current).filter(([key]) => !affectedRows.some(row => key === row.endpointId + ":validFrom" || key === row.endpointId + ":validTo"))));
+    for (const row of affectedRows) {
+      const dates = displayDates(row, row.draft);
+      if (status === "DELETED") {
+        if (!row.relationId || row.status === "DELETED") delete next[row.endpointId];
+        else { beforeDelete.current[row.endpointId] = next[row.endpointId]; next[row.endpointId] = { endpointId: row.endpointId, relationId: row.relationId, version: row.version, operation: "DELETE", validFrom: null, validTo: null, requestedStatus: null }; }
+      } else stage(next, row, status, dates.from, dates.to);
     }
-    for (const id of Object.keys(next)) {
-      if (!selected.has(id) && !active.has(id)) delete next[id];
-    }
-    change(next); setSelectionOpen(false);
+    change(next);
   };
-  const actionRow = effective.find(r => r.endpointId === actionId) ?? null;
-  const rowAction = (row: Row, operation: PolicyScopeOperation) => {
-    setActionId(null); setOpener(null);
-    put({ endpointId: row.endpointId, relationId: row.relationId, version: row.version,
-      operation, validFrom: operation === "UPDATE" ? row.validFrom : null,
-      validTo: operation === "UPDATE" ? row.validTo : null,
-      requestedStatus: null });
+  const updateDate = (row: Row & { draft: PolicyRelationDraft | null }, field: "validFrom" | "validTo", value: string | null) => {
+    const next = { ...drafts }; const dates = displayDates(row, row.draft);
+    stage(next, row, displayStatus(row, row.draft) === "INACTIVE" ? "INACTIVE" : "ACTIVE", field === "validFrom" ? value : dates.from, field === "validTo" ? value : dates.to); change(next);
   };
-  const openEditor = (row: Row) => {
-    setActionId(null); setOpener(null);
-    setEditor(row);
-    const draft = drafts[row.endpointId];
-    setEditorFrom(draft ? draft.validFrom ?? "" : row.validFrom ?? "");
-    setEditorTo(draft ? draft.validTo ?? "" : row.validTo ?? "");
-    setFromDraft(emptyDate); setToDraft(emptyDate); onInvalid(false);
-  };
-  const invalidDate = !fromDraft.valid || !toDraft.valid || Boolean(editorFrom && editorTo && editorFrom > editorTo);
-  useEffect(() => onInvalid(Boolean(editor && invalidDate)), [editor, invalidDate, onInvalid]);
-  const saveEditor = () => {
-    if (!editor || invalidDate) return;
-    const original = drafts[editor.endpointId];
-    put({ endpointId: editor.endpointId,
-      relationId: original?.operation === "CREATE_OR_RESTORE" ? null : editor.relationId,
-      version: original?.operation === "CREATE_OR_RESTORE" ? null : editor.version,
-      operation: original?.operation === "CREATE_OR_RESTORE" ? "CREATE_OR_RESTORE" : "UPDATE",
-      validFrom: editorFrom || null, validTo: editorTo || null,
-      requestedStatus: original?.requestedStatus ?? null });
-    setEditor(null); onInvalid(false);
-  };
-  if (!canView) return <MessageStrip design="Information" hideCloseButton>{t("policy.relations.noAccess")}</MessageStrip>;
+  const reportDate = (key: string, draft: PersianDateDraftState) => setDateDrafts(current => {
+    const previous = current[key]; return previous?.dirty === draft.dirty && previous.valid === draft.valid && previous.draftValue === draft.draftValue ? current : { ...current, [key]: draft };
+  });
+  type DisplayRow = typeof effective[number];
+  const columns: CatalogRelationColumn<DisplayRow>[] = [
+    { key: "code", header: t("catalogRelation.code"), cell: row => row.code },
+    { key: "name", header: t("catalogRelation.name"), cell: row => <Link accessibleRole="Button" onClick={event => { event.preventDefault(); setView(row); }}>{row.title}</Link> },
+    { key: "context", header: t("policy.relations.context"), cell: row => row.context || "—" },
+    ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: DisplayRow) => <CatalogRelationDate value={displayDates(row, row.draft)[field === "validFrom" ? "from" : "to"]} label={t(`catalogRelation.${field}`)} editable={!readOnly && canManage && row.draft?.operation !== "DELETE"} disabled={busy || loading}
+      onChange={value => updateDate(row, field, value)} onDraftStateChange={draft => reportDate(row.endpointId + ":" + field, draft)} /> })),
+    { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={displayStatus(row, row.draft)} draft={!row.draft ? null : row.draft.operation === "DELETE" ? "delete" : row.draft.operation === "CREATE_OR_RESTORE" ? "new" : row.draft.operation === "ACTIVATE" ? "active" : row.draft.operation === "INACTIVATE" ? "inactive" : "edit"} /> },
+  ];
+  if (!canView) return <MessageStrip design="Information">{t("policy.relations.noAccess")}</MessageStrip>;
   return <section className="policyRelationTab">
-    <div className="policyRelationToolbar">
-
-      <Select value={filter} onChange={e => setFilter(e.detail.selectedOption?.value ?? "ALL")}>
-        <Option value="ALL">{t("policy.relations.all")}</Option>
-        <Option value="ACTIVE">{t("common.active")}</Option>
-        <Option value="INACTIVE">{t("common.inactive")}</Option>
-      </Select>
-      <HeaderSearch value={search} onChange={(value) => setSearch(value)} accessibleName={t("policy.relations.search")} />
-      {!readOnly && canManage ? <Button design="Emphasized" disabled={busy} onClick={() => void openSelection()}>{t("policy.relations.select")}</Button> : null}
-
-    </div>
-    {error ? <MessageStrip design="Negative" hideCloseButton>{t("policy.relations.loadError")}</MessageStrip> : null}
-    {loading ? <BusyIndicator active delay={0} /> : visible.length ? <Table headerRow={<TableHeaderRow>
-      <TableHeaderCell>{t("policy.relations.reference")}</TableHeaderCell>
-      <TableHeaderCell>{t("policy.relations.context")}</TableHeaderCell>
-      <TableHeaderCell>{t("policy.fields.validFrom")}</TableHeaderCell>
-      <TableHeaderCell>{t("policy.fields.validTo")}</TableHeaderCell>
-      <TableHeaderCell>{t("policy.fields.status")}</TableHeaderCell>
-      {!readOnly && canManage ? <TableHeaderCell>{t("common.actions")}</TableHeaderCell> : null}
-    </TableHeaderRow>}>
-      {visible.map(row => {
-        const status = displayStatus(row, row.draft);
-        const dates = displayDates(row, row.draft);
-        return <TableRow key={row.endpointId} rowKey={row.endpointId}>
-          <TableCell><Link accessibleRole="Button" onClick={e => { e.preventDefault(); setView(row); }}>{row.code} — {row.title}</Link></TableCell>
-          <TableCell>{row.context || "—"}</TableCell>
-          <TableCell>{formatPersianDate(dates.from)}</TableCell>
-          <TableCell>{formatPersianDate(dates.to)}</TableCell>
-          <TableCell><ObjectStatus state={row.draft ? "Information" : status === "ACTIVE" ? "Positive" : status === "DELETED" ? "Negative" : "Critical"}>
-            {t(`policy.relations.status.${status}`)}{row.draft ? ` · ${t("policy.relations.pending")}` : ""}
-          </ObjectStatus></TableCell>
-          {!readOnly && canManage ? <TableCell><Button design="Transparent" icon="overflow"
-            accessibleName={t("common.actions")} onClick={e => { setActionId(row.endpointId); setOpener(e.currentTarget as HTMLElement); }} /></TableCell> : null}
-        </TableRow>;
-      })}
-    </Table> : <MessageStrip design="Information" hideCloseButton>{t("policy.relations.empty")}</MessageStrip>}
-    {!readOnly && canManage ? <ActionSheet open={Boolean(actionRow && opener)} opener={opener} onClose={() => { setActionId(null); setOpener(null); }}>
-      {actionRow?.draft ? <>
-        {(actionRow.draft.operation === "CREATE_OR_RESTORE" || actionRow.draft.operation === "UPDATE")
-          ? <Button icon="edit" onClick={() => openEditor(actionRow)}>{t("common.edit")}</Button> : null}
-        <Button icon="undo" onClick={() => { undo(actionRow.endpointId); setActionId(null); setOpener(null); }}>{t("policy.relations.undo")}</Button>
-      </> : <>
-        <Button icon="edit" onClick={() => actionRow && openEditor(actionRow)}>{t("common.edit")}</Button>
-        {actionRow?.status === "ACTIVE" ? <Button icon="pause" onClick={() => actionRow && rowAction(actionRow, "INACTIVATE")}>{t("policy.relations.inactivate")}</Button> : null}
-        {actionRow?.status === "INACTIVE" ? <Button icon="accept" onClick={() => actionRow && rowAction(actionRow, "ACTIVATE")}>{t("policy.relations.activate")}</Button> : null}
-        <Button icon="delete" onClick={() => actionRow && rowAction(actionRow, "DELETE")}>{t("policy.relations.remove")}</Button>
-      </>}
-    </ActionSheet> : null}
-    <Dialog open={selectionOpen} accessibleName={t("policy.relations.select")} onClose={e => { if (isOwnClose(e)) setSelectionOpen(false); }}>
-      <ModalDialogHeader title={t("policy.relations.select")} onClose={() => setSelectionOpen(false)}  actions={<HeaderSearch value={selectionSearch} onChange={(value) => setSelectionSearch(value)} accessibleName={t("policy.relations.search")} />} />
-
-      <List separators="Inner" accessibleName={t("policy.relations.select")}>
-        {grouped.map(([group, members]) => <ListItemGroup key={group} headerText={group} headerAccessibleName={group}>
-          {members.map(choice => <ListItemCustom key={choice.endpointId} type="Inactive" accessibleName={`${choice.code} ${choice.title}`}>
-            <CheckBox accessibleName={`${choice.code} ${choice.title}`} checked={selected.has(choice.endpointId)}
-              disabled={!choice.eligible && !selected.has(choice.endpointId)}
-              onChange={e => setSelected(current => { const next = new Set(current); if (e.target.checked) next.add(choice.endpointId); else next.delete(choice.endpointId); return next; })} />
-            <span>{choice.code} — {choice.title}</span>
-          </ListItemCustom>)}
-        </ListItemGroup>)}
-      </List>
-      <DialogFooter><Button design="Emphasized" onClick={confirmSelection}>{t("common.save")}</Button><Button design="Transparent" onClick={() => setSelectionOpen(false)}>{t("common.cancel")}</Button></DialogFooter>
-    </Dialog>
-    <Dialog open={Boolean(editor)} accessibleName={t("policy.relations.edit")} onClose={e => { if (isOwnClose(e)) { setEditor(null); onInvalid(false); } }}>
-      <ModalDialogHeader title={t("policy.relations.edit")} onClose={() => { setEditor(null); onInvalid(false); }} />
-      <PersianDatePicker value={editorFrom} accessibleName={t("policy.fields.validFrom")} invalidValueMessage={t("common.invalidPersianDate")}
-        onChange={setEditorFrom} onDraftStateChange={setFromDraft} />
-      <PersianDatePicker value={editorTo} accessibleName={t("policy.fields.validTo")} invalidValueMessage={t("common.invalidPersianDate")}
-        onChange={setEditorTo} onDraftStateChange={setToDraft} />
-      <DialogFooter><Button design="Emphasized" disabled={invalidDate} onClick={saveEditor}>{t("common.save")}</Button><Button design="Transparent" onClick={() => { setEditor(null); onInvalid(false); }}>{t("common.cancel")}</Button></DialogFooter>
-    </Dialog>
-    {view ? <PolicyReferenceView key={`${kind}:${view.objectId}`} kind={kind}
-      objectId={view.objectId} onClose={() => setView(null)} /> : null}
+    <CatalogRelationToolbar title={t(TAB_LABELS[kind])} search={search} onSearch={setSearch} filter={filter} onFilter={setFilter} editable={!readOnly && canManage} busy={busy || loading}
+      canSelect={!error} onSelect={openPicker} canActivate={affected("ACTIVE").length > 0} onActivate={() => batch("ACTIVE")} canInactivate={affected("INACTIVE").length > 0} onInactivate={() => batch("INACTIVE")} canDelete={affected("DELETED").length > 0} onDelete={() => batch("DELETED")} />
+    {error ? <MessageStrip design="Negative" hideCloseButton>{t("policy.relations.loadError")}<CatalogActionButton onClick={() => setReload(value => value + 1)}>{t("catalogRelation.retry")}</CatalogActionButton></MessageStrip> : null}
+    {invalid ? <MessageStrip design="Negative" hideCloseButton>{t("catalogRelation.invalid")}</MessageStrip> : null}
+    <CatalogRelationTable rows={visible} columns={columns} rowKey={row => row.endpointId} accessibleName={t("policy.relations.reference")} selectable={!readOnly && canManage} selectedKeys={selected} onSelectionChange={setSelected} loading={loading} busy={busy} emptyText={t("catalogRelation.empty")} />
+    {pickerOpen ? <HierarchyMultiSelectionDialog key={`policy-selection:${kind}`} open
+      title={t(`policy.relations.selection.${kind}.title`)} searchAccessibleName={t(`policy.relations.selection.${kind}.search`)}
+      description={t(`policy.relations.selection.${kind}.hint`)} nodes={nodes} selectedIds={EMPTY_SELECTION}
+      busy={busy} loading={loading} error={error ? t("policy.relations.loadError") : null} confirmDisabled={!validSelection}
+      onSelectionChange={setPickerSelection} confirmText={t("catalogRelation.select")} cancelText={t("common.cancel")}
+      onConfirm={confirmSelection} onClose={() => setPickerOpen(false)} /> : null}
+    {view ? <PolicyReferenceView key={`${kind}:${view.objectId}`} kind={kind} objectId={view.objectId} onClose={() => setView(null)} /> : null}
   </section>;
 }

@@ -22,6 +22,7 @@ function renderOverflowButton() {
 }
 
 export function DetailTabContainer({
+    collapsed = true,
     overflowButton,
     overflowMode = "End",
     startOverflowButton,
@@ -36,6 +37,9 @@ export function DetailTabContainer({
     return (
         <TabContainer
             {...props}
+            // Detail panels live outside the tab strip so drafts stay mounted.
+            // Collapse UI5's unused content area instead of rendering an empty band.
+            collapsed={collapsed}
             style={{ ...BASE_TAB_CONTAINER_STYLE, ...style }}
             overflowMode={overflowMode}
             overflowButton={overflowButton ?? renderOverflowButton()}

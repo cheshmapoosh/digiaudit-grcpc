@@ -20,6 +20,15 @@ function toCreateBody(payload: OrganizationNodeCreate) {
         parentOrganizationId: payload.parentOrganizationId ?? null,
         ownerAssignments: payload.ownerAssignments ?? [],
         subprocesses: payload.subprocesses ?? [],
+        localControlScopeChanges: payload.localControlScopeChanges ?? [],
+        localRiskScopeChanges: payload.localRiskScopeChanges ?? [],
+        localControlObjectiveScopeChanges: payload.localControlObjectiveScopeChanges ?? [],
+        localRequirementScopeChanges: payload.localRequirementScopeChanges ?? [],
+        localOrganizationPolicyChanges: payload.localOrganizationPolicyChanges ?? [],
+        localContextPolicyChanges: payload.localContextPolicyChanges ?? [],
+        localControlPolicyChanges: payload.localControlPolicyChanges ?? [],
+        localRequirementPolicyChanges: payload.localRequirementPolicyChanges ?? [],
+        organizationObjectiveChanges: payload.organizationObjectiveChanges ?? [],
         location: payload.location ?? null,
         description: payload.description ?? null,
         validFrom: payload.validFrom ?? null,
@@ -38,6 +47,15 @@ function toUpdateBody(payload: OrganizationNodeUpdate) {
         parentOrganizationId: payload.parentOrganizationId ?? null,
         ownerAssignments: payload.ownerAssignments ?? [],
         subprocesses: payload.subprocesses ?? [],
+        localControlScopeChanges: payload.localControlScopeChanges ?? [],
+        localRiskScopeChanges: payload.localRiskScopeChanges ?? [],
+        localControlObjectiveScopeChanges: payload.localControlObjectiveScopeChanges ?? [],
+        localRequirementScopeChanges: payload.localRequirementScopeChanges ?? [],
+        localOrganizationPolicyChanges: payload.localOrganizationPolicyChanges ?? [],
+        localContextPolicyChanges: payload.localContextPolicyChanges ?? [],
+        localControlPolicyChanges: payload.localControlPolicyChanges ?? [],
+        localRequirementPolicyChanges: payload.localRequirementPolicyChanges ?? [],
+        organizationObjectiveChanges: payload.organizationObjectiveChanges ?? [],
         location: payload.location ?? null,
         description: payload.description ?? null,
         validFrom: payload.validFrom ?? null,
@@ -49,6 +67,9 @@ function toUpdateBody(payload: OrganizationNodeUpdate) {
 export class OrganizationApiRepo implements OrganizationRepo {
     ownerOptions(): Promise<import("../domain/organization.model").OrganizationOwnerOption[]> {
         return httpClient.get(`${BASE_URL}/owner-options`);
+    }
+    deletedOwners(id: string): Promise<import("../domain/organization.model").OrganizationOwnerAssignment[]> {
+        return httpClient.get(`${BASE_URL}/${id}/owner-assignments/deleted`);
     }
     async list(): Promise<OrganizationNode[]> {
         return httpClient.get<OrganizationNode[]>(BASE_URL);

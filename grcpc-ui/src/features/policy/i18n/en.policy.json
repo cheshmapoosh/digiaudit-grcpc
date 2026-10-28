@@ -78,7 +78,34 @@
       "inactivate": "Inactivate",
       "remove": "Remove",
       "invalidDate": "A relationship date is invalid.",
-      "status": { "ACTIVE": "Active", "INACTIVE": "Inactive", "DELETED": "Removed" }
+      "selection": {
+        "assigned": "Already linked",
+        "subprocess": {
+          "title": "Select Policy subprocesses",
+          "search": "Search processes and subprocesses",
+          "hint": "Processes provide navigation; select active subprocesses. Selections are drafts until the main Policy Save."
+        },
+        "organization": {
+          "title": "Select Policy organizations",
+          "search": "Search organization code and name",
+          "hint": "Select active organizations from the organization hierarchy. Selections are drafts until the main Policy Save."
+        },
+        "control": {
+          "title": "Select subprocess controls for the Policy",
+          "search": "Search controls, control groups and subprocesses",
+          "hint": "Processes, subprocesses and control groups provide navigation; select a control under its intended subprocess. Each row identifies one exact Central Scope and is saved by the main Policy Save."
+        },
+        "requirement": {
+          "title": "Select subprocess requirements for the Policy",
+          "search": "Search requirements, regulations and subprocesses",
+          "hint": "Processes, subprocesses and regulations provide navigation; select a requirement under its intended subprocess. Each row identifies one exact Central Scope and is saved by the main Policy Save."
+        }
+      },
+      "status": {
+        "ACTIVE": "Active",
+        "INACTIVE": "Inactive",
+        "DELETED": "Removed"
+      }
     },
     "validation": {
       "codeRequired": "Identifier is required.",
@@ -101,7 +128,9 @@
       "relationNotFound": "The selected relationship or referenced item is no longer available.",
       "invalidRelation": "The relationship is invalid for the selected status or date range.",
       "accessDenied": "You do not have access to the selected relationship area.",
-      "hierarchyBusy": "Another change is in progress. Try again shortly."
+      "hierarchyBusy": "Another change is in progress. Try again shortly.",
+      "profileBusy": "Profile administration is busy. Save again shortly.",
+      "profileReadOnly": "Write access to this profile has changed. Your draft is retained."
     }
   }
 }

@@ -31,19 +31,20 @@ public class ObjectiveController {
 
   @GetMapping("/{id}/organizations")
   @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
-  public List<OrganizationObjectiveDtos.OrganizationLink> organizations(@PathVariable UUID id) {
-    return organizationObjectives.listOrganizations(id);
+  public List<OrganizationObjectiveDtos.OrganizationLink> organizations(@PathVariable UUID id,
+      @RequestParam(required = false) com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus lifecycleStatus) {
+    return organizationObjectives.listOrganizations(id, lifecycleStatus);
   }
 
   @PostMapping
   @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
-  public MasterDataAggregateMutationResponse create(@Valid @RequestBody ObjectiveDtos.Create request) {
+  public ObjectiveDtos.AggregateResponse create(@Valid @RequestBody ObjectiveDtos.Create request) {
     return service.create(request);
   }
 
   @PutMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
-  public MasterDataAggregateMutationResponse update(@PathVariable UUID id,
+  public ObjectiveDtos.AggregateResponse update(@PathVariable UUID id,
       @Valid @RequestBody ObjectiveDtos.Update request) { return service.update(id, request); }
 
   @DeleteMapping("/{id}")

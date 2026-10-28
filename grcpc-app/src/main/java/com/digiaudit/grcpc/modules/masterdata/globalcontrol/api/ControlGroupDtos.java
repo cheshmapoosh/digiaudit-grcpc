@@ -19,4 +19,5 @@ public final class ControlGroupDtos {
   public record Detail(UUID id, String nodeType, String code, String name, String description,
       UUID parentId, LocalDate validFrom, LocalDate validTo, MasterDataLifecycleStatus status,
       long version, Instant createdAt, Instant updatedAt) {}
+  public record MutationResponse(UUID entityId, UUID revisionId, long version, Detail entity) {}
 }

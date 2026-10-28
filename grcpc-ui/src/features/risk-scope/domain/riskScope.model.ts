@@ -4,8 +4,8 @@ import type {
   CentralRiskType,
 } from "@/features/risk/domain/centralRisk.model";
 
-export type RiskScopeStatus = "ACTIVE" | "INACTIVE";
-export type RiskScopeStatusFilter = RiskScopeStatus | "ALL";
+export type RiskScopeStatus = "ACTIVE" | "INACTIVE" | "DELETED";
+export type RiskScopeStatusFilter = Exclude<RiskScopeStatus, "DELETED"> | "ALL";
 export type RiskScopeEditState = "FINAL" | "DRAFT_NEW" | "DRAFT_EDITED" | "DRAFT_PENDING_DELETE";
 
 export interface CentralSubprocessRiskScope {
@@ -63,7 +63,7 @@ export interface RiskScopeChange {
   version?: number | null;
   validFrom?: string | null;
   validTo?: string | null;
-  requestedStatus?: RiskScopeStatus | null;
+  requestedStatus?: Exclude<RiskScopeStatus, "DELETED"> | null;
 }
 
 export interface RiskScopeDraftState {

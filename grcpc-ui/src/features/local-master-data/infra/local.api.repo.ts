@@ -87,6 +87,19 @@ function query(values: Record<string, string | number | null | undefined>): stri
 }
 
 export const localApi = {
+    async allRows<K extends LocalSectionKey>(section: K, owner: LocalRouteOwner): Promise<LocalRows[K][]> {
+        const rows: LocalRows[K][] = [];
+        for (const status of [null, "DELETED"] as const) {
+            let page = 0; let total = 1;
+            do { const result = await localApi.list(section, owner, status, page++, 100); rows.push(...result.items); total = result.totalPages; } while (page < total);
+        }
+        return [...new Map(rows.map(row => [row.id, row])).values()];
+    },
+    async allOptions(path: string, params: Record<string, string | number | null | undefined> = {}): Promise<LocalOption[]> {
+        const rows: LocalOption[] = []; let page = 0; let total = 1;
+        do { const result = await localApi.options(path, { ...params, page: page++, size: 100 }); rows.push(...result.items); total = result.totalPages; } while (page < total);
+        return [...new Map(rows.map(row => [row.id, row])).values()];
+    },
     saveSubprocesses(organizationId: string, changes: LocalContextChange[]): Promise<{ revisionId: string; rows: LocalRows["contexts"][] }> {
         return httpClient.post(`${ROOT}/organizations/${organizationId}/contexts/save`, { changes });
     },

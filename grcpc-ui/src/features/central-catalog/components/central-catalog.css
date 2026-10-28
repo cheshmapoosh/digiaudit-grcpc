@@ -16,10 +16,6 @@
   min-height: 34rem;
   height: calc(100vh - 10rem);
 }
-.catalogObjectDialog {
-  width: min(72rem, calc(100vw - 2rem));
-  max-width: min(72rem, calc(100vw - 2rem));
-}
 .catalogObjectDialogContent {
   width: 100%;
   max-height: calc(92vh - 8rem);

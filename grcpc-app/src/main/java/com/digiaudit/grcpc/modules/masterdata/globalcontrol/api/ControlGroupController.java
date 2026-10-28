@@ -36,13 +36,13 @@ public class ControlGroupController {
 
   @PostMapping
   @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
-  public MasterDataRevisionMutationResponse create(@Valid @RequestBody ControlGroupDtos.Create request) {
+  public ControlGroupDtos.MutationResponse create(@Valid @RequestBody ControlGroupDtos.Create request) {
     return service.create(request);
   }
 
   @PutMapping("/{id}")
   @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
-  public MasterDataRevisionMutationResponse update(@PathVariable UUID id,
+  public ControlGroupDtos.MutationResponse update(@PathVariable UUID id,
       @Valid @RequestBody ControlGroupDtos.Update request) {
     return service.update(id, request);
   }

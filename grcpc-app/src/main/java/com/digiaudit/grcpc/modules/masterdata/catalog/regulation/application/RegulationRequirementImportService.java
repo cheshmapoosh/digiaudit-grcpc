@@ -66,13 +66,19 @@ public class RegulationRequirementImportService {
 
   @Transactional(readOnly = true)
   public Preview preview(UUID regulationId, MultipartFile file) {
+    return preview(regulationId, file, false, List.of());
+  }
+
+  /** The modal stages fresh children; it must never turn a duplicate code into an implicit restore. */
+  @Transactional(readOnly = true)
+  public Preview preview(UUID regulationId, MultipartFile file, boolean draft, List<String> reservedCodes) {
     var parsed = reader.read(file);
     var regulation = requireRegulation(regulations.findById(regulationId).orElse(null), regulationId);
     var normalized = normalize(regulationId, parsed);
     var codes = lookupCodes(normalized);
     var existing = codes.isEmpty() ? List.<CentralRegulationRequirementEntity>of()
         : requirements.findByCodeIn(codes);
-    return validate(regulation, parsed, normalized, existing);
+    return validate(regulation, parsed, normalized, existing, draft, reservedCodes);
   }
 
   public Result commit(UUID regulationId, MultipartFile file, String expectedFingerprint) {
@@ -90,7 +96,7 @@ public class RegulationRequirementImportService {
             var codes = lookupCodes(normalized);
             var existing = codes.isEmpty() ? List.<CentralRegulationRequirementEntity>of()
                 : requirements.lockAllByCodes(codes);
-            var preview = validate(regulation, parsed, normalized, existing);
+            var preview = validate(regulation, parsed, normalized, existing, false, List.of());
             if (!preview.valid()) throw new InvalidImportException(preview);
             if (expectedFingerprint == null || !expectedFingerprint.equals(preview.fingerprint())) throw stale();
 
@@ -194,17 +200,20 @@ public class RegulationRequirementImportService {
   }
 
   private Preview validate(CentralRegulationEntity regulation, RegulationRequirementWorkbookReader.Parsed parsed,
-      Normalized normalized, List<CentralRegulationRequirementEntity> existing) {
+      Normalized normalized, List<CentralRegulationRequirementEntity> existing, boolean draft, List<String> reservedCodes) {
     List<Issue> issues = new ArrayList<>(normalized.issues());
     Map<String, CentralRegulationRequirementEntity> byCode = byCode(existing);
     List<Row> rows = new ArrayList<>();
+    var reserved = reservedCodes == null ? java.util.Set.<String>of() : reservedCodes.stream()
+        .map(support::normalizeCode).collect(java.util.stream.Collectors.toSet());
     for (Row row : normalized.rows()) {
       var stored = byCode.get(row.code());
       var operation = RevisionOperationType.CREATE;
+      if (draft && reserved.contains(row.code())) issues.add(new Issue(row.rowNumber(), "code", "DUPLICATE_CODE"));
       if (stored != null) {
         if (!stored.getRegulationId().equals(regulation.getId())) {
           issues.add(new Issue(row.rowNumber(), "code", "OTHER_REGULATION"));
-        } else if (stored.getStatus() == MasterDataLifecycleStatus.ACTIVE) {
+        } else if (draft || stored.getStatus() == MasterDataLifecycleStatus.ACTIVE) {
           issues.add(new Issue(row.rowNumber(), "code", "DUPLICATE_CODE"));
         } else {
           operation = stored.getStatus() == MasterDataLifecycleStatus.DELETED
@@ -218,6 +227,10 @@ public class RegulationRequirementImportService {
         .append(':').append(regulation.getVersion());
     existing.stream().sorted(java.util.Comparator.comparing(CentralRegulationRequirementEntity::getCode)).forEach(e ->
         state.append('|').append(e.getId()).append(':').append(e.getVersion()).append(':').append(e.getStatus()));
+    if (draft) {
+      state.append(":draft");
+      reserved.stream().sorted().forEach(code -> state.append('|').append(code));
+    }
     String fingerprint = RegulationRequirementWorkbookReader.digest(state.toString().getBytes(StandardCharsets.UTF_8));
     return new Preview(regulation.getId(), regulation.getTitle(), fingerprint, issues.isEmpty(),
         issues.isEmpty() ? List.copyOf(rows) : List.of(), List.copyOf(issues));

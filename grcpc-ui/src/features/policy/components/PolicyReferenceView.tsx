@@ -74,9 +74,10 @@ export default function PolicyReferenceView({ kind, objectId, onClose }: {
     return () => { cancelled = true; };
   }, [kind, objectId]);
 
-  return <Dialog open accessibleName={t("policy.relations.reference")}
+  return <Dialog open className="catalogObjectDialog" accessibleName={t("policy.relations.reference")}
     onClose={event => { if (isOwnClose(event)) onClose(); }}>
     <ModalDialogHeader title={t("policy.relations.reference")} onClose={onClose} />
+    <div data-catalog-dialog-content>
     {!data && !error ? <BusyIndicator active delay={0} /> : null}
     {error ? <MessageStrip design="Negative" hideCloseButton>{t("policy.relations.loadError")}</MessageStrip> : null}
     {data?.kind === "subprocess" ? <ProcessObjectPage mode="view" value={data.item} allItems={data.items}
@@ -98,5 +99,6 @@ export default function PolicyReferenceView({ kind, objectId, onClose }: {
       error={null} documentError={null} onErrorClose={() => undefined}
       onSubmit={async () => false} onCancel={onClose} onEdit={() => undefined}
       onActiveTabChange={setTab} onDirtyChange={() => undefined} /> : null}
+    </div>
   </Dialog>;
 }

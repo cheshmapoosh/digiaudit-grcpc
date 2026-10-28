@@ -1,5 +1,6 @@
 import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { BusyIndicator, Dialog, MessageStrip } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
@@ -15,6 +16,7 @@ import type { PolicyParentCandidate } from "../components/PolicyParentValueHelpD
 import type {
   CentralPolicyAnyDetail,
   CentralPolicyDetail,
+  CentralPolicyAggregateResponse,
   CentralPolicyGroupDetail,
   CentralPolicyGroupSummary,
   CentralPolicyNodeType,
@@ -79,8 +81,16 @@ function detailToNode(type: CentralPolicyNodeType, value: CentralPolicyAnyDetail
   };
 }
 
+function canonicalPolicy(result: CentralPolicyAggregateResponse): CentralPolicyDetail {
+  return { ...result.entity, relationRows: { subprocess: result.subprocessScopes, organization: result.organizationScopes,
+    control: result.controlScopes, requirement: result.requirementScopes } };
+}
+
 export default function CentralPoliciesPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const linkedId = searchParams.get("policyId");
+  const openedLinkedId = useRef<string | null>(null);
   const appDir = useResolvedUiDir();
   const permissions = useCatalogActionPermissions("CENTRAL_POLICY");
   const [groups, setGroups] = useState<CentralPolicyGroupSummary[]>([]);
@@ -136,6 +146,11 @@ export default function CentralPoliciesPage() {
         return t("policy.errors.invalidRelation");
       case "MASTER_DATA_ACCESS_DENIED":
         return t("policy.errors.accessDenied");
+      case "PROFILE_BUSY":
+        return t("policy.errors.profileBusy");
+      case "PROFILE_READ_ONLY":
+      case "PROFILE_ACCESS_DENIED":
+        return t("policy.errors.profileReadOnly");
       case "HIERARCHY_BUSY":
         return t("policy.errors.hierarchyBusy");
       default:
@@ -231,6 +246,21 @@ export default function CentralPoliciesPage() {
     });
   }, [loadDetail, requestLeave, selectedDetail?.id, selectedNode]);
 
+  useEffect(() => {
+    if (!linkedId || openedLinkedId.current === linkedId) return;
+    const row = policies.find(item => item.id === linkedId); if (!row) return;
+    openedLinkedId.current = linkedId;
+    requestLeave(() => {
+      const node: CentralPolicyTreeNode = { ...row, type: "POLICY", parentId: row.policyGroupId, children: [] };
+      setSelectedNode(node); setExpansionAnchorId(node.id);
+      void loadDetail(node).then(detail => {
+        if (!detail) return;
+        setSelectedDetail(detail); setModalValue(detail); setModalType("POLICY");
+        setModalParentId(row.policyGroupId); setModalMode("view"); setActiveTab("general"); setModalOpen(true);
+      });
+    });
+  }, [linkedId, loadDetail, policies, requestLeave]);
+
   const allowedCreateTypes = useMemo<CentralPolicyNodeType[]>(() => {
     if (!selectedNode) return ["GROUP"];
     if (selectedNode.type === "GROUP") return ["GROUP", "POLICY"];
@@ -280,7 +310,6 @@ export default function CentralPoliciesPage() {
     setModalParentId(selectedNode.parentId);
     setModalValue(selectedDetail);
     setModalMode("edit");
-    setActiveTab("general");
     setObjectError(null);
     setDocumentError(null);
     setModalOpen(true);
@@ -302,7 +331,7 @@ export default function CentralPoliciesPage() {
     setObjectError(null);
     setDocumentError(null);
     try {
-      let entityId: string;
+      let detail: CentralPolicyAnyDetail;
       if (modalMode === "create") {
         if (modalType === "GROUP") {
           const result = await centralPolicyApi.createGroup({
@@ -315,14 +344,14 @@ export default function CentralPoliciesPage() {
             validTo: draft.validTo,
             documents: draft.documents,
           });
-          entityId = result.entityId;
+          detail = result.entity;
         } else {
           if (!draft.parentId) throw new Error("PARENT_NOT_FOUND");
           const result = await centralPolicyApi.createPolicy({
             code: draft.code,
             title: draft.title,
             policyGroupId: draft.parentId,
-            status: draft.status,
+            status: "ACTIVE",
             policyType: draft.policyType,
             responsibleOrganization: draft.responsibleOrganization,
             communicationMethod: draft.communicationMethod,
@@ -339,13 +368,13 @@ export default function CentralPoliciesPage() {
             requirementScopeChanges: draft.requirementScopeChanges.map(({ endpointId, ...change }) => ({ ...change, centralRequirementScopeId: endpointId })),
             documents: draft.documents,
           });
-          entityId = result.entityId;
+          detail = canonicalPolicy(result);
         }
       } else {
         const current = modalValue!;
         if (modalType === "POLICY") {
           if (!draft.parentId) throw new Error("PARENT_NOT_FOUND");
-          await centralPolicyApi.updatePolicy(current.id, {
+          detail = canonicalPolicy(await centralPolicyApi.updatePolicy(current.id, {
             version: current.version,
             title: draft.title,
             policyGroupId: draft.parentId,
@@ -365,49 +394,18 @@ export default function CentralPoliciesPage() {
             controlScopeChanges: draft.controlScopeChanges.map(({ endpointId, ...change }) => ({ ...change, centralControlScopeId: endpointId })),
             requirementScopeChanges: draft.requirementScopeChanges.map(({ endpointId, ...change }) => ({ ...change, centralRequirementScopeId: endpointId })),
             documents: draft.documents,
-          });
+          }));
         } else {
-        let version = current.version;
-        const definitionChanged =
-          current.title !== draft.title ||
-          (current.description ?? null) !== draft.description ||
-          (current.validFrom ?? null) !== draft.validFrom ||
-          (current.validTo ?? null) !== draft.validTo ||
-          draft.documentsDirty;
-        if (definitionChanged) {
-          const result = await centralPolicyApi.updateGroup(current.id, {
-                version,
-                title: draft.title,
-                description: draft.description,
-                validFrom: draft.validFrom,
-                validTo: draft.validTo,
-                documents: draft.documents,
-              });
-          version = result.version;
+          detail = (await centralPolicyApi.updateGroup(current.id, {
+            version: current.version, title: draft.title, description: draft.description,
+            validFrom: draft.validFrom, validTo: draft.validTo, documents: draft.documents,
+            parentChange: { parentGroupId: draft.parentId }, status: draft.status, sortOrder: current.sortOrder,
+          })).entity;
         }
-
-        const currentParentId = detailParentId("GROUP", current);
-        if (currentParentId !== draft.parentId) {
-            const result = await centralPolicyApi.moveGroup(current.id, {
-              version,
-              parentGroupId: draft.parentId,
-              sortOrder: current.sortOrder,
-            });
-            version = result.version;
-        }
-
-        if (current.status !== draft.status) {
-          const action = draft.status === "ACTIVE" ? "activate" : "inactivate";
-          const result = await centralPolicyApi.groupLifecycle(current.id, action, version);
-          version = result.version;
-        }
-        }
-        entityId = current.id;
       }
 
       setDirty(false);
-      await loadRows();
-      const detail = await fetchDetail(modalType, entityId);
+      void loadRows();
       const node = detailToNode(modalType, detail);
       setSelectedNode(node);
       setSelectedDetail(detail);
@@ -428,7 +426,7 @@ export default function CentralPoliciesPage() {
     } finally {
       setBusy(false);
     }
-  }, [fetchDetail, loadRows, mapError, modalMode, modalType, modalValue, t]);
+  }, [loadRows, mapError, modalMode, modalType, modalValue, t]);
 
   const clearSelection = useCallback(() => {
     requestLeave(() => {
@@ -561,9 +559,9 @@ export default function CentralPoliciesPage() {
         midColumn,
       )}
 
-      <Dialog open={modalOpen} accessibleName={dialogTitle} className="policyObjectDialog" onClose={handleDialogClose}>
+      <Dialog open={modalOpen} accessibleName={dialogTitle} className="policyObjectDialog catalogObjectDialog" onClose={handleDialogClose}>
         <ModalDialogHeader title={dialogTitle} onClose={closeObject} />
-        <div className="policyDialogContent" dir={appDir}>
+        <div data-catalog-dialog-content className="policyDialogContent" dir={appDir}>
           {modalMode === "create" || modalValue ? (
             <CentralPolicyObjectPage
               key={`${modalMode === "create" ? "create" : modalValue?.id}:${modalType}:${modalMode}`}

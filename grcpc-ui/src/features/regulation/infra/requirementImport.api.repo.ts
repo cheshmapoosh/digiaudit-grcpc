@@ -20,6 +20,11 @@ export const requirementImportApi = {
     }),
   preview: (regulationId: string, file: File) =>
     httpClient.post<RequirementImportPreview>(`${base(regulationId)}/preview`, upload(file), { successMessage: false }),
+  draftPreview: (regulationId: string, file: File, reservedCodes: string[]) => {
+    const data = upload(file);
+    reservedCodes.forEach(code => data.append("reservedCodes", code));
+    return httpClient.post<RequirementImportPreview>(`${base(regulationId)}/preview?draft=true`, data, { successMessage: false });
+  },
   commit: (regulationId: string, file: File, fingerprint: string) =>
     httpClient.post<RequirementImportResult>(base(regulationId), upload(file, fingerprint), { successMessage: false }),
 };

@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlexBox, MessageStrip, ObjectStatus, Option, Select, Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow, TableSelectionMulti, Text, Title } from "@ui5/webcomponents-react";
-import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { useNavigate } from "react-router-dom";
+import { FlexBox, Link, MessageStrip, Text } from "@ui5/webcomponents-react";
+import { CatalogRelationTable } from "@/shared/components/CatalogRelationTable";
+import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
+import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import type { ProcessNode } from "@/features/process";
 import type { LocalContextDraft, LocalContextRow, LocalStatus } from "../domain/local.model";
 import { localApi } from "../infra/local.api.repo";
-import { useOrganizationTableViewport } from "../hooks/useOrganizationTableViewport";
 import OrganizationSubprocessSearchDialog from "./OrganizationSubprocessSearchDialog";
 import "./organizationSubprocessTable.css";
 
@@ -13,6 +16,8 @@ interface Props {
     organizationId: string | null;
     editable: boolean;
     busy: boolean;
+    canonicalRows?: LocalContextRow[];
+    resetKey?: string | number;
     changes: LocalContextDraft[];
     onChange: (changes: LocalContextDraft[]) => void;
     onPendingChange: (pending: boolean) => void;
@@ -20,41 +25,62 @@ interface Props {
 }
 
 /** Relationship drafts belong to the Organization modal; this table never writes or owns an edit mode. */
-export default function OrganizationSubprocessTable({ organizationId, editable, busy, changes, onChange, onPendingChange, onReadyChange }: Props) {
+export default function OrganizationSubprocessTable({ organizationId, editable, busy, canonicalRows, resetKey,
+    changes, onChange, onPendingChange, onReadyChange }: Props) {
     const { t } = useTranslation();
-    const viewportRef = useOrganizationTableViewport();
-    const [rows, setRows] = useState<LocalContextRow[]>([]);
+    const navigate = useNavigate();
+    const processAccess = useMasterDataAccess("PROCESS");
+    const [loaded, setLoaded] = useState<LocalContextRow[]>([]);
+    const [loadedFor, setLoadedFor] = useState<string | null>(organizationId);
+    const previousOwner = useRef(organizationId);
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [pickerOpen, setPickerOpen] = useState(false);
     const [loading, setLoading] = useState(Boolean(organizationId));
     const [error, setError] = useState<string | null>(null);
-    const [statusFilter, setStatusFilter] = useState<"ACTIVE" | "INACTIVE" | "">("");
+    const [retry, setRetry] = useState(0);
+    const [statusFilter, setStatusFilter] = useState<CatalogRelationFilter>("ALL");
+    const [search, setSearch] = useState("");
     useEffect(() => { onPendingChange(pickerOpen); }, [pickerOpen, onPendingChange]);
     useEffect(() => { onReadyChange(!loading && !error && !pickerOpen); }, [loading, error, pickerOpen, onReadyChange]);
     useEffect(() => {
         let current = true;
+        void Promise.resolve().then(() => { if (current) setLoading(Boolean(organizationId)); });
         const request = organizationId ? localApi.allContexts(organizationId) : Promise.resolve([]);
         void request.then((result) => {
-            if (current) { setRows(result); setLoading(false); setError(null); }
+            if (current) {
+                setLoaded(result); setLoadedFor(organizationId); setLoading(false); setError(null);
+                if (previousOwner.current !== organizationId) setSelected(new Set());
+                previousOwner.current = organizationId;
+            }
         }).catch(() => {
             if (current) { setLoading(false); setError(t("local.subprocessTable.loadError")); }
         });
         return () => { current = false; };
-    }, [organizationId, t]);
+    }, [organizationId, resetKey, retry, t]);
 
+    const rows = useMemo(() => {
+        const merged = new Map<string, LocalContextRow>();
+        for (const row of [...(loadedFor === organizationId ? loaded : []), ...(canonicalRows ?? [])]) {
+            const previous = merged.get(row.subprocessId);
+            if (!previous || previous.version <= row.version) merged.set(row.subprocessId, row);
+        }
+        return [...merged.values()];
+    }, [canonicalRows, loaded, loadedFor, organizationId]);
     const byId = useMemo(() => new Map(rows.map((row) => [row.subprocessId, row])), [rows]);
     const byChange = new Map(changes.map((change) => [change.subprocessId, change]));
     const target = (change: LocalContextDraft | undefined, original?: LocalContextRow): LocalStatus =>
         change?.operation === "DELETE" ? "DELETED" : change?.operation === "INACTIVATE" ? "INACTIVE"
             : change ? "ACTIVE" : original?.status ?? "ACTIVE";
-    const displayed = [
+    const currentRows = [
         ...rows.map((original) => ({ subprocessId: original.subprocessId, code: original.subprocessCode,
             name: original.subprocessLabel, original, change: byChange.get(original.subprocessId) })),
         ...changes.filter((change) => !byId.has(change.subprocessId)).map((change) => ({ subprocessId: change.subprocessId,
             code: change.code, name: change.name, original: undefined, change })),
-    ].filter((item) => item.change || (item.original?.status !== "DELETED"
-        && (!statusFilter || item.original?.status === statusFilter)));
-    const checked = displayed.filter((row) => selected.has(row.subprocessId));
+    ].filter(item => item.change || item.original?.status !== "DELETED");
+    const needle = search.trim().toLocaleLowerCase("fa");
+    const displayed = currentRows.filter(item => (item.change || statusFilter === "ALL" || item.original?.status === statusFilter)
+        && (!needle || `${item.code} ${item.name}`.toLocaleLowerCase("fa").includes(needle)));
+    const checked = currentRows.filter((row) => selected.has(row.subprocessId));
     const affected = (status: LocalStatus) => checked.filter((item) => target(item.change, item.original) !== status
         && (status === "DELETED" || (item.original && item.original.status !== "DELETED")));
     const excludedIds = new Set([
@@ -70,7 +96,6 @@ export default function OrganizationSubprocessTable({ organizationId, editable, 
             if (staged && staged.operation !== "DELETE") continue;
             const original = byId.get(node.id);
             if (original && original.status !== "DELETED") {
-                // Re-selecting a pending deletion simply cancels that draft deletion.
                 if (staged?.operation === "DELETE") next = next.filter((row) => row.subprocessId !== node.id);
                 continue;
             }
@@ -97,47 +122,27 @@ export default function OrganizationSubprocessTable({ organizationId, editable, 
                 contextId: original.id, version: original.version, operation });
         }
         onChange(next);
-        setSelected(new Set());
     };
     return <FlexBox direction="Column" className="organizationSubprocessTable">
-        <FlexBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap" className="organizationSubprocessActions">
-            <Title level="H5">{t("local.subprocessSearch.section")}</Title>
-            {editable ? <FlexBox wrap="Wrap" className="organizationSubprocessActions">
-                <Button design="Emphasized" disabled={loading || busy || Boolean(error)} onClick={() => setPickerOpen(true)}>{t("common.select")}</Button>
-                <Button disabled={loading || busy || !affected("ACTIVE").length}
-                    onClick={() => changeStatus("ACTIVE")}>{t("local.lifecycle.activate")}</Button>
-                <Button disabled={loading || busy || !affected("INACTIVE").length}
-                    onClick={() => changeStatus("INACTIVE")}>{t("local.lifecycle.inactivate")}</Button>
-                <Button design="Negative" disabled={loading || busy || !affected("DELETED").length}
-                    onClick={() => changeStatus("DELETED")}>{t("common.delete")}</Button>
-            </FlexBox> : null}
-        </FlexBox>
-        {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
+        <CatalogRelationToolbar title={t("local.subprocessSearch.section")} search={search} onSearch={setSearch}
+            filter={statusFilter} onFilter={setStatusFilter} editable={editable} busy={busy}
+            canSelect={!loading && !error} canActivate={!loading && affected("ACTIVE").length > 0}
+            canInactivate={!loading && affected("INACTIVE").length > 0} canDelete={!loading && affected("DELETED").length > 0}
+            onSelect={() => setPickerOpen(true)} onActivate={() => changeStatus("ACTIVE")}
+            onInactivate={() => changeStatus("INACTIVE")} onDelete={() => changeStatus("DELETED")} />
+        {error ? <><MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip>
+            <Link onClick={() => setRetry(value => value + 1)}>{t("catalogRelation.retry")}</Link></> : null}
         {changes.length ? <MessageStrip design="Information" hideCloseButton>{t("local.subprocessTable.draftHint")}</MessageStrip> : null}
-        <FlexBox alignItems="Center" className="organizationSubprocessActions">
-            <Title level="H6">{t("local.statusFilter")}</Title>
-            <Select value={statusFilter} accessibleName={t("local.statusFilter")} disabled={busy}
-                onChange={(event) => { setStatusFilter(event.target.value as typeof statusFilter); setSelected(new Set()); }}>
-                <Option value="" selected={!statusFilter}>{t("local.subprocessTable.noStatusFilter")}</Option>
-                <Option value="ACTIVE" selected={statusFilter === "ACTIVE"}>{t("local.status.ACTIVE")}</Option>
-                <Option value="INACTIVE" selected={statusFilter === "INACTIVE"}>{t("local.status.INACTIVE")}</Option>
-            </Select>
-        </FlexBox>
-        <FlexBox ref={viewportRef} direction="Column" className="organizationSubprocessViewport" role="region" aria-label={t("local.subprocessSearch.section")} tabIndex={0}>
-        <Table overflowMode="Scroll" accessibleName={t("local.subprocessSearch.section")} noDataText={t("local.subprocessTable.empty")} loading={loading} inert={busy || loading}
-            features={editable ? <TableSelectionMulti selected={[...selected].join(" ")} onChange={(event) => setSelected(event.target.getSelectedAsSet())} /> : undefined}
-            headerRow={<TableHeaderRow><TableHeaderCell>{t("local.subprocessTable.code")}</TableHeaderCell><TableHeaderCell>{t("local.subprocessTable.name")}</TableHeaderCell><TableHeaderCell>{t("common.status")}</TableHeaderCell></TableHeaderRow>}>
-            {displayed.map((item) => <TableRow key={item.subprocessId} rowKey={item.subprocessId}>
-                <TableCell><Text>{item.code}</Text></TableCell><TableCell><Text>{item.name}</Text></TableCell>
-                <TableCell><ObjectStatus state={item.change ? "Information" : item.original?.status === "ACTIVE" ? "Positive" : "None"}>
-                    {item.change ? t(item.change.operation === "DELETE" ? "local.subprocessTable.draftDelete"
-                        : item.change.operation === "ACTIVATE" ? "local.subprocessTable.draftActive"
-                        : item.change.operation === "INACTIVATE" ? "local.subprocessTable.draftInactive" : "local.subprocessTable.draft")
-                        : t(`local.status.${item.original?.status ?? "ACTIVE"}`)}
-                </ObjectStatus></TableCell>
-            </TableRow>)}
-        </Table>
-        </FlexBox>
+        <CatalogRelationTable rows={displayed} rowKey={item => item.subprocessId} accessibleName={t("local.subprocessSearch.section")}
+            selectedKeys={selected} onSelectionChange={setSelected} selectable={editable} loading={loading} busy={busy}
+            emptyText={t("local.subprocessTable.empty")} columns={[
+                { key: "code", header: t("catalogRelation.code"), cell: item => <Text>{item.code}</Text> },
+                { key: "name", header: t("catalogRelation.name"), cell: item => processAccess.view
+                    ? <Link onClick={() => navigate(`/processes/${item.subprocessId}`)}>{item.name}</Link> : <Text>{item.name}</Text> },
+                { key: "status", header: t("catalogRelation.status"), cell: item => <CatalogRelationStatus status={target(item.change, item.original)}
+                    draft={item.change?.operation === "DELETE" ? "delete" : item.change?.operation === "ACTIVATE" ? "active"
+                        : item.change?.operation === "INACTIVATE" ? "inactive" : item.change ? "new" : null} /> },
+            ]} />
         {pickerOpen ? <OrganizationSubprocessSearchDialog excludedIds={excludedIds} onClose={() => setPickerOpen(false)}
             busy={busy} onSelected={stage} /> : null}
     </FlexBox>;

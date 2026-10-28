@@ -2,6 +2,7 @@ package com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveac
 
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
 import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrolobjective.api.dto.CentralRiskControlObjectiveAssignmentResponse;
+import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.api.dto.CentralControlObjectiveResponse;
 import java.util.List;
 import java.util.UUID;
 
@@ -11,7 +12,7 @@ public record CentralControlObjectiveAggregateMutationResponse(
     long version,
     List<DocumentCommandResponse> finalizedDocuments,
     List<CentralControlObjectiveAccountGroupResponse> accountGroupClassifications,
-    List<CentralRiskControlObjectiveAssignmentResponse> riskAssignments) {
+    List<CentralRiskControlObjectiveAssignmentResponse> riskAssignments, CentralControlObjectiveResponse entity) {
   public CentralControlObjectiveAggregateMutationResponse {
     riskAssignments = riskAssignments == null ? List.of() : List.copyOf(riskAssignments);
     finalizedDocuments = finalizedDocuments == null ? List.of() : List.copyOf(finalizedDocuments);

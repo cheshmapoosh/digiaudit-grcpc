@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type {
   ControlGroup, ControlGroupCreate, ControlGroupUpdate, GlobalControl, GlobalControlCreate,
-  GlobalControlUpdate,
+  GlobalControlUpdate, GlobalControlMutation,
 } from "../domain/global-control.model";
 import { globalControlApi } from "../infra/global-control.api.repo";
 
@@ -13,8 +13,8 @@ interface GlobalControlState {
   createGroup: (body: ControlGroupCreate) => Promise<string>;
   updateGroup: (id: string, body: ControlGroupUpdate) => Promise<void>;
   deleteGroup: (id: string, version: number, refresh?: boolean) => Promise<void>;
-  createControl: (body: GlobalControlCreate) => Promise<string>;
-  updateControl: (id: string, body: GlobalControlUpdate) => Promise<void>;
+  createControl: (body: GlobalControlCreate) => Promise<GlobalControlMutation>;
+  updateControl: (id: string, body: GlobalControlUpdate) => Promise<GlobalControlMutation>;
   deleteControl: (id: string, version: number, refresh?: boolean) => Promise<void>;
 }
 
@@ -31,12 +31,12 @@ export const useGlobalControlState = create<GlobalControlState>((set, get) => ({
   },
   createGroup: async (body) => {
     const result = await globalControlApi.createGroup(body);
-    await get().load();
+    set(state => ({ groups: [...state.groups.filter(item => item.id !== result.entityId), result.entity] }));
     return result.entityId;
   },
   updateGroup: async (id, body) => {
-    await globalControlApi.updateGroup(id, body);
-    await get().load();
+    const result = await globalControlApi.updateGroup(id, body);
+    set(state => ({ groups: state.groups.map(item => item.id === id ? result.entity : item) }));
   },
   deleteGroup: async (id, version, refresh = true) => {
     await globalControlApi.deleteGroup(id, version);
@@ -45,12 +45,13 @@ export const useGlobalControlState = create<GlobalControlState>((set, get) => ({
   },
   createControl: async (body) => {
     const result = await globalControlApi.createControl(body);
-    await get().load();
-    return result.entityId;
+    set(state => ({ controls: [...state.controls.filter(item => item.id !== result.entityId), result.control] }));
+    return result;
   },
   updateControl: async (id, body) => {
-    await globalControlApi.updateControl(id, body);
-    await get().load();
+    const result = await globalControlApi.updateControl(id, body);
+    set(state => ({ controls: state.controls.map(item => item.id === id ? result.control : item) }));
+    return result;
   },
   deleteControl: async (id, version, refresh = true) => {
     await globalControlApi.deleteControl(id, version);

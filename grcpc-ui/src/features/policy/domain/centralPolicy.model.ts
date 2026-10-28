@@ -45,6 +45,7 @@ export interface CentralPolicySummary extends DefinitionDetailFields {
 export interface CentralPolicyDetail
   extends CentralPolicySummary,
     DefinitionAuditFields {
+  relationRows?: { subprocess: PolicySubprocessScopeRow[]; organization: PolicyOrganizationScopeRow[]; control: PolicyControlScopeRow[]; requirement: PolicyRequirementScopeRow[] };
   responsibleOrganization: string | null;
   communicationMethod: CentralPolicyCommunicationMethod | null;
   nextReviewDate: string | null;
@@ -87,7 +88,11 @@ export interface CreateCentralPolicyGroupCommand extends CreateBase {
   parentGroupId: string | null;
 }
 
-export type UpdateCentralPolicyGroupCommand = UpdateBase;
+export interface UpdateCentralPolicyGroupCommand extends UpdateBase {
+  parentChange?: { parentGroupId: string | null };
+  status?: "ACTIVE" | "INACTIVE";
+  sortOrder?: number;
+}
 
 export interface MoveCentralPolicyGroupCommand {
   version: number;
@@ -183,6 +188,7 @@ export interface PolicyRequirementOption {
   validFrom: string | null; validTo: string | null;
 }
 export interface CentralPolicyAggregateResponse extends MutationResponse {
+  entity: CentralPolicyDetail;
   subprocessScopes: PolicySubprocessScopeRow[];
   organizationScopes: PolicyOrganizationScopeRow[];
   controlScopes: PolicyControlScopeRow[];

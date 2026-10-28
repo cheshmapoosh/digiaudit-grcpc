@@ -11,6 +11,9 @@ function query(status: ControlScopeStatusFilter, search: string): string {
 }
 
 export const controlScopeApi = {
+  deletedForSubprocess: (subprocessId: string, signal?: AbortSignal) =>
+    httpClient.get<CentralSubprocessControlScope[]>(
+      `/api/master-data/central/subprocesses/${subprocessId}/control-scopes/deleted`, { signal }),
   listForSubprocess: (subprocessId: string, status: ControlScopeStatusFilter = "ALL", search = "", signal?: AbortSignal) =>
     httpClient.get<CentralSubprocessControlScope[]>(
       `/api/master-data/central/subprocesses/${subprocessId}/control-scopes${query(status, search)}`,

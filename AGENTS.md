@@ -44,7 +44,15 @@ These instructions apply to the whole repository. More specific `AGENTS.md` file
 - Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-organization-owner-assignments.md`. Typed many-to-many owner Assignments replace the scalar owner field and join Organization aggregate Save under the existing ORGANIZATION Guard and transaction. The Owners tab precedes Documents.
 - Actual root, authorized profile admins, and profile-local MASTER_DATA_ADMIN/ORGANIZATION_MASTER_DATA_MANAGER users are eligible owners. Only root and the selected profile's admin manage assignments. Ownership grants no authority. The new Organization role has narrow MD_ORGANIZATION permissions; existing Reference permissions retain Organization compatibility.
 
+## Governance modal relationship drafts (2026-10-28)
+
+- Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-governance-modal-relations.md`. The modal's main Save owns its typed editable relations; Local Organization L1–L9/B1 share one linked LOCAL Revision and O1 shares the Organization CENTRAL Revision, in one protected transaction. B1 is editable from both existing surfaces. O1/G1 support ACTIVE/INACTIVE/DELETED through forward V1202.
+- No independent relationship Edit/Save/Undo/Restore UI or immediate relationship writes mount in these modals. Deleted reads are internal occupied-pair lookup only. Inverses/projections/structural Requirements remain read-only; Documents and independent structural Import retain their explicit exceptions.
+- All structural parent updates use the existing Guard and one aggregate command. Shared table viewports divide the actual 70% modal budget; pending/invalid drafts join the main unsaved/readiness guard. Verification remains compile/typecheck/lint/static only.
+
 ## Structural hierarchy concurrency rule
+
+- The later `grcpc-docs/master-data/accepted-corrections/2026-10-28-regulation-requirement-aggregate.md` supersedes the independent structural Import/read-only Requirement exception above only for the Regulation Requirements tab: Excel confirmation stages fresh children and lifecycle joins main Regulation Save. The latest owner correction removes View and its child modal; blue Excel replaces Select in the common RTL-aligned toolbar. Existing dependencies and one guarded CENTRAL transaction remain; Governance widths share one rule.
 
 - The accepted `grcpc-docs/master-data/accepted-corrections/2026-10-28-main-catalog-display-order.md` authorizes sibling drag-and-drop only on the nine main Governance tree pages. Persist independent `display_order` fields in existing tables; forms, modals, value helps, relationship tabs and their existing sort fields remain outside this behavior. Reorder uses the existing hierarchy Guard, profile protection, versions and one CENTRAL Revision. New inserts are first in their group.
 - Before implementing, modifying, or reviewing a structural mutation, identify the affected hierarchy boundary.

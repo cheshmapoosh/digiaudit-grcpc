@@ -49,6 +49,9 @@ export interface CreateCentralAccountGroupCommand {
 }
 
 export interface UpdateCentralAccountGroupCommand {
+  parentChange?: { parentAccountGroupId: string | null };
+  sortOrder?: number;
+  status?: "ACTIVE" | "INACTIVE";
   version: number;
   title: string;
   importance: CentralAccountGroupImportance;
@@ -72,6 +75,7 @@ export interface MoveCentralAccountGroupCommand {
 }
 
 export interface CentralAccountGroupMutationResponse {
+  entity: CentralAccountGroupDetail;
   entityId: string;
   revisionId: string;
   version: number;

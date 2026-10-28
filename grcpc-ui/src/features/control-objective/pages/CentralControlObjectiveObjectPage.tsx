@@ -82,13 +82,13 @@ const EMPTY_DATE_DRAFT: PersianDateDraftState = {
   dirty: false,
 };
 
-function toForm(value: CentralControlObjectiveDetail | null): FormState {
+function toForm(value: CentralControlObjectiveDetail | null, creating = false): FormState {
   return {
     code: value?.code ?? "",
     title: value?.title ?? "",
     description: value?.description ?? "",
     objectiveClass: value?.objectiveClass ?? "",
-    status: value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+    status: !creating && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     validFrom: value?.validFrom ?? "",
     validTo: value?.validTo ?? "",
   };
@@ -140,8 +140,8 @@ export default function CentralControlObjectiveObjectPage({
   const scopePermissions = useControlObjectiveScopePermissions();
   const riskAssignmentPermissions = useRiskControlObjectiveAssignmentPermissions();
   const controlAssignmentPermissions = useControlControlObjectiveAssignmentPermissions();
-  const [form, setForm] = useState<FormState>(() => toForm(value));
-  const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value))));
+  const [form, setForm] = useState<FormState>(() => toForm(value, mode === "create"));
+  const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, mode === "create"))));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
   const [classifications, setClassifications] = useState<ControlObjectiveClassificationDraftState>(
@@ -161,7 +161,7 @@ export default function CentralControlObjectiveObjectPage({
 
   useEffect(() => {
     if (scopeRef.current === scope && dirty) return;
-    const next = toForm(value);
+    const next = toForm(value, mode === "create");
     const timer = window.setTimeout(() => {
       setForm(next);
       setBaseline(JSON.stringify(normalized(next)));
@@ -173,7 +173,7 @@ export default function CentralControlObjectiveObjectPage({
       scopeRef.current = scope;
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [dirty, scope, value]);
+  }, [dirty, mode, scope, value]);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -301,7 +301,7 @@ export default function CentralControlObjectiveObjectPage({
               {readOnly ? <Text className="objectPageValue">{(form.objectiveClass) || "—"}</Text> : <Input value={form.objectiveClass} readonly={readOnly} disabled={busy} maxlength={255} onInput={(event) => change("objectiveClass", readValue(event))} />}
             </Field>
             <Field label={t("controlObjective.fields.status")}>
-              {readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("controlObjective.status." + form.status)}</ObjectStatus> : <Select
+              {mode === "create" ? <ObjectStatus state="Positive">{t("common.active")}</ObjectStatus> : readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("controlObjective.status." + form.status)}</ObjectStatus> : <Select
                 value={form.status}
                 disabled={mode !== "edit" || busy}
                 accessibleName={t("controlObjective.fields.status")}
@@ -344,7 +344,7 @@ export default function CentralControlObjectiveObjectPage({
         </div>
 
         <div className={activeTab === "risks" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
-          {riskAssignmentPermissions.view ? <ControlObjectiveRiskTemplateAssignmentsTab controlObjectiveId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskAssignmentDraft} /> : null}
+          {riskAssignmentPermissions.view ? <ControlObjectiveRiskTemplateAssignmentsTab canonicalRows={value?.relations?.riskAssignments} controlObjectiveId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskAssignmentDraft} /> : null}
         </div>
 
         <div className={activeTab === "controls" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
@@ -357,7 +357,7 @@ export default function CentralControlObjectiveObjectPage({
               controlObjectiveId={value?.id ?? null}
               readOnly={readOnly}
               busy={busy}
-              adoptedCanonical={adoptedClassifications}
+              adoptedCanonical={adoptedClassifications ?? value?.relations?.accountGroupClassifications}
               allowAccountGroupNavigation={allowAccountGroupNavigation}
               onDraftStateChange={setClassifications}
             />

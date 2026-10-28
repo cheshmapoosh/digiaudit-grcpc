@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bar, Dialog, FlexBox, MessageStrip, ObjectStatus, Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow, TableSelectionMulti, Text, Title } from "@ui5/webcomponents-react";
+import { Dialog, MessageStrip, ObjectStatus, Text } from "@ui5/webcomponents-react";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
+import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
+import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
 import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
@@ -11,101 +14,116 @@ import type { OrganizationOwnerAssignment, OrganizationOwnerChange, Organization
 import "./organizationOwners.css";
 
 interface Props {
+  organizationId?: string | null;
   rows: OrganizationOwnerAssignment[];
   changes: OrganizationOwnerChange[];
   onChange: (changes: OrganizationOwnerChange[]) => void;
   onPendingChange: (dirty: boolean) => void;
+  onReadyChange?: (ready: boolean) => void;
   editable: boolean;
   busy: boolean;
 }
-
-export default function OrganizationOwnersTab({ rows, changes, onChange, onPendingChange, editable, busy }: Props) {
+type DisplayRow = Omit<OrganizationOwnerAssignment, "status"> & { status: "ACTIVE" | "INACTIVE" | "DELETED"; change?: OrganizationOwnerChange };
+export default function OrganizationOwnersTab({ organizationId, rows, changes, onChange, onPendingChange, onReadyChange, editable, busy }: Props) {
   const { t } = useTranslation();
+  const beforeDelete = useRef<Record<string, OrganizationOwnerChange | undefined>>({});
   const [options, setOptions] = useState<OrganizationOwnerOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshGeneration, setRefreshGeneration] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [optionSnapshots, setOptionSnapshots] = useState<OrganizationOwnerOption[]>([]);
+  const [deleted, setDeleted] = useState<OrganizationOwnerAssignment[]>([]);
+  const [loading, setLoading] = useState(false); const [reload, setReload] = useState(0);
+  const [error, setError] = useState<string | null>(null); const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState(""); const [pickerSearch, setPickerSearch] = useState("");
+  const [filter, setFilter] = useState<CatalogRelationFilter>("ALL");
+  const [selected, setSelected] = useState<Set<string>>(new Set()); const [picked, setPicked] = useState<Set<string>>(new Set());
   const profile = currentProfile();
   useEffect(() => {
     if (!editable) return;
     let current = true;
-    void organizationService.ownerOptions().then((items) => {
-      if (current) { setOptions(items); setLoading(false); setError(null); }
-    }).catch((error: unknown) => {
-      if (current) { setLoading(false); setError(error instanceof Error ? error.message : t("organization.owners.loadError")); }
+    void Promise.resolve().then(async () => {
+      setLoading(true);
+      try {
+        const [choices, removed] = await Promise.all([organizationService.ownerOptions(), organizationId ? organizationService.deletedOwners(organizationId) : Promise.resolve([])]);
+        if (current) { setOptions(choices); setOptionSnapshots(previous => [...choices, ...previous.filter(option => !choices.some(choice => choice.id === option.id))]); setDeleted(removed); setError(null); }
+      } catch { if (current) setError(t("organization.owners.loadError")); }
+      finally { if (current) setLoading(false); }
     });
     return () => { current = false; };
-  }, [editable, refreshGeneration, t]);
-  useEffect(() => { onPendingChange(open && picked.size > 0); }, [onPendingChange, open, picked]);
-  const displayed = useMemo(() => [
-    ...rows.map((row) => ({ ...row, pending: changes.some((change) => change.userId === row.userId && change.operation === "DELETE") ? "DELETE" : null })),
-    ...changes.filter((change) => change.operation === "CREATE_OR_RESTORE").map((change) => {
-      const option = options.find((item) => item.id === change.userId);
-      return { assignmentId: "", userId: change.userId, displayLabel: option?.displayLabel ?? change.userId,
-        username: option?.username ?? "", roleCode: option?.roleCode ?? null, eligible: true, version: 0, pending: "ADD" };
-    }),
-  ], [changes, options, rows]);
-  const query = search.trim().toLocaleLowerCase();
-  const choices = options.filter((option) => !displayed.some((row) => row.userId === option.id && row.pending !== "DELETE")
-    && (!query || `${option.displayLabel} ${option.username}`.toLocaleLowerCase().includes(query)));
+  }, [editable, organizationId, reload, t]);
+  useEffect(() => onPendingChange(open), [onPendingChange, open]);
+  useEffect(() => onReadyChange?.(!editable || !loading && !error && !open), [onReadyChange, editable, loading, error, open]);
+  const allRows = useMemo(() => [...rows, ...deleted.filter(row => !rows.some(current => current.userId === row.userId))], [rows, deleted]);
+  const displayed = useMemo<DisplayRow[]>(() => {
+    const result = allRows.map(row => {
+      const change = changes.find(change => change.userId === row.userId);
+      const status = change?.operation === "DELETE" ? "DELETED" : change?.operation === "INACTIVATE" ? "INACTIVE" : change ? "ACTIVE" : row.status;
+      return { ...row, status, change };
+    });
+    for (const change of changes) {
+      if (result.some(row => row.userId === change.userId)) continue;
+      const option = optionSnapshots.find(item => item.id === change.userId);
+      if (!option) continue;
+      result.push({ assignmentId: "", profileId: profile?.id ?? "", organizationId: organizationId ?? "", userId: option.id, displayLabel: option.displayLabel,
+        username: option.username, roleCode: option.roleCode, eligible: options.some(item => item.id === option.id), version: 0, status: "ACTIVE", change });
+    }
+    return result;
+  }, [allRows, changes, options, optionSnapshots, organizationId, profile?.id]);
+  const visible = displayed.filter(row => row.change || row.status !== "DELETED" && (filter === "ALL" || row.status === filter) && `${row.displayLabel} ${row.username}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  const choices = options.filter(option => !displayed.some(row => row.userId === option.id && row.status !== "DELETED") && `${option.displayLabel} ${option.username}`.toLocaleLowerCase().includes(pickerSearch.trim().toLocaleLowerCase()));
   const role = (code: string | null) => code ? t(`organization.owners.roles.${code}`, { defaultValue: code }) : "—";
-  const close = () => { setOpen(false); setPicked(new Set()); };
-  const add = () => {
-    const next = changes.filter((change) => !picked.has(change.userId));
-    for (const userId of picked) if (!rows.some((row) => row.userId === userId)) next.push({ operation: "CREATE_OR_RESTORE", userId });
+  const close = () => { if (!busy) { setOpen(false); setPicked(new Set()); } };
+  const stageSelection = () => {
+    const next = [...changes];
+    for (const userId of picked) {
+      if (!options.some(option => option.id === userId)) continue;
+      const index = next.findIndex(change => change.userId === userId);
+      const baseline = allRows.find(row => row.userId === userId);
+      if (index >= 0 && next[index].operation === "DELETE") { const previous = beforeDelete.current[userId]; if (previous) next[index] = previous; else next.splice(index, 1); delete beforeDelete.current[userId]; continue; }
+      if (index >= 0 || baseline && baseline.status !== "DELETED") continue;
+      next.push(baseline ? { operation: "RESTORE", userId, assignmentId: baseline.assignmentId, version: baseline.version } : { operation: "CREATE_OR_RESTORE", userId });
+    }
     onChange(next); close();
   };
-  const remove = () => {
-    const next = changes.filter((change) => !selected.has(change.userId));
-    for (const row of rows) if (selected.has(row.userId)) next.push({ operation: "DELETE", userId: row.userId, assignmentId: row.assignmentId, version: row.version });
-    onChange(next); setSelected(new Set());
+  const affected = (status: "ACTIVE" | "INACTIVE" | "DELETED") => displayed.filter(row => selected.has(row.userId) && (status === "DELETED"
+    ? row.status !== "DELETED" : Boolean(row.assignmentId && allRows.find(baseline => baseline.userId === row.userId)?.status !== "DELETED" && row.status !== "DELETED" && row.status !== status && (status !== "ACTIVE" || row.eligible))));
+  const batch = (status: "ACTIVE" | "INACTIVE" | "DELETED") => {
+    const affectedRows = affected(status); const keys = new Set(affectedRows.map(row => row.userId));
+    const next = changes.filter(change => !keys.has(change.userId));
+    for (const row of affectedRows) {
+      const baseline = allRows.find(item => item.userId === row.userId);
+      if (!baseline || baseline.status === "DELETED") continue;
+      if (baseline.status === status) continue;
+      if (status === "DELETED") beforeDelete.current[row.userId] = row.change;
+      next.push({ operation: status === "DELETED" ? "DELETE" : status === "ACTIVE" ? "ACTIVATE" : "INACTIVATE", userId: row.userId, assignmentId: baseline.assignmentId, version: baseline.version });
+    }
+    onChange(next);
   };
-  return <FlexBox direction="Column" className="organizationOwnersTab">
-    <Bar startContent={<Title level="H5">{t("organization.owners.title")}</Title>} endContent={editable ? <>
-      <Button icon="add" design="Emphasized" disabled={busy || loading} onClick={() => { setPicked(new Set()); setSearch(""); setLoading(true); setError(null); setRefreshGeneration((current) => current + 1); setOpen(true); }}>{t("common.add")}</Button>
-      <Button icon="delete" design="Negative" disabled={busy || !displayed.some((row) => selected.has(row.userId) && row.pending !== "DELETE")} onClick={remove}>{t("common.delete")}</Button>
-    </> : undefined} />
+  const columns: CatalogRelationColumn<DisplayRow>[] = [
+    { key: "username", header: t("organization.owners.username"), cell: row => row.username },
+    { key: "name", header: t("organization.owners.user"), cell: row => row.displayLabel },
+    { key: "role", header: t("organization.owners.role"), cell: row => role(row.roleCode) },
+    { key: "eligibility", header: t("organization.owners.eligibility"), cell: row => <ObjectStatus state={row.eligible ? "Positive" : "Negative"}>{t(row.eligible ? "organization.owners.eligible" : "organization.owners.ineligible")}</ObjectStatus> },
+    { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={row.status} draft={!row.change ? null : row.change.operation === "DELETE" ? "delete" : row.change.operation === "INACTIVATE" ? "inactive" : row.change.operation === "ACTIVATE" ? "active" : "new"} /> },
+  ];
+  const pickerColumns: CatalogRelationColumn<OrganizationOwnerOption>[] = [
+    { key: "username", header: t("organization.owners.username"), cell: row => row.username },
+    { key: "name", header: t("organization.owners.user"), cell: row => row.displayLabel },
+    { key: "role", header: t("organization.owners.role"), cell: row => role(row.roleCode) },
+  ];
+  return <section className="organizationOwnersTab">
+    <CatalogRelationToolbar title={t("organization.owners.title")} search={search} onSearch={setSearch} filter={filter} onFilter={setFilter} editable={editable} busy={busy || loading}
+      canSelect={!error} onSelect={() => { setOpen(true); setPicked(new Set()); setPickerSearch(""); setReload(value => value + 1); }}
+      canActivate={affected("ACTIVE").length > 0} onActivate={() => batch("ACTIVE")} canInactivate={affected("INACTIVE").length > 0} onInactivate={() => batch("INACTIVE")} canDelete={affected("DELETED").length > 0} onDelete={() => batch("DELETED")} />
     <Text>{t("basicData.profile")}: {profile?.name ?? "—"}</Text>
-    {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
-    {changes.length ? <MessageStrip design="Information" hideCloseButton>{t("organization.owners.saveHint")}</MessageStrip> : null}
-    <Table accessibleName={t("organization.owners.title")} noDataText={t("organization.owners.empty")} inert={busy}
-      features={editable ? <TableSelectionMulti selected={[...selected].join(" ")} onChange={(event) => { if (!busy) setSelected(event.target.getSelectedAsSet()); }} /> : undefined}
-      headerRow={<TableHeaderRow>
-        <TableHeaderCell>{t("organization.owners.user")}</TableHeaderCell><TableHeaderCell>{t("organization.owners.username")}</TableHeaderCell>
-        <TableHeaderCell>{t("organization.owners.role")}</TableHeaderCell><TableHeaderCell>{t("common.status")}</TableHeaderCell>
-        {editable ? <TableHeaderCell>{t("common.actions")}</TableHeaderCell> : null}
-      </TableHeaderRow>}>
-      {displayed.map((row) => <TableRow key={row.userId} rowKey={row.userId}>
-        <TableCell><Text>{row.displayLabel}</Text></TableCell><TableCell><Text>{row.username}</Text></TableCell><TableCell><Text>{role(row.roleCode)}</Text></TableCell>
-        <TableCell><ObjectStatus state={row.pending ? "None" : row.eligible ? "Positive" : "Negative"}>{t(row.pending === "DELETE" ? "organization.owners.pendingDelete" : row.pending === "ADD" ? "organization.owners.pendingAdd" : row.eligible ? "organization.owners.eligible" : "organization.owners.ineligible")}</ObjectStatus></TableCell>
-        {editable ? <TableCell>{row.pending ? <Button design="Transparent" icon="undo" disabled={busy} onClick={() => onChange(changes.filter((change) => change.userId !== row.userId))}>{t("common.undo")}</Button> : null}</TableCell> : null}
-      </TableRow>)}
-    </Table>
-    <Dialog open={open} accessibleName={t("organization.owners.select")} className="organizationOwnersDialog" onClose={close}
-      footer={<DialogFooterBar>
-        <Button design="Emphasized" disabled={busy || loading || Boolean(error) || !picked.size} onClick={add}>{t("common.add")}</Button>
-        <Button design="Transparent" disabled={busy} onClick={close}>{t("common.cancel")}</Button>
-      </DialogFooterBar>}>
-      <ModalDialogHeader title={t("organization.owners.select")} onClose={close} />
-      <FlexBox direction="Column" className="organizationOwnersPicker">
-        <Bar endContent={<HeaderSearch value={search} onChange={setSearch} disabled={busy} accessibleName={t("organization.owners.search")} />} />
-        <Text>{t("organization.owners.eligibilityHint")}</Text>
-        {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
-        <Table accessibleName={t("organization.owners.select")} noDataText={t("organization.owners.noOptions")} loading={loading} inert={busy || loading}
-          features={<TableSelectionMulti selected={[...picked].join(" ")} onChange={(event) => { if (!busy) setPicked((current) => {
-            const next = new Set(current);
-            const selectedRows = event.target.getSelectedAsSet();
-            for (const option of choices) { if (selectedRows.has(option.id)) next.add(option.id); else next.delete(option.id); }
-            return next;
-          }); }} />}
-          headerRow={<TableHeaderRow><TableHeaderCell>{t("organization.owners.user")}</TableHeaderCell><TableHeaderCell>{t("organization.owners.username")}</TableHeaderCell><TableHeaderCell>{t("organization.owners.role")}</TableHeaderCell></TableHeaderRow>}>
-          {choices.map((option) => <TableRow key={option.id} rowKey={option.id}><TableCell><Text>{option.displayLabel}</Text></TableCell><TableCell><Text>{option.username}</Text></TableCell><TableCell><Text>{role(option.roleCode)}</Text></TableCell></TableRow>)}
-        </Table>
-      </FlexBox>
+    {error ? <MessageStrip design="Negative" hideCloseButton>{error}<Button onClick={() => setReload(value => value + 1)}>{t("catalogRelation.retry")}</Button></MessageStrip> : null}
+    <CatalogRelationTable rows={visible} columns={columns} rowKey={row => row.userId} accessibleName={t("organization.owners.title")} selectable={editable} selectedKeys={selected} onSelectionChange={setSelected} loading={loading} busy={busy} emptyText={t("organization.owners.empty")} />
+    <Dialog open={open} accessibleName={t("organization.owners.select")} className="organizationOwnersDialog catalogObjectDialog" onClose={close}
+      footer={<DialogFooterBar><Button design="Emphasized" disabled={busy || loading || Boolean(error) || !picked.size} onClick={stageSelection}>{t("catalogRelation.select")}</Button><Button design="Transparent" disabled={busy} onClick={close}>{t("common.cancel")}</Button></DialogFooterBar>}>
+      <ModalDialogHeader title={t("organization.owners.select")} onClose={close} actions={<HeaderSearch value={pickerSearch} onChange={setPickerSearch} disabled={busy} accessibleName={t("organization.owners.search")} />} />
+      <div data-catalog-dialog-content>
+      <Text>{t("organization.owners.eligibilityHint")}</Text>
+      {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
+      <CatalogRelationTable rows={choices} columns={pickerColumns} rowKey={row => row.id} accessibleName={t("organization.owners.select")} selectable selectedKeys={picked} onSelectionChange={setPicked} loading={loading} busy={busy} emptyText={t("organization.owners.noOptions")} />
+      </div>
     </Dialog>
-  </FlexBox>;
+  </section>;
 }

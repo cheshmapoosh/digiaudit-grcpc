@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class MasterDataStructuralDependencyChecker {
   private static final List<String> ORGANIZATION_DEPENDENCY_QUERIES =
       List.of(
-          "select count(*) from organization_owner_assignment where profile_id = ? and organization_id = ? and status = 'ACTIVE'",
+          "select count(*) from organization_owner_assignment where profile_id = ? and organization_id = ? and status <> 'DELETED'",
           "select count(*) from local_organization_subprocess_scope where profile_id = ? and organization_id = ?",
           "select count(*) from local_policy_organization_scope where profile_id = ? and organization_id = ?",
           "select count(*) from central_policy_organization_scope where profile_id = ? and organization_id = ? and status <> 'DELETED'",

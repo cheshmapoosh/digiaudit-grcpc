@@ -87,7 +87,12 @@ async function runActiveRead(
         const indexes = buildIndexes(await processService.list());
         if (capturedGeneration !== stateGeneration || requestSequence !== activeReadSequence) return;
         set((state) => ({
-            ...indexes,
+            ...buildIndexes(Object.values(indexes.nodesById).map(node => ({ ...node,
+                controlScopes: node.version === state.nodesById[node.id]?.version ? state.nodesById[node.id]?.controlScopes : undefined,
+                riskScopes: node.version === state.nodesById[node.id]?.version ? state.nodesById[node.id]?.riskScopes : undefined,
+                controlObjectiveScopes: node.version === state.nodesById[node.id]?.version ? state.nodesById[node.id]?.controlObjectiveScopes : undefined,
+                requirementScopes: node.version === state.nodesById[node.id]?.version ? state.nodesById[node.id]?.requirementScopes : undefined,
+            }))),
             loadedChildren: { ...state.loadedChildren, [parentId]: true },
         }));
     } finally {
@@ -150,6 +155,10 @@ export const useProcessState = create<ProcessState>((set, get) => ({
                 validFrom: normalizeOptional(payload.validFrom),
                 validTo: normalizeOptional(payload.validTo),
                 version: result.version,
+                controlScopes: result.controlScopes,
+                riskScopes: result.riskScopes,
+                controlObjectiveScopes: result.controlObjectiveScopes,
+                requirementScopes: result.requirementScopes,
                 deletedAt: null,
                 deletedBy: null,
             };
@@ -193,6 +202,10 @@ export const useProcessState = create<ProcessState>((set, get) => ({
                     validFrom: normalizeOptional(payload.validFrom),
                     validTo: normalizeOptional(payload.validTo),
                     version: result.version,
+                    controlScopes: result.controlScopes,
+                    riskScopes: result.riskScopes,
+                    controlObjectiveScopes: result.controlObjectiveScopes,
+                    requirementScopes: result.requirementScopes,
                 },
             }));
             useDocumentState.getState().applyAggregateResults(

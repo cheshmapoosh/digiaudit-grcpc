@@ -44,7 +44,6 @@ type RouteMode = "list" | "create" | "view" | "edit";
 type UiDir = "rtl" | "ltr";
 type FclLayout = "OneColumn" | "TwoColumnsStartExpanded";
 
-const DIALOG_WIDTH = "90vw";
 
 function useProcessRouteMode(): RouteMode {
     const { processId } = useParams();
@@ -713,14 +712,6 @@ export default function ProcessesFclShellPage() {
         [appDir],
     );
 
-    const dialogStyle = useMemo<CSSProperties>(
-        () => ({
-            width: DIALOG_WIDTH,
-            maxWidth: DIALOG_WIDTH,
-        }),
-        [],
-    );
-
     const listColumn = createElement(
         "div",
         {
@@ -817,12 +808,11 @@ export default function ProcessesFclShellPage() {
             <Dialog
                 open={showModal}
                 accessibleName={dialogTitle}
-                className="processObjectDialog"
-                style={dialogStyle}
+                className="processObjectDialog catalogObjectDialog"
                 onClose={handleObjectDialogClose}
             >
                 <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
-                <div style={dialogContentStyle}>
+                <div data-catalog-dialog-content style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <ProcessObjectPage
                             key={routeMode === "create" ? objectTabScopeKey : `process:${objectValue?.id ?? "none"}:${objectMode}`}

@@ -8,4 +8,5 @@ import java.util.UUID;
 public record OrganizationAggregateMutationResponse(
         UUID entityId, UUID revisionId, long version, List<DocumentCommandResponse> finalizedDocuments,
         OrganizationResponse organization,
-        LocalContextDtos.Selection subprocesses) {}
+        LocalContextDtos.Selection subprocesses,
+        com.digiaudit.grcpc.modules.masterdata.local.api.dto.OrganizationLocalDtos.Result localRelationships) {}

@@ -74,14 +74,14 @@ interface Props {
 
 const EMPTY_DATE_DRAFT: PersianDateDraftState = { draftValue: "", valid: true, dirty: false };
 
-function toForm(value: CentralAccountGroupDetail | null, initialParentId: string | null): FormState {
+function toForm(value: CentralAccountGroupDetail | null, initialParentId: string | null, creating = false): FormState {
   return {
     code: value?.code ?? "",
     title: value?.title ?? "",
     parentAccountGroupId: value?.parentAccountGroupId ?? initialParentId,
     importance: value?.importance ?? "MEDIUM",
     reasonableAssurance: value?.reasonableAssurance ?? false,
-    status: value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+    status: !creating && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     validFrom: value?.validFrom ?? "",
     validTo: value?.validTo ?? "",
     description: value?.description ?? "",
@@ -140,8 +140,8 @@ export default function CentralAccountGroupObjectPage({
   const { t } = useTranslation();
   const classificationPermissions = useControlAccountGroupPermissions();
   const objectiveClassificationPermissions = useControlObjectiveAccountGroupPermissions();
-  const [form, setForm] = useState<FormState>(() => toForm(value, initialParentId));
-  const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, initialParentId))));
+  const [form, setForm] = useState<FormState>(() => toForm(value, initialParentId, mode === "create"));
+  const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, initialParentId, mode === "create"))));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [parentDialogOpen, setParentDialogOpen] = useState(false);
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
@@ -151,13 +151,13 @@ export default function CentralAccountGroupObjectPage({
   const readOnly = mode === "view";
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const generalDirty = JSON.stringify(normalized(form)) !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
-  const dirty = generalDirty || documents.dirty || documents.uploading;
+  const dirty = generalDirty || documents.dirty || documents.uploading || parentDialogOpen;
   const canChangeParent = !readOnly && (mode === "create" || permissions.move);
   const canChangeStatus = mode === "edit" && permissions.lifecycle;
 
   useEffect(() => {
     if (scopeRef.current === scope && dirty) return;
-    const next = toForm(value, initialParentId);
+    const next = toForm(value, initialParentId, mode === "create");
     const timer = window.setTimeout(() => {
       setForm(next);
       setBaseline(JSON.stringify(normalized(next)));
@@ -167,7 +167,7 @@ export default function CentralAccountGroupObjectPage({
       scopeRef.current = scope;
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [dirty, initialParentId, scope, value]);
+  }, [dirty, initialParentId, mode, scope, value]);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -238,7 +238,7 @@ export default function CentralAccountGroupObjectPage({
     }
   };
 
-  const saveDisabled = busy || invalidDate || documents.uploading || documents.invalid || !documents.ready || (!generalDirty && !documents.dirty);
+  const saveDisabled = busy || parentDialogOpen || invalidDate || documents.uploading || documents.invalid || !documents.ready || (!generalDirty && !documents.dirty);
 
   return (
     <>
@@ -246,7 +246,7 @@ export default function CentralAccountGroupObjectPage({
         <CatalogParentHeader objectTitle={form.title || t("accountGroup.object.title")} label={t("accountGroup.fields.parent")} parentId={form.parentAccountGroupId}
           busy={busy} onClearParent={canChangeParent ? () => change("parentAccountGroupId", null) : undefined}
           parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t("accountGroup.object.title"), status: selectedParent.status } : null}
-          selection={canChangeParent ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+          selection={canChangeParent ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
         <DetailTabContainer
           onTabSelect={(event) => {
@@ -294,7 +294,7 @@ export default function CentralAccountGroupObjectPage({
                 />}
               </Field>
               <Field label={t("accountGroup.fields.status")}>
-                {readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("accountGroup.status." + form.status)}</ObjectStatus> : <Select
+                {mode === "create" ? <ObjectStatus state="Positive">{t("common.active")}</ObjectStatus> : readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("accountGroup.status." + form.status)}</ObjectStatus> : <Select
                   value={form.status}
                   disabled={!canChangeStatus || busy}
                   onChange={(event) => change("status", readValue(event) as CentralAccountGroupEditableStatus)}
