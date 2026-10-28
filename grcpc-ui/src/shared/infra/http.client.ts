@@ -29,6 +29,7 @@ type RequestOptions = {
     headers?: Record<string, string>;
     signal?: AbortSignal;
     successMessage?: string | false;
+    responseType?: "blob";
 };
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
@@ -195,6 +196,7 @@ async function request<T>(
     const scoped = isDatasetUrl(url) || /\/api\/(usermanagement\/users|auth\/me)/.test(url);
     if (isDatasetUrl(url) && !profileId) throw new HttpError(i18n.t("profile.required"), 403, "PROFILE_REQUIRED");
     const hasBody = options.body !== undefined;
+    const multipart = options.body instanceof FormData;
     let response: Response;
 
     try {
@@ -203,11 +205,11 @@ async function request<T>(
             headers: {
                 Accept: "application/json",
                 "Accept-Language": getCurrentLanguage(),
-                ...(hasBody ? { "Content-Type": "application/json" } : {}),
+                ...(hasBody && !multipart ? { "Content-Type": "application/json" } : {}),
                 ...options.headers,
                 ...(scoped && profileId ? { "X-Profile-Id": profileId } : {}),
             },
-            body: hasBody ? JSON.stringify(options.body) : undefined,
+            body: multipart ? options.body as FormData : hasBody ? JSON.stringify(options.body) : undefined,
             signal: options.signal,
             credentials: "include",
         });
@@ -223,7 +225,9 @@ async function request<T>(
         );
     }
 
-    const payload = await parseResponseBody(response);
+    const payload = response.ok && options.responseType === "blob"
+        ? await response.blob()
+        : await parseResponseBody(response);
     if (scoped) assertRequestProfile(profileId);
     const errorCode = extractErrorCode(payload);
 

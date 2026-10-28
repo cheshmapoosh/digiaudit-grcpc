@@ -665,6 +665,8 @@ export default function CentralRegulationsPage() {
               onEdit={() => setModalMode("edit")}
               onActiveTabChange={setActiveTab}
               onDirtyChange={setDirty}
+              requirements={requirements.filter(row => row.regulationId === modalValue?.id)}
+              onRequirementsImported={loadRows}
             />
           ) : busy ? (
             <BusyIndicator active delay={0} />

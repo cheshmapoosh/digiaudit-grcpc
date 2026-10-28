@@ -28,6 +28,12 @@ public interface CentralRegulationRequirementRepository
 
   boolean existsByRegulationIdAndStatusNot(UUID regulationId, MasterDataLifecycleStatus status);
 
+  List<CentralRegulationRequirementEntity> findByCodeIn(List<String> codes);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select e from CentralRegulationRequirementEntity e where e.code in :codes order by e.id")
+  List<CentralRegulationRequirementEntity> lockAllByCodes(@Param("codes") List<String> codes);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   Optional<CentralRegulationRequirementEntity> findByCode(String code);
 

@@ -22,13 +22,15 @@ import { formatPersianDate } from "@/shared/utils/date.utils";
 import RegulationParentValueHelpDialog, {
   type RegulationParentCandidate,
 } from "../components/RegulationParentValueHelpDialog";
+import RegulationRequirementsTab from "../components/RegulationRequirementsTab";
 import type {
   CentralRegulationAnyDetail,
   CentralRegulationNodeType,
+  CentralRegulationRequirementSummary,
 } from "../domain/centralRegulation.model";
 
 export type CentralRegulationObjectMode = "create" | "view" | "edit";
-export type CentralRegulationTabKey = "general" | "controls" | "documents";
+export type CentralRegulationTabKey = "general" | "requirements" | "controls" | "documents";
 export type CentralRegulationEditableStatus = "ACTIVE" | "INACTIVE";
 
 export interface CentralRegulationObjectDraft {
@@ -71,6 +73,8 @@ interface Props {
   onEdit: () => void;
   onActiveTabChange: (tab: CentralRegulationTabKey) => void;
   onDirtyChange: (dirty: boolean) => void;
+  requirements?: CentralRegulationRequirementSummary[];
+  onRequirementsImported?: () => Promise<boolean>;
 }
 
 const EMPTY_DATE_DRAFT: PersianDateDraftState = {
@@ -154,6 +158,8 @@ export default function CentralRegulationObjectPage({
   onEdit,
   onActiveTabChange,
   onDirtyChange,
+  requirements = [],
+  onRequirementsImported,
 }: Props) {
   const { t } = useTranslation();
   const assignmentPermissions = useRequirementControlAssignmentPermissions();
@@ -163,6 +169,7 @@ export default function CentralRegulationObjectPage({
   );
   const [validationError, setValidationError] = useState<string | null>(null);
   const [parentDialogOpen, setParentDialogOpen] = useState(false);
+  const [importPending, setImportPending] = useState(false);
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(
     EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE,
   );
@@ -178,7 +185,7 @@ export default function CentralRegulationObjectPage({
     JSON.stringify(normalized(form)) !== baseline ||
     dateDrafts.validFrom.dirty ||
     dateDrafts.validTo.dirty;
-  const dirty = definitionDirty || documents.dirty || documents.uploading;
+  const dirty = definitionDirty || documents.dirty || documents.uploading || importPending;
   const canChangeStatus = mode === "edit" && permissions.lifecycle;
   const canChangeParent = !readOnly && (mode === "create" || permissions.move);
 
@@ -292,6 +299,7 @@ export default function CentralRegulationObjectPage({
           onTabSelect={(event) => {
             const key = event.detail.tab.getAttribute("data-tab-key") as CentralRegulationTabKey | null;
             if (key === "general" || key === "documents"
+              || (key === "requirements" && nodeType === "REGULATION" && mode !== "create")
               || (key === "controls" && nodeType === "REQUIREMENT" && mode !== "create" && assignmentPermissions.view)) {
               onActiveTabChange(key);
             }
@@ -302,6 +310,10 @@ export default function CentralRegulationObjectPage({
             selected={activeTab === "general"}
             data-tab-key="general"
           />
+          {nodeType === "REGULATION" ? (
+            <Tab text={t("regulation.tabs.requirements")} selected={activeTab === "requirements"}
+              disabled={mode === "create"} data-tab-key="requirements" />
+          ) : null}
           {nodeType === "REQUIREMENT" ? (
             <Tab
               text={t("regulation.tabs.controls")}
@@ -411,6 +423,14 @@ export default function CentralRegulationObjectPage({
               </Field>
             </div>
           </div>
+
+          {nodeType === "REGULATION" && value?.id && mode !== "create" && onRequirementsImported ? (
+            <div className={activeTab === "requirements" ? "regulationTabPanel" : "regulationTabPanel regulationTabPanelHidden"}>
+              <RegulationRequirementsTab regulationId={value.id} regulationTitle={value.title}
+                requirements={requirements} canImport={permissions.create} editable={!readOnly} busy={busy}
+                onImported={onRequirementsImported} onPendingChange={setImportPending} />
+            </div>
+          ) : null}
 
           <div
             className={
