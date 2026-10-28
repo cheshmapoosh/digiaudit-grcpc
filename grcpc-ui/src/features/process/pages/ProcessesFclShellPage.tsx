@@ -28,6 +28,11 @@ import ProcessObjectPage, { type ProcessTabKey } from "./ProcessObjectPage";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import { CentralControlDialog } from "@/features/control";
+import { useCatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
+import { useControlScopePermissions } from "@/features/control-scope/security/controlScopePermissions";
+import { processControlApi } from "../infra/processControl.api.repo";
+import { processControlTreeId, type ProcessControlNode, type ProcessCreateType } from "../domain/processControl.model";
 import {
     toDocumentAggregateDraftError,
     type DocumentAggregateDraftError,
@@ -268,6 +273,9 @@ export default function ProcessesFclShellPage() {
     const createNode = useProcessState((state) => state.createNode);
     const updateNode = useProcessState((state) => state.updateNode);
     const removeNode = useProcessState((state) => state.removeNode);
+    const refresh = useProcessState((state) => state.refresh);
+    const controlPermissions = useCatalogActionPermissions("CENTRAL_CONTROL");
+    const controlScopePermissions = useControlScopePermissions();
 
     const [searchText, setSearchText] = useState("");
     const [pageError, setPageError] = useState<string | null>(null);
@@ -280,9 +288,15 @@ export default function ProcessesFclShellPage() {
     const [objectActiveTab, setObjectActiveTab] = useState<ProcessTabKey>("general");
     const [generalInformationDirty, setGeneralInformationDirty] = useState(false);
     const [documentDirty, setDocumentDirty] = useState(false);
+    const [controlDirty, setControlDirty] = useState(false);
+    const [controls, setControls] = useState<ProcessControlNode[]>([]);
+    const [controlDialog, setControlDialog] = useState<{
+        controlId: string | null;
+        initialSubprocess?: { subprocessId: string; version: number };
+    } | null>(null);
     const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
     const pendingLeaveActionRef = useRef<(() => void) | null>(null);
-    const objectPageDirty = generalInformationDirty || documentDirty;
+    const objectPageDirty = generalInformationDirty || documentDirty || controlDirty;
     const { blocker, runWithNavigationBypass } = useUnsavedChangesGuard(objectPageDirty);
 
     const requestObjectPageLeave = useCallback((action: () => void) => {
@@ -306,6 +320,7 @@ export default function ProcessesFclShellPage() {
         setLeaveConfirmationOpen(false);
         setGeneralInformationDirty(false);
         setDocumentDirty(false);
+        setControlDirty(false);
         if (blocker.state === "blocked") blocker.proceed();
         else if (action) runWithNavigationBypass(action);
     }, [blocker, runWithNavigationBypass]);
@@ -317,6 +332,21 @@ export default function ProcessesFclShellPage() {
     const processItems = useMemo(() => sortProcesses(Object.values(nodesById)), [nodesById]);
     const selectedRouteItem = processId ? nodesById[processId] ?? null : null;
     const selectedTreeItem = selectedTreeId ? nodesById[selectedTreeId] ?? null : null;
+    const visibleControls = useMemo(() => controlScopePermissions.view ? controls : [], [controlScopePermissions.view, controls]);
+    const selectedControl = visibleControls.find(control => processControlTreeId(control.scopeId) === selectedTreeId);
+    const refreshControls = useCallback(async (signal?: AbortSignal) => {
+        if (!controlScopePermissions.view) return;
+        const rows = await processControlApi.list(signal);
+        if (!signal?.aborted) setControls(rows);
+    }, [controlScopePermissions.view]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        void refreshControls(controller.signal).catch(() => {
+            if (!controller.signal.aborted) setPageError(t("controlScope.errors.load"));
+        });
+        return () => controller.abort();
+    }, [nodesById, refreshControls, t]);
     const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const queryParentId = queryParams.get("parentId");
     const queryNodeType = queryParams.get("nodeType");
@@ -386,6 +416,14 @@ export default function ProcessesFclShellPage() {
 
     const handleShow = useCallback(
         (id: string) => {
+            const control = visibleControls.find(row => processControlTreeId(row.scopeId) === id);
+            if (control) {
+                requestObjectPageLeave(() => {
+                    setControlDirty(false);
+                    setControlDialog({ controlId: control.controlId });
+                });
+                return;
+            }
             const show = () => {
                 setObjectError(null);
                 setDocumentAggregateError(null);
@@ -399,12 +437,23 @@ export default function ProcessesFclShellPage() {
                 show();
             }
         },
-        [navigate, processId, requestObjectPageLeave, routeMode],
+        [navigate, processId, requestObjectPageLeave, routeMode, visibleControls],
     );
 
     const handleCreate = useCallback(
-        (nodeType: ProcessNodeType) => {
+        (nodeType: ProcessCreateType) => {
             const selectedItem = selectedTreeId ? nodesById[selectedTreeId] ?? null : null;
+            if (nodeType === "CONTROL") {
+                if (selectedItem?.nodeType !== "SUBPROCESS" || selectedItem.status !== "ACTIVE"
+                    || !controlPermissions.create || !controlScopePermissions.create) return;
+                requestObjectPageLeave(() => {
+                    setControlDirty(false);
+                    setControlDialog({ controlId: null, initialSubprocess: {
+                        subprocessId: selectedItem.id, version: selectedItem.version,
+                    } });
+                });
+                return;
+            }
             const parentId = resolveCreateParentId(nodeType, selectedItem);
 
             if (parentId === undefined) {
@@ -427,7 +476,7 @@ export default function ProcessesFclShellPage() {
                 navigate(`/processes/new?${params.toString()}`);
             });
         },
-        [navigate, nodesById, requestObjectPageLeave, selectedTreeId, t],
+        [controlPermissions.create, controlScopePermissions.create, navigate, nodesById, requestObjectPageLeave, selectedTreeId, t],
     );
 
     const handleEdit = useCallback(
@@ -626,10 +675,10 @@ export default function ProcessesFclShellPage() {
     const fclLayout: FclLayout = selectedTreeItem
         ? "TwoColumnsStartExpanded"
         : "OneColumn";
-    const createOptions: ProcessNodeType[] =
-        selectedTreeItem?.nodeType === "SUBPROCESS"
-            ? ["PROCESS"]
-            : ["PROCESS", "SUBPROCESS"];
+    const createOptions: ProcessCreateType[] = selectedControl || selectedTreeItem?.nodeType === "SUBPROCESS"
+        ? ["PROCESS"] : selectedTreeItem?.nodeType === "PROCESS" ? ["PROCESS", "SUBPROCESS"] : ["PROCESS"];
+    if (selectedTreeItem?.nodeType === "SUBPROCESS" && selectedTreeItem.status === "ACTIVE"
+        && controlPermissions.create && controlScopePermissions.create) createOptions.push("CONTROL");
 
     const slotContainerStyle = useMemo<CSSProperties>(
         () => ({
@@ -679,11 +728,13 @@ export default function ProcessesFclShellPage() {
         <div style={frameStyle}>
             <ProcessesListReport
                 items={processItems}
+                controls={visibleControls}
+                controlSelected={Boolean(selectedControl)}
                 selectedId={treeSelectedId}
                 expansionAnchorId={treeExpansionAnchorIdValue}
                 searchText={searchText}
                 busy={loading || submitting}
-                error={!showModal ? pageError : null}
+                error={!showModal && !controlDialog ? pageError : null}
                 onErrorClose={() => setPageError(null)}
                 createOptions={createOptions}
                 onSearchTextChange={setSearchText}
@@ -724,6 +775,17 @@ export default function ProcessesFclShellPage() {
 
     return (
         <>
+            {controlDialog ? <CentralControlDialog
+                key={controlDialog.controlId ?? `create:${controlDialog.initialSubprocess?.subprocessId}`}
+                {...controlDialog}
+                onDirtyChange={setControlDirty}
+                onClose={() => requestObjectPageLeave(() => { setControlDirty(false); setControlDialog(null); })}
+                onSaved={async () => { await refresh(); await refreshControls(); }}
+                onRefreshFailed={() => {
+                    setControlDirty(false); setControlDialog(null);
+                    setPageError(t("control.errors.savedRefreshFailed"));
+                }}
+            /> : null}
             {createElement(
                 "ui5-flexible-column-layout",
                 {

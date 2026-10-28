@@ -22,6 +22,8 @@ public interface CentralSubprocessControlScopeRepository
   List<CentralSubprocessControlScopeEntity> findBySubprocessIdAndStatusNot(
       UUID subprocessId, MasterDataLifecycleStatus status);
 
+  List<CentralSubprocessControlScopeEntity> findByStatusNot(MasterDataLifecycleStatus status);
+
   List<CentralSubprocessControlScopeEntity> findBySubprocessIdAndStatus(
       UUID subprocessId, MasterDataLifecycleStatus status);
 

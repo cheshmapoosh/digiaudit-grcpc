@@ -2,16 +2,16 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 
-import type { ProcessNode, ProcessNodeType } from "../domain/process.model";
-import {
-    buildTree,
-    collectAncestorIds,
-    filterTree,
-    type ProcessTreeNode,
-} from "../utils/process.tree";
+import type { ProcessNode } from "../domain/process.model";
+import { processControlTreeId, type ProcessControlNode, type ProcessCreateType } from "../domain/processControl.model";
+import { collectAncestorIds } from "../utils/process.tree";
+import { buildProcessDisplayTree, filterProcessDisplayTree, type ProcessDisplayTreeNode } from "../utils/processControl.tree";
+
+const NO_CONTROLS: ProcessControlNode[] = [];
 
 export interface ProcessTreeProps {
     items: ProcessNode[];
+    controls?: ProcessControlNode[];
     selectedId?: string | null;
     expansionAnchorId?: string | null;
     searchText?: string;
@@ -55,10 +55,10 @@ function readTreeItemId(event: TreeEventWithItem): string | null {
     return null;
 }
 
-function collectExpandableIds(nodes: ProcessTreeNode[]): Set<string> {
+function collectExpandableIds(nodes: ProcessDisplayTreeNode[]): Set<string> {
     const result = new Set<string>();
 
-    const visit = (node: ProcessTreeNode) => {
+    const visit = (node: ProcessDisplayTreeNode) => {
         if (node.children.length > 0) {
             result.add(node.id);
             node.children.forEach(visit);
@@ -82,19 +82,20 @@ function removeFromSet(previous: Set<string>, id: string): Set<string> {
 }
 
 function resolveNodeTypeLabel(
-    nodeType: ProcessNodeType,
+    nodeType: ProcessCreateType,
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
-    const labels: Record<ProcessNodeType, string> = {
+    const labels: Record<ProcessCreateType, string> = {
         PROCESS: t("process.nodeType.process", { defaultValue: "فرآیند" }),
         SUBPROCESS: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
+        CONTROL: t("control.nodeType.control"),
     };
 
     return labels[nodeType];
 }
 
 interface ProcessTreeItemProps {
-    node: ProcessTreeNode;
+    node: ProcessDisplayTreeNode;
     selectedId?: string | null;
     expandedIds: Set<string>;
 }
@@ -161,6 +162,7 @@ function ProcessTreeItem({
 
 export default function ProcessTree({
                                         items,
+                                        controls = NO_CONTROLS,
                                         selectedId,
                                         expansionAnchorId,
                                         searchText = "",
@@ -170,10 +172,10 @@ export default function ProcessTree({
     const { t } = useTranslation();
     const normalizedSearchText = searchText.trim();
 
-    const tree = useMemo(() => buildTree(items), [items]);
+    const tree = useMemo(() => buildProcessDisplayTree(items, controls), [items, controls]);
 
     const filteredTree = useMemo(
-        () => filterTree(tree, normalizedSearchText),
+        () => filterProcessDisplayTree(tree, normalizedSearchText),
         [tree, normalizedSearchText],
     );
 
@@ -188,8 +190,12 @@ export default function ProcessTree({
     const [manualCollapsedIds, setManualCollapsedIds] = useState<Set<string>>(new Set());
 
     const autoExpandedIds = useMemo(() => {
-        const anchorId = expansionAnchorId ?? selectedId ?? null;
+        const selectedAnchor = expansionAnchorId ?? selectedId ?? null;
+        const selectedControl = controls.find(control => processControlTreeId(control.scopeId) === selectedAnchor);
+        const anchorId = selectedControl?.subprocessId ?? selectedAnchor;
         const result = new Set<string>(collectAncestorIds(items, anchorId));
+
+        if (selectedControl) result.add(selectedControl.subprocessId);
 
         if (expansionAnchorId && expandableIds.has(expansionAnchorId)) {
             result.add(expansionAnchorId);
@@ -202,6 +208,7 @@ export default function ProcessTree({
         return result;
     }, [
         expansionAnchorId,
+        controls,
         expandableIds,
         filteredExpandableIds,
         items,

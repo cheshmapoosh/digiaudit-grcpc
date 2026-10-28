@@ -140,6 +140,7 @@ export default function CentralControlGroupObjectPage({
         groups={groups}
         currentGroupId={value?.id ?? null}
         selectedId={parentGroupId}
+        busy={busy}
         onClose={() => setValueHelpOpen(false)}
         onSelect={(id) => { setParentGroupId(id); setValueHelpOpen(false); }}
       />

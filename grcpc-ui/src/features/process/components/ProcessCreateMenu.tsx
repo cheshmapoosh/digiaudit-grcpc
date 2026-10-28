@@ -3,19 +3,21 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
-import type { ProcessNodeType } from "../domain/process.model";
+import type { ProcessCreateType } from "../domain/processControl.model";
 
-const DEFAULT_CREATE_NODE_TYPES: ProcessNodeType[] = ["PROCESS", "SUBPROCESS"];
+const DEFAULT_CREATE_NODE_TYPES: ProcessCreateType[] = ["PROCESS", "SUBPROCESS", "CONTROL"];
 
 
-const createMenuItemIdByNodeType: Record<ProcessNodeType, string> = {
+const createMenuItemIdByNodeType: Record<ProcessCreateType, string> = {
     PROCESS: "process-create-menu-process",
     SUBPROCESS: "process-create-menu-subprocess",
+    CONTROL: "process-create-menu-control",
 };
 
-const nodeTypeByMenuItemId: Record<string, ProcessNodeType> = {
+const nodeTypeByMenuItemId: Record<string, ProcessCreateType> = {
     "process-create-menu-process": "PROCESS",
     "process-create-menu-subprocess": "SUBPROCESS",
+    "process-create-menu-control": "CONTROL",
 };
 
 type MenuItemClickEvent = {
@@ -34,11 +36,11 @@ export interface ProcessCreateMenuProps {
     disabled?: boolean;
     slot?: string;
     style?: CSSProperties;
-    nodeTypes?: ProcessNodeType[];
-    onCreate: (nodeType: ProcessNodeType) => void;
+    nodeTypes?: ProcessCreateType[];
+    onCreate: (nodeType: ProcessCreateType) => void;
 }
 
-function readClickedNodeType(event: unknown): ProcessNodeType | null {
+function readClickedNodeType(event: unknown): ProcessCreateType | null {
     const itemId = (event as MenuItemClickEvent).detail?.item?.id;
     return itemId ? nodeTypeByMenuItemId[itemId] ?? null : null;
 }
@@ -63,10 +65,11 @@ export default function ProcessCreateMenu({
     const [open, setOpen] = useState(false);
     const [opener, setOpener] = useState<HTMLElement | undefined>(undefined);
 
-    const labels = useMemo<Record<ProcessNodeType, string>>(
+    const labels = useMemo<Record<ProcessCreateType, string>>(
         () => ({
             PROCESS: t("process.nodeType.process", { defaultValue: "فرآیند" }),
             SUBPROCESS: t("process.nodeType.subProcess", { defaultValue: "زیر فرآیند" }),
+            CONTROL: t("control.nodeType.control"),
         }),
         [t],
     );

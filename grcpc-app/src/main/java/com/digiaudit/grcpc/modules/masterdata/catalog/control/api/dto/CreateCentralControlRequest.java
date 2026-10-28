@@ -39,4 +39,5 @@ public record CreateCentralControlRequest(
     @Valid List<CentralControlAccountGroupChangeRequest> accountGroupChanges,
     @Valid List<CentralRiskControlAssignmentChangeRequest> riskAssignments,
     @Valid List<CentralControlControlObjectiveAssignmentChangeRequest> controlObjectiveAssignments,
-    @Valid List<CentralRequirementControlAssignmentChangeRequest> requirementAssignments) {}
+    @Valid List<CentralRequirementControlAssignmentChangeRequest> requirementAssignments,
+    @Valid InitialControlSubprocessRequest initialSubprocess) {}

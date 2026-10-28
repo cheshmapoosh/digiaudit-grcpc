@@ -183,3 +183,10 @@
 @media (min-width: 1101px) {
   .controlHeaderGrid, .controlFormGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem 1rem; }
 }
+.controlGroupValueHelp {
+  width: 48rem;
+  max-width: 80vw;
+  padding: .75rem;
+  display: grid;
+  gap: .75rem;
+}

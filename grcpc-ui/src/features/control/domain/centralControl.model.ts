@@ -157,9 +157,10 @@ export interface CreateCentralControlCommand {
   riskAssignments: RiskControlAssignmentChange[];
   controlObjectiveAssignments: ControlControlObjectiveAssignmentChange[];
   requirementAssignments: RequirementControlAssignmentChange[];
+  initialSubprocess?: { subprocessId: string; version: number };
 }
 
-export interface UpdateCentralControlCommand extends Omit<CreateCentralControlCommand, "code"> {
+export interface UpdateCentralControlCommand extends Omit<CreateCentralControlCommand, "code" | "initialSubprocess"> {
   version: number;
   status: CentralControlEditableStatus;
 }

@@ -24,5 +24,6 @@ Applies to `src/features/process`.
 - The Create submenu always shows both Process and Subprocess. Contextually invalid choices are disabled instead of removed; without a selected parent, Subprocess is disabled.
 - Do not send `nodeType`, generic parent IDs, process category, document count, objective, or operation-cycle fields in Update payloads. Use only typed `parentProcessId` or `processId`.
 - Subprocess is a leaf and must not offer structural child creation.
+- The Process tree may show read-only Control Scope occurrences beneath Subprocesses. These are not structural children. With an active Subprocess selected, Create also offers Control using the existing Control editor, an initially empty required Control Group, and one atomic Control Create with `initialSubprocess`. Existing Controls remain assigned through the Subprocess modal.
 - Use the shared Document component in `PARENT_SAVE` mode with target types `CENTRAL_PROCESS` or `CENTRAL_SUBPROCESS`; it emits serializable drafts and never performs a separate finalize command from these ObjectPages.
 - Keep list-page error MessageStrips compact; the tree/list body owns the flexible grid row and errors must never stretch to fill it.

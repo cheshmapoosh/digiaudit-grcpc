@@ -9,21 +9,24 @@ import {
     Title,
 } from "@ui5/webcomponents-react";
 
-import type { ProcessNode, ProcessNodeType } from "../domain/process.model";
+import type { ProcessNode } from "../domain/process.model";
+import type { ProcessControlNode, ProcessCreateType } from "../domain/processControl.model";
 import ProcessCreateMenu from "../components/ProcessCreateMenu";
 import ProcessTree from "../components/ProcessTree";
 
 export interface ProcessesListReportProps {
     items: ProcessNode[];
+    controls: ProcessControlNode[];
+    controlSelected: boolean;
     selectedId?: string | null;
     expansionAnchorId?: string | null;
     searchText: string;
     busy?: boolean;
     error?: string | null;
     onErrorClose?: () => void;
-    createOptions: ProcessNodeType[];
+    createOptions: ProcessCreateType[];
     onSearchTextChange: (value: string) => void;
-    onCreate: (nodeType: ProcessNodeType) => void;
+    onCreate: (nodeType: ProcessCreateType) => void;
     onShow: (id: string) => void;
     onDelete: (id: string) => void;
     onSelect: (id: string) => void;
@@ -31,6 +34,8 @@ export interface ProcessesListReportProps {
 
 export default function ProcessesListReport({
     items,
+    controls,
+    controlSelected,
     selectedId,
     expansionAnchorId,
     searchText,
@@ -47,7 +52,7 @@ export default function ProcessesListReport({
     const { t } = useTranslation();
     const { manage } = useMasterDataAccess("PROCESS");
 
-    const enabledCreateOptions: ProcessNodeType[] = selectedId ? createOptions : ["PROCESS"];
+    const enabledCreateOptions = manage ? createOptions : [];
 
     return (
         <div
@@ -88,7 +93,7 @@ export default function ProcessesListReport({
                         <Button
                             design="Negative"
                             hidden={!manage}
-                            disabled={!selectedId || busy}
+                            disabled={!selectedId || controlSelected || busy}
                             onClick={() => selectedId && onDelete(selectedId)}
                         >
                             {t("common.delete", { defaultValue: "Delete" })}
@@ -111,6 +116,7 @@ export default function ProcessesListReport({
 
                 <ProcessTree
                     items={items}
+                    controls={controls}
                     selectedId={selectedId}
                     expansionAnchorId={expansionAnchorId}
                     searchText={searchText}

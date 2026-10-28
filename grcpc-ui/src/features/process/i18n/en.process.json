@@ -88,6 +88,8 @@
       "confirm": "Are you sure you want to delete \"{{title}}\"?"
     },
     "errors": {
+      "controlValidityDisjoint": "The Control and Subprocess validity ranges do not overlap.",
+      "hierarchyBusy": "The hierarchy is being changed. Try saving again shortly.",
       "loadList": "Failed to load process structure",
       "notFound": "The requested item was not found",
       "duplicateCode": "Process code already exists",

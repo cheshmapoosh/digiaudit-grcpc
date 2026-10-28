@@ -57,7 +57,7 @@ The table has one row per approved independent hierarchy, not one row per busine
 | `PROCESS` | `central_process`, `central_subprocess` | Process and Subprocess are one structural hierarchy and share one Guard. |
 | `RISK` | `central_risk_category`, `central_risk_template` | Category and Template structural mutations share this Guard. |
 | `ACCOUNT_GROUP` | `central_account_group` | All Account Group structural mutations share this Guard. |
-| `CONTROL` | `central_control_group`, `central_control` | Existing Control hierarchy/aggregate Guard; direct Assignments union referenced `RISK`/`REGULATION` Guards and classification changes retain `ACCOUNT_GROUP`. Control Objective remains non-hierarchical. |
+| `CONTROL` | `central_control_group`, `central_control` | Existing Control hierarchy/aggregate Guard; direct Assignments union referenced `RISK`/`REGULATION` Guards and classification changes retain `ACCOUNT_GROUP`. Control Create with `initialSubprocess` also unions `PROCESS` before any hierarchy reads. Control Objective remains non-hierarchical. |
 | `REGULATION` | `central_regulation_group`, `central_regulation`, `central_regulation_requirement` | The complete Regulation family shares this Guard. |
 | `POLICY` | `central_policy_group`, `central_policy` | Policy Group and Policy structural mutations share this Guard; Policy aggregate Update acquires it even if the submitted group is unchanged. Four typed Policy relation collections add their referenced hierarchy Guards. |
 | `OBJECTIVE` | `objective` | Strategy categories and Objective create, update (including kind/parent changes), delete, and restore share this Guard. Organization Objective assignment also acquires `OBJECTIVE` and `ORGANIZATION` in lexical order. |

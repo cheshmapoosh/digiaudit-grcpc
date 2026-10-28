@@ -7,6 +7,7 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.repository.
 import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralSubprocessEntity;
 import com.digiaudit.grcpc.modules.masterdata.process.domain.repository.CentralSubprocessRepository;
 import com.digiaudit.grcpc.modules.masterdata.scope.control.api.dto.CentralSubprocessControlScopeResponse;
+import com.digiaudit.grcpc.modules.masterdata.scope.control.api.dto.ProcessControlTreeNodeResponse;
 import com.digiaudit.grcpc.modules.masterdata.scope.control.api.mapper.CentralSubprocessControlScopeMapper;
 import com.digiaudit.grcpc.modules.masterdata.scope.control.domain.entity.CentralSubprocessControlScopeEntity;
 import com.digiaudit.grcpc.modules.masterdata.scope.control.domain.repository.CentralSubprocessControlScopeRepository;
@@ -37,6 +38,29 @@ public class CentralSubprocessControlScopeQueryService {
     this.subprocesses = subprocesses;
     this.controls = controls;
     this.mapper = mapper;
+  }
+
+  @Transactional(readOnly = true)
+  public List<ProcessControlTreeNodeResponse> listForProcessTree() {
+    var rows = scopes.findByStatusNot(MasterDataLifecycleStatus.DELETED);
+    var controlsById = controls.findAllById(rows.stream()
+        .map(CentralSubprocessControlScopeEntity::getControlId).distinct().toList()).stream()
+        .collect(Collectors.toMap(CentralControlEntity::getId, Function.identity()));
+    var subprocessesById = subprocesses.findAllById(rows.stream()
+        .map(CentralSubprocessControlScopeEntity::getSubprocessId).distinct().toList()).stream()
+        .collect(Collectors.toMap(CentralSubprocessEntity::getId, Function.identity()));
+    return rows.stream().filter(row -> {
+      var control = controlsById.get(row.getControlId());
+      var subprocess = subprocessesById.get(row.getSubprocessId());
+      return control != null && subprocess != null
+          && control.getStatus() != MasterDataLifecycleStatus.DELETED
+          && subprocess.getStatus() != MasterDataLifecycleStatus.DELETED;
+    }).map(row -> {
+      var control = controlsById.get(row.getControlId());
+      return new ProcessControlTreeNodeResponse(row.getId(), row.getSubprocessId(),
+          control.getId(), control.getCode(), control.getTitle(), row.getStatus());
+    }).sorted(Comparator.comparing(ProcessControlTreeNodeResponse::code)
+        .thenComparing(ProcessControlTreeNodeResponse::scopeId)).toList();
   }
 
   @Transactional(readOnly = true)

@@ -2,11 +2,11 @@ import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Dialog, List, ListItemStandard } from "@ui5/webcomponents-react";
+import { Button, Dialog, List, ListItemStandard, Tree, TreeItem } from "@ui5/webcomponents-react";
 
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import type { CentralControlGroupSummary } from "../domain/centralControl.model";
-import { collectControlGroupDescendantIds } from "../utils/centralControl.tree";
+import { buildCentralControlTree, collectControlGroupDescendantIds, filterCentralControlTree, type CentralControlTreeNode } from "../utils/centralControl.tree";
 
 interface Props {
   open: boolean;
@@ -38,42 +38,36 @@ export default function ControlGroupValueHelpDialog({
     return result;
   }, [currentGroupId, groups]);
   const rows = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase("fa");
-    return groups.filter((group) => {
-      if (excluded.has(group.id)) return false;
-      if (!query) return true;
-      return `${group.code} ${group.title}`.toLocaleLowerCase("fa").includes(query);
-    });
+    const eligible = groups.filter((group) => !excluded.has(group.id));
+    return filterCentralControlTree(buildCentralControlTree(eligible, []), search);
   }, [excluded, groups, search]);
   const title = t("control.group.valueHelpTitle", { defaultValue: "انتخاب گروه کنترل" });
   const select = (id: string | null) => {
+    if (busy) return;
     onSelect(id);
     onClose();
   };
+  const renderGroup = (group: CentralControlTreeNode) => (
+    <TreeItem key={group.id} data-group-id={group.id} text={`${group.code} — ${group.title}`}
+      expanded selected={group.id === selectedId}>
+      {group.children.map(renderGroup)}
+    </TreeItem>
+  );
 
   return (
     <Dialog open={open} accessibleName={title} onClose={onClose}>
       <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy} accessibleName={t("control.group.search", { defaultValue: "جستجوی گروه کنترل" })} />} />
-      <div style={{ width: "32rem", maxWidth: "80vw", padding: "0.75rem", display: "grid", gap: "0.75rem" }}>
+      <div className="controlGroupValueHelp">
 
-        <List separators="Inner">
-          {allowEmpty ? (
-            <ListItemStandard selected={!selectedId} onClick={() => select(null)}>
+          {allowEmpty ? <List separators="Inner">
+            <ListItemStandard selected={!selectedId} type={busy ? "Inactive" : "Active"} onClick={() => select(null)}>
               {t("control.group.noParent", { defaultValue: "بدون گروه" })}
             </ListItemStandard>
-          ) : null}
-          {rows.map((group) => (
-            <ListItemStandard
-              key={group.id}
-              selected={group.id === selectedId}
-              additionalText={group.code}
-              description={`${group.code} — ${group.title}`}
-              onClick={() => select(group.id)}
-            >
-              {group.title}
-            </ListItemStandard>
-          ))}
-        </List>
+          </List> : null}
+        <Tree accessibleName={title} onItemClick={(event) => {
+          const id = event.detail.item.dataset.groupId;
+          if (id && !excluded.has(id)) select(id);
+        }}>{rows.map(renderGroup)}</Tree>
         <DialogFooter>
           <Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.close", { defaultValue: "بستن" })}</Button>
         </DialogFooter>

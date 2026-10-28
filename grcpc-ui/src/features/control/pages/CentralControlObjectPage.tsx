@@ -230,6 +230,7 @@ export default function CentralControlObjectPage({
   const validate = () => {
     if (!form.code.trim()) { setValidationError(t("control.validation.codeRequired")); return false; }
     if (!form.title.trim()) { setValidationError(t("control.validation.nameRequired")); return false; }
+    if (!selectedGroup) { setValidationError(t("control.validation.groupRequired")); onActiveTabChange("general"); return false; }
     if (invalidDate) { setValidationError(t("control.validation.invalidDate")); return false; }
     if (form.validFrom && form.validTo && form.validFrom > form.validTo) { setValidationError(t("control.validation.invalidValidityRange")); return false; }
     if (!documents.ready || documents.invalid || documents.uploading) {
@@ -409,7 +410,7 @@ export default function CentralControlObjectPage({
         </> : <><Button design="Emphasized" disabled={saveDisabled} onClick={submit}>{t("control.actions.submit")}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.cancel", { defaultValue: "انصراف" })}</Button></>}
       </DialogFooter>
 
-      <ControlGroupValueHelpDialog open={groupHelpOpen} groups={groups} selectedId={form.controlGroupId} allowEmpty={false} onClose={() => setGroupHelpOpen(false)} onSelect={(id) => { change("controlGroupId", id); setGroupHelpOpen(false); }} />
+      <ControlGroupValueHelpDialog open={groupHelpOpen} groups={groups} selectedId={form.controlGroupId} allowEmpty={false} busy={busy} onClose={() => setGroupHelpOpen(false)} onSelect={(id) => { change("controlGroupId", id); setGroupHelpOpen(false); }} />
     </div>
   );
 }

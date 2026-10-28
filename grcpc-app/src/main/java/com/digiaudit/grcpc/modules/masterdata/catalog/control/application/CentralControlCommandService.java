@@ -13,6 +13,7 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.Cent
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.enums.CentralControlTriggerType;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.repository.CentralControlGroupRepository;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.repository.CentralControlRepository;
+import com.digiaudit.grcpc.modules.masterdata.process.application.ProcessService;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.CentralControlAccountGroupResponse;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.CentralControlAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.application.CentralControlAccountGroupAggregateService;
@@ -61,6 +62,7 @@ public class CentralControlCommandService {
   private final CentralRequirementControlAssignmentAggregateService requirementAssignments;
   private final Clock clock;
   private final CentralControlAccountGroupAggregateService accountGroupClassifications;
+  private final ProcessService processes;
 
   public CentralControlCommandService(
       CentralControlRepository repository,
@@ -74,6 +76,7 @@ public class CentralControlCommandService {
       CentralRiskControlAssignmentAggregateService riskAssignments,
       CentralControlControlObjectiveAssignmentAggregateService controlObjectiveAssignments,
       CentralRequirementControlAssignmentAggregateService requirementAssignments,
+      ProcessService processes,
       @Qualifier("masterDataRevisionClock") Clock clock) {
     this.repository = repository;
     this.groups = groups;
@@ -86,6 +89,7 @@ public class CentralControlCommandService {
     this.riskAssignments = riskAssignments;
     this.controlObjectiveAssignments = controlObjectiveAssignments;
     this.requirementAssignments = requirementAssignments;
+    this.processes = processes;
     this.clock = clock;
   }
 
@@ -96,6 +100,10 @@ public class CentralControlCommandService {
     String eventDescription = support.normalizeDescription(request.eventDescription());
     validateDefinition(request.triggerType(), eventDescription, request.operationFrequency());
     support.validateValidity(request.validFrom(), request.validTo());
+    if (request.initialSubprocess() != null && request.controlGroupId() == null) {
+      throw new UnprocessableEntityException(
+          "INVALID_PARENT", "error.masterdata.v2.invalidParent", "A Control Group is required");
+    }
     AtomicReference<List<DocumentCommandResponse>> documents = new AtomicReference<>(List.of());
     AtomicReference<List<CentralRiskControlAssignmentResponse>> canonicalRiskAssignments = new AtomicReference<>(List.of());
     AtomicReference<List<CentralControlControlObjectiveAssignmentResponse>> canonicalControlObjectiveAssignments = new AtomicReference<>(List.of());
@@ -105,13 +113,14 @@ public class CentralControlCommandService {
     try {
       RevisionExecutionResult result =
           revisionCoordinator.executeStructural(
-              requiredGuards(request.accountGroupChanges(), request.riskAssignments(), request.controlObjectiveAssignments(), request.requirementAssignments()),
+              createGuards(request),
               RevisionRequest.central(
                   "Create central control " + code, "Central Control definition create", null),
               context -> {
                 DocumentCommandService.PreparedAggregateContext prepared =
                     documentCommandService.prepareAggregate(request.documents());
                 CentralControlEntity entity = repository.findByCode(code).orElse(null);
+                if (entity != null) entity = lock(entity.getId());
                 lockAssignmentEndpoints(context, request);
                 validateControlGroup(request.controlGroupId());
                 RevisionOperationType operationType;
@@ -215,6 +224,10 @@ public class CentralControlCommandService {
                 CentralRequirementControlAssignmentAggregateService.PreparedChanges preparedRequirementAssignments =
                     requirementAssignments.prepare(context, entity, MasterDataLifecycleStatus.ACTIVE, request.requirementAssignments());
                 CentralControlEntity saved = repository.saveAndFlush(entity);
+                var subprocessContents = request.initialSubprocess() == null
+                    ? List.<com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentResult>of()
+                    : processes.attachCreatedControl(context, request.initialSubprocess().subprocessId(),
+                        request.initialSubprocess().version(), saved).contentResults();
                 documents.set(
                     documentCommandService.finalizePreparedAggregate(
                         prepared,
@@ -230,7 +243,7 @@ public class CentralControlCommandService {
                 canonicalControlObjectiveAssignments.set(controlObjectiveAssignmentsResult.canonicalRows());
                 CentralRequirementControlAssignmentAggregateService.ApplyResult requirementAssignmentsResult = requirementAssignments.apply(preparedRequirementAssignments, saved);
                 canonicalRequirementAssignments.set(requirementAssignmentsResult.canonicalRows());
-                return combine(context, completed(context, saved, operationType, expectedVersion, before), classificationResult.revisionContents(), riskAssignmentsResult.revisionContents(), controlObjectiveAssignmentsResult.revisionContents(), requirementAssignmentsResult.revisionContents());
+                return combine(context, completed(context, saved, operationType, expectedVersion, before), classificationResult.revisionContents(), riskAssignmentsResult.revisionContents(), controlObjectiveAssignmentsResult.revisionContents(), requirementAssignmentsResult.revisionContents(), subprocessContents);
               });
       return aggregateResponse(result, documents.get(), canonicalClassifications.get(), canonicalRiskAssignments.get(), canonicalControlObjectiveAssignments.get(), canonicalRequirementAssignments.get());
     } catch (DataIntegrityViolationException exception) {
@@ -429,6 +442,14 @@ public class CentralControlCommandService {
     if (!isEmpty(riskAssignments)) keys.addAll(List.of(MasterDataHierarchyKey.CONTROL, MasterDataHierarchyKey.RISK));
     if (!isEmpty(controlObjectiveAssignments)) keys.addAll(List.of(MasterDataHierarchyKey.CONTROL));
     if (!isEmpty(requirementAssignments)) keys.addAll(List.of(MasterDataHierarchyKey.CONTROL, MasterDataHierarchyKey.REGULATION));
+    return List.copyOf(keys);
+  }
+
+  private List<MasterDataHierarchyKey> createGuards(CreateCentralControlRequest request) {
+    var keys = new java.util.TreeSet<MasterDataHierarchyKey>(java.util.Comparator.comparing(Enum::name));
+    keys.addAll(requiredGuards(request.accountGroupChanges(), request.riskAssignments(),
+        request.controlObjectiveAssignments(), request.requirementAssignments()));
+    if (request.initialSubprocess() != null) keys.add(MasterDataHierarchyKey.PROCESS);
     return List.copyOf(keys);
   }
 

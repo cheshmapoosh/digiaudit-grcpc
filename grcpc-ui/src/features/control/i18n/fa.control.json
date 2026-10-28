@@ -125,7 +125,7 @@
     "validation": {
       "codeRequired": "شناسه کنترل الزامی است.",
       "nameRequired": "نام کنترل الزامی است.",
-      "groupRequired": "شناسه و نام گروه کنترل الزامی است.",
+      "groupRequired": "انتخاب گروه کنترل به‌عنوان والد الزامی است.",
       "invalidDate": "تاریخ واردشده معتبر نیست.",
       "invalidValidityRange": "بازه اعتبار معتبر نیست.",
       "documentsNotReady": "مستندات موقت هنوز برای ثبت نهایی آماده نیستند."

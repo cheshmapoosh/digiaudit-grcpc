@@ -11,6 +11,7 @@ Use `grcpc-docs/master-data/accepted-corrections/2026-08-17-central-control-desi
 - Control Group modals use the same object-summary header pattern as Policy Group modals.
 - Create menu always renders both `گروه کنترل` and `کنترل`; invalid choices are disabled. No selection enables Group only; Group selection enables Group and Control; Control selection creates siblings in the selected Control's group context.
 - Parent/group changes happen inside Edit through Value Help. Do not add a separate Move button.
+- Group Value Help shows the recursive Group hierarchy, retaining ancestors through search and excluding self/descendants when selecting a Group's parent. Control creation from the Process page starts with an empty required Group and reuses the existing Control ObjectPage.
 - Control tab order is: `اطلاعات کلی`, `زیرفرآیندها`, `قوانین`, `الزام‌ها`, `ریسک‌ها`, `گروه حساب‌ها`, `اهداف کنترل`, `مستندات`.
 - Prompt 7.5 enables `گروه حساب‌ها` with UI-only classification drafts submitted by the one Control aggregate Save. The accepted 2026-10-27 correction makes Risks, Requirements and Control Objectives typed Control-owned Assignment draft managers in Create/Edit and read-only in View; the single Control Save persists them. Direct Regulation and Test Plan remain disabled.
 - Do not show `برنامه عملکرد`.

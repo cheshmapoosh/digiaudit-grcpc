@@ -39,6 +39,7 @@ import com.digiaudit.grcpc.modules.masterdata.coverage.riskcontrolobjective.api.
 import com.digiaudit.grcpc.modules.masterdata.coverage.riskcontrolobjective.application.CentralSubprocessRiskControlObjectiveCoverageAggregateService;
 import com.digiaudit.grcpc.modules.masterdata.scope.control.api.dto.CentralSubprocessControlScopeResponse;
 import com.digiaudit.grcpc.modules.masterdata.scope.control.api.dto.CentralControlScopeChangeRequest;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.CentralControlEntity;
 import com.digiaudit.grcpc.modules.masterdata.scope.control.application.CentralSubprocessControlScopeAggregateService;
 import com.digiaudit.grcpc.modules.masterdata.scope.controlobjective.api.dto.CentralControlObjectiveScopeChangeRequest;
 import com.digiaudit.grcpc.modules.masterdata.scope.controlobjective.api.dto.CentralSubprocessControlObjectiveScopeResponse;
@@ -979,6 +980,33 @@ public class ProcessService {
         }
         CentralSubprocessEntity saved = subprocessRepository.saveAndFlush(entity);
         return completedSubprocess(context, saved, operationType, expectedVersion, before);
+    }
+
+    /** Joins Control creation's revision transaction; this is not a standalone Scope command. */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public RevisionOperationResult attachCreatedControl(
+            RevisionExecutionContext context, UUID subprocessId, Long version, CentralControlEntity control) {
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.CONTROL);
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
+        CentralSubprocessEntity subprocess = lockSubprocessIncludingDeleted(subprocessId);
+        long expectedVersion = requireVersion(version);
+        assertVersion(subprocess, expectedVersion, "Subprocess");
+        requireMutableSubprocess(subprocess);
+        LocalDate from = subprocess.getValidFrom();
+        if (from == null || (control.getValidFrom() != null && control.getValidFrom().isAfter(from))) {
+            from = control.getValidFrom();
+        }
+        LocalDate to = subprocess.getValidTo();
+        if (to == null || (control.getValidTo() != null && control.getValidTo().isBefore(to))) {
+            to = control.getValidTo();
+        }
+        var prepared = controlScopes.prepareCreatedControl(context, subprocess, control, from, to);
+        JsonNode before = subprocessSnapshot(subprocess);
+        subprocess.controlScopesChanged(actorProvider.currentActorId(), Instant.now(clock));
+        CentralSubprocessEntity saved = subprocessRepository.saveAndFlush(subprocess);
+        var scopeResult = controlScopes.apply(prepared, saved);
+        return combine(context, completedSubprocess(context, saved, RevisionOperationType.UPDATE,
+                expectedVersion, before), scopeResult.revisionContents());
     }
 
     private RevisionOperationResult completedProcess(

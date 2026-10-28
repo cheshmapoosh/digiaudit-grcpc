@@ -52,7 +52,7 @@ public class CentralControlController {
   }
 
   @PostMapping
-  @PreAuthorize("@masterDataAuthorization.canManage('CONTROL')")
+  @PreAuthorize("@masterDataAuthorization.canManage('CONTROL') and (#request.initialSubprocess() == null or @masterDataAuthorization.canManage('PROCESS'))")
   public CentralControlAggregateMutationResponse create(
       @Valid @RequestBody CreateCentralControlRequest request) {
     return commands.create(request);

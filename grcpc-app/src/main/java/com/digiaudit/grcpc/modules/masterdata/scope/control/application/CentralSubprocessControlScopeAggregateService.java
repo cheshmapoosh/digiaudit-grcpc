@@ -130,6 +130,25 @@ public class CentralSubprocessControlScopeAggregateService {
     return new PreparedChanges(endpoint.id(), prepared);
   }
 
+  public PreparedChanges prepareCreatedControl(
+      RevisionExecutionContext context, CentralSubprocessEntity subprocess,
+      CentralControlEntity control, LocalDate validFrom, LocalDate validTo) {
+    requireProcessGuard(context);
+    if (!context.hasHierarchyGuard(MasterDataHierarchyKey.CONTROL)) {
+      throw new IllegalStateException("Control creation requires the CONTROL hierarchy guard");
+    }
+    requireScopeAccess();
+    // The caller has already persisted/locked this Control before its other endpoint rows.
+    var change = new CentralControlScopeChangeRequest(
+        CentralControlScopeChangeOperation.CREATE_OR_RESTORE, control.getId(), null, null,
+        null, null, null, validFrom, validTo, null);
+    var existing = scopes.lockByBusinessKey(subprocess.getId(), control.getId()).orElse(null);
+    var endpoint = new SubprocessEndpoint(subprocess.getId(), subprocess.getStatus(),
+        subprocess.getValidFrom(), subprocess.getValidTo());
+    return new PreparedChanges(subprocess.getId(), List.of(prepare(endpoint, control, existing,
+        change, MasterDataStructuralDependencyChecker.CoverageDeletionExclusions.NONE)));
+  }
+
   public ApplyResult apply(
       PreparedChanges preparedChanges,
       CentralSubprocessEntity subprocess) {
@@ -485,7 +504,7 @@ public class CentralSubprocessControlScopeAggregateService {
   }
 
   private void requireProcessGuard(RevisionExecutionContext context) {
-    if (context.acquiredHierarchyKey() != MasterDataHierarchyKey.PROCESS) {
+    if (!context.hasHierarchyGuard(MasterDataHierarchyKey.PROCESS)) {
       throw new IllegalStateException("Control Scope aggregate changes require the PROCESS hierarchy guard");
     }
   }
