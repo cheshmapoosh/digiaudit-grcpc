@@ -1,9 +1,11 @@
+import { CatalogTreeOrder } from "@/shared/components/CatalogTreeOrder";
+import { CatalogDeleteButton } from "@/shared/components/CatalogSelection";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { useTranslation } from "react-i18next";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
     Bar,
-    Button,
     BusyIndicator,
     MessageStrip,
     Title,
@@ -42,7 +44,7 @@ export default function OrganizationsListReport({
                                                     onSelect,
                                                 }: OrganizationsListReportProps) {
     const { t } = useTranslation();
-    const { manage } = useMasterDataAccess("REFERENCE");
+    const { manage } = useMasterDataAccess("ORGANIZATION");
 
     return (
         <div
@@ -76,21 +78,21 @@ export default function OrganizationsListReport({
 
 
                         <Button
-                            design="Emphasized"
+                            design="Default"
                             disabled={!selectedId || busy}
                             onClick={() => selectedId && onShow(selectedId)}
                         >
                             {t("common.view", { defaultValue: "نمایش" })}
                         </Button>
 
-                        <Button
+                        <CatalogDeleteButton
                             design="Negative"
                             hidden={!manage}
                             disabled={!selectedId || busy}
                             onClick={() => selectedId && onDelete(selectedId)}
                         >
                             {t("common.delete", { defaultValue: "حذف" })}
-                        </Button>
+                        </CatalogDeleteButton>
                     </>
                 }
             />
@@ -107,14 +109,16 @@ export default function OrganizationsListReport({
             >
                 {busy ? <BusyIndicator active /> : null}
 
-                <OrganizationTree
+                <CatalogTreeOrder catalog="ORGANIZATION" refreshKey={JSON.stringify([items])} filtered={Boolean(searchText.trim())}>
+                  <OrganizationTree
                     items={items}
                     selectedId={selectedId}
                     expansionAnchorId={expansionAnchorId}
                     searchText={searchText}
                     busy={busy}
                     onSelect={onSelect}
-                />
+                  />
+                </CatalogTreeOrder>
             </div>
         </div>
     );

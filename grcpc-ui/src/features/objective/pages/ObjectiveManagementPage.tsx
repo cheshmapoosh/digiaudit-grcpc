@@ -1,13 +1,17 @@
+import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
+import { CatalogTreeOrder, CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
+import { orderKey } from "@/shared/components/catalogOrder.context";
+import { CatalogSelectableRow, CatalogDeleteButton } from "@/shared/components/CatalogSelection";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
-import { DialogFooter } from "@/shared/components/DialogFooter";
+import { DialogFooter, DialogFooterBar } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { createElement, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
-  Bar, BusyIndicator, Button, Dialog, FlexBox, Input, Label, Link, MessageStrip, ObjectStatus, Option, Select, Tab,
+  Bar, BusyIndicator, Dialog, FlexBox, Input, Label, Link, MessageStrip, ObjectStatus, Option, Select, Tab,
   Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow, Text, TextArea, Title, Tree,
-  TreeItemCustom,
 } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
 import {
@@ -86,13 +90,13 @@ function ObjectiveTreeItem({ node, selectedId, expandedIds }: {
   node: TreeNode; selectedId: string | null; expandedIds: Set<string>;
 }) {
   const { t } = useTranslation();
-  return <TreeItemCustom
+  return <TreeItemCustom orderType="OBJECTIVE" orderId={node.id}
     data-objective-id={node.id} selected={node.id === selectedId}
     expanded={expandedIds.has(node.id)}
-    content={<FlexBox alignItems="Center" justifyContent="SpaceBetween" className="objectiveTreeLabel" title={node.name}>
+    content={<CatalogSelectableRow itemKey={node.id}><FlexBox alignItems="Center" justifyContent="SpaceBetween" className="objectiveTreeLabel" title={node.name}>
       <Text className="objectiveTreeTitle" maxLines={1}>{node.name}</Text>
       <Text className="objectiveTreeType" maxLines={1}>{t(`objective.kind.${node.kind}`)}</Text>
-    </FlexBox>}
+    </FlexBox></CatalogSelectableRow>}
   >
     {node.children.map((child) => <ObjectiveTreeItem key={child.id} node={child}
       selectedId={selectedId} expandedIds={expandedIds} />)}
@@ -377,17 +381,17 @@ export default function ObjectiveManagementPage() {
             onCreate={(kind) => begin("create", false, kind)} />
 
           <Button disabled={!selected || busy} onClick={() => begin("view")}>{t("common.view")}</Button>
-          <Button design="Negative" disabled={!selected || !manage || busy}
-            onClick={() => setDeleteCandidate(selected)}>{t("common.delete")}</Button>
+          <CatalogDeleteButton design="Negative" disabled={!selected || !manage || busy}
+            onClick={() => setDeleteCandidate(selected)}>{t("common.delete")}</CatalogDeleteButton>
         </>} />
       <div className="objectiveTreeFrame">
         {loading || busy ? <BusyIndicator active delay={0} /> : null}
         {!loading && !visibleItems.length ? <MessageStrip design="Information" hideCloseButton>
           {t("common.noData")}
-        </MessageStrip> : <Tree onItemClick={onTreeSelect} onItemToggle={onTreeToggle}>
-            {tree.map((node) => <ObjectiveTreeItem key={node.id} node={node}
+        </MessageStrip> : <CatalogTreeOrder catalog="OBJECTIVE" refreshKey={JSON.stringify(items)} filtered={Boolean(search.trim())}>{(order) => <Tree inert={order.busy} onMove={order.onMove} onMoveOver={order.onMoveOver} onItemClick={onTreeSelect} onItemToggle={onTreeToggle}>
+            {order.sortTree(tree, (node) => orderKey("OBJECTIVE", node.id)).map((node) => <ObjectiveTreeItem key={node.id} node={node}
               selectedId={selectedId} expandedIds={visibleExpandedIds} />)}
-          </Tree>}
+          </Tree>}</CatalogTreeOrder>}
       </div>
     </div>);
   const summaryColumn = selected ? createElement("div", { slot: "midColumn", className: "objectiveFclColumn" },
@@ -411,13 +415,20 @@ export default function ObjectiveManagementPage() {
         <Label showColon>{t("objective.createdAt")}</Label><Text>{formatPersianDateTime(selected.createdAt)}</Text>
         </> : null}
       </div>
-      <Bar endContent={<>
+      <DialogFooterBar>
         <Button design="Emphasized" disabled={!manage || busy} onClick={() => begin("edit")}>{t("common.edit")}</Button>
         <Button design="Transparent" onClick={() => setSelectedId(null)}>{t("common.close")}</Button>
-      </>} />
+      </DialogFooterBar>
     </div>) : null;
 
-  return <section className="objectivePage">
+  const bulkDeleteItems = items.map((row) => ({ key: row.id, parentKey: row.parentObjectiveId, label: `${row.code} — ${row.name}`,
+      remove: () => remove(row.id, row.version, false) }));
+
+  return <CatalogSelectionProvider items={bulkDeleteItems} enabled={manage} busy={busy || loading}
+      onBusyChange={setBusy} reload={load} mapError={errorText}
+      onDeleted={(keys) => {
+        if (selectedId && keys.has(selectedId)) setSelectedId(null);
+      }}><section className="objectivePage">
     <Link onClick={() => navigate("/master-data")}>{t("masterData.title")}</Link>
     {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}</MessageStrip> : null}
     {createElement("ui5-flexible-column-layout", {
@@ -548,5 +559,5 @@ export default function ObjectiveManagementPage() {
       confirmText={t("common.unsavedChanges.leave")} cancelText={t("common.unsavedChanges.stay")}
       loading={false} onClose={() => { setLeaveOpen(false); if (blocker.state === "blocked") blocker.reset(); }}
       onConfirm={() => { setLeaveOpen(false); setMode(null); if (blocker.state === "blocked") blocker.proceed(); }} />
-  </section>;
+  </section></CatalogSelectionProvider>;
 }

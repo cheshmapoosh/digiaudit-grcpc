@@ -1,13 +1,17 @@
+import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
+import { CatalogTreeOrder, CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
+import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
+import { CatalogSelectableRow, CatalogDeleteButton } from "@/shared/components/CatalogSelection";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
-import { DialogFooter } from "@/shared/components/DialogFooter";
+import { DialogFooter, DialogFooterBar } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { createElement, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
-  Bar, BusyIndicator, Button, Dialog, Input, Label, Link, MessageStrip, ObjectStatus, Option, Select, Tab, Table,
+  Bar, BusyIndicator, Dialog, Input, Label, Link, MessageStrip, ObjectStatus, Option, Select, Tab, Table,
   TableCell, TableHeaderCell, TableHeaderRow, TableRow, Text, TextArea, Title, Tree,
-  TreeItemCustom,
 } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
 import {
@@ -99,18 +103,24 @@ function GroupTreeItem({ node, selected, expanded }: {
   node: GroupNode; selected: Selection; expanded: Set<string>;
 }) {
   const { t } = useTranslation();
-  return <TreeItemCustom data-node-kind="group" data-node-id={node.id}
+  const order = useCatalogTreeOrder();
+  const children = [
+    ...node.children.map((group) => ({ kind: "group" as const, group })),
+    ...node.controls.map((control) => ({ kind: "control" as const, control })),
+  ];
+  const ordered = order?.sort(children, (child) => child.kind === "group"
+    ? orderKey("CONTROL_GROUP", child.group.id) : orderKey("GLOBAL_CONTROL", child.control.id)) ?? children;
+  return <TreeItemCustom orderType="CONTROL_GROUP" orderId={node.id} data-node-kind="group" data-node-id={node.id}
     selected={selected?.kind === "group" && selected.id === node.id}
     expanded={expanded.has(node.id)}
-    content={<div className="globalControlTreeRow"><span>{node.name}</span>
-      <span className="globalControlTreeType">{t("globalControl.group.menu")}</span></div>}>
-    {node.children.map((child) => <GroupTreeItem key={child.id} node={child}
-      selected={selected} expanded={expanded} />)}
-    {node.controls.map((control) => <TreeItemCustom key={control.id}
-      data-node-kind="control" data-node-id={control.id}
-      selected={selected?.kind === "control" && selected.id === control.id}
-      content={<div className="globalControlTreeRow"><span>{control.name}</span>
-        <span className="globalControlTreeType">{t("globalControl.control.menu")}</span></div>} />)}
+    content={<CatalogSelectableRow itemKey={"group:" + node.id}><div className="globalControlTreeRow"><span>{node.name}</span>
+      <span className="globalControlTreeType">{t("globalControl.group.menu")}</span></div></CatalogSelectableRow>}>
+    {ordered.map((child) => child.kind === "group" ? <GroupTreeItem key={"group:" + child.group.id} node={child.group}
+      selected={selected} expanded={expanded} /> : <TreeItemCustom key={"control:" + child.control.id}
+      orderType="GLOBAL_CONTROL" orderId={child.control.id} data-node-kind="control" data-node-id={child.control.id}
+      selected={selected?.kind === "control" && selected.id === child.control.id}
+      content={<CatalogSelectableRow itemKey={"control:" + child.control.id}><div className="globalControlTreeRow"><span>{child.control.name}</span>
+        <span className="globalControlTreeType">{t("globalControl.control.menu")}</span></div></CatalogSelectableRow>} />)}
   </TreeItemCustom>;
 }
 
@@ -403,12 +413,12 @@ export default function GlobalControlManagementPage() {
         <Button disabled={!selected || busy} onClick={() => {
           setActiveTab("general"); setViewOpen(true);
         }}>{t("common.view")}</Button>
-        <Button design="Negative" disabled={!selected || !manage || busy}
+        <CatalogDeleteButton design="Negative" disabled={!selected || !manage || busy}
           onClick={() => {
             const value = selectedGroup || selectedControl;
             if (value) setDeleteCandidate({ kind: selectedGroup ? "group" : "control",
               id: value.id, name: value.name, version: value.version });
-          }}>{t("common.delete")}</Button>
+          }}>{t("common.delete")}</CatalogDeleteButton>
       </>} />
 
     <div className="globalControlTreeFrame">
@@ -417,17 +427,17 @@ export default function GlobalControlManagementPage() {
       <Label>{t("globalControl.tree.name")}</Label>
       <Label>{t("globalControl.tree.kind")}</Label>
     </div>
-    {needle ? <Tree onItemClick={onTreeSelect}>
+    <CatalogTreeOrder catalog="GLOBAL_CONTROL" refreshKey={JSON.stringify([groups, controls])} filtered={Boolean(needle)}>{(order) => needle ? <Tree onItemClick={onTreeSelect}>
       {filtered.map(({ item, kind }) => <TreeItemCustom key={kind + item.id}
         data-node-kind={kind} data-node-id={item.id}
         selected={selected?.kind === kind && selected.id === item.id}
-        content={<div className="globalControlTreeRow"><span>{item.name}</span>
-          <span className="globalControlTreeType">{t(kind === "group" ? "globalControl.group.menu" : "globalControl.control.menu")}</span></div>} />)}
+        content={<CatalogSelectableRow itemKey={kind + ":" + item.id}><div className="globalControlTreeRow"><span>{item.name}</span>
+          <span className="globalControlTreeType">{t(kind === "group" ? "globalControl.group.menu" : "globalControl.control.menu")}</span></div></CatalogSelectableRow>} />)}
     </Tree>
-      : <Tree onItemClick={onTreeSelect} onItemToggle={onTreeToggle}>
-        {tree.map((node) => <GroupTreeItem key={node.id} node={node}
+      : <Tree inert={order.busy} onMove={order.onMove} onMoveOver={order.onMoveOver} onItemClick={onTreeSelect} onItemToggle={onTreeToggle}>
+        {order.sort(tree, (node) => orderKey("CONTROL_GROUP", node.id)).map((node) => <GroupTreeItem key={node.id} node={node}
           selected={selected} expanded={expanded} />)}
-      </Tree>}
+      </Tree>}</CatalogTreeOrder>
     </div>
   </div>);
 
@@ -535,11 +545,11 @@ export default function GlobalControlManagementPage() {
             ? related.map((link) => link.regulationName).join("، ") : "—"}</Text></> : null}
         <Label showColon>{t("globalControl.createdAt")}</Label><Text>{formatPersianDateTime(details.createdAt)}</Text>
       </div>
-      <Bar endContent={<>
+      <DialogFooterBar>
         <Button design="Emphasized" disabled={!manage || busy}
           onClick={() => selectedGroup ? beginGroup(true) : beginControl(true)}>{t("common.edit")}</Button>
         <Button design="Transparent" onClick={() => choose(null)}>{t("common.close")}</Button>
-      </>} />
+      </DialogFooterBar>
     </div>) : null;
 
   const groupEditor = editor?.startsWith("group") ?? false;
@@ -548,7 +558,18 @@ export default function GlobalControlManagementPage() {
     : t(editor === "controlEdit" ? "globalControl.control.edit" : "globalControl.control.create");
   const form = groupEditor ? groupForm : controlForm;
   const editorParent = groups.find((item) => item.id === (groupEditor ? groupForm.parentId : controlForm.controlGroupId));
-  return <section className="globalControlPage">
+  const bulkDeleteItems = [
+    ...groups.map((row) => ({ key: "group:" + row.id, parentKey: row.parentId ? "group:" + row.parentId : null, label: `${row.code} — ${row.name}`,
+      remove: () => deleteGroup(row.id, row.version, false) })),
+    ...controls.map((row) => ({ key: "control:" + row.id, parentKey: "group:" + row.controlGroupId, label: `${row.code} — ${row.name}`,
+      remove: () => deleteControl(row.id, row.version, false) })),
+  ];
+
+  return <CatalogSelectionProvider items={bulkDeleteItems} enabled={manage} busy={busy || loading}
+      onBusyChange={setBusy} reload={load} mapError={message}
+      onDeleted={(keys) => {
+        if (selected && keys.has(selected.kind + ":" + selected.id)) { setSelected(null); setViewOpen(false); }
+      }}><section className="globalControlPage">
     <Link onClick={() => navigate("/master-data")}>{t("masterData.title")}</Link>
     {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}</MessageStrip> : null}
     {createElement("ui5-flexible-column-layout", {
@@ -690,5 +711,5 @@ export default function GlobalControlManagementPage() {
         setEditor(null);
         if (blocker.state === "blocked") blocker.proceed();
       }} />
-  </section>;
+  </section></CatalogSelectionProvider>;
 }

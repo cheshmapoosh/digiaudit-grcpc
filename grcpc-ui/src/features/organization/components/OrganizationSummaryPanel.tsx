@@ -1,7 +1,9 @@
+import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Label, MessageStrip, ObjectStatus, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Bar, Label, MessageStrip, ObjectStatus, Title } from "@ui5/webcomponents-react";
 
 import type { OrganizationNode } from "../domain/organization.model";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -41,14 +43,7 @@ export default function OrganizationSummaryPanel({
     onCancel,
 }: OrganizationSummaryPanelProps) {
     const { t } = useTranslation();
-    const { manage } = useMasterDataAccess("REFERENCE");
-
-    const actionButtonStyle = useMemo(
-        () => ({
-            minWidth: "8rem",
-        }),
-        [],
-    );
+    const { manage } = useMasterDataAccess("ORGANIZATION");
 
     const rows = useMemo(() => {
         if (!value) {
@@ -73,7 +68,7 @@ export default function OrganizationSummaryPanel({
             },
             {
                 label: t("organization.fields.organizationType", { defaultValue: "Organization type" }),
-                value: t(`organization.types.${value.organizationType}`, { defaultValue: value.organizationType }),
+                value: value.organizationTypeName ?? t(`organization.types.${value.organizationType}`, { defaultValue: value.organizationType }),
             },
             {
                 label: t("organization.fields.location", { defaultValue: "Location" }),
@@ -164,29 +159,23 @@ export default function OrganizationSummaryPanel({
                 )}
             </div>
 
-            <Bar
-                endContent={
-                    <>
-                        <Button
-                            design="Emphasized"
-                            disabled={!value || busy}
-                            style={actionButtonStyle}
-                            hidden={!manage} onClick={() => value && onEdit?.(value.id)}
-                        >
-                            {t("common.edit", { defaultValue: "ویرایش" })}
-                        </Button>
+            <DialogFooterBar>
+                <Button
+                    design="Emphasized"
+                    disabled={!value || busy}
+                    hidden={!manage} onClick={() => value && onEdit?.(value.id)}
+                >
+                    {t("common.edit", { defaultValue: "ویرایش" })}
+                </Button>
 
-                        <Button
-                            design="Transparent"
-                            disabled={busy}
-                            style={actionButtonStyle}
-                            onClick={onCancel}
-                        >
-                            {t("common.close", { defaultValue: "بستن" })}
-                        </Button>
-                    </>
-                }
-            />
+                <Button
+                    design="Transparent"
+                    disabled={busy}
+                    onClick={onCancel}
+                >
+                    {t("common.close", { defaultValue: "بستن" })}
+                </Button>
+            </DialogFooterBar>
         </div>
     );
 }

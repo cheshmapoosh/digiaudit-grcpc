@@ -1,6 +1,8 @@
+import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Label, MessageStrip, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Bar, Label, MessageStrip, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type { CentralControlDetail, CentralControlGroupDetail, CentralControlNodeType } from "../domain/centralControl.model";
@@ -47,7 +49,7 @@ export default function CentralControlSummaryPanel({ type, value, busy = false, 
     <div className="controlSummaryPanel">
       <Bar startContent={<Title level="H4">{value?.title ?? t("control.summary.title")}</Title>} />
       {value ? <div className="controlSummaryGrid">{rows.map(([label, displayValue]) => <div className="controlSummaryRow" key={label}><Label showColon>{label}</Label>{typeof displayValue === "string" ? <Text>{displayValue}</Text> : displayValue}</div>)}</div> : <MessageStrip design="Information" hideCloseButton>{t("control.summary.selectPrompt")}</MessageStrip>}
-      <Bar endContent={<><Button design="Emphasized" disabled={!value || busy || !canEdit} onClick={onEdit}>{t("common.edit", { defaultValue: "ویرایش" })}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.close", { defaultValue: "بستن" })}</Button></>} />
+      <DialogFooterBar><Button design="Emphasized" disabled={!value || busy || !canEdit} onClick={onEdit}>{t("common.edit", { defaultValue: "ویرایش" })}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.close", { defaultValue: "بستن" })}</Button></DialogFooterBar>
     </div>
   );
 }

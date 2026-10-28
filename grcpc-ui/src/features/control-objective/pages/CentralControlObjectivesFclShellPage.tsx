@@ -1,3 +1,4 @@
+import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { createElement, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -375,8 +376,16 @@ export default function CentralControlObjectivesFclShellPage() {
     if (isOwnDialogCloseEvent(event)) closeObject();
   }, [closeObject]);
 
+  const bulkDeleteItems = items.map((row) => ({ key: row.id, label: `${row.code} — ${row.title}`,
+      remove: () => centralControlObjectiveApi.delete(row.id, row.version) }));
+
   return (
-    <>
+    <CatalogSelectionProvider items={bulkDeleteItems} enabled={permissions.delete} busy={busy}
+      onBusyChange={setBusy} reload={() => loadList()} mapError={(error) => mapError(error, t("controlObjective.errors.delete"), t)} beforeDelete={requestLeave}
+      onDeleted={(keys) => {
+        if (selectedId && keys.has(selectedId)) { setSelectedId(null); setSelectedDetail(null); }
+        if (controlObjectiveId && keys.has(controlObjectiveId)) navigate("/control-objectives");
+      }}>
       {createElement(
         "ui5-flexible-column-layout",
         {
@@ -445,6 +454,6 @@ export default function CentralControlObjectivesFclShellPage() {
         onClose={() => setDeleteCandidate(null)}
         onConfirm={() => void confirmDelete()}
       />
-    </>
+    </CatalogSelectionProvider>
   );
 }

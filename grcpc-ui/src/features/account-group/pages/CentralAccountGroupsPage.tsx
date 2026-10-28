@@ -1,3 +1,4 @@
+import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { createElement, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BusyIndicator, Dialog, MessageStrip } from "@ui5/webcomponents-react";
@@ -386,8 +387,16 @@ export default function CentralAccountGroupsPage() {
     if (isOwnDialogCloseEvent(event)) closeObject();
   }, [closeObject]);
 
+  const bulkDeleteItems = rows.map((row) => ({ key: row.id, parentKey: row.parentAccountGroupId, label: `${row.code} — ${row.title}`,
+      remove: () => centralAccountGroupApi.lifecycle(row.id, "delete", row.version) }));
+
   return (
-    <>
+    <CatalogSelectionProvider items={bulkDeleteItems} enabled={permissions.delete} busy={busy}
+      onBusyChange={setBusy} reload={loadRows} reloadOrder={async () => { try { if (selectedNode) setSelectedDetail(await loadDetail(selectedNode.id)); } finally { await loadRows(); } }} mapError={(error) => mapError(error, "accountGroup.errors.delete")} beforeDelete={requestLeave}
+      onDeleted={(keys) => {
+        if (selectedNode && keys.has(selectedNode.id)) { setSelectedNode(null); setSelectedDetail(null); }
+        if (expansionAnchorId && keys.has(expansionAnchorId)) setExpansionAnchorId(null);
+      }}>
       {createElement(
         "ui5-flexible-column-layout",
         {
@@ -456,6 +465,6 @@ export default function CentralAccountGroupsPage() {
         onClose={() => setDeleteCandidate(null)}
         onConfirm={() => void confirmDelete()}
       />
-    </>
+    </CatalogSelectionProvider>
   );
 }

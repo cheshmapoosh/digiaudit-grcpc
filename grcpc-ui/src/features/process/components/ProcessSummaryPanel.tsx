@@ -1,7 +1,9 @@
+import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import type { CSSProperties, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Label, MessageStrip, ObjectStatus, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Bar, Label, MessageStrip, ObjectStatus, Title } from "@ui5/webcomponents-react";
 
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type { ProcessNode, ProcessNodeType, ProcessStatus } from "../domain/process.model";
@@ -16,7 +18,6 @@ export interface ProcessSummaryPanelProps {
     onClose: () => void;
 }
 
-const ACTION_STYLE: CSSProperties = { minWidth: "8rem" };
 const BODY_STYLE: CSSProperties = { minHeight: "18rem", padding: "1rem" };
 const ROW_STYLE: CSSProperties = { display: "grid", gridTemplateColumns: "minmax(7rem, max-content) minmax(0, 1fr)", gap: "0.5rem", alignItems: "start" };
 
@@ -55,6 +56,6 @@ export default function ProcessSummaryPanel({ value, allItems = [], busy = false
                 </div>
             </div> : <MessageStrip design="Information" hideCloseButton>{t("process.object.selectPrompt", { defaultValue: "Select an item to view details." })}</MessageStrip>}
         </div>
-        <Bar endContent={<><Button design="Emphasized" disabled={!value || busy} style={ACTION_STYLE} hidden={!manage} onClick={() => value && onEdit?.(value.id)}>{t("common.edit", { defaultValue: "Edit" })}</Button><Button design="Transparent" disabled={busy} style={ACTION_STYLE} onClick={onClose}>{t("common.close", { defaultValue: "Close" })}</Button></>} />
+        <DialogFooterBar><Button design="Emphasized" disabled={!value || busy} hidden={!manage} onClick={() => value && onEdit?.(value.id)}>{t("common.edit", { defaultValue: "Edit" })}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.close", { defaultValue: "Close" })}</Button></DialogFooterBar>
     </div>;
 }

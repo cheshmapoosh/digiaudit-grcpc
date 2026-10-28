@@ -12,10 +12,10 @@ interface GlobalControlState {
   load: () => Promise<void>;
   createGroup: (body: ControlGroupCreate) => Promise<string>;
   updateGroup: (id: string, body: ControlGroupUpdate) => Promise<void>;
-  deleteGroup: (id: string, version: number) => Promise<void>;
+  deleteGroup: (id: string, version: number, refresh?: boolean) => Promise<void>;
   createControl: (body: GlobalControlCreate) => Promise<string>;
   updateControl: (id: string, body: GlobalControlUpdate) => Promise<void>;
-  deleteControl: (id: string, version: number) => Promise<void>;
+  deleteControl: (id: string, version: number, refresh?: boolean) => Promise<void>;
 }
 
 export const useGlobalControlState = create<GlobalControlState>((set, get) => ({
@@ -38,9 +38,10 @@ export const useGlobalControlState = create<GlobalControlState>((set, get) => ({
     await globalControlApi.updateGroup(id, body);
     await get().load();
   },
-  deleteGroup: async (id, version) => {
+  deleteGroup: async (id, version, refresh = true) => {
     await globalControlApi.deleteGroup(id, version);
-    await get().load();
+    if (refresh) await get().load();
+    else set((state) => ({ groups: state.groups.filter((item) => item.id !== id) }));
   },
   createControl: async (body) => {
     const result = await globalControlApi.createControl(body);
@@ -51,8 +52,9 @@ export const useGlobalControlState = create<GlobalControlState>((set, get) => ({
     await globalControlApi.updateControl(id, body);
     await get().load();
   },
-  deleteControl: async (id, version) => {
+  deleteControl: async (id, version, refresh = true) => {
     await globalControlApi.deleteControl(id, version);
-    await get().load();
+    if (refresh) await get().load();
+    else set((state) => ({ controls: state.controls.filter((item) => item.id !== id) }));
   },
 }));

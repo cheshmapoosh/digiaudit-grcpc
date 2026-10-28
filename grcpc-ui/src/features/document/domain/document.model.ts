@@ -63,6 +63,8 @@ export interface DocumentDetail {
   title: string;
   description?: string | null;
   documentCategoryCode?: string | null;
+  documentTypeId?: string | null;
+  documentTypeName?: string | null;
   status: DocumentLifecycleStatus;
   validFrom?: string | null;
   validTo?: string | null;
@@ -98,6 +100,8 @@ export interface DocumentLinkSummary {
   title: string;
   description?: string | null;
   documentCategoryCode?: string | null;
+  documentTypeId?: string | null;
+  documentTypeName?: string | null;
   documentStatus: DocumentLifecycleStatus;
   documentVersionId: string;
   documentVersionNumber: number;
@@ -132,6 +136,7 @@ export interface DocumentCreatePayload {
   title: string;
   description?: string | null;
   documentCategoryCode?: string | null;
+  documentTypeId: string;
   targetType: DocumentLinkTargetType;
   targetId: string;
   validFrom?: string | null;
@@ -155,6 +160,7 @@ export interface DocumentMetadataUpdatePayload {
   title?: string | null;
   description?: string | null;
   documentCategoryCode?: string | null;
+  documentTypeId?: string | null;
   validFrom?: string | null;
   validTo?: string | null;
 }
@@ -181,6 +187,7 @@ export interface ParentSaveNewDocumentDraft {
   tempUploadId: string;
   code?: string | null;
   title: string;
+  documentTypeId: string;
   description?: string | null;
   validFrom?: string | null;
   validTo?: string | null;
@@ -197,6 +204,7 @@ export interface ParentSaveNewDocumentVersionDraft {
 
 export interface ParentSaveDocumentMetadataDraft {
   documentId: string;
+  documentTypeId?: string;
   expectedVersion: number;
   title: string;
 }
@@ -248,6 +256,7 @@ export function toDocumentAggregateRequest(
       tempUploadId: draft.tempUploadId,
       code: draft.code,
       title: draft.title,
+      documentTypeId: draft.documentTypeId,
       description: draft.description,
       validFrom: draft.validFrom,
       validTo: draft.validTo,

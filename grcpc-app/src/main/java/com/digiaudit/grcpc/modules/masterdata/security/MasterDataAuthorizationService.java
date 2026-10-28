@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 @Service("masterDataAuthorization")
 @RequiredArgsConstructor
 public class MasterDataAuthorizationService {
-    private static final Set<String> AREAS = Set.of("PROCESS", "RISK", "CONTROL", "GOVERNANCE", "REFERENCE");
+    private static final Set<String> AREAS = Set.of("PROCESS", "RISK", "CONTROL", "GOVERNANCE", "REFERENCE", "ORGANIZATION");
     private final CurrentUserProvider currentUserProvider;
     private final AppUserRepository users;
     private final com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService profileAccess;
@@ -56,6 +56,7 @@ public class MasterDataAuthorizationService {
             var user = users.findById(principal.getUserId()).orElse(null);
             if (user == null || !user.isEnabled() || user.isLocked()) return false;
             var permissions = users.findActiveBusinessPermissionCodes(principal.getUserId());
+            if ("ORGANIZATION".equals(area) && (permissions.contains("MD_REFERENCE_MANAGE") || (!manage && permissions.contains("MD_REFERENCE_VIEW")))) return true;
             return permissions.contains("MD_" + area + "_MANAGE")
                     || (!manage && permissions.contains("MD_" + area + "_VIEW"));
         }).orElse(false);

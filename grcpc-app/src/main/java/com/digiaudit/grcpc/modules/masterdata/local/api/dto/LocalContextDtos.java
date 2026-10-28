@@ -2,6 +2,9 @@ package com.digiaudit.grcpc.modules.masterdata.local.api.dto;
 
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.Valid;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -12,6 +15,12 @@ public final class LocalContextDtos {
 
   public record Create(@NotNull UUID organizationId, @NotNull UUID subprocessId,
       String contextNote, LocalDate validFrom, LocalDate validTo) {}
+  public record SelectSubprocesses(@NotEmpty List<@NotNull UUID> subprocessIds) {}
+  public record Selection(UUID revisionId, List<Row> rows) {}
+  public enum ContextOperation { CREATE_OR_RESTORE, ACTIVATE, INACTIVATE, DELETE }
+  public record ContextChange(@NotNull UUID subprocessId, @NotNull ContextOperation operation,
+      UUID contextId, @PositiveOrZero Long version) {}
+  public record SaveContexts(@NotEmpty List<@NotNull @Valid ContextChange> changes) {}
   public record Update(@NotNull Long version, String contextNote,
       LocalDate validFrom, LocalDate validTo) {}
   public record Lifecycle(@NotNull Long version) {}

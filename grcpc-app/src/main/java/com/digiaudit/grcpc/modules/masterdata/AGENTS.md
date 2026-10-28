@@ -135,3 +135,7 @@ When an owning V2 slice replaces a quarantined area, implement its approved V2 p
 - Control and Control Objective aggregate Saves own the typed drafts, canonical response, owner version and one CENTRAL Revision. Assignment-only no-op updates participate in NO_CHANGE detection.
 - Acquire the full lexical Guard union including concurrent classifications; lock affected endpoint rows in Control, Risk Template, Control Objective, Requirement order before validation. Control Objective has no hierarchy Guard of its own.
 - Control/Control Objective/Risk Template/Requirement deletion checks all non-DELETED assignments and never cascades. Keep existing Coverage dependencies.
+
+## Main-page display ordering (2026-10-28)
+
+Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-main-catalog-display-order.md`. The explicit owner approval supersedes earlier no-drag rules only on main Governance trees. Sibling-only native UI5 dragging saves independent display ranks under the existing hierarchy Guard and one CENTRAL Revision; new inserts appear first. Modals, value helps and relationship tabs keep their existing sorting and have no ordering provider.

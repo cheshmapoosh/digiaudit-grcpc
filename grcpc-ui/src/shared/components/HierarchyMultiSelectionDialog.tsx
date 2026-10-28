@@ -1,7 +1,7 @@
 import { DialogFooter } from "./DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
-import { useEffect, useMemo, useState } from "react";
-import { Button, CheckBox, Dialog, Text, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BusyIndicator, Button, CheckBox, Dialog, MessageStrip, Text, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 import { ModalDialogHeader } from "./ModalDialogHeader";
 import "./hierarchyMultiSelectionDialog.css";
 
@@ -63,7 +63,8 @@ function ChoiceItem({ node, selected, collapsed, search, busy, onToggle }: {
 }
 
 export function HierarchyMultiSelectionDialog({ open, title, searchAccessibleName, nodes,
-  selectedIds, busy, confirmText, cancelText, onConfirm, onClose }: {
+  selectedIds, busy, confirmText, cancelText, onConfirm, onClose, loading = false,
+  error, description, confirmDisabled = false, onSelectionChange }: {
   open: boolean;
   title: string;
   searchAccessibleName: string;
@@ -74,15 +75,23 @@ export function HierarchyMultiSelectionDialog({ open, title, searchAccessibleNam
   cancelText: string;
   onConfirm: (ids: Set<string>) => void;
   onClose: () => void;
+  loading?: boolean;
+  error?: string | null;
+  description?: string;
+  confirmDisabled?: boolean;
+  onSelectionChange?: (ids: Set<string>) => void;
 }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const selectedRef = useRef<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (!open) return;
     const timer = window.setTimeout(() => {
       setSearch("");
-      setSelected(new Set(selectedIds));
+      const next = new Set(selectedIds);
+      selectedRef.current = next;
+      setSelected(next);
       setCollapsed(new Set());
     }, 0);
     return () => window.clearTimeout(timer);
@@ -91,11 +100,13 @@ export function HierarchyMultiSelectionDialog({ open, title, searchAccessibleNam
   const tree = useMemo(() => buildTree(nodes), [nodes]);
   const query = search.trim().toLocaleLowerCase();
   const visible = useMemo(() => filterTree(tree, query), [tree, query]);
-  const toggle = (id: string, checked: boolean) => setSelected((previous) => {
-    const next = new Set(previous);
+  const toggle = (id: string, checked: boolean) => {
+    const next = new Set(selectedRef.current);
     if (checked) next.add(id); else next.delete(id);
-    return next;
-  });
+    selectedRef.current = next;
+    setSelected(next);
+    onSelectionChange?.(next);
+  };
   const toggleExpansion = (event: ToggleEvent) => {
     event.preventDefault?.();
     const id = event.detail?.item?.dataset?.nodeId;
@@ -107,19 +118,23 @@ export function HierarchyMultiSelectionDialog({ open, title, searchAccessibleNam
     });
   };
 
-  return <Dialog open={open} accessibleName={title} className="hierarchyMultiSelectionDialog" onClose={onClose}>
-    <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy} accessibleName={searchAccessibleName} />} />
+  const close = () => { if (!busy) onClose(); };
+  return <Dialog open={open} accessibleName={title} className="hierarchyMultiSelectionDialog" onClose={close}
+    onBeforeClose={(event) => { if (busy) event.preventDefault(); }}>
+    <ModalDialogHeader title={title} onClose={close} actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy || loading} accessibleName={searchAccessibleName} />} />
     <div className="hierarchyMultiSelectionBody">
-
+      {description ? <Text>{description}</Text> : null}
+      {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
+      {loading ? <BusyIndicator active delay={0} /> : null}
       <div className="hierarchyMultiSelectionTree">
-        <Tree onItemToggle={toggleExpansion}>
+        <Tree accessibleName={title} inert={busy || loading} onItemToggle={toggleExpansion}>
           {visible.map((node) => <ChoiceItem key={node.id} node={node} selected={selected}
             collapsed={collapsed} search={query} busy={busy} onToggle={toggle} />)}
         </Tree>
       </div>
       <DialogFooter>
-        <Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{confirmText}</Button>
-        <Button design="Transparent" disabled={busy} onClick={onClose}>{cancelText}</Button>
+        <Button design="Emphasized" disabled={busy || loading || confirmDisabled} onClick={() => onConfirm(selected)}>{confirmText}</Button>
+        <Button design="Transparent" disabled={busy} onClick={close}>{cancelText}</Button>
       </DialogFooter>
     </div>
   </Dialog>;

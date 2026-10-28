@@ -1,0 +1,6 @@
+.catalogActionButton { min-inline-size: 7rem; flex-shrink: 0; }
+.catalogSelectableRow { width: 100%; min-width: 0; gap: var(--sapContent_Space_Tiny); }
+.catalogSelectableRow > ui5-checkbox { flex-shrink: 0; }
+.catalogSelectableContent { flex: 1; min-width: 0; }
+.catalogBulkDeleteBody { display: grid; gap: var(--sapContent_Space_Small); padding: var(--sapContent_Space_Small); max-width: 36rem; }
+.catalogBulkDeleteRows { max-height: 45vh; overflow: auto; }

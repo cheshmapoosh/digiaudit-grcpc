@@ -2,7 +2,8 @@ import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Select, Option, TextArea } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Text, ObjectStatus, Input, Label, MessageStrip, Select, Option, TextArea } from "@ui5/webcomponents-react";
 
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate } from "@/shared/utils/date.utils";

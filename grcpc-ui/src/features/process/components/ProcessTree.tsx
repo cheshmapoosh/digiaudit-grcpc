@@ -1,6 +1,9 @@
+import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
+import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
+import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, Tree } from "@ui5/webcomponents-react";
 
 import type { ProcessNode } from "../domain/process.model";
 import { processControlTreeId, type ProcessControlNode, type ProcessCreateType } from "../domain/processControl.model";
@@ -110,12 +113,12 @@ function ProcessTreeItem({
     const displayName = `${node.title}`;
 
     return (
-        <TreeItemCustom
+        <TreeItemCustom orderId={node.id} orderType={node.nodeType === "PROCESS" ? "CENTRAL_PROCESS" : node.nodeType === "SUBPROCESS" ? "CENTRAL_SUBPROCESS" : undefined}
             data-id={node.id}
             data-process-node-id={node.id}
             expanded={expandedIds.has(node.id)}
             selected={isSelected}
-            content={
+            content={<CatalogSelectableRow itemKey={node.id}>
                 <div
                     data-process-node-id={node.id}
                     title={displayName}
@@ -146,7 +149,7 @@ function ProcessTreeItem({
                         {resolveNodeTypeLabel(node.nodeType, t)}
                     </span>
                 </div>
-            }
+            </CatalogSelectableRow>}
         >
             {node.children.map((child) => (
                 <ProcessTreeItem
@@ -172,7 +175,11 @@ export default function ProcessTree({
     const { t } = useTranslation();
     const normalizedSearchText = searchText.trim();
 
-    const tree = useMemo(() => buildProcessDisplayTree(items, controls), [items, controls]);
+    const sourceTree = useMemo(() => buildProcessDisplayTree(items, controls), [items, controls]);
+
+    const displayOrder = useCatalogTreeOrder();
+
+    const tree = useMemo(() => displayOrder?.sortTree(sourceTree, (node) => orderKey(node.nodeType === "PROCESS" ? "CENTRAL_PROCESS" : node.nodeType === "SUBPROCESS" ? "CENTRAL_SUBPROCESS" : "", node.id)) ?? sourceTree, [sourceTree, displayOrder]);
 
     const filteredTree = useMemo(
         () => filterProcessDisplayTree(tree, normalizedSearchText),
@@ -303,7 +310,7 @@ export default function ProcessTree({
                 </span>
             </div>
 
-            <Tree
+            <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
                 accessibleName={t("process.list.title", {
                     defaultValue: "ساختار فرآیند",
                 })}

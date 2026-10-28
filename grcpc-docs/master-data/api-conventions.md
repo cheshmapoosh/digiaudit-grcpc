@@ -1,5 +1,7 @@
 # Master Data V2 API Conventions
 
+**Accepted 2026-10-28 main-page ordering:** [Sibling display order](accepted-corrections/2026-10-28-main-catalog-display-order.md) adds the closed, profile-scoped `GET/POST /api/master-data/display-order/{catalog}` projection/command. POST accepts typed source/destination, BEFORE/AFTER and the observed complete sibling sequence with versions; only unchanged typed parents are accepted. It uses the catalog's live permissions, existing hierarchy Guard and one CENTRAL Revision. Modals, value helps and relationship tabs do not consume this API.
+
 ## 1. Purpose and authority
 
 These conventions turn the approved Master Data V2 model into a stable API discipline for later Backend and UI tasks.

@@ -3,11 +3,11 @@ import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Button,
     Dialog,
     List,
     ListItemStandard,
 } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
 import type { OrganizationNode } from "../domain/organization.model";
@@ -79,18 +79,19 @@ export default function ParentValueHelpDialog({
             <div style={{ display: "grid", gap: "1rem", minWidth: "32rem", maxWidth: "90vw" }}>
 
 
-                <List separators="Inner">
-                    <ListItemStandard selected={!selectedParentId} onClick={() => onSelect(null)}>
+                <List separators="Inner" inert={busy}>
+                    <ListItemStandard type="Active" selected={!selectedParentId} onClick={() => { if (!busy) onSelect(null); }}>
                         {t("organization.parent.none", { defaultValue: "بدون والد" })}
                     </ListItemStandard>
 
                     {filteredItems.map((item) => (
                         <ListItemStandard
                             key={item.id}
+                            type="Active"
                             selected={item.id === selectedParentId}
                             additionalText={item.code}
                             description={`${item.code} - ${item.name}`}
-                            onClick={() => onSelect(item.id)}
+                            onClick={() => { if (!busy) onSelect(item.id); }}
                         >
                             {item.name}
                         </ListItemStandard>
@@ -98,6 +99,9 @@ export default function ParentValueHelpDialog({
                 </List>
 
                 <DialogFooter>
+                    {selectedParentId ? <Button design="Negative" disabled={busy} onClick={() => onSelect(null)}>
+                        {t("catalog.parentHeader.clear")}
+                    </Button> : null}
                     <Button design="Transparent" disabled={busy} onClick={onClose}>
                         {t("common.close", { defaultValue: "بستن" })}
                     </Button>

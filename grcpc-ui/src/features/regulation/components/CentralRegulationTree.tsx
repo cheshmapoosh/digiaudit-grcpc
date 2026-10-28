@@ -1,6 +1,9 @@
+import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
+import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
+import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, Tree } from "@ui5/webcomponents-react";
 
 import type {
   CentralRegulationGroupSummary,
@@ -71,11 +74,11 @@ function RegulationTreeItem({
         : "requirement";
 
   return (
-    <TreeItemCustom
+    <TreeItemCustom orderId={node.id} orderType={node.type === "GROUP" ? "CENTRAL_REGULATION_GROUP" : node.type === "REGULATION" ? "CENTRAL_REGULATION" : "CENTRAL_REGULATION_REQUIREMENT"}
       data-node-id={node.id}
       expanded={expandedIds.has(node.id)}
       selected={selected}
-      content={
+      content={<CatalogSelectableRow itemKey={node.id}>
         <div className="regulationTreeItemContent" title={node.title}>
           <span className={selected ? "regulationTreeTitle regulationTreeTitleSelected" : "regulationTreeTitle"}>
             {node.title}
@@ -84,7 +87,7 @@ function RegulationTreeItem({
             {t(`regulation.nodeType.${typeKey}`)}
           </span>
         </div>
-      }
+      </CatalogSelectableRow>}
     >
       {node.children.map((child) => (
         <RegulationTreeItem
@@ -122,10 +125,12 @@ export default function CentralRegulationTree({
 }: Props) {
   const { t } = useTranslation();
   const query = searchText.trim();
-  const tree = useMemo(
+  const sourceTree = useMemo(
     () => buildCentralRegulationTree(groups, regulations, requirements),
     [groups, regulations, requirements],
   );
+  const displayOrder = useCatalogTreeOrder();
+  const tree = useMemo(() => displayOrder?.sortTree(sourceTree, (node) => orderKey(node.type === "GROUP" ? "CENTRAL_REGULATION_GROUP" : node.type === "REGULATION" ? "CENTRAL_REGULATION" : "CENTRAL_REGULATION_REQUIREMENT", node.id)) ?? sourceTree, [sourceTree, displayOrder]);
   const filteredTree = useMemo(
     () => filterCentralRegulationTree(tree, query),
     [query, tree],
@@ -196,7 +201,7 @@ export default function CentralRegulationTree({
   }
 
   return (
-    <Tree
+    <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
       accessibleName={t("regulation.list.title")}
       onItemClick={handleItemClick}
       onItemToggle={handleItemToggle}

@@ -1,6 +1,9 @@
+import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
+import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
+import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, Tree } from "@ui5/webcomponents-react";
 
 import type { CentralPolicyGroupSummary, CentralPolicySummary } from "../domain/centralPolicy.model";
 import {
@@ -52,11 +55,11 @@ function PolicyTreeItem({ node, selectedId, expandedIds }: {
   const { t } = useTranslation();
   const selected = node.id === selectedId;
   return (
-    <TreeItemCustom
+    <TreeItemCustom orderId={node.id} orderType={node.type === "GROUP" ? "CENTRAL_POLICY_GROUP" : "CENTRAL_POLICY"}
       data-node-id={node.id}
       expanded={expandedIds.has(node.id)}
       selected={selected}
-      content={
+      content={<CatalogSelectableRow itemKey={node.id}>
         <div className="policyTreeItemContent" title={node.title}>
           <span className={selected ? "policyTreeTitle policyTreeTitleSelected" : "policyTreeTitle"}>
             {node.title}
@@ -67,7 +70,7 @@ function PolicyTreeItem({ node, selectedId, expandedIds }: {
               : t("policy.nodeType.policy", { defaultValue: "سیاست" })}
           </span>
         </div>
-      }
+      </CatalogSelectableRow>}
     >
       {node.children.map((child) => (
         <PolicyTreeItem key={child.id} node={child} selectedId={selectedId} expandedIds={expandedIds} />
@@ -98,7 +101,9 @@ export default function CentralPolicyTree({
 }: Props) {
   const { t } = useTranslation();
   const query = searchText.trim();
-  const tree = useMemo(() => buildCentralPolicyTree(groups, policies), [groups, policies]);
+  const sourceTree = useMemo(() => buildCentralPolicyTree(groups, policies), [groups, policies]);
+  const displayOrder = useCatalogTreeOrder();
+  const tree = useMemo(() => displayOrder?.sortTree(sourceTree, (node) => orderKey(node.type === "GROUP" ? "CENTRAL_POLICY_GROUP" : "CENTRAL_POLICY", node.id)) ?? sourceTree, [sourceTree, displayOrder]);
   const filteredTree = useMemo(() => filterCentralPolicyTree(tree, query), [query, tree]);
   const expandableIds = useMemo(() => collectExpandableIds(tree), [tree]);
   const filteredExpandableIds = useMemo(() => collectExpandableIds(filteredTree), [filteredTree]);
@@ -154,7 +159,7 @@ export default function CentralPolicyTree({
   }
 
   return (
-    <Tree
+    <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
       accessibleName={t("policy.list.title", { defaultValue: "ساختار سیاست" })}
       onItemClick={handleItemClick}
       onItemToggle={handleItemToggle}

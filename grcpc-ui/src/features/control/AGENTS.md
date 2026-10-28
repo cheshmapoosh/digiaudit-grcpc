@@ -23,3 +23,7 @@ Use `grcpc-docs/master-data/accepted-corrections/2026-08-17-central-control-desi
 - Show system-owned `تاریخ ایجاد` read-only, plus editable `تاریخ اعتبار از` and `تاریخ اعتبار تا`; render the two validity dates in one desktop form row and do not introduce a generic `تاریخ اعتبار` field.
 - A closed Control/Control Group dialog must not keep a mounted draft that can report stale dirty state. Remount object content per modal type/mode/entity as Policy does.
 - Control Scope is available as the read-only inverse Subprocess projection and Prompt 7.5 owns Account Group classification mutations. Assignment tabs use direct central definitions; never add Coverage fields to Control Save.
+
+## Main-page display ordering (2026-10-28)
+
+Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-main-catalog-display-order.md`. The explicit owner approval supersedes earlier no-drag rules only on main Governance trees. Sibling-only native UI5 dragging saves independent display ranks under the existing hierarchy Guard and one CENTRAL Revision; new inserts appear first. Modals, value helps and relationship tabs keep their existing sorting and have no ordering provider.

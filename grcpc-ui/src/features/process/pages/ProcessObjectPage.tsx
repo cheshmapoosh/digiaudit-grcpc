@@ -3,7 +3,8 @@ import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Text, ObjectStatus, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import { DocumentManager, EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE, toDocumentAggregateRequest, type DocumentAggregateDraftError, type DocumentLinkTargetType, type ParentSaveDocumentDraftState } from "@/features/document";
 import { EMPTY_CONTROL_SCOPE_DRAFT_STATE, SubprocessControlScopesTab, useControlScopePermissions, type ControlScopeDraftState } from "@/features/control-scope";

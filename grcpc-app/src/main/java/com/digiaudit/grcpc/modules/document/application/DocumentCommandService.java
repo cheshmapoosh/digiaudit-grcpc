@@ -61,6 +61,7 @@ public class DocumentCommandService {
     private final DocumentPromotionRollbackRegistry cleanupRegistry;
     private final DocumentValidation validation;
     private final DocumentResponseMapper responseMapper;
+    private final com.digiaudit.grcpc.modules.basicdata.application.BasicDataService basicData;
     private final Clock clock;
 
     public DocumentCommandService(
@@ -76,6 +77,7 @@ public class DocumentCommandService {
             DocumentPromotionRollbackRegistry cleanupRegistry,
             DocumentValidation validation,
             DocumentResponseMapper responseMapper,
+            com.digiaudit.grcpc.modules.basicdata.application.BasicDataService basicData,
             @Qualifier("documentClock") Clock clock
     ) {
         this.documentRepository = Objects.requireNonNull(documentRepository, "documentRepository is required");
@@ -90,6 +92,7 @@ public class DocumentCommandService {
         this.cleanupRegistry = Objects.requireNonNull(cleanupRegistry, "cleanupRegistry is required");
         this.validation = Objects.requireNonNull(validation, "validation is required");
         this.responseMapper = Objects.requireNonNull(responseMapper, "responseMapper is required");
+        this.basicData = basicData;
         this.clock = Objects.requireNonNull(clock, "clock is required");
     }
 
@@ -207,6 +210,10 @@ public class DocumentCommandService {
                 DocumentEntity document = lockDocument(mutation.documentId());
                 requireVersion(document.getVersion(), mutation.expectedVersion());
                 document.requireNotDeleted();
+                if (mutation.metadataUpdate() != null && mutation.metadataUpdate().documentTypeId() != null) {
+                    basicData.requireType(com.digiaudit.grcpc.modules.basicdata.domain.BasicDataKind.DOCUMENT_TYPE,
+                            mutation.metadataUpdate().documentTypeId(), document.getDocumentTypeId());
+                }
                 LinkedDocumentContext linkedContext = requireActiveDocumentLink(document.getId(), targetContext);
                 existingMutations.add(new PreparedExistingMutation(
                         document,
@@ -252,6 +259,7 @@ public class DocumentCommandService {
                 throw withDraftContext(DocumentFailures.invalid("INVALID_DOCUMENT_DRAFT", "New document draft is required"), context);
             }
             validateWithDraftContext(context, () -> {
+                basicData.requireType(com.digiaudit.grcpc.modules.basicdata.domain.BasicDataKind.DOCUMENT_TYPE, draft.documentTypeId(), null);
                 validation.validateDateRange(draft.validFrom(), draft.validTo());
                 validation.requiredText(draft.title(), 255, "INVALID_DOCUMENT_TITLE", "Document title");
                 validation.nullableText(draft.code(), 64, "INVALID_DOCUMENT_CODE", "Document code");
@@ -386,6 +394,7 @@ public class DocumentCommandService {
                     actorId,
                     now
             );
+            document.setDocumentTypeId(basicData.requireType(com.digiaudit.grcpc.modules.basicdata.domain.BasicDataKind.DOCUMENT_TYPE, draft.documentTypeId(), null));
             DocumentVersionEntity version = DocumentVersionEntity.create(
                     documentVersionId,
                     documentId,
@@ -437,6 +446,7 @@ public class DocumentCommandService {
             DocumentLinkEntity responseLink = mutation.linkedContext().link();
 
             if (mutation.metadataUpdate() != null) {
+                if (mutation.metadataUpdate().documentTypeId() != null) document.setDocumentTypeId(basicData.requireType(com.digiaudit.grcpc.modules.basicdata.domain.BasicDataKind.DOCUMENT_TYPE, mutation.metadataUpdate().documentTypeId(), document.getDocumentTypeId()));
                 document.updateMetadata(
                         document.getCode(),
                         validation.requiredText(mutation.metadataUpdate().title(), 255, "INVALID_DOCUMENT_TITLE", "Document title"),
@@ -532,6 +542,7 @@ public class DocumentCommandService {
         String code = validation.nullableText(command.code(), 64, "INVALID_DOCUMENT_CODE", "Document code");
         String category = validation.nullableText(command.documentCategoryCode(), 64, "INVALID_DOCUMENT_CATEGORY", "Document category");
 
+        UUID typeId = basicData.requireType(com.digiaudit.grcpc.modules.basicdata.domain.BasicDataKind.DOCUMENT_TYPE, command.documentTypeId(), null);
         UUID documentId = UUID.randomUUID();
         UUID documentVersionId = UUID.randomUUID();
         UUID documentLinkId = UUID.randomUUID();
@@ -549,6 +560,7 @@ public class DocumentCommandService {
                 actorId,
                 now
         );
+        document.setDocumentTypeId(typeId);
         DocumentVersionEntity version = DocumentVersionEntity.create(
                 documentVersionId,
                 documentId,
@@ -662,6 +674,7 @@ public class DocumentCommandService {
         LocalDate nextValidFrom = command.validFrom().isPresent() ? command.validFrom().value() : document.getValidFrom();
         LocalDate nextValidTo = command.validTo().isPresent() ? command.validTo().value() : document.getValidTo();
         validation.validateDateRange(nextValidFrom, nextValidTo);
+        if (command.documentTypeId().isPresent()) document.setDocumentTypeId(basicData.requireType(com.digiaudit.grcpc.modules.basicdata.domain.BasicDataKind.DOCUMENT_TYPE, command.documentTypeId().value(), document.getDocumentTypeId()));
         document.updateMetadata(
                 nextCode,
                 nextTitle,

@@ -19,6 +19,8 @@ public record DocumentDetailResponse(
         Instant createdAt,
         UUID createdBy,
         Instant updatedAt,
-        UUID updatedBy
+        UUID updatedBy,
+        UUID documentTypeId,
+        String documentTypeName
 ) {
 }

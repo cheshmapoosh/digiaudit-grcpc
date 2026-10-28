@@ -16,8 +16,10 @@ function toCreateBody(payload: OrganizationNodeCreate) {
         code: payload.code,
         name: payload.name,
         organizationType: payload.organizationType,
+        organizationTypeId: payload.organizationTypeId,
         parentOrganizationId: payload.parentOrganizationId ?? null,
-        ownerUserId: payload.ownerUserId ?? null,
+        ownerAssignments: payload.ownerAssignments ?? [],
+        subprocesses: payload.subprocesses ?? [],
         location: payload.location ?? null,
         description: payload.description ?? null,
         validFrom: payload.validFrom ?? null,
@@ -31,9 +33,11 @@ function toUpdateBody(payload: OrganizationNodeUpdate) {
         version: payload.version,
         name: payload.name,
         organizationType: payload.organizationType,
+        organizationTypeId: payload.organizationTypeId,
         status: payload.status,
         parentOrganizationId: payload.parentOrganizationId ?? null,
-        ownerUserId: payload.ownerUserId ?? null,
+        ownerAssignments: payload.ownerAssignments ?? [],
+        subprocesses: payload.subprocesses ?? [],
         location: payload.location ?? null,
         description: payload.description ?? null,
         validFrom: payload.validFrom ?? null,
@@ -43,7 +47,7 @@ function toUpdateBody(payload: OrganizationNodeUpdate) {
 }
 
 export class OrganizationApiRepo implements OrganizationRepo {
-    ownerOptions(): Promise<{ id: string; displayLabel: string }[]> {
+    ownerOptions(): Promise<import("../domain/organization.model").OrganizationOwnerOption[]> {
         return httpClient.get(`${BASE_URL}/owner-options`);
     }
     async list(): Promise<OrganizationNode[]> {

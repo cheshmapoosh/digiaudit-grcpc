@@ -34,13 +34,13 @@ public class OrganizationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canManage('ORGANIZATION')")
     public OrganizationAggregateMutationResponse create(@Valid @RequestBody CreateOrganizationRequest request) {
         return organizationService.create(request);
     }
 
     @GetMapping
-    @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canView('ORGANIZATION')")
     public List<OrganizationResponse> findAll(
             @RequestParam(required = false) String lifecycleStatus
     ) {
@@ -52,25 +52,25 @@ public class OrganizationController {
     public List<OrganizationService.OwnerOption> ownerOptions() { return organizationService.ownerOptions(); }
 
     @GetMapping("/ownership-scope")
-    @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canView('ORGANIZATION')")
     public java.util.Set<UUID> ownedScope(org.springframework.security.core.Authentication authentication) {
         return organizationService.ownedOrganizationIds(((com.digiaudit.grcpc.common.security.CurrentUser) authentication.getPrincipal()).getUserId());
     }
 
     @GetMapping("/tree")
-    @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canView('ORGANIZATION')")
     public List<OrganizationTreeNodeResponse> findTree() {
         return organizationService.findTree();
     }
 
     @GetMapping("/{organizationId}")
-    @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canView('ORGANIZATION')")
     public OrganizationResponse findById(@PathVariable UUID organizationId) {
         return organizationService.findById(organizationId);
     }
 
     @PatchMapping("/{organizationId}")
-    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canManage('ORGANIZATION')")
     public OrganizationAggregateMutationResponse update(
             @PathVariable UUID organizationId,
             @Valid @RequestBody UpdateOrganizationRequest request
@@ -79,7 +79,7 @@ public class OrganizationController {
     }
 
     @PostMapping("/{organizationId}/move")
-    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canManage('ORGANIZATION')")
     public MasterDataRevisionMutationResponse move(
             @PathVariable UUID organizationId,
             @Valid @RequestBody MoveOrganizationRequest request
@@ -88,7 +88,7 @@ public class OrganizationController {
     }
 
     @PostMapping("/{organizationId}/activate")
-    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canManage('ORGANIZATION')")
     public MasterDataRevisionMutationResponse activate(
             @PathVariable UUID organizationId,
             @Valid @RequestBody OrganizationLifecycleCommandRequest request
@@ -97,7 +97,7 @@ public class OrganizationController {
     }
 
     @PostMapping("/{organizationId}/inactivate")
-    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canManage('ORGANIZATION')")
     public MasterDataRevisionMutationResponse inactivate(
             @PathVariable UUID organizationId,
             @Valid @RequestBody OrganizationLifecycleCommandRequest request
@@ -106,7 +106,7 @@ public class OrganizationController {
     }
 
     @PostMapping("/{organizationId}/delete")
-    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canManage('ORGANIZATION')")
     public MasterDataRevisionMutationResponse delete(
             @PathVariable UUID organizationId,
             @Valid @RequestBody OrganizationLifecycleCommandRequest request
@@ -115,7 +115,7 @@ public class OrganizationController {
     }
 
     @PostMapping("/{organizationId}/restore")
-    @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
+    @PreAuthorize("@masterDataAuthorization.canManage('ORGANIZATION')")
     public MasterDataRevisionMutationResponse restore(
             @PathVariable UUID organizationId,
             @Valid @RequestBody OrganizationLifecycleCommandRequest request

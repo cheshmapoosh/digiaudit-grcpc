@@ -7,6 +7,7 @@ export const documentAggregateRequestSchema = z.object({
         tempUploadId: z.string().trim().min(1),
         code: z.string().trim().nullable().optional(),
         title: z.string().trim().min(1).max(255),
+        documentTypeId: z.string().trim().min(1),
         description: z.string().trim().nullable().optional(),
         validFrom: optionalDate,
         validTo: optionalDate,
@@ -22,5 +23,6 @@ export const documentAggregateRequestSchema = z.object({
         documentId: z.string().trim().min(1),
         expectedVersion: z.number().int().min(0),
         title: z.string().trim().min(1).max(255),
+        documentTypeId: z.string().trim().min(1).optional(),
     })),
 });

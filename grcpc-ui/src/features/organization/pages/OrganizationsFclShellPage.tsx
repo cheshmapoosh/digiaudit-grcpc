@@ -1,3 +1,5 @@
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
+import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import {
     createElement,
     useCallback,
@@ -67,6 +69,19 @@ function mapError(
     const errorCode = knownError?.code ?? code;
 
     switch (errorCode) {
+        case "LOCAL_DEPENDENCY_EXISTS":
+            return t("local.subprocessTable.dependencies");
+        case "LOCAL_RESTORE_REQUIRED":
+        case "DUPLICATE_RELATION":
+            return t("local.subprocessTable.stale");
+        case "OWNER_NOT_ELIGIBLE":
+        case "INVALID_OWNER_ASSIGNMENT":
+        case "DUPLICATE_OWNER_ASSIGNMENT":
+            return t("organization.owners.invalid");
+        case "BASIC_DATA_TYPE_REQUIRED":
+        case "BASIC_DATA_TYPE_INACTIVE":
+        case "BASIC_DATA_NOT_FOUND":
+            return error instanceof Error ? error.message : t("basicData.typeRequired");
         case "ORGANIZATION_NOT_FOUND":
         case "NOT_FOUND":
             return t("organization.errors.notFound", {
@@ -201,6 +216,7 @@ function resolveDialogTitle(
 
 export default function OrganizationsFclShellPage() {
     const { t } = useTranslation();
+    const { manage } = useMasterDataAccess("ORGANIZATION");
     const navigate = useNavigate();
     const location = useLocation();
     const { organizationId } = useParams();
@@ -302,7 +318,7 @@ export default function OrganizationsFclShellPage() {
     useEffect(() => {
         const requested = new URLSearchParams(location.search).get("tab");
         const tabs: OrganizationTabKey[] = ["general", "subprocesses", "risks", "controls",
-            "regulations", "objectives", "businessObjectives", "policies", "documents"];
+            "regulations", "objectives", "businessObjectives", "policies", "owners", "documents"];
         const next = tabs.includes(requested as OrganizationTabKey)
             ? requested as OrganizationTabKey : "general";
         setObjectActiveTab((current) => current === next ? current : next);
@@ -388,15 +404,17 @@ export default function OrganizationsFclShellPage() {
                 setDocumentAggregateError(null);
                 setSelectedTreeId(targetId);
                 setTreeExpansionAnchorId(targetId);
-                navigate(`/organizations/${targetId}/edit`);
+                const params = targetId === organizationId ? new URLSearchParams(location.search) : new URLSearchParams();
+                params.set("tab", objectActiveTab);
+                navigate({ pathname: `/organizations/${targetId}/edit`, search: params.toString() });
             };
-            if (routeMode === "create" || (organizationId && organizationId !== targetId)) {
+            if (localDirty || routeMode === "create" || (organizationId && organizationId !== targetId)) {
                 requestObjectPageLeave(edit);
             } else {
                 edit();
             }
         },
-        [navigate, organizationId, requestObjectPageLeave, routeMode, selectedTreeId],
+        [localDirty, location.search, navigate, objectActiveTab, organizationId, requestObjectPageLeave, routeMode, selectedTreeId],
     );
 
     const handleCancel = useCallback(() => {
@@ -427,7 +445,7 @@ export default function OrganizationsFclShellPage() {
                 setTreeExpansionAnchorId(createPayload.parentOrganizationId ?? result.entityId);
                 setGeneralInformationDirty(false);
                 setDocumentDirty(false);
-                runWithNavigationBypass(() => navigate(`/organizations/${result.entityId}`, { replace: true }));
+                runWithNavigationBypass(() => navigate({ pathname: `/organizations/${result.entityId}`, search: new URLSearchParams({ tab: objectActiveTab }).toString() }, { replace: true }));
                 return true;
             } catch (error) {
                 setDocumentAggregateError(toDocumentAggregateDraftError(error));
@@ -445,7 +463,7 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [createNode, navigate, runWithNavigationBypass, t],
+        [createNode, navigate, objectActiveTab, runWithNavigationBypass, t],
     );
 
     const handleSubmitUpdate = useCallback(
@@ -466,7 +484,9 @@ export default function OrganizationsFclShellPage() {
                 setTreeExpansionAnchorId(updatePayload.parentOrganizationId ?? target.id);
                 setGeneralInformationDirty(false);
                 setDocumentDirty(false);
-                runWithNavigationBypass(() => navigate(`/organizations/${target.id}`, { replace: true }));
+                const params = new URLSearchParams(location.search);
+                params.set("tab", objectActiveTab);
+                runWithNavigationBypass(() => navigate({ pathname: `/organizations/${target.id}`, search: params.toString() }, { replace: true }));
                 return true;
             } catch (error) {
                 setDocumentAggregateError(toDocumentAggregateDraftError(error));
@@ -484,7 +504,7 @@ export default function OrganizationsFclShellPage() {
                 setSubmitting(false);
             }
         },
-        [navigate, runWithNavigationBypass, selectedRouteItem, t, updateNode],
+        [location.search, navigate, objectActiveTab, runWithNavigationBypass, selectedRouteItem, t, updateNode],
     );
 
     const requestDelete = useCallback(
@@ -618,8 +638,6 @@ export default function OrganizationsFclShellPage() {
             width: "100%",
             minWidth: 0,
             maxWidth: "100%",
-            maxHeight: "calc(92vh - 8rem)",
-            overflow: "auto",
             direction: appDir,
             boxSizing: "border-box",
             padding: "0.25rem",
@@ -631,6 +649,7 @@ export default function OrganizationsFclShellPage() {
         () => ({
             width: DIALOG_WIDTH,
             maxWidth: DIALOG_WIDTH,
+            maxHeight: "70dvh",
         }),
         [],
     );
@@ -687,8 +706,17 @@ export default function OrganizationsFclShellPage() {
 
     const dialogTitle = resolveDialogTitle(routeMode, t);
 
+    const bulkDeleteItems = items.map((row) => ({ key: row.id, parentKey: row.parentOrganizationId, label: `${row.code} — ${row.displayLabel || row.name}`,
+      remove: () => removeNode(row.id, { version: row.version }) }));
+
     return (
-        <>
+        <CatalogSelectionProvider items={bulkDeleteItems} enabled={manage} busy={loading || submitting}
+            onBusyChange={setSubmitting} reload={() => useOrganizationState.getState().refresh()} mapError={(error) => mapError(error, t("organization.errors.delete"), t)} beforeDelete={requestObjectPageLeave}
+            onDeleted={(keys) => {
+              if (selectedTreeId && keys.has(selectedTreeId)) { setSelectedTreeId(null); }
+              if (treeExpansionAnchorId && keys.has(treeExpansionAnchorId)) setTreeExpansionAnchorId(null);
+              if (organizationId && keys.has(organizationId)) navigate("/organizations");
+            }}>
             {createElement(
                 "ui5-flexible-column-layout",
                 {
@@ -713,7 +741,7 @@ export default function OrganizationsFclShellPage() {
                 onClose={handleObjectDialogClose}
             >
                 <ModalDialogHeader title={dialogTitle} onClose={handleObjectDialogClose} />
-                <div style={dialogContentStyle}>
+                <div className="organizationObjectDialogContent" style={dialogContentStyle}>
                     {objectMode === "create" || objectValue ? (
                         <OrganizationObjectPage
                             key={routeMode === "create" ? objectTabScopeKey : `org:${objectValue?.id ?? "none"}:${objectMode}`}
@@ -799,6 +827,6 @@ export default function OrganizationsFclShellPage() {
                 }}
             />
 
-        </>
+        </CatalogSelectionProvider>
     );
 }

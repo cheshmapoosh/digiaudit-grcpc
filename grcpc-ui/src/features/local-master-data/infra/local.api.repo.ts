@@ -1,7 +1,7 @@
 import { httpClient } from "@/shared/infra/http.client";
 import type {
     LocalMutation, LocalOption, LocalPage, LocalRows, LocalSectionKey, LocalStatus,
-    LocalSource, LocalAction, LocalPropagation,
+    LocalSource, LocalAction, LocalPropagation, LocalContextChange,
 } from "../domain/local.model";
 
 const ROOT = "/api/master-data/local";
@@ -87,6 +87,27 @@ function query(values: Record<string, string | number | null | undefined>): stri
 }
 
 export const localApi = {
+    saveSubprocesses(organizationId: string, changes: LocalContextChange[]): Promise<{ revisionId: string; rows: LocalRows["contexts"][] }> {
+        return httpClient.post(`${ROOT}/organizations/${organizationId}/contexts/save`, { changes });
+    },
+    selectSubprocesses(organizationId: string, subprocessIds: string[]): Promise<{ revisionId: string; rows: LocalRows["contexts"][] }> {
+        return httpClient.post(`${ROOT}/organizations/${organizationId}/contexts/select`, { subprocessIds });
+    },
+    async allContexts(organizationId: string): Promise<LocalRows["contexts"][]> {
+        const groups = await Promise.all(([null, "DELETED"] as const).map(async (status) => {
+            const collected: LocalRows["contexts"][] = [];
+            let page = 0;
+            let totalPages = 1;
+            do {
+                const result = await localApi.list("contexts", { organizationId }, status, page, 100);
+                collected.push(...result.items);
+                totalPages = result.totalPages;
+                page += 1;
+            } while (page < totalPages);
+            return collected;
+        }));
+        return [...new Map(groups.flat().map((row) => [row.id, row])).values()];
+    },
     list<K extends LocalSectionKey>(section: K, owner: LocalRouteOwner,
         lifecycleStatus: LocalStatus | null, page = 0, size = 25): Promise<LocalPage<LocalRows[K]>> {
         return httpClient.get<LocalPage<LocalRows[K]>>(`${base(section, owner, true)}?${query({

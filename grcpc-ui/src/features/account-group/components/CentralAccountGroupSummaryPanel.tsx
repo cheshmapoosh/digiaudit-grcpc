@@ -1,6 +1,8 @@
+import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type { CentralAccountGroupDetail } from "../domain/centralAccountGroup.model";
@@ -62,14 +64,14 @@ export default function CentralAccountGroupSummaryPanel({
           value={<Text>{formatPersianDateTime(value.updatedAt)}</Text>}
         />
       </div>
-      <div className="accountGroupSummaryActions">
+      <DialogFooterBar>
         <Button design="Emphasized" disabled={busy || !canEdit} onClick={onEdit}>
           {t("common.edit", { defaultValue: "ویرایش" })}
         </Button>
         <Button design="Transparent" disabled={busy} onClick={onCancel}>
           {t("common.close", { defaultValue: "بستن" })}
         </Button>
-      </div>
+      </DialogFooterBar>
     </div>
   );
 }

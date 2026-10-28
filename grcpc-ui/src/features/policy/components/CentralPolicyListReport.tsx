@@ -1,6 +1,9 @@
+import { CatalogTreeOrder } from "@/shared/components/CatalogTreeOrder";
+import { CatalogDeleteButton } from "@/shared/components/CatalogSelection";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, BusyIndicator, MessageStrip, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Bar, BusyIndicator, MessageStrip, Title } from "@ui5/webcomponents-react";
 
 import type {
   CentralPolicyGroupSummary,
@@ -63,16 +66,16 @@ export default function CentralPolicyListReport({
               onCreate={onCreate}
             />
 
-            <Button design="Emphasized" disabled={busy || !selectedId} onClick={onShow}>
+            <Button design="Default" disabled={busy || !selectedId} onClick={onShow}>
               {t("common.view", { defaultValue: "نمایش" })}
             </Button>
-            <Button
+            <CatalogDeleteButton
               design="Negative"
               disabled={busy || !selectedId || !canDelete}
               onClick={onDelete}
             >
               {t("common.delete", { defaultValue: "حذف" })}
-            </Button>
+            </CatalogDeleteButton>
           </>
         }
       />
@@ -80,15 +83,17 @@ export default function CentralPolicyListReport({
       {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
       <div className="policyTreeFrame">
         {busy ? <BusyIndicator active delay={0} /> : null}
-        <CentralPolicyTree
-          groups={groups}
-          policies={policies}
-          selectedId={selectedId}
-          expansionAnchorId={expansionAnchorId}
-          searchText={searchText}
-          busy={busy}
-          onSelect={onSelect}
-        />
+        <CatalogTreeOrder catalog="POLICY" refreshKey={JSON.stringify([groups, policies])} filtered={Boolean(searchText.trim())}>
+          <CentralPolicyTree
+            groups={groups}
+            policies={policies}
+            selectedId={selectedId}
+            expansionAnchorId={expansionAnchorId}
+            searchText={searchText}
+            busy={busy}
+            onSelect={onSelect}
+          />
+        </CatalogTreeOrder>
       </div>
     </div>
   );

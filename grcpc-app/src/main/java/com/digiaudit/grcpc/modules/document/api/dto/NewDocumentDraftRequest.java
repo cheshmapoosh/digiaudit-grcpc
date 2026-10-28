@@ -13,6 +13,7 @@ public record NewDocumentDraftRequest(
         @NotBlank @Size(max = 255) String title,
         String description,
         LocalDate validFrom,
-        LocalDate validTo
+        LocalDate validTo,
+        @NotNull UUID documentTypeId
 ) {
 }

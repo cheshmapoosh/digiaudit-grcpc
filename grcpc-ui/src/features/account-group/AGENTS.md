@@ -23,3 +23,7 @@ Account groups are hierarchical Master Data V2 definitions backed by `CentralAcc
 
 ## Verification
 - Run `npm run lint` and `npm run build` from `grcpc-ui` when verification is requested/available.
+
+## Main-page display ordering (2026-10-28)
+
+Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-main-catalog-display-order.md`. The explicit owner approval supersedes earlier no-drag rules only on main Governance trees. Sibling-only native UI5 dragging saves independent display ranks under the existing hierarchy Guard and one CENTRAL Revision; new inserts appear first. Modals, value helps and relationship tabs keep their existing sorting and have no ordering provider.

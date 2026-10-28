@@ -1,3 +1,4 @@
+import { useBasicDataOptions } from "@/features/basic-data";
 import {
     useCallback,
     useEffect,
@@ -10,6 +11,9 @@ import { useTranslation } from "react-i18next";
 import {
     Button,
     FileUploader,
+    Select,
+    Option,
+    Label,
     Input,
     MessageStrip,
     ObjectStatus,
@@ -85,6 +89,7 @@ interface UploadFlowItem {
     existingDocument?: DocumentLinkSummary;
     error?: string;
     title: string;
+    documentTypeId: string;
     code: string;
     description: string;
     validFrom: string;
@@ -293,10 +298,12 @@ export default function DocumentManager({
     aggregateError,
 }: DocumentManagerProps) {
     const { t } = useTranslation();
+    const documentTypes = useBasicDataOptions("document-types", !readOnly && showActions);
     const mountedRef = useRef(true);
     const progressFallbackTimersRef =
         useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
     const [uploadItems, setUploadItems] = useState<UploadFlowItem[]>([]);
+    const [typeDrafts, setTypeDrafts] = useState<Record<string, string>>({});
     const [metadataDrafts, setMetadataDrafts] = useState<Record<string, string>>({});
     const [metadataErrors, setMetadataErrors] = useState<Record<string, string>>({});
     const [savingMetadataIds, setSavingMetadataIds] = useState<Set<string>>(() => new Set());
@@ -351,6 +358,7 @@ export default function DocumentManager({
     );
     const dirty = hasPendingUploads
         || hasMetadataDrafts
+        || Object.entries(typeDrafts).some(([id, type]) => (rows.find((row) => row.documentId === id)?.documentTypeId ?? "") !== type)
         || savingMetadataIds.size > 0;
 
     const parentSaveDraftState = useMemo<ParentSaveDocumentDraftState>(() => {
@@ -360,7 +368,7 @@ export default function DocumentManager({
         const invalidUpload = uploadItems.some((item) => {
             const missingTitle = !item.existingDocument && !item.title.trim();
             const invalidRange = Boolean(item.validFrom && item.validTo && item.validFrom > item.validTo);
-            return missingTitle
+            return missingTitle || (!item.existingDocument && !item.documentTypeId)
                 || invalidRange
                 || !item.validFromDraftValid
                 || !item.validToDraftValid
@@ -369,14 +377,13 @@ export default function DocumentManager({
                 || Boolean(item.failureState)
                 || isExpired(item.expiresAt);
         });
-        const metadataUpdates = Object.entries(metadataDrafts).flatMap(([documentId, draftTitle]) => {
+        const metadataUpdates = [...new Set([...Object.keys(metadataDrafts), ...Object.keys(typeDrafts)])].flatMap((documentId) => {
             const row = rows.find((candidate) => candidate.documentId === documentId);
-            if (!row || draftTitle.trim() === row.title) return [];
-            return [{
-                documentId,
-                expectedVersion: row.documentVersion,
-                title: draftTitle.trim(),
-            }];
+            if (!row) return [];
+            const title = (metadataDrafts[documentId] ?? row.title).trim();
+            const documentTypeId = typeDrafts[documentId] || row.documentTypeId || undefined;
+            if (title === row.title && documentTypeId === (row.documentTypeId ?? undefined)) return [];
+            return [{ documentId, expectedVersion: row.documentVersion, title, documentTypeId }];
         });
         const invalidMetadata = metadataUpdates.some(
             (draft) => !draft.title || Boolean(metadataErrors[draft.documentId]),
@@ -388,6 +395,7 @@ export default function DocumentManager({
                 tempUploadId: item.tempUploadId as string,
                 code: optionalText(item.code),
                 title: item.title.trim(),
+                documentTypeId: item.documentTypeId,
                 description: optionalText(item.description),
                 validFrom: optionalText(item.validFrom),
                 validTo: optionalText(item.validTo),
@@ -413,7 +421,7 @@ export default function DocumentManager({
             newVersions,
             metadataUpdates,
         };
-    }, [metadataDrafts, metadataErrors, rows, uploadItems]);
+    }, [metadataDrafts, metadataErrors, rows, typeDrafts, uploadItems]);
     const effectiveDirty = parentSaveMode ? parentSaveDraftState.dirty : dirty;
 
     useEffect(() => {
@@ -444,6 +452,7 @@ export default function DocumentManager({
         resetKeyRef.current = draftResetKey;
         setUploadItems([]);
         setMetadataDrafts({});
+        setTypeDrafts({});
         setMetadataErrors({});
         setActionMessage(null);
     }, [draftResetKey]);
@@ -472,6 +481,11 @@ export default function DocumentManager({
                         return t("document.errors.metadataMismatch", {
                             defaultValue: "The temporary file could not be verified. Remove this row and upload it again.",
                         });
+                    case "BASIC_DATA_TYPE_REQUIRED":
+                        return t("document.errors.typeRequired");
+                    case "BASIC_DATA_TYPE_INACTIVE":
+                    case "BASIC_DATA_NOT_FOUND":
+                        return t("document.errors.typeUnavailable");
                     case "DOCUMENT_VERSION_CONFLICT":
                     case "VERSION_CONFLICT":
                         return t("document.errors.versionConflict", {
@@ -492,7 +506,7 @@ export default function DocumentManager({
                 "TEMPORARY_UPLOAD_OWNERSHIP_DENIED",
                 "TEMPORARY_OBJECT_METADATA_MISMATCH",
             ]);
-            const failureState: UploadFailureState = aggregateError.code === "TEMPORARY_UPLOAD_EXPIRED"
+            const failureState: UploadFailureState | undefined = ["BASIC_DATA_TYPE_REQUIRED", "BASIC_DATA_TYPE_INACTIVE", "BASIC_DATA_NOT_FOUND"].includes(aggregateError.code) ? undefined : aggregateError.code === "TEMPORARY_UPLOAD_EXPIRED"
                 ? "EXPIRED"
                 : reuploadCodes.has(aggregateError.code)
                     ? "REUPLOAD_REQUIRED"
@@ -581,7 +595,7 @@ export default function DocumentManager({
 
     const updateStagedField = useCallback((
         rowId: string,
-        field: "title" | "code" | "description" | "validFrom" | "validTo",
+        field: "documentTypeId" | "title" | "code" | "description" | "validFrom" | "validTo",
         value: string,
     ) => {
         setUploadItems((current) =>
@@ -687,10 +701,12 @@ export default function DocumentManager({
                 }));
             }
 
+            if (!item.documentTypeId) throw new Error(t("document.errors.typeRequired"));
             await createDocument({
                 tempUploadId: item.tempUploadId,
                 code: optionalText(item.code),
                 title: titleValue,
+                documentTypeId: item.documentTypeId,
                 description: optionalText(item.description),
                 targetType,
                 targetId,
@@ -722,6 +738,7 @@ export default function DocumentManager({
                 state: "SELECTED",
                 existingDocument,
                 title: existingDocument?.title ?? initialTitle(file.name),
+                documentTypeId: existingDocument?.documentTypeId ?? "",
                 code: existingDocument?.code ?? "",
                 description: existingDocument?.description ?? "",
                 validFrom: "",
@@ -891,12 +908,17 @@ export default function DocumentManager({
         [metadataDrafts],
     );
 
+    const updateTypeDraft = (documentId: string, typeId: string) => {
+        setTypeDrafts((current) => ({ ...current, [documentId]: typeId }));
+        setMetadataErrors((current) => { const next = { ...current }; delete next[documentId]; return next; });
+    };
+
     const hasTitleChange = useCallback(
         (row: DocumentLinkSummary): boolean => {
             const draft = metadataDrafts[row.documentId];
-            return Boolean(draft?.trim() && draft.trim() !== row.title);
+            return Boolean((draft?.trim() && draft.trim() !== row.title) || (typeDrafts[row.documentId] && typeDrafts[row.documentId] !== row.documentTypeId));
         },
-        [metadataDrafts],
+        [metadataDrafts, typeDrafts],
     );
 
     const handleSaveMetadata = useCallback(
@@ -915,7 +937,9 @@ export default function DocumentManager({
                     targetType,
                     targetId,
                     title: nextTitle,
+                    ...(typeDrafts[row.documentId] ? { documentTypeId: typeDrafts[row.documentId] } : {}),
                 });
+                setTypeDrafts((current) => { const next = { ...current }; delete next[row.documentId]; return next; });
                 setMetadataDrafts((current) => {
                     const next = { ...current };
                     delete next[row.documentId];
@@ -928,7 +952,7 @@ export default function DocumentManager({
                 });
                 setActionMessage({
                     design: "Positive",
-                    text: t("document.titleSave.success", {
+                    text: t("document.metadataSave.success", {
                         defaultValue: "Document title saved successfully.",
                     }),
                 });
@@ -953,6 +977,7 @@ export default function DocumentManager({
         [
             getDraftTitle,
             hasTitleChange,
+            typeDrafts,
             readOnly,
             t,
             targetId,
@@ -1210,7 +1235,7 @@ export default function DocumentManager({
                         !parentSaveMode &&
                         !busy &&
                         !readOnly &&
-                        !titleMissing &&
+                        !titleMissing && (Boolean(item.existingDocument) || Boolean(item.documentTypeId)) &&
                         !invalidValidityRange;
                     const showMetadata =
                         item.state === "UPLOADED" ||
@@ -1284,6 +1309,13 @@ export default function DocumentManager({
                                                         updateStagedField(item.id, "title", readInputValue(event))
                                                     }
                                                 />
+                                                <div>
+                                                    <Label required>{t("document.fields.documentType")}</Label>
+                                                    <Select value={item.documentTypeId} disabled={busy || item.state === "FINALIZING" || documentTypes.loading || Boolean(documentTypes.error)} accessibleName={t("document.fields.documentType")} valueState={!item.documentTypeId ? "Negative" : "None"} onChange={(event) => updateStagedField(item.id, "documentTypeId", event.detail.selectedOption.value ?? "")}>
+                                                        <Option value="" selected={!item.documentTypeId}>{t("basicData.choose")}</Option>
+                                                        {documentTypes.items.filter((type) => type.status === "ACTIVE").map((type) => <Option key={type.id} value={type.id} selected={item.documentTypeId === type.id}>{type.name}</Option>)}
+                                                    </Select>
+                                                </div>
                                                 <Input
                                                     accessibleName={t("document.fields.code", {
                                                         defaultValue: "Code",
@@ -1360,7 +1392,7 @@ export default function DocumentManager({
         : saveFirstMessage ?? t("document.saveFirst", {
               defaultValue: "Save the item first, then finalize uploaded documents.",
           });
-    const canUploadDocuments = showActions && !readOnly && !busy;
+    const canUploadDocuments = showActions && !readOnly && !busy && !documentTypes.loading && !documentTypes.error && documentTypes.items.some((item) => item.status === "ACTIVE");
     const activeBusy = busy || loading;
     const noDataText = t("document.empty", {
         defaultValue: "No document has been added.",
@@ -1398,6 +1430,8 @@ export default function DocumentManager({
                 </MessageStrip>
             ) : null}
 
+            {!readOnly && showActions && documentTypes.error ? <MessageStrip design="Negative" hideCloseButton>{documentTypes.error}</MessageStrip> : null}
+            {!readOnly && showActions && !documentTypes.loading && !documentTypes.error && documentTypes.items.every((type) => type.status !== "ACTIVE") ? <MessageStrip design="Information" hideCloseButton>{t("document.noTypes")}</MessageStrip> : null}
             {loadError ? (
                 <MessageStrip
                     design="Negative"
@@ -1425,6 +1459,7 @@ export default function DocumentManager({
                 alternateRowColors
                 headerRow={
                     <TableHeaderRow>
+                        <TableHeaderCell minWidth="10rem">{t("document.fields.documentType")}</TableHeaderCell>
                         <TableHeaderCell minWidth="12rem">
                             {t("document.fields.title", { defaultValue: "Title" })}
                         </TableHeaderCell>
@@ -1460,6 +1495,10 @@ export default function DocumentManager({
             >
                 {rows.map((row) => (
                     <TableRow key={row.documentLinkId} rowKey={row.documentLinkId}>
+                        <TableCell>{readOnly || !showActions ? <Text>{row.documentTypeName || NONE_TEXT}</Text> : <Select value={typeDrafts[row.documentId] ?? row.documentTypeId ?? ""} disabled={busy || documentTypes.loading || Boolean(documentTypes.error) || savingMetadataIds.has(row.documentId)} accessibleName={t("document.fields.documentType")} onChange={(event) => updateTypeDraft(row.documentId, event.detail.selectedOption.value ?? "")}>
+                            {!row.documentTypeId ? <Option value="" selected={!typeDrafts[row.documentId]}>{t("basicData.choose")}</Option> : null}
+                            {documentTypes.items.map((type) => <Option key={type.id} value={type.id} selected={(typeDrafts[row.documentId] ?? row.documentTypeId) === type.id}>{type.name}</Option>)}
+                        </Select>}</TableCell>
                         <TableCell>{renderDocumentTitleControl(row)}</TableCell>
                         <TableCell>{row.fileName}</TableCell>
                         <TableCell>{row.documentVersionNumber}</TableCell>

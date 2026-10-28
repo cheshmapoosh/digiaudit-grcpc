@@ -1,3 +1,4 @@
+import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BusyIndicator, Dialog, MessageStrip } from "@ui5/webcomponents-react";
@@ -624,8 +625,22 @@ export default function CentralRegulationsPage() {
     [closeObject],
   );
 
+  const bulkDeleteItems = [
+    ...groups.map((row) => ({ key: row.id, parentKey: row.parentGroupId, label: `${row.code} — ${row.title}`,
+      remove: () => centralRegulationApi.groupLifecycle(row.id, "delete", row.version) })),
+    ...regulations.map((row) => ({ key: row.id, parentKey: row.regulationGroupId, label: `${row.code} — ${row.title}`,
+      remove: () => centralRegulationApi.regulationLifecycle(row.id, "delete", row.version) })),
+    ...requirements.map((row) => ({ key: row.id, parentKey: row.regulationId, label: `${row.code} — ${row.title}`,
+      remove: () => centralRegulationApi.requirementLifecycle(row.id, "delete", row.version) })),
+  ];
+
   return (
-    <>
+    <CatalogSelectionProvider items={bulkDeleteItems} enabled={permissions.delete} busy={busy}
+      onBusyChange={setBusy} reload={loadRows} reloadOrder={async () => { try { if (selectedNode) setSelectedDetail(await fetchDetail(selectedNode.type, selectedNode.id)); } finally { await loadRows(); } }} mapError={(error) => mapError(error, "regulation.errors.delete")} beforeDelete={requestLeave}
+      onDeleted={(keys) => {
+        if (selectedNode && keys.has(selectedNode.id)) { setSelectedNode(null); setSelectedDetail(null); }
+        if (expansionAnchorId && keys.has(expansionAnchorId)) setExpansionAnchorId(null);
+      }}>
       {createElement(
         "ui5-flexible-column-layout",
         {
@@ -703,6 +718,6 @@ export default function CentralRegulationsPage() {
         onClose={() => setDeleteCandidate(null)}
         onConfirm={() => void confirmDelete()}
       />
-    </>
+    </CatalogSelectionProvider>
   );
 }

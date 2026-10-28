@@ -39,6 +39,12 @@ component, or - there is a documented limitation.
   sections use `sapContent_Space_Tiny`. Avoid repeating padding in FCL slots,
   their inner frames and tree/list bodies. Keep native Bar spacing and button
   widths instead of extra action wrappers, fixed widths or per-button margins.
+- The project owner's governance action consistency request is a scoped width
+  exception: use `CatalogActionButton` for catalog list, summary and editor
+  actions. Text actions share a 7rem minimum inline size, including Create menus;
+  longer translations may grow and icon-only controls keep their native width.
+  Remove feature-local action widths. Native UI5 height, density and appearance
+  remain unchanged.
 - In the user editor, full-span native FormGroups keep First/Last Name together
   and Password/Confirm Password together in two columns, falling back to one
   on small screens. Confirm Password is client-side only and gates Create Save.
@@ -88,7 +94,11 @@ component, or - there is a documented limitation.
 - Render native Compact `Breadcrumbs` directly in the page content above the
   routed page/title. Do not add a separate Bar, header strip, background or fixed height.
 - Put Roles under User Management at `/access-control/roles`. Profile Management
-  is a direct navigation item at `/profiles`; do not add a Settings navigation group.
+  is the root-only `Profile` child at `/profiles` under Initial Data Management
+  (مدیریت داده‌های اولیه).
+  The same group contains Organization Types and Document Types for root and
+  profile admins; both dictionaries belong to the selected profile and show
+  that profile in their list, detail and editor. Do not add a Settings group.
   Legacy `/settings/roles` and `/settings/profiles` URLs redirect to these pages.
 - Users and Profiles use full-width native Tables and separate native Dialogs
   for details. Roles currently has no detail modal. Do not add a side detail pane.
@@ -276,6 +286,35 @@ Preferred: - List - Checkbox - MultiComboBox
 
 Do not create custom checkbox lists.
 
+Organization's Subprocess Select opens the shared searchable hierarchy dialog:
+native UI5 Dialog + HeaderSearch + Tree + CheckBox. Processes are navigation
+nodes, and only eligible Subprocess leaves can select. Preserve selections across
+search, show loading/errors and block confirmation/closure while saving. Every
+selected Subprocess first enters the three-column Code/Name/Status table as a
+blue ObjectStatus Information draft. The Organization modal's main Edit/Save owns
+these drafts and sends one aggregate request; the table has no separate Edit,
+Save, Cancel, Undo or Restore. Its status filter offers Not selected, Active and
+Inactive only. Saved Deleted rows never appear; pending deletion remains a blue
+draft until main Save, labelled پیش‌نویس حذف. Lifecycle drafts use پیش‌نویس فعال
+and پیش‌نویس غیرفعال. Mixed selections change only eligible rows whose target
+state differs. A layout-only scroll frame reserves measured dialog chrome under
+the Organization modal's 70dvh cap; native Table Scroll mode handles horizontal
+column overflow and the frame handles growing rows without reskinning UI5;
+canonical ACTIVE uses Positive (green), INACTIVE uses None, and deletion is logical.
+Reselecting a deleted relationship restores its existing context on Save;
+no catalog display-order provider belongs in this dialog.
+
+## Main catalog tree ordering
+
+- Use native Tree move-over/move events and TreeItemCustom movable for sibling
+  Before/After gestures. Main List Reports mount CatalogTreeOrder; reusable tree
+  items have no ordering behavior outside that provider. Never mount it in a
+  modal, value help or relationship tab.
+- Keep parent IDs, descendant structure, selection, checkboxes and expansion.
+  Save on drop through the closed display-order API. Disable dragging while
+  busy, read-only, filtered or waiting for canonical order; reject On/re-parenting.
+  Refresh canonical row/detail versions after Save and show localized errors.
+
 ------------------------------------------------------------------------
 
 # Master Data Examples
@@ -289,6 +328,15 @@ Required components:
 -   Operations: ActionSheet
 -   Selection dialog: List + Checkbox + List Item Group
 -   Validity dates: DatePicker
+
+## Organization Owners
+
+- Place Owners immediately before Documents; General Information has no scalar owner.
+- Use Table/TableSelectionMulti for rows and a searchable native Dialog with the
+  same selection feature for eligible users. Use ObjectStatus for eligibility and
+  staged changes, and the shared catalog action buttons for Add/Delete/Undo.
+- Changes join parent aggregate Save, dirty protection and readiness. Only root
+  and the selected profile's authorized admin can manage the rows.
 
 ------------------------------------------------------------------------
 

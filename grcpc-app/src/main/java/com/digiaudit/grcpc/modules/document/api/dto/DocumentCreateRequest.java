@@ -16,6 +16,7 @@ public record DocumentCreateRequest(
         @NotBlank @Size(max = 32) String targetType,
         @NotNull UUID targetId,
         LocalDate validFrom,
-        LocalDate validTo
+        LocalDate validTo,
+        @NotNull UUID documentTypeId
 ) {
 }

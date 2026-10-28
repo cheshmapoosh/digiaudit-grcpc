@@ -9,6 +9,7 @@ import java.util.UUID;
 public record DocumentMetadataDraftRequest(
         @NotNull UUID documentId,
         @NotNull Long expectedVersion,
-        @NotBlank @Size(max = 255) String title
+        @NotBlank @Size(max = 255) String title,
+        UUID documentTypeId
 ) {
 }

@@ -49,11 +49,11 @@ The active business-table count after Policy simplification is 45. The unmapped 
 
 The two technical tables are `document_temp_upload` and `masterdata_hierarchy_guard`.
 
-The total physical Master Data table count after this correction was 48. The approved Objective extension adds two business tables, bringing that count to 50. The approved Global Control library extension adds three more business tables, bringing that count to 53. The accepted [Central Assignment correction](accepted-corrections/2026-10-27-central-reference-assignments.md) adds four business tables, bringing the current count to 57.
+The total physical Master Data table count after this correction was 48. The approved Objective extension adds two business tables, bringing that count to 50. The approved Global Control library extension adds three more business tables, bringing that count to 53. The accepted [Central Assignment correction](accepted-corrections/2026-10-27-central-reference-assignments.md) adds four business tables, bringing the count at that decision to 57.
 
 The active business structures are the original catalog with Policy Version removed from active use and Central Policy–Organization Scope added.
 
-The Document business-table count remains 3. The current physical contract is `54 active business tables + 1 retained historical table + 2 technical tables = 57 physical tables`.
+The Document business-table count remains 3. The [2026-10-28 Organization owner Assignment](accepted-corrections/2026-10-28-organization-owner-assignments.md) adds one typed business table; the current physical contract is `55 active business tables + 1 retained historical table + 2 technical tables = 58 physical tables`. The administrative Basic Data type dictionaries and dataset/User Management tables are outside this count.
 
 No additional Master Data table is authorized merely to simplify implementation.
 
@@ -446,7 +446,7 @@ The approved model permits exactly two controlled polymorphic relations:
 
 Each relation has its own closed stored-code vocabulary. These vocabularies must not be conflated, even where both reuse the same stored code for the same logical table.
 
-`RevisionEntityType` contains 54 stored codes after the four Central reference Assignments and is used only for Revision Content.
+`RevisionEntityType` contains 55 stored codes after the four Central reference Assignments and the Organization owner Assignment and is used only for Revision Content.
 
 Document Link Target Type contains 43 stored codes after the Global Control document extension and is used only for Document Link target validation.
 

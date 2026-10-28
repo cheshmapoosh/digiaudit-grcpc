@@ -6,6 +6,8 @@ import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
 import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
+import com.digiaudit.grcpc.modules.masterdata.local.api.dto.LocalContextDtos;
+import com.digiaudit.grcpc.modules.masterdata.local.application.LocalContextService;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionActorProvider;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.MasterDataRevisionCoordinator;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionExecutionContext;
@@ -61,6 +63,7 @@ public class OrganizationService {
             .comparing(OrganizationEntity::getCode, String.CASE_INSENSITIVE_ORDER)
             .thenComparing(OrganizationEntity::getId);
 
+    private final com.digiaudit.grcpc.modules.basicdata.application.BasicDataService basicData;
     private final OrganizationRepository organizationRepository;
     private final MasterDataRevisionCoordinator revisionCoordinator;
     private final MasterDataRevisionActorProvider actorProvider;
@@ -69,11 +72,11 @@ public class OrganizationService {
     private final MasterDataStructuralDependencyChecker dependencyChecker;
     private final RevisionMutationGuard mutationGuard;
     private final DocumentCommandService documentCommandService;
-    private final com.digiaudit.grcpc.modules.usermanagement.application.ProfileUserService profileUsers;
-    private final com.digiaudit.grcpc.modules.usermanagement.domain.repository.AppUserRepository users;
-    private final com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService profileAccess;
+    private final OrganizationOwnerAssignmentService owners;
+    private final LocalContextService subprocessContexts;
 
     public OrganizationService(
+            com.digiaudit.grcpc.modules.basicdata.application.BasicDataService basicData,
             OrganizationRepository organizationRepository,
             MasterDataRevisionCoordinator revisionCoordinator,
             MasterDataRevisionActorProvider actorProvider,
@@ -82,10 +85,10 @@ public class OrganizationService {
             MasterDataStructuralDependencyChecker dependencyChecker,
             RevisionMutationGuard mutationGuard,
             DocumentCommandService documentCommandService,
-            com.digiaudit.grcpc.modules.usermanagement.application.ProfileUserService profileUsers,
-            com.digiaudit.grcpc.modules.usermanagement.domain.repository.AppUserRepository users,
-            com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService profileAccess
+            OrganizationOwnerAssignmentService owners,
+            LocalContextService subprocessContexts
     ) {
+        this.basicData = basicData;
         this.organizationRepository = Objects.requireNonNull(organizationRepository, "organizationRepository is required");
         this.revisionCoordinator = Objects.requireNonNull(revisionCoordinator, "revisionCoordinator is required");
         this.actorProvider = Objects.requireNonNull(actorProvider, "actorProvider is required");
@@ -94,7 +97,8 @@ public class OrganizationService {
         this.dependencyChecker = Objects.requireNonNull(dependencyChecker, "dependencyChecker is required");
         this.mutationGuard = Objects.requireNonNull(mutationGuard, "mutationGuard is required");
         this.documentCommandService = Objects.requireNonNull(documentCommandService, "documentCommandService is required");
-        this.profileUsers = profileUsers; this.users = users; this.profileAccess = profileAccess;
+        this.owners = owners;
+        this.subprocessContexts = subprocessContexts;
     }
 
     @Transactional(readOnly = true)
@@ -120,11 +124,14 @@ public class OrganizationService {
         return toResponse(findActiveReadable(id));
     }
 
+    @Transactional
     public OrganizationAggregateMutationResponse create(CreateOrganizationRequest request) {
+        if (hasSubprocessChanges(request.subprocesses())) subprocessContexts.prepareOrganizationSave();
         String code = normalizeCode(request.code());
         OrganizationGeneralInformation generalInformation = normalizeGeneralInformation(
                 request.name(),
                 request.organizationType(),
+                request.organizationTypeId(),
                 request.location(),
                 request.description(),
                 MasterDataLifecycleStatus.ACTIVE,
@@ -144,7 +151,7 @@ public class OrganizationService {
                                 context,
                                 code,
                                 request.parentOrganizationId(),
-                                request.ownerUserId(),
+                                request.ownerAssignments(),
                                 generalInformation
                         );
                         finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
@@ -156,14 +163,17 @@ public class OrganizationService {
                         return operation;
                     }
         );
-        return aggregateResponse(result, finalizedDocuments.get(), confirmed.get());
+        return aggregateResponse(result, finalizedDocuments.get(), confirmed.get(), request.subprocesses());
     }
 
+    @Transactional
     public OrganizationAggregateMutationResponse update(UUID organizationId, UpdateOrganizationRequest request) {
+        if (hasSubprocessChanges(request.subprocesses())) subprocessContexts.prepareOrganizationSave();
         long expectedVersion = requireVersion(request.version());
         OrganizationGeneralInformation generalInformation = normalizeGeneralInformation(
                 request.name(),
                 request.organizationType(),
+                request.organizationTypeId(),
                 request.location(),
                 request.description(),
                 requireUpdateStatus(request.status()),
@@ -188,7 +198,7 @@ public class OrganizationService {
                             organizationId,
                             expectedVersion,
                             request.parentOrganizationId(),
-                            request.ownerUserId(),
+                            request.ownerAssignments(),
                             generalInformation
                     );
                     finalizedDocuments.set(documentCommandService.finalizePreparedAggregate(
@@ -200,7 +210,7 @@ public class OrganizationService {
                     return operation;
                 }
         );
-        return aggregateResponse(result, finalizedDocuments.get(), confirmed.get());
+        return aggregateResponse(result, finalizedDocuments.get(), confirmed.get(), request.subprocesses());
     }
 
     public MasterDataRevisionMutationResponse move(UUID organizationId, MoveOrganizationRequest request) {
@@ -233,7 +243,7 @@ public class OrganizationService {
             RevisionExecutionContext context,
             String code,
             UUID parentOrganizationId,
-            UUID ownerUserId,
+            List<com.digiaudit.grcpc.modules.organization.api.dto.OrganizationOwnerChange> ownerAssignments,
             OrganizationGeneralInformation generalInformation
     ) {
         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
@@ -242,6 +252,7 @@ public class OrganizationService {
         List<OrganizationEntity> hierarchy = organizationRepository.findAllByOrderByIdAsc();
         Map<UUID, OrganizationEntity> byId = indexById(hierarchy);
         OrganizationEntity entity = findByNormalizedCode(hierarchy, code);
+        UUID typeId = basicData.organizationType(generalInformation.organizationTypeId(), generalInformation.organizationType().wireValue(), entity == null ? null : entity.getOrganizationTypeId());
 
         if (entity == null) {
             UUID entityId = UUID.randomUUID();
@@ -250,7 +261,7 @@ public class OrganizationService {
                     entityId,
                     code,
                     generalInformation.name(),
-                    generalInformation.organizationType(),
+                    OrganizationType.fromWireValue(basicData.legacyOrganizationCode(typeId)),
                     parentOrganizationId,
                     generalInformation.location(),
                     generalInformation.description(),
@@ -259,9 +270,9 @@ public class OrganizationService {
                     actorId,
                     now
             );
-            applyOwner(created, ownerUserId);
+            created.setOrganizationTypeId(typeId);
             OrganizationEntity saved = organizationRepository.saveAndFlush(created);
-            return completed(context, saved, RevisionOperationType.CREATE, null, null);
+            return completed(context, saved, RevisionOperationType.CREATE, null, null, ownerAssignments);
         }
 
         JsonNode before = snapshot(entity);
@@ -277,7 +288,7 @@ public class OrganizationService {
         if (operationType == RevisionOperationType.RESTORE) {
             entity.restoreFromCreate(
                     generalInformation.name(),
-                    generalInformation.organizationType(),
+                    OrganizationType.fromWireValue(basicData.legacyOrganizationCode(typeId)),
                     parentOrganizationId,
                     generalInformation.location(),
                     generalInformation.description(),
@@ -289,7 +300,7 @@ public class OrganizationService {
         } else {
             entity.reactivateFromCreate(
                     generalInformation.name(),
-                    generalInformation.organizationType(),
+                    OrganizationType.fromWireValue(basicData.legacyOrganizationCode(typeId)),
                     parentOrganizationId,
                     generalInformation.location(),
                     generalInformation.description(),
@@ -300,9 +311,9 @@ public class OrganizationService {
             );
         }
 
-        applyOwner(entity, ownerUserId);
+        entity.setOrganizationTypeId(typeId);
         OrganizationEntity saved = organizationRepository.saveAndFlush(entity);
-        return completed(context, saved, operationType, expectedVersion, before);
+        return completed(context, saved, operationType, expectedVersion, before, ownerAssignments);
     }
 
     private RevisionOperationResult updateInsideRevision(
@@ -310,7 +321,7 @@ public class OrganizationService {
             UUID organizationId,
             long expectedVersion,
             UUID parentOrganizationId,
-            UUID ownerUserId,
+            List<com.digiaudit.grcpc.modules.organization.api.dto.OrganizationOwnerChange> ownerAssignments,
             OrganizationGeneralInformation generalInformation
     ) {
         mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ORGANIZATION);
@@ -320,10 +331,11 @@ public class OrganizationService {
         requireMutable(entity);
         validateParent(organizationId, parentOrganizationId, byId);
         JsonNode before = snapshot(entity);
-        applyOwner(entity, ownerUserId);
+        UUID typeId = basicData.organizationType(generalInformation.organizationTypeId(), generalInformation.organizationType().wireValue(), entity.getOrganizationTypeId());
+        entity.setOrganizationTypeId(typeId);
         entity.updateGeneralInformation(
                 generalInformation.name(),
-                generalInformation.organizationType(),
+                OrganizationType.fromWireValue(basicData.legacyOrganizationCode(typeId)),
                 parentOrganizationId,
                 generalInformation.location(),
                 generalInformation.description(),
@@ -334,21 +346,28 @@ public class OrganizationService {
                 Instant.now(clock)
         );
         OrganizationEntity saved = organizationRepository.saveAndFlush(entity);
-        return completed(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
+        return completed(context, saved, RevisionOperationType.UPDATE, expectedVersion, before, ownerAssignments);
     }
 
     private OrganizationAggregateMutationResponse aggregateResponse(
             RevisionExecutionResult result,
             List<DocumentCommandResponse> finalizedDocuments,
-            OrganizationResponse organization
+            OrganizationResponse organization,
+            List<LocalContextDtos.ContextChange> subprocesses
     ) {
         MasterDataMutationResult primary = result.primaryResult();
         return new OrganizationAggregateMutationResponse(
                 primary.entityId(),
                 primary.revisionId(),
                 primary.version(),
-                finalizedDocuments, organization
+                finalizedDocuments, organization,
+                hasSubprocessChanges(subprocesses) ? subprocessContexts.saveSubprocesses(
+                        primary.entityId(), new LocalContextDtos.SaveContexts(subprocesses), primary.revisionId()) : null
         );
+    }
+
+    private boolean hasSubprocessChanges(List<LocalContextDtos.ContextChange> changes) {
+        return changes != null && !changes.isEmpty();
     }
 
     private RevisionOperationResult moveInsideRevision(
@@ -444,21 +463,19 @@ public class OrganizationService {
             Long expectedVersion,
             JsonNode beforeSnapshot
     ) {
+        return completed(context, entity, operationType, expectedVersion, beforeSnapshot, List.of());
+    }
+
+    private RevisionOperationResult completed(RevisionExecutionContext context, OrganizationEntity entity,
+            RevisionOperationType operationType, Long expectedVersion, JsonNode beforeSnapshot,
+            List<com.digiaudit.grcpc.modules.organization.api.dto.OrganizationOwnerChange> ownerAssignments) {
+        var assignmentContents = owners.apply(context, entity.getId(), ownerAssignments);
         MasterDataMutationResult primary = new MasterDataMutationResult(entity.getId(), context.revisionId(), entity.getVersion());
-        return RevisionOperationResult.completed(
-                context,
-                primary,
-                List.of(RevisionContentResult.completed(
-                        RevisionEntityType.ORGANIZATION,
-                        entity.getId(),
-                        operationType,
-                        expectedVersion,
-                        beforeSnapshot,
-                        snapshot(entity),
-                        entity.getVersion(),
-                        validationSnapshot()
-                ))
-        );
+        List<RevisionContentResult> contents = new ArrayList<>();
+        contents.add(RevisionContentResult.completed(RevisionEntityType.ORGANIZATION, entity.getId(), operationType,
+                expectedVersion, beforeSnapshot, snapshot(entity), entity.getVersion(), validationSnapshot()));
+        contents.addAll(assignmentContents);
+        return RevisionOperationResult.completed(context, primary, contents);
     }
 
     private void validateParent(
@@ -622,6 +639,7 @@ public class OrganizationService {
     private OrganizationGeneralInformation normalizeGeneralInformation(
             String name,
             OrganizationType organizationType,
+            UUID organizationTypeId,
             String location,
             String description,
             MasterDataLifecycleStatus status,
@@ -636,6 +654,7 @@ public class OrganizationService {
         return new OrganizationGeneralInformation(
                 normalizedName,
                 normalizedType,
+                organizationTypeId,
                 normalizedLocation,
                 normalizedDescription,
                 status,
@@ -664,14 +683,7 @@ public class OrganizationService {
     }
 
     private OrganizationType requireOrganizationType(OrganizationType organizationType) {
-        if (organizationType == null) {
-            throw new UnprocessableEntityException(
-                    "INVALID_ORGANIZATION_TYPE",
-                    "error.masterdata.v2.organizationTypeRequired",
-                    "Organization type is required"
-            );
-        }
-        return organizationType;
+        return organizationType == null ? OrganizationType.OTHER : organizationType;
     }
 
     private String normalizeLocation(String location) {
@@ -816,6 +828,8 @@ public class OrganizationService {
                 node.entity.getCode(),
                 node.entity.getName(),
                 node.entity.getOrganizationType(),
+                node.entity.getOrganizationTypeId(),
+                basicData.name(com.digiaudit.grcpc.modules.basicdata.domain.BasicDataKind.ORGANIZATION_TYPE, node.entity.getOrganizationTypeId()),
                 node.entity.getParentOrganizationId(),
                 node.entity.getName(),
                 node.entity.getStatus(),
@@ -832,6 +846,8 @@ public class OrganizationService {
                 entity.getCode(),
                 entity.getName(),
                 entity.getOrganizationType(),
+                entity.getOrganizationTypeId(),
+                basicData.name(com.digiaudit.grcpc.modules.basicdata.domain.BasicDataKind.ORGANIZATION_TYPE, entity.getOrganizationTypeId()),
                 entity.getParentOrganizationId(),
                 entity.getName(),
                 entity.getStatus(),
@@ -845,30 +861,15 @@ public class OrganizationService {
                 entity.getCreatedBy(),
                 entity.getUpdatedBy(),
                 entity.getDeletedAt(),
-                entity.getDeletedBy(), entity.getOwnerUserId(),
-                entity.getOwnerUserId() == null ? null : users.findByIdAndProfileId(entity.getOwnerUserId(), entity.getProfileId())
-                    .filter(u -> entity.getProfileId().equals(u.getProfileId()))
-                    .map(u -> (u.getFirstName() + " " + u.getLastName()).trim()).orElse(null)
+                entity.getDeletedBy(), owners.list(entity.getId())
         );
     }
 
 
-    private void applyOwner(OrganizationEntity entity, UUID ownerUserId) {
-        if (Objects.equals(entity.getOwnerUserId(), ownerUserId)) return;
-        profileAccess.requireManager();
-        if (ownerUserId != null) profileUsers.validateOwner(ownerUserId);
-        entity.setOwnerUserId(ownerUserId);
-    }
-
-    public record OwnerOption(UUID id, String displayLabel) {}
+    public record OwnerOption(UUID id, String displayLabel, String username, String roleCode) {}
     @Transactional(readOnly = true)
     public List<OwnerOption> ownerOptions() {
-        profileAccess.requireManager();
-        UUID profileId = com.digiaudit.grcpc.common.security.ProfileContext.requireId();
-        return users.findByProfileIdAndRootUserFalseAndProfileAdminFalse(profileId).stream().filter(u -> !u.isRootUser()
-                && !u.isProfileAdmin() && u.isEnabled() && !u.isLocked())
-                .map(u -> new OwnerOption(u.getId(), (u.getFirstName() + " " + u.getLastName()).trim()))
-                .sorted(Comparator.comparing(OwnerOption::displayLabel).thenComparing(OwnerOption::id)).toList();
+        return owners.options().stream().map(option -> new OwnerOption(option.id(), option.displayLabel(), option.username(), option.roleCode())).toList();
     }
 
     /** Current tree only: moving a node immediately changes its inherited ownership scope. */
@@ -876,7 +877,8 @@ public class OrganizationService {
     public Set<UUID> ownedOrganizationIds(UUID userId) {
         var hierarchy = organizationRepository.findByStatusNotOrderByCodeAscIdAsc(DELETED);
         Set<UUID> result = new HashSet<>();
-        hierarchy.stream().filter(o -> userId.equals(o.getOwnerUserId())).forEach(o -> result.add(o.getId()));
+        var direct = owners.directlyOwned(userId);
+        hierarchy.stream().filter(o -> direct.contains(o.getId())).forEach(o -> result.add(o.getId()));
         boolean changed;
         do {
             changed = false;
@@ -891,9 +893,11 @@ public class OrganizationService {
         snapshot.put("code", entity.getCode());
         snapshot.put("name", entity.getName());
         snapshot.put("organizationType", entity.getOrganizationType().wireValue());
+        snapshot.put("organizationTypeId", entity.getOrganizationTypeId());
+        snapshot.put("organizationTypeName", basicData.name(com.digiaudit.grcpc.modules.basicdata.domain.BasicDataKind.ORGANIZATION_TYPE, entity.getOrganizationTypeId()));
         snapshot.put("parentOrganizationId", entity.getParentOrganizationId());
         snapshot.put("profileId", entity.getProfileId());
-        snapshot.put("ownerUserId", entity.getOwnerUserId());
+        snapshot.put("ownerAssignments", owners.list(entity.getId()));
         snapshot.put("displayLabel", entity.getName());
         snapshot.put("status", entity.getStatus().wireValue());
         snapshot.put("location", entity.getLocation());
@@ -917,6 +921,7 @@ public class OrganizationService {
     private record OrganizationGeneralInformation(
             String name,
             OrganizationType organizationType,
+            UUID organizationTypeId,
             String location,
             String description,
             MasterDataLifecycleStatus status,

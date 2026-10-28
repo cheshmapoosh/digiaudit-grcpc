@@ -1,8 +1,10 @@
+import { CatalogTreeOrder } from "@/shared/components/CatalogTreeOrder";
+import { CatalogDeleteButton } from "@/shared/components/CatalogSelection";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useTranslation } from "react-i18next";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
   Bar,
-  Button,
   BusyIndicator,
   MessageStrip,
   Title,
@@ -70,19 +72,19 @@ export default function CentralRiskListReport({
             />
 
             <Button
-              design="Emphasized"
+              design="Default"
               disabled={busy || !selectedKey}
               onClick={onShow}
             >
               {t("common.view", { defaultValue: "نمایش" })}
             </Button>
-            <Button
+            <CatalogDeleteButton
               design="Negative"
               disabled={busy || !selectedKey || !canDelete}
               onClick={onDelete}
             >
               {t("common.delete", { defaultValue: "حذف" })}
-            </Button>
+            </CatalogDeleteButton>
           </>
         }
       />
@@ -96,15 +98,17 @@ export default function CentralRiskListReport({
 
       <div className="riskTreeFrame">
         {busy ? <BusyIndicator active delay={0} /> : null}
-        <CentralRiskTree
-          categories={categories}
-          templates={templates}
-          selectedKey={selectedKey}
-          expansionAnchorKey={expansionAnchorKey}
-          searchText={searchText}
-          busy={busy}
-          onSelect={onSelect}
-        />
+        <CatalogTreeOrder catalog="RISK" refreshKey={JSON.stringify([categories, templates])} filtered={Boolean(searchText.trim())}>
+          <CentralRiskTree
+            categories={categories}
+            templates={templates}
+            selectedKey={selectedKey}
+            expansionAnchorKey={expansionAnchorKey}
+            searchText={searchText}
+            busy={busy}
+            onSelect={onSelect}
+          />
+        </CatalogTreeOrder>
       </div>
     </div>
   );

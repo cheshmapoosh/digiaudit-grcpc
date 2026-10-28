@@ -171,7 +171,12 @@ export default function MainLayout() {
             const roles = isPathInPrefixes(selectedPath, ["/access-control/roles"]);
             breadcrumbItems.push({ route: roles ? "/access-control/roles" : "/access-control/users", text: t(roles ? "nav.roles" : "nav.users") });
         } else if (isPathInPrefixes(selectedPath, ["/profiles"])) {
-            breadcrumbItems.push({ route: "/profiles", text: t("profile.management") });
+            breadcrumbItems.push({ route: "/basic-data", text: t("basicData.management") });
+            breadcrumbItems.push({ route: "/profiles", text: t("basicData.profiles") });
+        } else if (selectedPath.startsWith("/basic-data")) {
+            breadcrumbItems.push({ route: "/basic-data", text: t("basicData.management") });
+            if (selectedPath.includes("/organization-types")) breadcrumbItems.push({ route: "/basic-data/organization-types", text: t("basicData.organization-types.title") });
+            if (selectedPath.includes("/document-types")) breadcrumbItems.push({ route: "/basic-data/document-types", text: t("basicData.document-types.title") });
         } else {
             breadcrumbItems.push({ route: selectedPath, text: t("app.platformTitle") });
         }
@@ -252,7 +257,11 @@ export default function MainLayout() {
                             /> : null}
                         </SideNavigationItem>
                     ) : null}
-                    {isRootAdmin ? <SideNavigationItem text={t("profile.management")} icon="database" data-route="/profiles" selected={isPathInPrefixes(selectedPath, ["/profiles"])} /> : null}
+                    {canViewUsers ? <SideNavigationItem text={t("basicData.management")} icon="database" expanded={isPathInPrefixes(selectedPath, ["/profiles", "/basic-data"])}>
+                        {isRootAdmin ? <SideNavigationSubItem text={t("basicData.profiles")} data-route="/profiles" selected={isPathInPrefixes(selectedPath, ["/profiles"])} /> : null}
+                        <SideNavigationSubItem text={t("basicData.document-types.title")} data-route="/basic-data/document-types" selected={isPathInPrefixes(selectedPath, ["/basic-data/document-types"])} />
+                        <SideNavigationSubItem text={t("basicData.organization-types.title")} data-route="/basic-data/organization-types" selected={isPathInPrefixes(selectedPath, ["/basic-data/organization-types"])} />
+                    </SideNavigationItem> : null}
                 </SideNavigation>
             }
         >

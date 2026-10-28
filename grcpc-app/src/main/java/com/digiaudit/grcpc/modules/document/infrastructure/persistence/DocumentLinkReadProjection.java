@@ -27,6 +27,7 @@ public record DocumentLinkReadProjection(
         UUID targetId,
         DocumentLifecycleStatus linkStatus,
         Instant uploadedAt,
-        UUID uploadedBy
+        UUID uploadedBy,
+        UUID documentTypeId
 ) {
 }

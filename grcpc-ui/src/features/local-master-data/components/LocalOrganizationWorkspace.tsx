@@ -70,11 +70,13 @@ export default function LocalOrganizationWorkspace({
     const canWrite = useCallback((spec: LocalSectionSpec) =>
         referenceManage && spec.areas.every((area) => canAccessMasterData(me, area)),
     [me, referenceManage]);
-    const visibleSections = FORM_SECTIONS.filter((spec) => spec.tab === tab && canRead(spec));
+    // Keep local drafts mounted when another Organization tab is displayed by the parent.
+    const workspaceTab = LOCAL_TABS.includes(tab) ? tab : "subprocesses";
+    const visibleSections = FORM_SECTIONS.filter((spec) => spec.tab === workspaceTab && canRead(spec));
     const sectionButtons = visibleSections.filter((spec) =>
-        spec.key !== "requirement-scopes" && spec.key !== "control-objective-scopes");
+        spec.key !== "contexts" && spec.key !== "requirement-scopes" && spec.key !== "control-objective-scopes");
     const requestedSection = isSection(rawSection) ? LOCAL_SECTION_BY_KEY[rawSection] : null;
-    const activeSpec = requestedSection?.tab === tab && canRead(requestedSection)
+    const activeSpec = requestedSection?.tab === workspaceTab && canRead(requestedSection)
         ? requestedSection : visibleSections[0] ?? null;
     const needsContext = activeSpec && activeSpec.key !== "contexts"
         && activeSpec.key !== "organization-policies";
@@ -149,7 +151,7 @@ export default function LocalOrganizationWorkspace({
                 }));
             });
         return () => { current = false; };
-    }, [organizationId, rawContext, malformed, processView, t]);
+    }, [organizationId, rawContext, malformed, processView, contextRefreshKey, t]);
 
     useEffect(() => {
         if (!organizationId || !contextId || !rawTarget || malformed || !needsTarget) {
@@ -216,7 +218,6 @@ export default function LocalOrganizationWorkspace({
             ...(deletedContexts?.items ?? [])].some((row) => row.id === selectedContext.id)
             ? [selectedContext] : []),
     ];
-    if (!LOCAL_TABS.includes(tab)) return null;
     if (!organizationId) return <MessageStrip design="Information" hideCloseButton>
         {t("local.saveOrganizationFirst", {
             defaultValue: "ابتدا اطلاعات سازمان را ذخیره کنید؛ سپس روابط محلی را ثبت کنید.",
@@ -227,13 +228,16 @@ export default function LocalOrganizationWorkspace({
             {t("local.errors.invalidSelection", { defaultValue: "انتخاب یا پیوند محلی نامعتبر است." })}
         </MessageStrip>;
     }
-    if (!referenceView || visibleSections.length === 0) {
+    if (!referenceView) {
         return <MessageStrip design="Critical" hideCloseButton>
             {t("local.forbidden", { defaultValue: "دسترسی به این بخش مجاز نیست." })}
         </MessageStrip>;
     }
 
     return <div style={{ display: "grid", gap: "0.8rem" }}>
+        {visibleSections.length === 0 ? <MessageStrip design="Critical" hideCloseButton>
+            {t("local.forbidden", { defaultValue: "دسترسی به این بخش مجاز نیست." })}
+        </MessageStrip> : null}
         {sectionButtons.length > 0 ? <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
             {sectionButtons.map((spec) => <Button key={spec.key}
                 design={activeSpec?.key === spec.key ? "Emphasized" : "Transparent"}
@@ -317,7 +321,7 @@ export default function LocalOrganizationWorkspace({
                 <Option value="DELETED">{t("local.status.DELETED", { defaultValue: "حذف‌شده" })}</Option>
             </Select>
         </div>
-        {FORM_SECTIONS.filter((spec) => canRead(spec)).map((spec) =>
+        {FORM_SECTIONS.filter((spec) => spec.key !== "contexts" && canRead(spec)).map((spec) =>
             <LocalSectionPane key={spec.key} spec={spec} organizationId={organizationId}
                 contextId={contextId} policyTargetId={policyTargetId}
                 active={activeSpec?.key === spec.key && (!needsContext || Boolean(contextId))
@@ -331,7 +335,7 @@ export default function LocalOrganizationWorkspace({
                     previous[section] === value ? previous : { ...previous, [section]: value })}
                 onContextCreated={(id) => {
                     setContextRefreshKey((key) => key + 1);
-                    setSelection({ contextId: id });
+                    setSelection({ contextId: id, localRowId: id, localStatus: null });
                 }}
                 resetKey={resetKey} />)}
         <DeleteConfirmDialog open={pendingNavigation !== null}

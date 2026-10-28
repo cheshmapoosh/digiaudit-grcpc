@@ -15,7 +15,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Comparator;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -135,11 +139,147 @@ public class LocalContextService {
     return change(id, expectedOrganizationId, request.version(), "update", request);
   }
 
+  /** The Organization's multi-select creates explicit Local Contexts, never Central scopes. */
+  @Transactional
+  public LocalContextDtos.Selection selectSubprocesses(UUID organizationId,
+      LocalContextDtos.SelectSubprocesses request) {
+    rules.requireWrite("PROCESS");
+    rules.lock(KEYS.toArray(MasterDataHierarchyKey[]::new));
+    var selected = request.subprocessIds();
+    if (selected == null || selected.isEmpty() || selected.stream().anyMatch(id -> id == null)
+        || new HashSet<>(selected).size() != selected.size()) {
+      throw rules.bad("Select distinct Subprocesses");
+    }
+    var ids = selected.stream().sorted(Comparator.comparing(UUID::toString)).toList();
+    List<LocalContextDtos.Row> confirmed = new ArrayList<>();
+    var result = revisions.executeStructural(KEYS,
+        RevisionRequest.local(organizationId, "Select Organization Subprocesses", "Create explicit Local Contexts", null),
+        revision -> {
+          requireRevision(revision, organizationId);
+          var organization = organizations.lockById(organizationId)
+              .orElseThrow(() -> rules.referenceNotFound(organizationId));
+          rules.active(organization.getStatus());
+          // Lock and validate the complete selection before writing its first context.
+          for (UUID id : ids) {
+            var subprocess = subprocesses.lockById(id).orElseThrow(() -> rules.referenceNotFound(id));
+            rules.active(subprocess.getStatus());
+            rows.findByOrganizationIdAndSubprocessId(organizationId, id)
+                .ifPresent(other -> { throw rules.duplicate(other.getStatus()); });
+          }
+          List<RevisionContentResult> contents = new ArrayList<>();
+          MasterDataMutationResult primary = null;
+          for (UUID id : ids) {
+            var row = rows.saveAndFlush(LocalOrganizationSubprocessScopeEntity.create(
+                organizationId, id, null, null, null, actor(), now()));
+            confirmed.add(map(row));
+            contents.add(RevisionContentResult.completed(RevisionEntityType.LOCAL_ORGANIZATION_SUBPROCESS_SCOPE,
+                row.getId(), RevisionOperationType.CREATE, null, null, snapshot(row), row.getVersion(),
+                mapper.valueToTree(Map.of("validated", true))));
+            if (primary == null) primary = new MasterDataMutationResult(row.getId(), revision.revisionId(), row.getVersion());
+          }
+          return RevisionOperationResult.completed(revision, primary, contents);
+        });
+    return new LocalContextDtos.Selection(result.primaryResult().revisionId(), List.copyOf(confirmed));
+  }
+
   @Transactional
   public LocalContextDtos.Version lifecycle(UUID id, UUID expectedOrganizationId,
       Long version, String action) {
     return new LocalContextDtos.Version(change(id, expectedOrganizationId, version, action, null)
         .version());
+  }
+
+  /** Acquire the complete Guard union before the Organization aggregate reads either hierarchy. */
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public void prepareOrganizationSave() {
+    rules.requireWrite("PROCESS");
+    rules.lock(KEYS.toArray(MasterDataHierarchyKey[]::new));
+  }
+
+  @Transactional
+  public LocalContextDtos.Selection saveSubprocesses(UUID organizationId, LocalContextDtos.SaveContexts request) {
+    return saveSubprocesses(organizationId, request, null);
+  }
+
+  /** Organization Save joins the same transaction while keeping Local content in its own Revision. */
+  @Transactional
+  public LocalContextDtos.Selection saveSubprocesses(UUID organizationId, LocalContextDtos.SaveContexts request,
+      UUID causedByRevisionId) {
+    rules.requireWrite("PROCESS");
+    rules.lock(KEYS.toArray(MasterDataHierarchyKey[]::new));
+    var changes = request.changes();
+    var seen = new HashSet<UUID>();
+    if (changes == null || changes.isEmpty()) throw rules.bad("Context changes are required");
+    for (var change : changes) {
+      if (change == null || change.subprocessId() == null || change.operation() == null || !seen.add(change.subprocessId()))
+        throw rules.bad("Select distinct context changes");
+    }
+    var ordered = changes.stream().sorted(Comparator.comparing(change -> change.subprocessId().toString())).toList();
+    List<LocalContextDtos.Row> confirmed = new ArrayList<>();
+    var result = revisions.executeStructural(KEYS,
+        RevisionRequest.local(organizationId, "Save Organization Subprocesses", "Staged Local Context changes", causedByRevisionId), revision -> {
+          requireRevision(revision, organizationId);
+          var organization = organizations.lockById(organizationId).orElseThrow(() -> rules.referenceNotFound(organizationId));
+          rules.nonDeleted(organization.getStatus());
+          Map<UUID, LocalOrganizationSubprocessScopeEntity> existing = new HashMap<>();
+          // All endpoint locks precede context locks, and the full batch is validated before mutation.
+          for (var change : ordered) {
+            var subprocess = subprocesses.lockById(change.subprocessId()).orElseThrow(() -> rules.referenceNotFound(change.subprocessId()));
+            if (change.operation() == LocalContextDtos.ContextOperation.CREATE_OR_RESTORE
+                || change.operation() == LocalContextDtos.ContextOperation.ACTIVATE) {
+              rules.active(organization.getStatus());
+              rules.active(subprocess.getStatus());
+            }
+          }
+          for (var change : ordered) {
+            var occupied = rows.findByOrganizationIdAndSubprocessId(organizationId, change.subprocessId()).orElse(null);
+            if (occupied == null) {
+              if (change.operation() != LocalContextDtos.ContextOperation.CREATE_OR_RESTORE
+                  || change.contextId() != null || change.version() != null) throw rules.bad("Context identity changed");
+              continue;
+            }
+            var row = rows.lockById(occupied.getId()).orElseThrow(() -> rules.notFound(occupied.getId()));
+            if (!row.getId().equals(change.contextId())) throw rules.duplicate(row.getStatus());
+            rules.assertVersion(row.getVersion(), change.version());
+            var action = switch (change.operation()) {
+              case CREATE_OR_RESTORE -> "restore";
+              case ACTIVATE -> "activate";
+              case INACTIVATE -> "inactivate";
+              case DELETE -> "delete";
+            };
+            rules.transition(row.getStatus(), action);
+            if (change.operation() == LocalContextDtos.ContextOperation.CREATE_OR_RESTORE
+                || change.operation() == LocalContextDtos.ContextOperation.ACTIVATE) rules.dates(row.getValidFrom(), row.getValidTo());
+            if (change.operation() == LocalContextDtos.ContextOperation.DELETE) requireNoLiveChildren(row.getId());
+            existing.put(change.subprocessId(), row);
+          }
+          List<RevisionContentResult> contents = new ArrayList<>();
+          MasterDataMutationResult primary = null;
+          for (var change : ordered) {
+            var row = existing.get(change.subprocessId());
+            JsonNode before = row == null ? null : snapshot(row);
+            Long expected = row == null ? null : row.getVersion();
+            RevisionOperationType operation;
+            if (row == null) {
+              row = LocalOrganizationSubprocessScopeEntity.create(organizationId, change.subprocessId(), null, null, null, actor(), now());
+              operation = RevisionOperationType.CREATE;
+            } else {
+              operation = switch (change.operation()) {
+                case CREATE_OR_RESTORE -> { row.restore(actor(), now()); yield RevisionOperationType.RESTORE; }
+                case ACTIVATE -> { row.activate(actor(), now()); yield RevisionOperationType.ACTIVATE; }
+                case INACTIVATE -> { row.inactivate(actor(), now()); yield RevisionOperationType.INACTIVATE; }
+                case DELETE -> { row.delete(actor(), now()); yield RevisionOperationType.DELETE; }
+              };
+            }
+            var saved = rows.saveAndFlush(row);
+            confirmed.add(map(saved));
+            contents.add(RevisionContentResult.completed(RevisionEntityType.LOCAL_ORGANIZATION_SUBPROCESS_SCOPE,
+                saved.getId(), operation, expected, before, snapshot(saved), saved.getVersion(), mapper.valueToTree(Map.of("validated", true))));
+            if (primary == null) primary = new MasterDataMutationResult(saved.getId(), revision.revisionId(), saved.getVersion());
+          }
+          return RevisionOperationResult.completed(revision, primary, contents);
+        });
+    return new LocalContextDtos.Selection(result.primaryResult().revisionId(), List.copyOf(confirmed));
   }
 
   private LocalContextDtos.Mutation change(UUID id, UUID expectedOrganizationId,

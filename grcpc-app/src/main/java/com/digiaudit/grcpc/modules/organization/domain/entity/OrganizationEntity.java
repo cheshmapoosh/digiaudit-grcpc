@@ -31,13 +31,6 @@ public class OrganizationEntity extends com.digiaudit.grcpc.common.persistence.P
     public java.util.UUID getProfileId() { return profileId; }
     public void setProfileId(java.util.UUID profileId) { this.profileId = profileId; }
 
-    @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "owner_user_id", length = 36)
-    private UUID ownerUserId;
-
-    public UUID getOwnerUserId() { return ownerUserId; }
-    public void setOwnerUserId(UUID id) { ownerUserId = id; }
-
     @Id
     @JdbcTypeCode(SqlTypes.BINARY)
     @Column(name = "id", nullable = false, columnDefinition = "RAW(16)")
@@ -52,6 +45,13 @@ public class OrganizationEntity extends com.digiaudit.grcpc.common.persistence.P
     @Convert(converter = OrganizationTypeConverter.class)
     @Column(name = "organization_type", nullable = false, length = 32)
     private OrganizationType organizationType;
+
+    @JdbcTypeCode(SqlTypes.BINARY)
+    @Column(name = "organization_type_id", nullable = false, columnDefinition = "RAW(16)")
+    private UUID organizationTypeId;
+
+    public UUID getOrganizationTypeId() { return organizationTypeId; }
+    public void setOrganizationTypeId(UUID id) { this.organizationTypeId = Objects.requireNonNull(id); }
 
     @JdbcTypeCode(SqlTypes.BINARY)
     @Column(name = "parent_organization_id", columnDefinition = "RAW(16)")

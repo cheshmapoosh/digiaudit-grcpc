@@ -13,6 +13,7 @@ User management handles users, roles, permissions, business permissions, and del
 - Keep role assignment and permission assignment operations explicit and auditable.
 - Be careful with root/admin capabilities; do not accidentally grant broad permissions by default.
 - Keep endpoint paths under `/api/usermanagement/**` aligned with UI repositories.
+- Organization ownership uses typed profile-owned assignments, including shared root/profile-admin accounts. Active assignments block ordinary membership changes; deleted assignment history remains. Role/access revocation does not silently mutate ownership. ORGANIZATION_MASTER_DATA_MANAGER grants only Organization permissions and must be explicitly assigned, never inferred from ownership.
 
 ## Verification
 - Run `./mvnw -Dskip.ui=true test` from `grcpc-app`.

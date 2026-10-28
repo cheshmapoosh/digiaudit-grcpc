@@ -1,6 +1,9 @@
+import { CatalogTreeOrder } from "@/shared/components/CatalogTreeOrder";
+import { CatalogDeleteButton } from "@/shared/components/CatalogSelection";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, BusyIndicator, MessageStrip, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Bar, BusyIndicator, MessageStrip, Title } from "@ui5/webcomponents-react";
 
 import type { CentralAccountGroupSummary } from "../domain/centralAccountGroup.model";
 import type { CentralAccountGroupTreeNode } from "../utils/centralAccountGroup.tree";
@@ -52,16 +55,16 @@ export default function CentralAccountGroupListReport({
               {t("common.create", { defaultValue: "ایجاد" })}
             </Button>
 
-            <Button design="Emphasized" disabled={busy || !selectedId} onClick={onShow}>
+            <Button design="Default" disabled={busy || !selectedId} onClick={onShow}>
               {t("common.view", { defaultValue: "نمایش" })}
             </Button>
-            <Button
+            <CatalogDeleteButton
               design="Negative"
               disabled={busy || !selectedId || !canDelete}
               onClick={onDelete}
             >
               {t("common.delete", { defaultValue: "حذف" })}
-            </Button>
+            </CatalogDeleteButton>
           </>
         }
       />
@@ -71,14 +74,16 @@ export default function CentralAccountGroupListReport({
 
       <div className="accountGroupTreeFrame">
         {busy ? <BusyIndicator active delay={0} /> : null}
-        <CentralAccountGroupTree
-          rows={rows}
-          selectedId={selectedId}
-          expansionAnchorId={expansionAnchorId}
-          searchText={searchText}
-          busy={busy}
-          onSelect={onSelect}
-        />
+        <CatalogTreeOrder catalog="ACCOUNT_GROUP" refreshKey={JSON.stringify([rows])} filtered={Boolean(searchText.trim())}>
+          <CentralAccountGroupTree
+            rows={rows}
+            selectedId={selectedId}
+            expansionAnchorId={expansionAnchorId}
+            searchText={searchText}
+            busy={busy}
+            onSelect={onSelect}
+          />
+        </CatalogTreeOrder>
       </div>
     </div>
   );

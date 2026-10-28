@@ -1,6 +1,8 @@
+import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Bar, Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type {
@@ -70,14 +72,14 @@ export default function CentralRiskSummaryPanel({
           <Text>{value.description || "-"}</Text>
         </div>
       </div>
-      <div className="riskSummaryActions">
+      <DialogFooterBar>
         <Button design="Emphasized" disabled={busy || !canEdit} onClick={onEdit}>
           {t("common.edit", { defaultValue: "ویرایش" })}
         </Button>
         <Button design="Transparent" disabled={busy} onClick={onCancel}>
           {t("common.close", { defaultValue: "بستن" })}
         </Button>
-      </div>
+      </DialogFooterBar>
     </div>
   );
 }

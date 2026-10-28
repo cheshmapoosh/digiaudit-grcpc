@@ -35,7 +35,18 @@ These instructions apply to the whole repository. More specific `AGENTS.md` file
 - Guard unions are lexical; endpoint row locks are Control, Risk Template, Control Objective, Requirement, then ID. Control Objective gets no new Guard.
 - This delivery permits only backend compile with `-Dskip.ui=true -Dmaven.test.skip=true`, UI typecheck and lint. Do not create, edit or run tests, run the app/Flyway, or connect to a database/browser/external service.
 
+## Profile-owned Basic Data
+
+- Profile-owned Organization Types and Document Types are flat administrative Basic Data, separate from the core catalogs above. Root and authorized profile admins manage them under Initial Data Management (مدیریت داده‌های اولیه); Profile management remains root-only within that menu. Their profile IDs are server-owned and immutable. New references require an active type from the selected profile; referenced types cannot be deleted. See `grcpc-docs/master-data/accepted-corrections/2026-10-28-profile-owned-basic-data.md`.
+
+## Organization owner Assignments (2026-10-28)
+
+- Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-organization-owner-assignments.md`. Typed many-to-many owner Assignments replace the scalar owner field and join Organization aggregate Save under the existing ORGANIZATION Guard and transaction. The Owners tab precedes Documents.
+- Actual root, authorized profile admins, and profile-local MASTER_DATA_ADMIN/ORGANIZATION_MASTER_DATA_MANAGER users are eligible owners. Only root and the selected profile's admin manage assignments. Ownership grants no authority. The new Organization role has narrow MD_ORGANIZATION permissions; existing Reference permissions retain Organization compatibility.
+
 ## Structural hierarchy concurrency rule
+
+- The accepted `grcpc-docs/master-data/accepted-corrections/2026-10-28-main-catalog-display-order.md` authorizes sibling drag-and-drop only on the nine main Governance tree pages. Persist independent `display_order` fields in existing tables; forms, modals, value helps, relationship tabs and their existing sort fields remain outside this behavior. Reorder uses the existing hierarchy Guard, profile protection, versions and one CENTRAL Revision. New inserts are first in their group.
 - Before implementing, modifying, or reviewing a structural mutation, identify the affected hierarchy boundary.
 - Every `Create`, `Move`, `Delete`, `Restore`, re-parenting operation, and lifecycle change that affects structural eligibility must acquire the corresponding row in `masterdata_hierarchy_guard` with `PESSIMISTIC_WRITE` before reading or validating the hierarchy.
 - The Guard Row lock, hierarchy validation, source mutation, and Business Revision persistence must remain inside the same database transaction.

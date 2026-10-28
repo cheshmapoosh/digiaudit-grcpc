@@ -50,7 +50,8 @@ public class DocumentController {
                 targetType(request.targetType()),
                 request.targetId(),
                 request.validFrom(),
-                request.validTo()
+                request.validTo(),
+                request.documentTypeId()
         ));
     }
 
@@ -99,7 +100,8 @@ public class DocumentController {
                 request.description(),
                 request.documentCategoryCode(),
                 request.validFrom(),
-                request.validTo()
+                request.validTo(),
+                request.documentTypeId()
         ));
     }
 

@@ -14,6 +14,7 @@ Applies to `grcpc-app/src/main/java/com/digiaudit/grcpc/modules/document`.
 - Successful finalization deletes the temporary database row in the Document transaction.
 - Successful finalization deletes the temporary object after the database transaction commits.
 - Document commands use direct Spring-managed transactions and do not use Business Revision.
+- Document identity references a profile-owned controlled `documentTypeId`; new attachments require it. Preflight profile/type/status eligibility inside the existing protected transaction before permanent promotion. Type metadata changes keep the same document/version identity and join the existing metadata or parent aggregate command. Existing unclassified documents remain readable; free-text category is a separate retained field.
 - Parent aggregate Create/Update may invoke Document commands inside the already-open parent transaction; Document still creates no Revision Content of its own.
 - Aggregate finalization preflights every temporary upload before the parent Oracle mutation and then validates all document/version/metadata drafts before applying any Document mutation.
 - Lock temporary-upload and existing-document rows in stable UUID order. A failed aggregate retains temporary rows/objects and removes only permanent objects created by the failed attempt.

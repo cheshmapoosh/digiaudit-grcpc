@@ -1,13 +1,16 @@
+import OrganizationOwnersTab from "../components/OrganizationOwnersTab";
+import type { OrganizationOwnerChange } from "../domain/organization.model";
+import { useBasicDataOptions } from "@/features/basic-data";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useAuthState } from "@/features/auth";
-import { organizationService } from "../service/organization.service";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
-import { LocalOrganizationWorkspace } from "@/features/local-master-data";
+import { LocalOrganizationWorkspace, OrganizationSubprocessTable, type LocalContextDraft } from "@/features/local-master-data";
 import { OrganizationObjectivesTab } from "@/features/objective";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Text, ObjectStatus, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import {
     DocumentManager,
@@ -21,7 +24,6 @@ import { PersianDatePicker, type PersianDateDraftState } from "@/shared/componen
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import ParentValueHelpDialog from "../components/ParentValueHelpDialog";
 import {
-    ORGANIZATION_TYPES,
     type OrganizationEditableStatus,
     type OrganizationNode,
     type OrganizationNodeCreate,
@@ -32,15 +34,15 @@ import { buildTree, collectDescendantIds } from "../utils/organization.tree";
 
 export type OrganizationObjectMode = "create" | "edit" | "view";
 export type OrganizationTabKey = "general" | "subprocesses" | "risks" | "controls"
-    | "regulations" | "objectives" | "businessObjectives" | "policies" | "documents";
+    | "regulations" | "objectives" | "businessObjectives" | "policies" | "owners" | "documents";
 
 interface OrganizationFormState {
     code: string;
     name: string;
     organizationType: OrganizationType;
+    organizationTypeId: string;
     status: OrganizationEditableStatus;
     parentOrganizationId: string | null;
-    ownerUserId: string | null;
     location: string;
     description: string;
     validFrom: string;
@@ -77,9 +79,9 @@ function toFormState(value: OrganizationNode | null): OrganizationFormState {
         code: value?.code ?? "",
         name: value?.name ?? "",
         organizationType: value?.organizationType ?? "OTHER",
+        organizationTypeId: value?.organizationTypeId ?? "",
         status: value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
         parentOrganizationId: value?.parentOrganizationId ?? null,
-        ownerUserId: value?.ownerUserId ?? null,
         location: value?.location ?? "",
         description: value?.description ?? "",
         validFrom: value?.validFrom ?? "",
@@ -89,9 +91,8 @@ function toFormState(value: OrganizationNode | null): OrganizationFormState {
 
 function normalized(form: OrganizationFormState, mode: OrganizationObjectMode) {
     const common = {
-        ownerUserId: form.ownerUserId,
         name: form.name.trim(),
-        organizationType: form.organizationType,
+        organizationType: form.organizationType, organizationTypeId: form.organizationTypeId,
         location: form.location.trim(),
         description: form.description.trim(),
         validFrom: form.validFrom.trim(),
@@ -116,17 +117,16 @@ export default function OrganizationObjectPage({
     onLocalDirtyChange, onLocalNavigation,
 }: OrganizationObjectPageProps) {
     const { t } = useTranslation();
-    const { manage } = useMasterDataAccess("REFERENCE");
+    const { manage } = useMasterDataAccess("ORGANIZATION");
+    const referenceAccess = useMasterDataAccess("REFERENCE");
+    const processAccess = useMasterDataAccess("PROCESS");
+    const organizationTypes = useBasicDataOptions("organization-types", mode !== "view");
     const canAssignOwner = useAuthState((state) => Boolean(state.me?.rootUser || state.me?.authorities.includes("ROLE_PROFILE_ADMIN")));
-    const [ownerOptions, setOwnerOptions] = useState<{ id: string; displayLabel: string }[]>([]);
-    const [ownerOptionsError, setOwnerOptionsError] = useState(false);
-    useEffect(() => {
-        if (!canAssignOwner || mode === "view") return;
-        let alive = true;
-        void organizationService.ownerOptions().then((rows) => { if (alive) setOwnerOptions(rows); })
-            .catch(() => { if (alive) setOwnerOptionsError(true); });
-        return () => { alive = false; };
-    }, [canAssignOwner, mode]);
+    const [ownerChanges, setOwnerChanges] = useState<OrganizationOwnerChange[]>([]);
+    const [ownerSelectionDirty, setOwnerSelectionDirty] = useState(false);
+    const [subprocessChanges, setSubprocessChanges] = useState<LocalContextDraft[]>([]);
+    const [subprocessSelectionPending, setSubprocessSelectionPending] = useState(false);
+    const [subprocessReady, setSubprocessReady] = useState(true);
     const [form, setForm] = useState(() => toFormState(value));
     const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toFormState(value), mode)));
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -138,10 +138,12 @@ export default function OrganizationObjectPage({
     });
     const [internalTab, setInternalTab] = useState<OrganizationTabKey>("general");
     const [localObjectiveDirty, setLocalObjectiveDirty] = useState(false);
+    const [localWorkspaceDirty, setLocalWorkspaceDirty] = useState(false);
     const scopeRef = useRef(mode === "create" ? "CREATE" : value?.id ?? "EMPTY");
-    const generalInformationDirty = JSON.stringify(normalized(form, mode)) !== baseline;
+    const generalInformationDirty = JSON.stringify(normalized(form, mode)) !== baseline || ownerChanges.length > 0;
     const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
-    const dirty = generalInformationDirty || invalidDateDraft || localObjectiveDirty;
+    const dirty = generalInformationDirty || ownerSelectionDirty || invalidDateDraft || localObjectiveDirty
+        || subprocessChanges.length > 0 || subprocessSelectionPending;
 
     const activeTab = controlledTab ?? internalTab;
     const readOnly = mode === "view" || !manage;
@@ -163,15 +165,17 @@ export default function OrganizationObjectPage({
     }, [dirty, mode, onDirtyChange, scope, value]);
 
     useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+    useEffect(() => { onLocalDirtyChange?.(localWorkspaceDirty); }, [localWorkspaceDirty, onLocalDirtyChange]);
 
     const descendants = useMemo(() => new Set(collectDescendantIds(buildTree(allItems), value?.id)), [allItems, value?.id]);
     const selectedParent = form.parentOrganizationId ? allItems.find((item) => item.id === form.parentOrganizationId) : null;
 
-    const typeLabel = t(`organization.types.${form.organizationType}`, { defaultValue: form.organizationType });
+    const typeLabel = organizationTypes.items.find((item) => item.id === form.organizationTypeId)?.name ?? value?.organizationTypeName ?? t(`organization.types.${form.organizationType}`, { defaultValue: form.organizationType });
 
     const change = <K extends keyof OrganizationFormState>(key: K, next: OrganizationFormState[K]) => setForm((current) => ({ ...current, [key]: next }));
 
     const validate = () => {
+        if (!form.organizationTypeId || organizationTypes.loading || organizationTypes.error) return setValidationError(t("basicData.typeRequired")), false;
         if (mode === "create" && !form.code.trim()) return setValidationError(t("organization.validation.codeRequired", { defaultValue: "Code is required" })), false;
         if (!form.name.trim()) return setValidationError(t("organization.validation.nameRequired", { defaultValue: "Name is required" })), false;
         if (form.name.trim().length > 255) return setValidationError(t("organization.validation.nameMaxLength", { defaultValue: "Name cannot exceed 255 characters" })), false;
@@ -180,33 +184,42 @@ export default function OrganizationObjectPage({
         if (form.parentOrganizationId && (form.parentOrganizationId === value?.id || descendants.has(form.parentOrganizationId) || !allItems.some((item) => item.id === form.parentOrganizationId))) return setValidationError(t("organization.errors.invalidHierarchyMove", { defaultValue: "Invalid parent" })), false;
         if (form.validFrom && form.validTo && form.validFrom > form.validTo) return setValidationError(t("organization.validation.invalidValidityRange", { defaultValue: "Invalid validity range" })), false;
         if (!documentDraft.ready || documentDraft.invalid || documentDraft.uploading) return setValidationError(t("document.errors.finalize", { defaultValue: "Document drafts are not ready" })), false;
+        if (subprocessSelectionPending || (subprocessChanges.length > 0 && !subprocessReady)) return false;
         setValidationError(null);
         return true;
     };
 
     const submit = async () => {
         if (readOnly || !validate()) return;
+        const subprocesses = subprocessChanges.map(({ subprocessId, operation, contextId, version }) => ({ subprocessId, operation, contextId, version }));
         const payload = mode === "create"
-            ? { code: form.code.trim(), name: form.name.trim(), organizationType: form.organizationType, parentOrganizationId: form.parentOrganizationId, ownerUserId: form.ownerUserId, location: form.location.trim() || null, description: form.description.trim() || null, validFrom: form.validFrom || null, validTo: form.validTo || null, documents: toDocumentAggregateRequest(documentDraft) } satisfies OrganizationNodeCreate
-            : { version: value?.version ?? 0, name: form.name.trim(), organizationType: form.organizationType, status: form.status, parentOrganizationId: form.parentOrganizationId, ownerUserId: form.ownerUserId, location: form.location.trim() || null, description: form.description.trim() || null, validFrom: form.validFrom || null, validTo: form.validTo || null, documents: toDocumentAggregateRequest(documentDraft) } satisfies OrganizationNodeUpdate;
+            ? { code: form.code.trim(), name: form.name.trim(), organizationType: form.organizationType, organizationTypeId: form.organizationTypeId, parentOrganizationId: form.parentOrganizationId, ownerAssignments: ownerChanges, subprocesses, location: form.location.trim() || null, description: form.description.trim() || null, validFrom: form.validFrom || null, validTo: form.validTo || null, documents: toDocumentAggregateRequest(documentDraft) } satisfies OrganizationNodeCreate
+            : { version: value?.version ?? 0, name: form.name.trim(), organizationType: form.organizationType, organizationTypeId: form.organizationTypeId, status: form.status, parentOrganizationId: form.parentOrganizationId, ownerAssignments: ownerChanges, subprocesses, location: form.location.trim() || null, description: form.description.trim() || null, validFrom: form.validFrom || null, validTo: form.validTo || null, documents: toDocumentAggregateRequest(documentDraft) } satisfies OrganizationNodeUpdate;
         if (await onSubmit(payload)) {
+            setOwnerChanges([]);
+            setOwnerSelectionDirty(false);
+            setSubprocessChanges([]);
+            setSubprocessSelectionPending(false);
             setBaseline(JSON.stringify(normalized(form, mode)));
             onDirtyChange?.(false);
         }
     };
 
-    const saveDisabled = busy
+    const saveDisabled = busy || organizationTypes.loading || Boolean(organizationTypes.error) || !form.organizationTypeId
+        || localWorkspaceDirty
+        || ownerSelectionDirty
+        || subprocessSelectionPending || (subprocessChanges.length > 0 && !subprocessReady)
         || invalidDateDraft
         || documentDraft.uploading
         || documentDraft.invalid
         || !documentDraft.ready
-        || (!generalInformationDirty && !documentDraft.dirty);
+        || (!generalInformationDirty && !documentDraft.dirty && subprocessChanges.length === 0);
 
     return <div style={ROOT_STYLE}>
         <CatalogParentHeader objectTitle={form.name || t("organization.object.modalTitle")} label={t("organization.fields.parent")} parentId={form.parentOrganizationId}
             busy={busy} onClearParent={!readOnly ? () => change("parentOrganizationId", null) : undefined}
-            parent={selectedParent ? { code: selectedParent.code, title: selectedParent.name, type: t(`organization.types.${selectedParent.organizationType}`), status: selectedParent.status } : null}
-            selection={!readOnly ? <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+            parent={selectedParent ? { code: selectedParent.code, title: selectedParent.name, type: selectedParent.organizationTypeName ?? t(`organization.types.${selectedParent.organizationType}`), status: selectedParent.status } : null}
+            selection={!readOnly ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
 
         <DetailTabContainer onTabSelect={(event) => { const key = (event.detail.tab.getAttribute("data-tab-key") as OrganizationTabKey | null); if (key) { if (!controlledTab) setInternalTab(key); onActiveTabChange?.(key); } }}>
             <Tab text={t("organization.tabs.general", { defaultValue: "General Information" })} selected={activeTab === "general"} data-tab-key="general" />
@@ -217,9 +230,12 @@ export default function OrganizationObjectPage({
             <Tab text={t("organization.tabs.objectives", { defaultValue: "Control Objectives" })} selected={activeTab === "objectives"} data-tab-key="objectives" />
             <Tab text={t("organization.tabs.businessObjectives", { defaultValue: "Objectives" })} selected={activeTab === "businessObjectives"} data-tab-key="businessObjectives" disabled={mode === "create"} />
             <Tab text={t("organization.tabs.policies", { defaultValue: "Policy" })} selected={activeTab === "policies"} data-tab-key="policies" />
+            <Tab text={t("organization.tabs.owners")} selected={activeTab === "owners"} data-tab-key="owners" />
             <Tab text={t("organization.tabs.documents", { defaultValue: "Documents" })} selected={activeTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
 
+        {!readOnly && organizationTypes.error ? <MessageStrip design="Negative" hideCloseButton>{organizationTypes.error}</MessageStrip> : null}
+        {!readOnly && !organizationTypes.loading && !organizationTypes.error && organizationTypes.items.every((item) => item.status !== "ACTIVE") ? <MessageStrip design="Information" hideCloseButton>{t("basicData.noOrganizationTypes")}</MessageStrip> : null}
         {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
         {validationError ? <MessageStrip design="Negative" onClose={() => setValidationError(null)}>{validationError}</MessageStrip> : null}
 
@@ -228,27 +244,32 @@ export default function OrganizationObjectPage({
                 <div className="modalThreeColumnGrid">
                     <FormField label={t("organization.fields.code", { defaultValue: "Code" })} required>{readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} onInput={(e) => change("code", readValue(e))} />}</FormField>
                     <FormField label={t("organization.fields.name", { defaultValue: "Name" })} required>{readOnly ? <Text className="objectPageValue">{(form.name) || "—"}</Text> : <Input value={form.name} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("name", readValue(e))} />}</FormField>
-                    <FormField label={t("organization.fields.organizationType", { defaultValue: "Organization type" })} required>{readOnly ? <Text className="objectPageValue">{(typeLabel) || "—"}</Text> : <Select value={form.organizationType} disabled={readOnly || busy} accessibleName={t("organization.fields.organizationType", { defaultValue: "Organization type" })} onChange={(e) => change("organizationType", readValue(e) as OrganizationType)}>{ORGANIZATION_TYPES.map((type) => <Option key={type} value={type}>{t(`organization.types.${type}`, { defaultValue: type })}</Option>)}</Select>}</FormField>
+                    <FormField label={t("organization.fields.organizationType", { defaultValue: "Organization type" })} required>{readOnly ? <Text className="objectPageValue">{(typeLabel) || "—"}</Text> : <Select value={form.organizationTypeId} disabled={busy || organizationTypes.loading || Boolean(organizationTypes.error)} accessibleName={t("organization.fields.organizationType")} onChange={(event) => change("organizationTypeId", event.detail.selectedOption.value ?? "")}>
+                        <Option value="" selected={!form.organizationTypeId}>{t("basicData.choose")}</Option>
+                        {organizationTypes.items.filter((type) => type.status === "ACTIVE" || type.id === value?.organizationTypeId).map((type) => <Option key={type.id} value={type.id} selected={type.id === form.organizationTypeId}>{type.name}</Option>)}
+                    </Select>}</FormField>
                     <FormField label={t("organization.fields.status", { defaultValue: "Status" })}>{readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t(form.status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select value={form.status} disabled={mode !== "edit" || busy} accessibleName={t("organization.fields.status", { defaultValue: "Status" })} onChange={(e) => change("status", readValue(e) as OrganizationEditableStatus)}><Option value="ACTIVE">{t("common.active", { defaultValue: "Active" })}</Option><Option value="INACTIVE">{t("common.inactive", { defaultValue: "Inactive" })}</Option></Select>}</FormField>
-                    <FormField label={t("organization.fields.owner")}>
-                        {readOnly ? <Text className="objectPageValue">{(ownerOptions.find((owner) => owner.id === form.ownerUserId)?.displayLabel ?? value?.ownerDisplayLabel ?? t("organization.owner.none")) || "—"}</Text> : <Select value={form.ownerUserId ?? ""} disabled={readOnly || busy || !canAssignOwner || ownerOptionsError} accessibleName={t("organization.fields.owner")} onChange={(e) => change("ownerUserId", e.detail.selectedOption?.value || null)}>
-                            <Option value="" selected={!form.ownerUserId}>{t("organization.owner.none")}</Option>
-                            {form.ownerUserId && !ownerOptions.some((o) => o.id === form.ownerUserId) ? <Option value={form.ownerUserId} selected>{value?.ownerDisplayLabel ?? form.ownerUserId}</Option> : null}
-                            {ownerOptions.map((owner) => <Option key={owner.id} value={owner.id} selected={form.ownerUserId === owner.id}>{owner.displayLabel}</Option>)}
-                        </Select>}
-                        {ownerOptionsError ? <MessageStrip design="Negative" hideCloseButton>{t("organization.owner.loadError")}</MessageStrip> : null}
-                    </FormField>
                     <FormField label={t("organization.fields.location", { defaultValue: "Location" })}>{readOnly ? <Text className="objectPageValue">{(form.location) || "—"}</Text> : <Input value={form.location} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("location", readValue(e))} />}</FormField>
                     <div className="modalDateRange"><FormField label={t("organization.fields.validFrom", { defaultValue: "Valid from" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("organization.fields.validFrom", { defaultValue: "Valid from" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validFrom", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validFrom.valid === state.valid && current.validFrom.draftValue === state.draftValue && current.validFrom.dirty === state.dirty ? current : { ...current, validFrom: state })} />}</FormField>
                     <FormField label={t("organization.fields.validTo", { defaultValue: "Valid to" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("organization.fields.validTo", { defaultValue: "Valid to" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validTo", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validTo.valid === state.valid && current.validTo.draftValue === state.draftValue && current.validTo.dirty === state.dirty ? current : { ...current, validTo: state })} />}</FormField></div>
                     <FormField label={t("organization.fields.description", { defaultValue: "Description" })} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea value={form.description} readonly={readOnly} disabled={busy} rows={4} accessibleName={t("organization.fields.description", { defaultValue: "Description" })} onInput={(e) => change("description", readValue(e))} />}</FormField>
                 </div>
             </div>
+            <div style={{ display: activeTab === "owners" ? "block" : "none" }}>
+                <OrganizationOwnersTab rows={value?.ownerAssignments ?? []} changes={ownerChanges} onChange={setOwnerChanges} onPendingChange={setOwnerSelectionDirty} editable={!readOnly && canAssignOwner} busy={busy} />
+            </div>
             <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("organization.tabs.documents", { defaultValue: "Documents" })} targetType="ORG" targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentAggregateError} onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
-            <div style={{ display: activeTab !== "general" && activeTab !== "documents" && activeTab !== "businessObjectives" ? "block" : "none" }}>
+            <div style={{ display: activeTab === "subprocesses" ? "block" : "none" }}>
+                {referenceAccess.view && processAccess.view ? <OrganizationSubprocessTable
+                    organizationId={value?.id ?? null} editable={!readOnly && referenceAccess.manage} busy={busy}
+                    changes={subprocessChanges} onChange={setSubprocessChanges}
+                    onPendingChange={setSubprocessSelectionPending} onReadyChange={setSubprocessReady} />
+                    : <MessageStrip design="Critical" hideCloseButton>{t("local.forbidden")}</MessageStrip>}
+            </div>
+            <div style={{ display: activeTab !== "general" && activeTab !== "documents" && activeTab !== "owners" && activeTab !== "businessObjectives" && activeTab !== "subprocesses" ? "block" : "none" }}>
                 {onLocalDirtyChange && onLocalNavigation ? <LocalOrganizationWorkspace
                     organizationId={value?.id ?? null} tab={activeTab}
-                    onDirtyChange={onLocalDirtyChange}
+                    onDirtyChange={setLocalWorkspaceDirty}
                     navigateWithinOrganization={onLocalNavigation} /> : null}
             </div>
             <div style={{ display: activeTab === "businessObjectives" ? "block" : "none" }}><OrganizationObjectivesTab organizationId={value?.id ?? null} manage={manage} onDirtyChange={setLocalObjectiveDirty} /></div>

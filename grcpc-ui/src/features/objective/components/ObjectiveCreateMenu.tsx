@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Menu, MenuItem } from "@ui5/webcomponents-react";
 import type { ObjectiveKind } from "../domain/objective.model";
 
 export default function ObjectiveCreateMenu({ disabled, slot, canCreateObjective, onCreate }: {

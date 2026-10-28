@@ -46,6 +46,13 @@ public class DocumentEntity implements com.digiaudit.grcpc.common.persistence.Pr
     @Column(name = "document_category_code", length = 64)
     private String documentCategoryCode;
 
+    @JdbcTypeCode(SqlTypes.BINARY)
+    @Column(name = "document_type_id", columnDefinition = "RAW(16)")
+    private UUID documentTypeId;
+
+    public UUID getDocumentTypeId() { return documentTypeId; }
+    public void setDocumentTypeId(UUID value) { this.documentTypeId = value; }
+
     @Convert(converter = DocumentLifecycleStatusConverter.class)
     @Column(name = "status", nullable = false, length = 32)
     private DocumentLifecycleStatus status;

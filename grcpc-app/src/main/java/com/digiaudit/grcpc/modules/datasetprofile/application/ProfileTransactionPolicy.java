@@ -35,7 +35,7 @@ public class ProfileTransactionPolicy {
     public Object protect(ProceedingJoinPoint call) throws Throwable {
         var state = ProfileContext.state();
         String type = call.getSignature().getDeclaringTypeName();
-        boolean business = type.contains(".modules.masterdata.") || type.contains(".modules.organization.")
+        boolean business = type.contains(".modules.basicdata.") || type.contains(".modules.masterdata.") || type.contains(".modules.organization.")
                 || type.contains(".modules.document.") || type.contains(".modules.securityacl.");
         boolean administration = type.contains(".modules.datasetprofile.") || type.contains(".modules.usermanagement.");
         if ((business || administration) && TransactionSynchronizationManager.isActualTransactionActive()

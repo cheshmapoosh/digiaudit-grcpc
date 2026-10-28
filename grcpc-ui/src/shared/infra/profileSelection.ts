@@ -50,5 +50,5 @@ export function assertRequestProfile(id: string | null) {
 }
 
 export function isDatasetUrl(url: string) {
-  return /\/api\/(master-data(?:\/|$)|objectives(?:\/|$)|organizations(?:\/|$)|global-controls(?:\/|$)|control-groups(?:\/|$)|dashboard\/master-data|security\/resource-acl)/.test(url);
+  return /\/api\/(basic-data(?:\/|$)|master-data(?:\/|$)|objectives(?:\/|$)|organizations(?:\/|$)|global-controls(?:\/|$)|control-groups(?:\/|$)|dashboard\/master-data|security\/resource-acl)/.test(url);
 }

@@ -106,4 +106,8 @@ public class DocumentMetadataUpdateRequest {
     public void setValidTo(LocalDate validTo) {
         this.validTo = PatchValue.present(validTo);
     }
+    private PatchValue<UUID> documentTypeId = PatchValue.absent();
+    public PatchValue<UUID> documentTypeId() { return documentTypeId; }
+    @JsonSetter("documentTypeId")
+    public void setDocumentTypeId(UUID value) { this.documentTypeId = PatchValue.present(value); }
 }

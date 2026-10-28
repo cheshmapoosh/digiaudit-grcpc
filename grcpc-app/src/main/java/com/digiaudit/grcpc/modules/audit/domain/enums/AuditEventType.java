@@ -1,6 +1,7 @@
 package com.digiaudit.grcpc.modules.audit.domain.enums;
 
 public enum AuditEventType {
+    BASIC_DATA_CHANGED,
     PROFILE_CHANGED,
     SYSTEM_INITIALIZED,
     ROOT_USER_CREATED,

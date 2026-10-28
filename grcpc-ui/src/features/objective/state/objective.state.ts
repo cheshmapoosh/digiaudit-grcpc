@@ -8,7 +8,7 @@ interface ObjectiveState {
   load: () => Promise<void>;
   create: (body: ObjectiveCreate) => Promise<string>;
   update: (id: string, body: ObjectiveUpdate) => Promise<void>;
-  remove: (id: string, version: number) => Promise<void>;
+  remove: (id: string, version: number, refresh?: boolean) => Promise<void>;
 }
 
 export const useObjectiveState = create<ObjectiveState>((set, get) => ({
@@ -28,8 +28,9 @@ export const useObjectiveState = create<ObjectiveState>((set, get) => ({
     await objectiveApi.update(id, body);
     await get().load();
   },
-  remove: async (id, version) => {
+  remove: async (id, version, refresh = true) => {
     await objectiveApi.remove(id, version);
-    await get().load();
+    if (refresh) await get().load();
+    else set((state) => ({ items: state.items.filter((item) => item.id !== id) }));
   },
 }));

@@ -2,7 +2,8 @@ import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ObjectStatus, Button, Input, Label, MessageStrip, MultiComboBox, MultiComboBoxItem, Option, Select, Tab, Text, TextArea } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { ObjectStatus, Input, Label, MessageStrip, MultiComboBox, MultiComboBoxItem, Option, Select, Tab, Text, TextArea } from "@ui5/webcomponents-react";
 
 import {
   DocumentManager,

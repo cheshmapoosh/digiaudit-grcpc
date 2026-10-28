@@ -22,7 +22,7 @@ All unrelated Conceptual, Logical, Physical, Document, Revision, Greenfield, Leg
 | Technical tables | 2 |
 | Total Master Data V2 physical tables at this decision | 47 |
 
-The later Policy simplification, Objective extension, and Global Control library extension bring the physical count to 53; the accepted 2026-10-27 four-Assignment correction brings the current count to 57. The technical table count remains two. The `OBJECTIVE` Guard row is seeded by `V1186`, and `GLOBAL_CONTROL` by `V1187`.
+The later Policy simplification, Objective extension, and Global Control library extension bring the physical count to 53; the accepted 2026-10-27 four-Assignment correction brings it to 57. The 2026-10-28 typed Organization owner Assignment brings the current count to 58. The technical table count remains two. The `OBJECTIVE` Guard row is seeded by `V1186`, and `GLOBAL_CONTROL` by `V1187`.
 
 Approved technical tables:
 
@@ -51,9 +51,11 @@ The table has one row per approved independent hierarchy, not one row per busine
 
 ## 4. Current hierarchy registry
 
+The [2026-10-28 main-page display-order correction](accepted-corrections/2026-10-28-main-catalog-display-order.md) uses these same nine keys for sibling reordering. Reorder acquires the registered Guard before sibling reads, validates unchanged typed parent and observed versions/sequence, and keeps source ranks, source audit/version and CENTRAL Revision in one coordinator transaction after the dataset ADMINISTRATION lock. It introduces no hierarchy key or technical table.
+
 | Key | Entity/tables | Rule |
 | --- | --- | --- |
-| `ORGANIZATION` | `organization` | All structural Organization mutations share this Guard. |
+| `ORGANIZATION` | `organization`, `organization_owner_assignment` | All structural Organization mutations and aggregate owner changes share this Guard. Create/Update acquire it even for unchanged parent/owner-only edits; source, owner changes, Documents and Revision stay in one coordinator transaction after the dataset ADMINISTRATION lock. |
 | `PROCESS` | `central_process`, `central_subprocess` | Process and Subprocess are one structural hierarchy and share one Guard. |
 | `RISK` | `central_risk_category`, `central_risk_template` | Category and Template structural mutations share this Guard. |
 | `ACCOUNT_GROUP` | `central_account_group` | All Account Group structural mutations share this Guard. |

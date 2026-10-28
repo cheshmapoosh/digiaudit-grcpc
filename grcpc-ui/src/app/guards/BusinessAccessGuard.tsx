@@ -16,6 +16,10 @@ export default function BusinessAccessGuard() {
   if (area) allowed = canAccessMasterData(me, area, /\/(new|edit)\/?$/.test(pathname));
   if (pathname === "/master-data") allowed = MASTER_DATA_AREAS.some((item) => canAccessMasterData(me, item));
   if (pathname.startsWith("/access-control/users")) allowed = Boolean(me?.rootUser || me?.authorities.includes("ROLE_PROFILE_ADMIN"));
+  if (pathname === "/basic-data" || pathname.startsWith("/basic-data/")) {
+    allowed = Boolean(me?.rootUser || me?.authorities.includes("ROLE_PROFILE_ADMIN"));
+    if (allowed && !currentProfile()) return <MessageStrip design="Information" hideCloseButton>{t("profile.required")}</MessageStrip>;
+  }
   if (pathname.startsWith("/settings/") || pathname === "/profiles" || pathname.startsWith("/profiles/")
     || pathname === "/access-control/roles" || pathname.startsWith("/access-control/roles/")) allowed = Boolean(me?.rootUser);
   return allowed ? <Outlet /> : <MessageStrip design="Negative" hideCloseButton>{t("security.accessDenied")}</MessageStrip>;

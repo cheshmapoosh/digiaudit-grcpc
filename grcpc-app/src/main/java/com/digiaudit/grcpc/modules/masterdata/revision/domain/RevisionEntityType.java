@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Set;
 
 public enum RevisionEntityType {
+  ORGANIZATION_OWNER_ASSIGNMENT("ORGANIZATION_OWNER_ASG", EnumSet.of(RevisionDomain.CENTRAL)),
   ORGANIZATION("ORG", EnumSet.of(RevisionDomain.CENTRAL)),
   OBJECTIVE("OBJECTIVE", EnumSet.of(RevisionDomain.CENTRAL)),
   ORGANIZATION_OBJECTIVE("ORGANIZATION_OBJECTIVE", EnumSet.of(RevisionDomain.LOCAL)),

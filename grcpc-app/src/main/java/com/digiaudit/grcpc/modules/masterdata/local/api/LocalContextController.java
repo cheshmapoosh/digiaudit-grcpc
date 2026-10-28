@@ -41,6 +41,21 @@ public class LocalContextController {
     return service.create(request);
   }
 
+  @PostMapping("/organizations/{organizationId}/contexts/select")
+  @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE') and @masterDataAuthorization.canView('PROCESS')")
+  public LocalContextDtos.Selection selectSubprocesses(@PathVariable UUID organizationId,
+      @Valid @RequestBody LocalContextDtos.SelectSubprocesses request) {
+    return service.selectSubprocesses(organizationId, request);
+  }
+
+  @PostMapping("/organizations/{organizationId}/contexts/save")
+  @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE') and @masterDataAuthorization.canView('PROCESS')")
+  public LocalContextDtos.Selection saveSubprocesses(@PathVariable UUID organizationId,
+      @Valid @RequestBody LocalContextDtos.SaveContexts request) {
+    return service.saveSubprocesses(organizationId, request);
+  }
+
   @PatchMapping("/organization-subprocess-scopes/{id}")
   @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE') and @masterDataAuthorization.canView('PROCESS')")
   public LocalContextDtos.Mutation update(@PathVariable UUID id,

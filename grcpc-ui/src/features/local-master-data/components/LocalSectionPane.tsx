@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import { useTranslation } from "react-i18next";
-import { Text, Button, Label, MessageStrip, Option, Select, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, Label, MessageStrip, Option, Select, TextArea, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { DocumentManager } from "@/features/document";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
@@ -460,10 +461,10 @@ export default function LocalSectionPane({
     return <div style={{ display: "grid", gap: "0.8rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
             gap: "0.5rem", flexWrap: "wrap" }}>
-            <Title level="H5">{t(spec.labelKey, { defaultValue: spec.labelFa })}</Title>
-            {canWrite ? <Button design="Emphasized" disabled={busy}
-                onClick={startCreate}>{t("local.create", { defaultValue: "ایجاد ردیف" })}</Button> : null}
+            <Title level="H5">{spec.key === "contexts" ? t("local.subprocessSearch.section") : t(spec.labelKey, { defaultValue: spec.labelFa })}</Title>
+            {canWrite ? <Button design="Emphasized" disabled={busy} onClick={startCreate}>{t("local.create", { defaultValue: "ایجاد ردیف" })}</Button> : null}
         </div>
+
         {loading ? <MessageStrip design="Information" hideCloseButton>
             {t("local.loading", { defaultValue: "در حال بارگذاری..." })}
         </MessageStrip> : null}

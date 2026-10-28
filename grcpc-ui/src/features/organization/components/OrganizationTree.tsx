@@ -1,6 +1,9 @@
+import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
+import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
+import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, Tree } from "@ui5/webcomponents-react";
 
 import type { OrganizationNode } from "../domain/organization.model";
 import {
@@ -75,19 +78,19 @@ function OrganizationTreeItem({
     const label = node.displayLabel || node.code;
 
     return (
-        <TreeItemCustom
+        <TreeItemCustom orderId={node.id} orderType={"ORGANIZATION"}
             icon="+"
             data-id={node.id}
             expanded={expandedIds.has(node.id)}
             selected={isSelected}
-            content={
+            content={<CatalogSelectableRow itemKey={node.id}>
                 <span
                     title={label}
                     style={{ display: "block", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                 >
                     {label}
                 </span>
-            }
+            </CatalogSelectableRow>}
         >
             {node.children.map((child) => (
                 <OrganizationTreeItem
@@ -113,7 +116,11 @@ export default function OrganizationTree({
 
     const normalizedSearchText = searchText.trim();
 
-    const tree = useMemo(() => buildTree(items), [items]);
+    const sourceTree = useMemo(() => buildTree(items), [items]);
+
+    const displayOrder = useCatalogTreeOrder();
+
+    const tree = useMemo(() => displayOrder?.sortTree(sourceTree, (node) => orderKey("ORGANIZATION", node.id)) ?? sourceTree, [sourceTree, displayOrder]);
 
     const filteredTree = useMemo(
         () => filterTree(tree, normalizedSearchText),
@@ -223,7 +230,7 @@ export default function OrganizationTree({
     }
 
     return (
-        <Tree
+        <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
             accessibleName={t("organization.list.title", {
                 defaultValue: "ساختار سازمانی",
             })}

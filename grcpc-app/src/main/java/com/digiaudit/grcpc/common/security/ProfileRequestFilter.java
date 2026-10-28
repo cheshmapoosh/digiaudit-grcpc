@@ -29,7 +29,7 @@ public class ProfileRequestFilter extends OncePerRequestFilter {
             var authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null && authentication.getPrincipal() instanceof CurrentUser principal) {
                 String path = request.getServletPath();
-                boolean dataset = path.startsWith("/api/master-data/")
+                boolean dataset = path.startsWith("/api/basic-data/") || path.startsWith("/api/master-data/")
                         || path.matches("/api/(objectives|organizations|global-controls|control-groups)(/.*)?")
                         || path.startsWith("/api/dashboard/master-data") || path.startsWith("/api/security/resource-acl");
                 boolean mutation = !path.matches("/api/master-data/document-versions/[^/]+/download") && !"GET".equals(request.getMethod()) && !"HEAD".equals(request.getMethod())

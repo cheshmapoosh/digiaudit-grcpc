@@ -1,3 +1,4 @@
+import { BasicDataTypesPage } from "@/features/basic-data";
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route } from "react-router-dom";
 
 import ProfilesPage from "@/features/dataset-profile/pages/ProfilesPage";
@@ -57,6 +58,11 @@ export const appRouter = createBrowserRouter(
                 {processRoutes}
                 {centralCatalogRoutes}
                 {usermanagementRoutes}
+                <Route path="/basic-data" element={<Navigate to="/basic-data/organization-types" replace />} />
+                <Route path="/basic-data/organization-types" element={<BasicDataTypesPage key="organization-types" kind="organization-types" />} />
+                <Route path="/basic-data/organization-types/:typeId" element={<BasicDataTypesPage key="organization-types" kind="organization-types" />} />
+                <Route path="/basic-data/document-types" element={<BasicDataTypesPage key="document-types" kind="document-types" />} />
+                <Route path="/basic-data/document-types/:typeId" element={<BasicDataTypesPage key="document-types" kind="document-types" />} />
                 <Route path="/profiles" element={<ProfilesPage />} />
                 <Route path="/profiles/:profileId" element={<ProfilesPage />} />
                 <Route path="/settings/profiles" element={<Navigate to="/profiles" replace />} />

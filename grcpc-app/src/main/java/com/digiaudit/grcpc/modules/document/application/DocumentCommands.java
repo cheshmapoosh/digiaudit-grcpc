@@ -18,7 +18,8 @@ public final class DocumentCommands {
             DocumentLinkTargetType targetType,
             UUID targetId,
             LocalDate validFrom,
-            LocalDate validTo
+            LocalDate validTo,
+            UUID documentTypeId
     ) {
     }
 
@@ -43,7 +44,8 @@ public final class DocumentCommands {
             PatchValue<String> description,
             PatchValue<String> documentCategoryCode,
             PatchValue<LocalDate> validFrom,
-            PatchValue<LocalDate> validTo
+            PatchValue<LocalDate> validTo,
+            PatchValue<UUID> documentTypeId
     ) {
     }
 

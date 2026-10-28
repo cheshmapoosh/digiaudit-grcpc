@@ -12,6 +12,8 @@ public record OrganizationTreeNodeResponse(
         String code,
         String name,
         OrganizationType organizationType,
+        UUID organizationTypeId,
+        String organizationTypeName,
         UUID parentOrganizationId,
         String displayLabel,
         MasterDataLifecycleStatus status,

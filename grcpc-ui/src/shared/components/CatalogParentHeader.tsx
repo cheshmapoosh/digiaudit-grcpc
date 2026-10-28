@@ -1,6 +1,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Button, FlexBox, Grid, Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "./CatalogActionButton";
+import { FlexBox, Grid, Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
 import "./modal-layout.css";
 
@@ -50,7 +51,7 @@ export function CatalogParentHeader({ objectTitle, label, parent, parentId, requ
           </FlexBox>
           {selection || canClearParent ? <FlexBox alignItems="Center" wrap="Wrap" className="catalogParentHeaderActions">
             {selection}
-            {canClearParent ? <Button design="Transparent" disabled={busy} onClick={onClearParent}>{t("catalog.parentHeader.clear")}</Button> : null}
+            {canClearParent ? <Button design="Negative" disabled={busy} onClick={onClearParent}>{t("catalog.parentHeader.clear")}</Button> : null}
           </FlexBox> : null}
         </FlexBox>
         <Grid defaultSpan="XL3 L3 M6 S6" className="catalogParentHeaderFields">

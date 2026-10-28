@@ -55,7 +55,7 @@ public class ProfileUserService {
 
     private void requireNoOwnershipDependencies(AppUserEntity user) {
         if (user.getProfileId() == null) return;
-        Long organizations = jdbc.queryForObject("select count(*) from organization where profile_id = ? and owner_user_id = ?",
+        Long organizations = jdbc.queryForObject("select count(*) from organization_owner_assignment where profile_id = ? and user_id = ? and status = 'ACTIVE'",
                 Long.class, ProfileContext.raw(user.getProfileId()), user.getId().toString());
         Long controls = jdbc.queryForObject("select count(*) from local_subprocess_control_scope where profile_id = ? and actual_owner_id = ?",
                 Long.class, ProfileContext.raw(user.getProfileId()), ProfileContext.raw(user.getId()));
@@ -149,10 +149,4 @@ public class ProfileUserService {
                 .sorted(Comparator.comparing(RoleChoice::title)).toList();
     }
 
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
-    public void validateOwner(UUID userId) {
-        var owner = users.findOrdinaryByIdForUpdate(userId, ProfileContext.requireId()).orElseThrow(() -> new NotFoundException("Owner was not found"));
-        if (!ProfileContext.requireId().equals(owner.getProfileId()) || owner.isRootUser() || owner.isProfileAdmin()
-                || !owner.isEnabled() || owner.isLocked()) ProfileAccessService.deny();
-    }
 }

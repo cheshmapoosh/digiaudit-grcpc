@@ -26,6 +26,8 @@ public record DocumentLinkSummaryResponse(
         UUID targetId,
         DocumentLifecycleStatus linkStatus,
         Instant uploadedAt,
-        UUID uploadedBy
+        UUID uploadedBy,
+        UUID documentTypeId,
+        String documentTypeName
 ) {
 }

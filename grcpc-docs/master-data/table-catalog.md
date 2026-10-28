@@ -2,7 +2,7 @@
 
 ## Catalog authority and count rule
 
-This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md), plus the approved Objective and Global Control library extensions. It has 54 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables: 57 physical Master Data tables, including the four typed Assignments accepted in [accepted-corrections/2026-10-27-central-reference-assignments.md](accepted-corrections/2026-10-27-central-reference-assignments.md).
+This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md), plus the approved Objective and Global Control library extensions. It has 55 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables: 58 physical Master Data tables, including the four typed Central Assignments and the [Organization owner Assignment](accepted-corrections/2026-10-28-organization-owner-assignments.md). Administrative dataset/User Management and the two Basic Data type dictionaries are outside this Master Data count.
 
 Authoritative source files: `GRC_Master_Data_Logical_Model_Final_FA.docx` and `GRC_Master_Data_Physical_Design_Reference_FA.docx`; business meaning is cross-checked against `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`.
 
@@ -11,6 +11,8 @@ No table is inferred merely to satisfy a count. The new Central Organization rel
 Document non-invention rule: there is no Retention Policy table, no Hold table, and no purge-state persistence model in Master Data V2. No future implementation prompt may recreate these concepts without a new explicit approved design decision.
 
 ### Shared physical profile and notation
+
+The [2026-10-28 main-page display-order correction](accepted-corrections/2026-10-28-main-catalog-display-order.md) adds nullable nonnegative `display_order NUMBER(19,0)` to its sixteen explicitly listed existing definition/group tables. It adds no table, relation or stored entity code. Main-page sibling ordering uses the saved rank, with new unranked inserts first by creation time; existing `sort_order`, forms and dependent collections are unchanged. Reorder updates source audit/version under the existing hierarchy Guard and one CENTRAL Revision.
 
 | Notation | Meaning |
 | --- | --- |
@@ -47,11 +49,12 @@ Stored codes are stable uppercase ASCII values stored in `VARCHAR2(32 BYTE)`. Ev
 
 ### Revision Entity Type stored-code vocabulary
 
-`masterdata_revision_content.entity_type` accepts 54 values, including the retained `CENTRAL_POLICY_VERSION` historical decoder, `CENTRAL_POLICY_ORG`, `OBJECTIVE`, `ORGANIZATION_OBJECTIVE`, `CONTROL_GROUP`, `GLOBAL_CONTROL`, and `GLOBAL_CONTROL_REGULATION`.
+`masterdata_revision_content.entity_type` accepts 55 values, including the retained `CENTRAL_POLICY_VERSION` historical decoder and the new `ORGANIZATION_OWNER_ASG`.
 
 | Stored code | Exact catalog table | Permitted Revision domain |
 | --- | --- | --- |
 | `ORG` | `organization` | `CENTRAL` |
+| `ORGANIZATION_OWNER_ASG` | `organization_owner_assignment` | `CENTRAL` |
 | `OBJECTIVE` | `objective` | `CENTRAL` |
 | `ORGANIZATION_OBJECTIVE` | `organization_objective` | `LOCAL` |
 | `CENTRAL_PROCESS` | `central_process` | `CENTRAL` |
@@ -986,7 +989,7 @@ Document Link Target Type rules:
 
 **Purpose and family.** Ordered immutable change records belonging to one Master Data Revision; the controlled polymorphic reference identifies the changed entity.
 
-**Fields.** `ID`; `revision_id RAW(16) NOT NULL`; `sequence_number NUMBER(19,0) NOT NULL`; controlled `entity_type VARCHAR2(32 BYTE) NOT NULL`; `entity_id RAW(16) NOT NULL`; `operation_type VARCHAR2(32 BYTE) NOT NULL`; nullable `expected_version NUMBER(19,0)`; nullable `before_snapshot CLOB JSON`; nullable `after_snapshot CLOB JSON`; nullable `applied_entity_version NUMBER(19,0)`; nullable `validation_result CLOB JSON`; `created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `created_by RAW(16) NOT NULL`; `version NUMBER(19,0) NOT NULL`. `entity_type` uses the current 54-code Revision Entity Type vocabulary in this catalog.
+**Fields.** `ID`; `revision_id RAW(16) NOT NULL`; `sequence_number NUMBER(19,0) NOT NULL`; controlled `entity_type VARCHAR2(32 BYTE) NOT NULL`; `entity_id RAW(16) NOT NULL`; `operation_type VARCHAR2(32 BYTE) NOT NULL`; nullable `expected_version NUMBER(19,0)`; nullable `before_snapshot CLOB JSON`; nullable `after_snapshot CLOB JSON`; nullable `applied_entity_version NUMBER(19,0)`; nullable `validation_result CLOB JSON`; `created_at TIMESTAMP(6) WITH TIME ZONE NOT NULL`; `created_by RAW(16) NOT NULL`; `version NUMBER(19,0) NOT NULL`. `entity_type` uses the current 55-code Revision Entity Type vocabulary in this catalog.
 
 **Keys and relationships.** PK: `id`. Business key: unique `(revision_id, sequence_number)`. FK: `revision_id -> masterdata_revision(id)`. `entity_type/entity_id` is controlled polymorphism and must be domain-validated against the header.
 
@@ -994,7 +997,7 @@ Document Link Target Type rules:
 
 **Lifecycle, validity, and lock.** Operation is one of `CREATE`, `UPDATE`, `ACTIVATE`, `INACTIVATE`, `DELETE`, or `RESTORE`. No generic status/validity interval is documented. Applied content/snapshots are immutable; `version` supports guarded draft handling only.
 
-**Constraints and indexes.** Unique revision/sequence; controlled operation/entity type checked against the current 54-code Revision Entity Type vocabulary; revision-domain compatibility enforced by Backend validation; indexed `revision_id` via the unique key and target lookup only when proven necessary. JSON values require `IS JSON` checks.
+**Constraints and indexes.** Unique revision/sequence; controlled operation/entity type checked against the current 55-code Revision Entity Type vocabulary; revision-domain compatibility enforced by Backend validation; indexed `revision_id` via the unique key and target lookup only when proven necessary. JSON values require `IS JSON` checks.
 
 **Mutability and Revision.** Generated, sequenced, snapshot-filled, validated, and atomically applied by the Backend. The Frontend never sends this object, its sequence number, snapshots, or transaction order.
 
@@ -1081,11 +1084,25 @@ This library is separate from `central_control`, `central_control_group`, and `c
 | Objective extension business tables | 2 |
 | Global Control library extension business tables | 3 |
 | Central reference Assignment business tables | 4 |
-| **Current physical Master Data tables** | **57** |
+| Organization owner Assignment business table | 1 |
+| **Current physical Master Data tables** | **58** |
 
 The contiguous original numbered business list starts at `01` and ends at `45` exactly once; `T1` and `T2` are outside it. The Policy simplification correction retains one historical table, and the Objective extension adds two typed business tables, the Global Control library adds three, and the accepted Central reference Assignment correction adds four.
 
 No KPI, KRI, risk-assessment, control-test, workflow, monitoring, job, scheduler, cache, outbox, Audit, generic assignment, generic Scope, generic Coverage, or invented relationship table is part of this catalog.
+
+## Organization owner Assignment extension (accepted 2026-10-28)
+
+`organization_owner_assignment` has `id`, immutable `profile_id`, `organization_id`
+and `user_id`, ACTIVE/DELETED `status`, `version`, creation/update actors and
+timestamps and nullable deletion actors/timestamp. IDs and audit actors are RAW(16);
+`user_id` is VARCHAR2(36 CHAR), matching User Management. The composite Organization
+FK enforces profile ownership; the User FK is global to support root/shared admin
+identities. The unique occupied profile/Organization/User pair also covers the
+Organization and profile FKs; a user/profile/status index covers the User FK.
+No physical delete, automatic role grant or cascade is added. Live eligibility,
+aggregate Save, migration and Guard rules are in the
+[accepted correction](accepted-corrections/2026-10-28-organization-owner-assignments.md).
 
 ## Central reference Assignment extension (accepted 2026-10-27)
 

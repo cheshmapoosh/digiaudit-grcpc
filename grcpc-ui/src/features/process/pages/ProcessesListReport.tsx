@@ -1,10 +1,12 @@
+import { CatalogTreeOrder } from "@/shared/components/CatalogTreeOrder";
+import { CatalogDeleteButton } from "@/shared/components/CatalogSelection";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { useTranslation } from "react-i18next";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
     Bar,
     BusyIndicator,
-    Button,
     MessageStrip,
     Title,
 } from "@ui5/webcomponents-react";
@@ -83,21 +85,21 @@ export default function ProcessesListReport({
 
 
                         <Button
-                            design="Emphasized"
+                            design="Default"
                             disabled={!selectedId || busy}
                             onClick={() => selectedId && onShow(selectedId)}
                         >
                             {t("common.view", { defaultValue: "نمایش" })}
                         </Button>
 
-                        <Button
+                        <CatalogDeleteButton
                             design="Negative"
                             hidden={!manage}
                             disabled={!selectedId || controlSelected || busy}
                             onClick={() => selectedId && onDelete(selectedId)}
                         >
                             {t("common.delete", { defaultValue: "Delete" })}
-                        </Button>
+                        </CatalogDeleteButton>
                     </>
                 }
             />
@@ -114,7 +116,8 @@ export default function ProcessesListReport({
             >
                 {busy ? <BusyIndicator active /> : null}
 
-                <ProcessTree
+                <CatalogTreeOrder catalog="PROCESS" refreshKey={JSON.stringify([items])} filtered={Boolean(searchText.trim())}>
+                  <ProcessTree
                     items={items}
                     controls={controls}
                     selectedId={selectedId}
@@ -122,7 +125,8 @@ export default function ProcessesListReport({
                     searchText={searchText}
                     busy={busy}
                     onSelect={onSelect}
-                />
+                  />
+                </CatalogTreeOrder>
             </div>
         </div>
     );

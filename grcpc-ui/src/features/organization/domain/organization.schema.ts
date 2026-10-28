@@ -54,6 +54,17 @@ const baseValiditySchema = z
         ),
     });
 
+const ownerChangeSchema = z.object({
+    operation: z.enum(["CREATE_OR_RESTORE", "DELETE"]), userId: z.string().uuid(),
+    assignmentId: z.string().trim().min(1).optional(), version: z.number().int().min(0).optional(),
+});
+const subprocessChangeSchema = z.object({
+    subprocessId: z.string().uuid(),
+    operation: z.enum(["CREATE_OR_RESTORE", "ACTIVATE", "INACTIVATE", "DELETE"]),
+    contextId: z.string().uuid().optional(),
+    version: z.number().int().min(0).optional(),
+});
+
 export const organizationCreateSchema = baseValiditySchema.extend({
     code: z
         .string()
@@ -67,7 +78,9 @@ export const organizationCreateSchema = baseValiditySchema.extend({
         }),
     name: nameSchema,
     organizationType: organizationTypeSchema,
-    ownerUserId: z.string().uuid().nullable().optional(),
+    organizationTypeId: z.string().trim().min(1),
+    ownerAssignments: z.array(ownerChangeSchema).optional(),
+    subprocesses: z.array(subprocessChangeSchema).optional(),
     parentOrganizationId: z.string().trim().min(1).nullable().optional(),
     location: optionalLocationSchema,
     description: optionalDescriptionSchema,
@@ -78,8 +91,10 @@ export const organizationUpdateSchema = baseValiditySchema.extend({
     version: z.number().int().min(0),
     name: nameSchema,
     organizationType: organizationTypeSchema,
+    organizationTypeId: z.string().trim().min(1),
     status: organizationEditableStatusSchema,
-    ownerUserId: z.string().uuid().nullable().optional(),
+    ownerAssignments: z.array(ownerChangeSchema).optional(),
+    subprocesses: z.array(subprocessChangeSchema).optional(),
     parentOrganizationId: z.string().trim().min(1).nullable().optional(),
     location: optionalLocationSchema,
     description: optionalDescriptionSchema,

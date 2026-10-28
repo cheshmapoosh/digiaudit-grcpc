@@ -1,6 +1,9 @@
+import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
+import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
+import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, Tree } from "@ui5/webcomponents-react";
 
 import type { CentralControlGroupSummary, CentralControlSummary } from "../domain/centralControl.model";
 import {
@@ -52,11 +55,11 @@ function ControlTreeItem({ node, selectedId, expandedIds }: {
   const { t } = useTranslation();
   const selected = node.id === selectedId;
   return (
-    <TreeItemCustom
+    <TreeItemCustom orderId={node.id} orderType={node.type === "GROUP" ? "CENTRAL_CONTROL_GROUP" : "CENTRAL_CONTROL"}
       data-node-id={node.id}
       expanded={expandedIds.has(node.id)}
       selected={selected}
-      content={
+      content={<CatalogSelectableRow itemKey={node.id}>
         <div className="controlTreeItemContent" title={node.title}>
           <span className={selected ? "controlTreeTitle controlTreeTitleSelected" : "controlTreeTitle"}>
             {node.title}
@@ -67,7 +70,7 @@ function ControlTreeItem({ node, selectedId, expandedIds }: {
               : t("control.nodeType.control", { defaultValue: "کنترل" })}
           </span>
         </div>
-      }
+      </CatalogSelectableRow>}
     >
       {node.children.map((child) => (
         <ControlTreeItem key={child.id} node={child} selectedId={selectedId} expandedIds={expandedIds} />
@@ -98,7 +101,9 @@ export default function CentralControlTree({
 }: Props) {
   const { t } = useTranslation();
   const query = searchText.trim();
-  const tree = useMemo(() => buildCentralControlTree(groups, controls), [controls, groups]);
+  const sourceTree = useMemo(() => buildCentralControlTree(groups, controls), [controls, groups]);
+  const displayOrder = useCatalogTreeOrder();
+  const tree = useMemo(() => displayOrder?.sortTree(sourceTree, (node) => orderKey(node.type === "GROUP" ? "CENTRAL_CONTROL_GROUP" : "CENTRAL_CONTROL", node.id)) ?? sourceTree, [sourceTree, displayOrder]);
   const filteredTree = useMemo(() => filterCentralControlTree(tree, query), [query, tree]);
   const expandableIds = useMemo(() => collectExpandableIds(tree), [tree]);
   const filteredExpandableIds = useMemo(() => collectExpandableIds(filteredTree), [filteredTree]);
@@ -150,7 +155,7 @@ export default function CentralControlTree({
   }
 
   return (
-    <Tree
+    <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
       accessibleName={t("control.list.title")}
       onItemClick={handleItemClick}
       onItemToggle={handleItemToggle}

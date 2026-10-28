@@ -1,6 +1,9 @@
+import { CatalogTreeOrder } from "@/shared/components/CatalogTreeOrder";
+import { CatalogDeleteButton } from "@/shared/components/CatalogSelection";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, BusyIndicator, MessageStrip, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Bar, BusyIndicator, MessageStrip, Title } from "@ui5/webcomponents-react";
 
 import type {
   CentralRegulationGroupSummary,
@@ -67,19 +70,19 @@ export default function CentralRegulationListReport({
             />
 
             <Button
-              design="Emphasized"
+              design="Default"
               disabled={busy || !selectedId}
               onClick={onShow}
             >
               {t("common.view", { defaultValue: "نمایش" })}
             </Button>
-            <Button
+            <CatalogDeleteButton
               design="Negative"
               disabled={busy || !selectedId || !canDelete}
               onClick={onDelete}
             >
               {t("common.delete", { defaultValue: "حذف" })}
-            </Button>
+            </CatalogDeleteButton>
           </>
         }
       />
@@ -93,16 +96,18 @@ export default function CentralRegulationListReport({
 
       <div className="regulationTreeFrame">
         {busy ? <BusyIndicator active delay={0} /> : null}
-        <CentralRegulationTree
-          groups={groups}
-          regulations={regulations}
-          requirements={requirements}
-          selectedId={selectedId}
-          expansionAnchorId={expansionAnchorId}
-          searchText={searchText}
-          busy={busy}
-          onSelect={onSelect}
-        />
+        <CatalogTreeOrder catalog="REGULATION" refreshKey={JSON.stringify([groups, regulations, requirements])} filtered={Boolean(searchText.trim())}>
+          <CentralRegulationTree
+            groups={groups}
+            regulations={regulations}
+            requirements={requirements}
+            selectedId={selectedId}
+            expansionAnchorId={expansionAnchorId}
+            searchText={searchText}
+            busy={busy}
+            onSelect={onSelect}
+          />
+        </CatalogTreeOrder>
       </div>
     </div>
   );

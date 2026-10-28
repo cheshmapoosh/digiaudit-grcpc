@@ -72,7 +72,8 @@ public interface InternalDocumentLinkJpaRepository extends JpaRepository<Documen
                 l.targetId,
                 l.status,
                 v.createdAt,
-                v.createdBy
+                v.createdBy,
+                d.documentTypeId
             )
             from DocumentLinkEntity l, DocumentVersionEntity v, DocumentEntity d
             where l.documentVersionId = v.id
@@ -111,7 +112,8 @@ public interface InternalDocumentLinkJpaRepository extends JpaRepository<Documen
                 l.targetId,
                 l.status,
                 v.createdAt,
-                v.createdBy
+                v.createdBy,
+                d.documentTypeId
             )
             from DocumentLinkEntity l, DocumentVersionEntity v, DocumentEntity d
             where l.documentVersionId = v.id
@@ -148,7 +150,8 @@ public interface InternalDocumentLinkJpaRepository extends JpaRepository<Documen
                 l.targetId,
                 l.status,
                 v.createdAt,
-                v.createdBy
+                v.createdBy,
+                d.documentTypeId
             )
             from DocumentLinkEntity l, DocumentVersionEntity v, DocumentEntity d
             where l.documentVersionId = v.id

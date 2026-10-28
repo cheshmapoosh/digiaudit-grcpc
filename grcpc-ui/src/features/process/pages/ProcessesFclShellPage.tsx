@@ -1,3 +1,5 @@
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
+import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import {
     createElement,
     useCallback,
@@ -261,6 +263,7 @@ function resolveCreateParentId(
 
 export default function ProcessesFclShellPage() {
     const { t } = useTranslation();
+    const { manage } = useMasterDataAccess("PROCESS");
     const navigate = useNavigate();
     const location = useLocation();
     const { processId } = useParams();
@@ -773,8 +776,17 @@ export default function ProcessesFclShellPage() {
 
     const dialogTitle = resolveDialogTitle(routeMode, t);
 
+    const bulkDeleteItems = processItems.map((row) => ({ key: row.id, parentKey: row.parentId, label: `${row.code} — ${row.title}`,
+      remove: () => removeNode(row, { version: row.version }) }));
+
     return (
-        <>
+        <CatalogSelectionProvider items={bulkDeleteItems} enabled={manage} busy={loading || submitting}
+            onBusyChange={setSubmitting} reload={refresh} mapError={(error) => mapError(error, t("process.errors.delete"), t)} beforeDelete={requestObjectPageLeave}
+            onDeleted={(keys) => {
+              if (selectedTreeId && keys.has(selectedTreeId)) setSelectedTreeId(null);
+              if (treeExpansionAnchorId && keys.has(treeExpansionAnchorId)) setTreeExpansionAnchorId(null);
+              if (processId && keys.has(processId)) navigate("/processes");
+            }}>
             {controlDialog ? <CentralControlDialog
                 key={controlDialog.controlId ?? `create:${controlDialog.initialSubprocess?.subprocessId}`}
                 {...controlDialog}
@@ -874,6 +886,6 @@ export default function ProcessesFclShellPage() {
                 }}
             />
 
-        </>
+        </CatalogSelectionProvider>
     );
 }

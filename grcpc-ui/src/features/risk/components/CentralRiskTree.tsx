@@ -1,6 +1,9 @@
+import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
+import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
+import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, Tree } from "@ui5/webcomponents-react";
 
 import type {
   CentralRiskCategorySummary,
@@ -71,11 +74,11 @@ function RiskTreeItem({ node, selectedKey, expandedKeys }: ItemProps) {
   const { t } = useTranslation();
   const selected = node.key === selectedKey;
   return (
-    <TreeItemCustom
+    <TreeItemCustom orderId={node.id} orderType={node.kind === "category" ? "CENTRAL_RISK_CATEGORY" : "CENTRAL_RISK_TEMPLATE"}
       data-node-key={node.key}
       expanded={expandedKeys.has(node.key)}
       selected={selected}
-      content={
+      content={<CatalogSelectableRow itemKey={node.key}>
         <div className="riskTreeItemContent" title={`${node.code} — ${node.title}`}>
           <span className={selected ? "riskTreeItemTitle riskTreeItemTitleSelected" : "riskTreeItemTitle"}>
             {node.title}
@@ -84,7 +87,7 @@ function RiskTreeItem({ node, selectedKey, expandedKeys }: ItemProps) {
             {t(`risk.nodeType.${node.kind}`)}
           </span>
         </div>
-      }
+      </CatalogSelectableRow>}
     >
       {node.children.map((child) => (
         <RiskTreeItem
@@ -109,7 +112,9 @@ export default function CentralRiskTree({
 }: Props) {
   const { t } = useTranslation();
   const normalizedSearchText = searchText.trim();
-  const tree = useMemo(() => buildRiskTree(categories, templates), [categories, templates]);
+  const sourceTree = useMemo(() => buildRiskTree(categories, templates), [categories, templates]);
+  const displayOrder = useCatalogTreeOrder();
+  const tree = useMemo(() => displayOrder?.sortTree(sourceTree, (node) => orderKey(node.kind === "category" ? "CENTRAL_RISK_CATEGORY" : "CENTRAL_RISK_TEMPLATE", node.id)) ?? sourceTree, [sourceTree, displayOrder]);
   const filteredTree = useMemo(
     () => filterRiskTree(tree, normalizedSearchText),
     [normalizedSearchText, tree],
@@ -191,7 +196,7 @@ export default function CentralRiskTree({
   }
 
   return (
-    <Tree
+    <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
       accessibleName={t("risk.list.title")}
       onItemClick={handleItemClick}
       onItemToggle={handleItemToggle}

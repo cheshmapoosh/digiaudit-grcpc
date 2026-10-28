@@ -35,6 +35,18 @@ export interface LocalContextRow extends LocalBaseRow {
     contextNote: string | null;
 }
 
+export interface LocalContextChange {
+    subprocessId: string;
+    operation: "CREATE_OR_RESTORE" | "ACTIVATE" | "INACTIVATE" | "DELETE";
+    contextId?: string;
+    version?: number;
+}
+
+export interface LocalContextDraft extends LocalContextChange {
+    code: string;
+    name: string;
+}
+
 interface InContext extends LocalBaseRow {
     organizationSubprocessScopeId: string;
     subprocessId: string;

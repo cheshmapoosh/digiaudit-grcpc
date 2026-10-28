@@ -12,6 +12,8 @@ public record OrganizationResponse(
         String code,
         String name,
         OrganizationType organizationType,
+        UUID organizationTypeId,
+        String organizationTypeName,
         UUID parentOrganizationId,
         String displayLabel,
         MasterDataLifecycleStatus status,
@@ -26,7 +28,6 @@ public record OrganizationResponse(
         UUID updatedBy,
         Instant deletedAt,
         UUID deletedBy,
-        UUID ownerUserId,
-        String ownerDisplayLabel
+        java.util.List<OrganizationOwnerView> ownerAssignments
 ) {
 }

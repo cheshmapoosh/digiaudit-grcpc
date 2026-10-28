@@ -16,6 +16,9 @@ import java.util.UUID;
 
 @Component
 public class DocumentResponseMapper {
+    private final com.digiaudit.grcpc.modules.basicdata.application.BasicDataService basicData;
+    public DocumentResponseMapper(com.digiaudit.grcpc.modules.basicdata.application.BasicDataService basicData) { this.basicData = basicData; }
+    private String typeName(UUID id) { return basicData.name(com.digiaudit.grcpc.modules.basicdata.domain.BasicDataKind.DOCUMENT_TYPE, id); }
     public DocumentTemporaryUploadResponse toTemporaryUploadResponse(DocumentTempUploadEntity entity) {
         return new DocumentTemporaryUploadResponse(
                 entity.getId(),
@@ -42,7 +45,9 @@ public class DocumentResponseMapper {
                 entity.getCreatedAt(),
                 entity.getCreatedBy(),
                 entity.getUpdatedAt(),
-                entity.getUpdatedBy()
+                entity.getUpdatedBy(),
+                entity.getDocumentTypeId(),
+                typeName(entity.getDocumentTypeId())
         );
     }
 
@@ -88,7 +93,9 @@ public class DocumentResponseMapper {
                 projection.targetId(),
                 projection.linkStatus(),
                 projection.uploadedAt(),
-                projection.uploadedBy()
+                projection.uploadedBy(),
+                projection.documentTypeId(),
+                typeName(projection.documentTypeId())
         );
     }
 
@@ -118,7 +125,9 @@ public class DocumentResponseMapper {
                 link.getTargetId(),
                 link.getStatus(),
                 version.getCreatedAt(),
-                version.getCreatedBy()
+                version.getCreatedBy(),
+                document.getDocumentTypeId(),
+                typeName(document.getDocumentTypeId())
         );
     }
 

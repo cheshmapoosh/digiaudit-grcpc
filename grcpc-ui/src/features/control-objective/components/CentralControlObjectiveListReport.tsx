@@ -1,9 +1,10 @@
+import { CatalogSelectableRow, CatalogDeleteButton } from "@/shared/components/CatalogSelection";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
   Bar,
-  Button,
   BusyIndicator,
   List,
   ListItemCustom,
@@ -68,19 +69,19 @@ export default function CentralControlObjectiveListReport({
             </Button>
 
             <Button
-              design="Emphasized"
+              design="Default"
               disabled={busy || !selectedId}
               onClick={() => selectedId && onShow(selectedId)}
             >
               {t("controlObjective.actions.view")}
             </Button>
-            <Button
+            <CatalogDeleteButton
               design="Negative"
               disabled={busy || !selectedId || !canDelete}
               onClick={() => selectedId && onDelete(selectedId)}
             >
               {t("common.delete", { defaultValue: "حذف" })}
-            </Button>
+            </CatalogDeleteButton>
           </>
         }
       />
@@ -116,7 +117,7 @@ export default function CentralControlObjectiveListReport({
                 selected={item.id === selectedId}
                 data-control-objective-id={item.id}
               >
-                <div
+                <CatalogSelectableRow itemKey={item.id}><div
                   dir="rtl"
                   style={{
                     width: "100%",
@@ -130,7 +131,7 @@ export default function CentralControlObjectiveListReport({
                 >
                   <Text style={{ textAlign: "right" }}>{index + 1}</Text>
                   <Text style={{ textAlign: "right" }}>{item.title}</Text>
-                </div>
+                </div></CatalogSelectableRow>
               </ListItemCustom>
             ))}
           </List>

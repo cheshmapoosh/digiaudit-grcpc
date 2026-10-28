@@ -22,6 +22,7 @@ Document is the shared Master Data V2 UI for:
 - Do not expose storage keys, bucket names, endpoints, permanent URLs, Revision Content, or object metadata in UI models.
 - All editable Master Data business dates use the shared UI5 Persian DatePicker while retaining Gregorian ISO `yyyy-MM-dd` API values.
 - Hide free-text Document Category until an approved controlled vocabulary exists; keep the nullable Backend-compatible response field unchanged.
+- The 2026-10-28 profile-owned Basic Data correction adds a distinct controlled `documentTypeId`/`documentTypeName`. New attachments require an active type from the selected profile. Existing unclassified Documents remain readable; metadata type drafts join title drafts in the existing parent aggregate or standalone metadata Save. Temporary upload remains file-only and target-independent.
 - Document dirty state includes selected/uploading/staged/finalizing files, retryable failed finalization with a temporary upload, and unsaved metadata drafts.
 - Parent General Information, hierarchy, and Document drafts use one aggregate browser Save. The component exposes dirty/uploading/valid/ready state, hides per-document Save/finalize controls, and clears consumed drafts only after aggregate success.
 - Local relationship rows use the existing standalone Document mode after the Local target has been created. Their Document commands are independent of Organization aggregate Save and do not produce Local Business Revisions. General Information and Organization Documents continue to use `PARENT_SAVE`.

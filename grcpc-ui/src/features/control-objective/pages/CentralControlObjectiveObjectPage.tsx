@@ -5,7 +5,8 @@ import { ControlObjectiveControlAssignmentsTab, useControlControlObjectiveAssign
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Text, ObjectStatus, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import {
   DocumentManager,

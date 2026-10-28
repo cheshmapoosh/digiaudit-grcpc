@@ -1,3 +1,4 @@
+import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -293,7 +294,19 @@ export default function CentralControlsFclShellPage() {
   const dialogTitle = modalMode === "create" ? t(modalType === "GROUP" ? "control.group.createTitle" : "control.create.title") : modalMode === "edit" ? t(modalType === "GROUP" ? "control.group.editTitle" : "control.edit.title") : t(modalType === "GROUP" ? "control.group.viewTitle" : "control.view.title");
   const modalContentReady = modalMode === "create" || Boolean(modalValue);
 
-  return <>
+  const bulkDeleteItems = [
+    ...groups.map((row) => ({ key: row.id, parentKey: row.parentGroupId, label: `${row.code} — ${row.title}`,
+      remove: () => centralControlApi.deleteGroup(row.id, row.version) })),
+    ...controls.map((row) => ({ key: row.id, parentKey: row.controlGroupId, label: `${row.code} — ${row.title}`,
+      remove: () => centralControlApi.delete(row.id, row.version) })),
+  ];
+
+  return <CatalogSelectionProvider items={bulkDeleteItems} enabled={permissions.delete} busy={busy}
+      onBusyChange={setBusy} reload={loadRows} reloadOrder={async () => { try { if (selectedNode) setSelectedDetail(await fetchDetail(selectedNode.type, selectedNode.id)); } finally { await loadRows(); } }} mapError={(error) => mapError(error, t("control.errors.delete"))} beforeDelete={requestLeave}
+      onDeleted={(keys) => {
+        if (selectedNode && keys.has(selectedNode.id)) { setSelectedNode(null); setSelectedDetail(null); }
+        if (expansionAnchorId && keys.has(expansionAnchorId)) setExpansionAnchorId(null);
+      }}>
     {createElement("ui5-flexible-column-layout", { layout: fclLayout, dir: appDir, "disable-resizing": true, className: "controlFcl" }, listColumn, midColumn)}
     <Dialog open={modalOpen} accessibleName={dialogTitle} className="controlObjectDialog" onClose={(event) => { if (isOwnDialogCloseEvent(event)) closeObject(); }}>
       <ModalDialogHeader title={dialogTitle} onClose={closeObject} />
@@ -343,5 +356,5 @@ export default function CentralControlsFclShellPage() {
     </Dialog>
     <DeleteConfirmDialog open={leaveConfirmationOpen || blocker.state === "blocked"} title={t("common.unsavedChanges.title", { defaultValue: "تغییرات ذخیره‌نشده" })} message={t("common.unsavedChanges.message", { defaultValue: "تغییرات ذخیره‌نشده نادیده گرفته شود؟" })} confirmText={t("common.unsavedChanges.leave", { defaultValue: "خروج" })} cancelText={t("common.unsavedChanges.stay", { defaultValue: "ماندن" })} loading={false} onClose={stay} onConfirm={confirmLeave} />
     <DeleteConfirmDialog open={Boolean(deleteCandidate)} title={t("control.delete.title")} message={t("control.delete.confirm", { title: deleteCandidate?.title ?? "" })} confirmText={t("common.delete", { defaultValue: "حذف" })} cancelText={t("common.cancel", { defaultValue: "انصراف" })} loading={busy} onClose={() => setDeleteCandidate(null)} onConfirm={confirmDelete} />
-  </>;
+  </CatalogSelectionProvider>;
 }

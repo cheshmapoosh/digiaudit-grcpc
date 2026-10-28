@@ -1,5 +1,6 @@
 import type { AuditFields } from "@/shared/domain/audit.model";
 import type { DocumentAggregateRequest, DocumentCommandResponse } from "@/features/document";
+import type { LocalContextChange, LocalContextRow } from "@/features/local-master-data";
 
 export type OrganizationStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type OrganizationEditableStatus = "ACTIVE" | "INACTIVE";
@@ -20,7 +21,14 @@ export const ORGANIZATION_TYPES = [
 
 export type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
 
-export interface OrganizationOwnerOption { id: string; displayLabel: string }
+export interface OrganizationOwnerOption { id: string; displayLabel: string; username: string; roleCode: string }
+export interface OrganizationOwnerAssignment {
+    assignmentId: string; profileId: string; organizationId: string; userId: string;
+    displayLabel: string; username: string; roleCode: string | null; eligible: boolean; version: number;
+}
+export interface OrganizationOwnerChange {
+    operation: "CREATE_OR_RESTORE" | "DELETE"; userId: string; assignmentId?: string; version?: number;
+}
 
 export interface MasterDataRevisionMutationResponse {
     entityId: string;
@@ -31,6 +39,7 @@ export interface MasterDataRevisionMutationResponse {
 export interface MasterDataAggregateMutationResponse extends MasterDataRevisionMutationResponse {
     finalizedDocuments: DocumentCommandResponse[];
     organization: OrganizationNode;
+    subprocesses?: { revisionId: string; rows: LocalContextRow[] } | null;
 }
 
 export interface OrganizationNode extends AuditFields {
@@ -38,8 +47,9 @@ export interface OrganizationNode extends AuditFields {
     code: string;
     name: string;
     organizationType: OrganizationType;
-    ownerUserId?: string | null;
-    ownerDisplayLabel?: string | null;
+    organizationTypeId?: string;
+    organizationTypeName?: string | null;
+    ownerAssignments?: OrganizationOwnerAssignment[];
     parentOrganizationId: string | null;
     displayLabel: string;
     status: OrganizationStatus;
@@ -65,7 +75,9 @@ export interface OrganizationNodeCreate {
     code: string;
     name: string;
     organizationType: OrganizationType;
-    ownerUserId?: string | null;
+    organizationTypeId: string;
+    ownerAssignments?: OrganizationOwnerChange[];
+    subprocesses?: LocalContextChange[];
     parentOrganizationId?: string | null;
     location?: string | null;
     description?: string | null;
@@ -78,8 +90,10 @@ export interface OrganizationNodeUpdate {
     version: number;
     name: string;
     organizationType: OrganizationType;
+    organizationTypeId: string;
     status: OrganizationEditableStatus;
-    ownerUserId?: string | null;
+    ownerAssignments?: OrganizationOwnerChange[];
+    subprocesses?: LocalContextChange[];
     parentOrganizationId?: string | null;
     location?: string | null;
     description?: string | null;

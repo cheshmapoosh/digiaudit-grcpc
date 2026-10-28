@@ -73,7 +73,7 @@ public class DatabaseUserDetailsService implements UserDetailsService {
 
         if (ProfileContext.idOrNull() != null && user.isProfileAdmin() && profileAccess.isAdmin(user.getId(), ProfileContext.requireId())) {
             authorities.add(new SimpleGrantedAuthority("ROLE_PROFILE_ADMIN"));
-            for (String area : java.util.List.of("PROCESS", "RISK", "CONTROL", "GOVERNANCE", "REFERENCE"))
+            for (String area : java.util.List.of("PROCESS", "RISK", "CONTROL", "GOVERNANCE", "REFERENCE", "ORGANIZATION"))
                 authorities.add(new SimpleGrantedAuthority("MD_" + area + "_MANAGE"));
             for (String permission : java.util.List.of("USER_VIEW", "USER_CREATE", "USER_EDIT", "USER_DISABLE", "USER_ASSIGN_ROLE"))
                 authorities.add(new SimpleGrantedAuthority(permission));

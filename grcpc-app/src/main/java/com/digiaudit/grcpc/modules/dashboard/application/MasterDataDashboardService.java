@@ -24,7 +24,7 @@ public class MasterDataDashboardService {
     private static final MasterDataLifecycleStatus ACTIVE = MasterDataLifecycleStatus.ACTIVE;
     private static final MasterDataLifecycleStatus INACTIVE = MasterDataLifecycleStatus.INACTIVE;
     private static final List<Source> SOURCES = List.of(
-            new Source("ORGANIZATION", "OrganizationEntity", "name", "REFERENCE"),
+            new Source("ORGANIZATION", "OrganizationEntity", "name", "ORGANIZATION"),
             new Source("PROCESS", "CentralProcessEntity", "title", "PROCESS"),
             new Source("SUBPROCESS", "CentralSubprocessEntity", "title", "PROCESS"),
             new Source("RISK_TEMPLATE", "CentralRiskTemplateEntity", "title", "RISK"),

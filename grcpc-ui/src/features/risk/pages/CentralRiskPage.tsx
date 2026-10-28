@@ -1,3 +1,4 @@
+import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BusyIndicator, Dialog, MessageStrip } from "@ui5/webcomponents-react";
@@ -528,8 +529,20 @@ export default function CentralRiskPage() {
     if (isOwnDialogCloseEvent(event)) closeObject();
   }, [closeObject]);
 
+  const bulkDeleteItems = [
+    ...categories.map((row) => ({ key: riskNodeKey("category", row.id), parentKey: row.parentCategoryId ? riskNodeKey("category", row.parentCategoryId) : null, label: `${row.code} — ${row.title}`,
+      remove: () => centralRiskApi.categoryLifecycle(row.id, "delete", row.version) })),
+    ...templates.map((row) => ({ key: riskNodeKey("template", row.id), parentKey: riskNodeKey("category", row.riskCategoryId), label: `${row.code} — ${row.title}`,
+      remove: () => centralRiskApi.templateLifecycle(row.id, "delete", row.version) })),
+  ];
+
   return (
-    <>
+    <CatalogSelectionProvider items={bulkDeleteItems} enabled={permissions.delete} busy={busy}
+      onBusyChange={setBusy} reload={loadLists} reloadOrder={async () => { try { if (selectedNode) setSelectedDetail(await loadDetail(selectedNode.kind, selectedNode.id)); } finally { await loadLists(); } }} mapError={(error) => mapError(error, "risk.errors.delete")} beforeDelete={requestLeave}
+      onDeleted={(keys) => {
+        if (selectedNode && keys.has(selectedNode.key)) { setSelectedNode(null); setSelectedDetail(null); }
+        if (expansionAnchorKey && keys.has(expansionAnchorKey)) setExpansionAnchorKey(null);
+      }}>
       {createElement(
         "ui5-flexible-column-layout",
         {
@@ -599,6 +612,6 @@ export default function CentralRiskPage() {
         onClose={() => setDeleteCandidate(null)}
         onConfirm={() => void confirmDelete()}
       />
-    </>
+    </CatalogSelectionProvider>
   );
 }

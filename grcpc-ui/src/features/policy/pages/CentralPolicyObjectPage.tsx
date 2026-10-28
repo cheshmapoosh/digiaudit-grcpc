@@ -5,7 +5,8 @@ import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
 import { useAuthState } from "@/features/auth";
 import { canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
-import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { Text, ObjectStatus, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {

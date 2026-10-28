@@ -30,3 +30,7 @@ Risk manages the Master Data V2 `CentralRiskCategory` hierarchy and leaf `Centra
 ## Verification
 - Do not create or run automated tests for the current Master Data V2 implementation sequence.
 - Non-test verification may use `npm run lint` and `npm run build` from `grcpc-ui` when execution is available.
+
+## Main-page display ordering (2026-10-28)
+
+Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-main-catalog-display-order.md`. The explicit owner approval supersedes earlier no-drag rules only on main Governance trees. Sibling-only native UI5 dragging saves independent display ranks under the existing hierarchy Guard and one CENTRAL Revision; new inserts appear first. Modals, value helps and relationship tabs keep their existing sorting and have no ordering provider.

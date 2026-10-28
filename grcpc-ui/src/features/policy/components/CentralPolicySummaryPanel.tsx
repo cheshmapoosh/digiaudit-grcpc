@@ -1,6 +1,8 @@
+import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
+import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
+import { ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
 import type { CentralPolicyAnyDetail, CentralPolicyType } from "../domain/centralPolicy.model";
@@ -80,14 +82,14 @@ export default function CentralPolicySummaryPanel({
         <Row label={t("policy.fields.createdAt", { defaultValue: "تاریخ ایجاد" })} value={<Text>{formatPersianDateTime(value.createdAt)}</Text>} />
         <Row label={t("policy.fields.updatedAt", { defaultValue: "تاریخ بروزرسانی" })} value={<Text>{formatPersianDateTime(value.updatedAt)}</Text>} />
       </div>
-      <div className="policySummaryActions">
+      <DialogFooterBar>
         <Button design="Emphasized" disabled={busy || !canEdit} onClick={onEdit}>
           {t("common.edit", { defaultValue: "ویرایش" })}
         </Button>
         <Button design="Transparent" disabled={busy} onClick={onCancel}>
           {t("common.close", { defaultValue: "بستن" })}
         </Button>
-      </div>
+      </DialogFooterBar>
     </div>
   );
 }

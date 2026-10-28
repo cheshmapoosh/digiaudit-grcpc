@@ -1,5 +1,11 @@
 # Master Data V2 — Phase 1 Reference Pack
 
+**Accepted Organization Subprocess selection (2026-10-28):** [Hierarchy SearchDialog and explicit Local Contexts](accepted-corrections/2026-10-28-organization-subprocess-selection.md) replaces generic context creation with a draft table controlled by the Organization modal's main Edit/Save. One aggregate request commits Organization and Local Contexts atomically, retaining separate CENTRAL/LOCAL revisions. Deleted rows are hidden and can be selected again.
+
+**Accepted main-page ordering (2026-10-28):** [Sibling display order](accepted-corrections/2026-10-28-main-catalog-display-order.md) adds persisted native UI5 drag-and-drop and newest-first insertion only to main Governance trees. Modals, value helps and relationship tabs retain their current behavior.
+
+**Accepted Organization ownership follow-up (2026-10-28):** [Organization owner Assignments](accepted-corrections/2026-10-28-organization-owner-assignments.md) replaces the scalar owner with typed many-to-many links, adds the Organization Data Manager role and renames Initial Data Management. [Profile-owned type dictionaries](accepted-corrections/2026-10-28-profile-owned-basic-data.md) define Organization/Document Types.
+
 **Accepted objective follow-up (2026-10-28):** [Strategy structure, form and Objective selection](accepted-corrections/2026-10-28-objective-strategy-corrections.md) restricts Strategies to root categories, simplifies their forms to General Information/Documents, and introduces the structural single-Objective selection dialog.
 
 **Accepted objective correction (2026-10-27):** [Objective strategy classification](accepted-corrections/2026-10-27-objective-strategy-classification.md) implements delivery item 3: strategy categories in the existing Objective tree, exactly one strategy per objective, and strategy selection/details/filtering on the Objectives page.

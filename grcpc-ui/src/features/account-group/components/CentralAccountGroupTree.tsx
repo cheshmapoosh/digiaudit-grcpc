@@ -1,6 +1,9 @@
+import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
+import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
+import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageStrip, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { MessageStrip, Tree } from "@ui5/webcomponents-react";
 
 import type { CentralAccountGroupSummary } from "../domain/centralAccountGroup.model";
 import {
@@ -66,17 +69,17 @@ function AccountGroupTreeItem({
 }) {
   const selected = node.id === selectedId;
   return (
-    <TreeItemCustom
+    <TreeItemCustom orderId={node.id} orderType={"CENTRAL_ACCOUNT_GROUP"}
       data-node-id={node.id}
       expanded={expandedIds.has(node.id)}
       selected={selected}
-      content={
+      content={<CatalogSelectableRow itemKey={node.id}>
         <div className="accountGroupTreeItemContent" title={`${node.code} — ${node.title}`}>
           <span className={selected ? "accountGroupTreeItemTitle accountGroupTreeItemTitleSelected" : "accountGroupTreeItemTitle"}>
             {node.title}
           </span>
         </div>
-      }
+      </CatalogSelectableRow>}
     >
       {node.children.map((child) => (
         <AccountGroupTreeItem
@@ -100,7 +103,9 @@ export default function CentralAccountGroupTree({
 }: Props) {
   const { t } = useTranslation();
   const normalizedSearchText = searchText.trim();
-  const tree = useMemo(() => buildAccountGroupTree(rows), [rows]);
+  const sourceTree = useMemo(() => buildAccountGroupTree(rows), [rows]);
+  const displayOrder = useCatalogTreeOrder();
+  const tree = useMemo(() => displayOrder?.sortTree(sourceTree, (node) => orderKey("CENTRAL_ACCOUNT_GROUP", node.id)) ?? sourceTree, [sourceTree, displayOrder]);
   const filteredTree = useMemo(
     () => filterAccountGroupTree(tree, normalizedSearchText),
     [normalizedSearchText, tree],
@@ -155,7 +160,7 @@ export default function CentralAccountGroupTree({
   }
 
   return (
-    <Tree
+    <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
       accessibleName={t("accountGroup.list.title")}
       onItemClick={handleItemClick}
       onItemToggle={handleItemToggle}
