@@ -1,3 +1,4 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Dialog, Label, MessageStrip } from "@ui5/webcomponents-react";
@@ -57,7 +58,7 @@ export default function RequirementScopeEditorDialog({ open, row, busy, onClose,
           <div className="requirementScopeField"><Label showColon>{t("requirementScope.fields.validFrom")}</Label><PersianDatePicker value={validFrom} disabled={busy} accessibleName={t("requirementScope.fields.validFrom")} invalidValueMessage={t("requirementScope.validation.invalidDate")} onChange={setValidFrom} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} /></div>
           <div className="requirementScopeField"><Label showColon>{t("requirementScope.fields.validTo")}</Label><PersianDatePicker value={validTo} disabled={busy} accessibleName={t("requirementScope.fields.validTo")} invalidValueMessage={t("requirementScope.validation.invalidDate")} onChange={setValidTo} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))} /></div>
         </div>
-        <div className="requirementScopeDialogFooter"><Button design="Emphasized" disabled={busy} onClick={save}>{t("requirementScope.actions.applyDraft")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></div>
+        <DialogFooter><Button design="Emphasized" disabled={busy} onClick={save}>{t("requirementScope.actions.applyDraft")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></DialogFooter>
       </div>
     </Dialog>
   );

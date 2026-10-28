@@ -1,6 +1,8 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, CheckBox, Dialog, Input, ObjectStatus, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { Button, CheckBox, Dialog, ObjectStatus, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import type {
   ControlObjectiveAccountGroupOption,
@@ -154,14 +156,9 @@ export default function ControlObjectiveAccountGroupSelectionDialog({
       <ModalDialogHeader
         title={t("controlObjectiveAccountGroup.selection.title")}
         onClose={onClose}
-      />
+       actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy} accessibleName={t("controlObjectiveAccountGroup.selection.search")} />} />
       <div className="controlObjectiveAccountGroupDialogBody">
-        <Input
-          value={search}
-          placeholder={t("controlObjectiveAccountGroup.selection.search")}
-          disabled={busy}
-          onInput={(event) => setSearch(event.target.value)}
-        />
+
         <div className="controlObjectiveAccountGroupTreeFrame">
           <Tree accessibleName={t("controlObjectiveAccountGroup.selection.title")}>
             {tree.map((node) => (
@@ -176,14 +173,14 @@ export default function ControlObjectiveAccountGroupSelectionDialog({
             ))}
           </Tree>
         </div>
-        <div className="controlObjectiveAccountGroupDialogFooter">
+        <DialogFooter>
           <Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>
             {t("controlObjectiveAccountGroup.actions.confirm")}
           </Button>
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.cancel")}
           </Button>
-        </div>
+        </DialogFooter>
       </div>
     </Dialog>
   );

@@ -32,86 +32,86 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
           central(
               targetType,
               targetId,
-              "select id from organization where id = ? and status <> 'DELETED'");
+              "select id from organization where profile_id = ? and id = ? and status <> 'DELETED'");
       case OBJECTIVE ->
           central(targetType, targetId,
-              "select id from objective where id = ? and status <> 'DELETED'");
+              "select id from objective where profile_id = ? and id = ? and status <> 'DELETED'");
       case GLOBAL_CONTROL ->
           central(targetType, targetId,
-              "select id from global_control where id = ? and status <> 'DELETED'");
+              "select id from global_control where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_PROCESS ->
           central(
               targetType,
               targetId,
-              "select id from central_process where id = ? and status <> 'DELETED'");
+              "select id from central_process where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_SUBPROCESS ->
           central(
               targetType,
               targetId,
-              "select id from central_subprocess where id = ? and status <> 'DELETED'");
+              "select id from central_subprocess where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_CONTROL ->
           central(
               targetType,
               targetId,
-              "select id from central_control where id = ? and status <> 'DELETED'");
+              "select id from central_control where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_CONTROL_OBJECTIVE ->
           central(
               targetType,
               targetId,
-              "select id from central_control_objective where id = ? and status <> 'DELETED'");
+              "select id from central_control_objective where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_RISK_CATEGORY ->
           central(
               targetType,
               targetId,
-              "select id from central_risk_category where id = ? and status <> 'DELETED'");
+              "select id from central_risk_category where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_RISK_TEMPLATE ->
           central(
               targetType,
               targetId,
-              "select id from central_risk_template where id = ? and status <> 'DELETED'");
+              "select id from central_risk_template where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_ACCOUNT_GROUP ->
           central(
               targetType,
               targetId,
-              "select id from central_account_group where id = ? and status <> 'DELETED'");
+              "select id from central_account_group where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_REGULATION_GROUP ->
           central(
               targetType,
               targetId,
-              "select id from central_regulation_group where id = ? and status <> 'DELETED'");
+              "select id from central_regulation_group where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_REGULATION ->
           central(
               targetType,
               targetId,
-              "select id from central_regulation where id = ? and status <> 'DELETED'");
+              "select id from central_regulation where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_REGULATION_REQUIREMENT ->
           central(
               targetType,
               targetId,
-              "select id from central_regulation_requirement where id = ? and status <> 'DELETED'");
+              "select id from central_regulation_requirement where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_POLICY_GROUP ->
           central(
               targetType,
               targetId,
-              "select id from central_policy_group where id = ? and status <> 'DELETED'");
+              "select id from central_policy_group where profile_id = ? and id = ? and status <> 'DELETED'");
       case CENTRAL_POLICY ->
           central(
               targetType,
               targetId,
-              "select id from central_policy where id = ? and status <> 'DELETED'");
-      case LOCAL_ORGANIZATION_SUBPROCESS_SCOPE -> local(targetType, targetId, "select c.organization_id from local_organization_subprocess_scope c where c.id = ? and c.status <> 'DELETED'");
-      case LOCAL_SUBPROCESS_CONTROL_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_control_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED'");
-      case LOCAL_SUBPROCESS_RISK_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_risk_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED'");
-      case LOCAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_control_objective_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED'");
-      case LOCAL_SUBPROCESS_REQUIREMENT_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_requirement_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED'");
-      case LOCAL_SUBPROCESS_RISK_CONTROL_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_risk_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED'");
-      case LOCAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_risk_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED'");
-      case LOCAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_control_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_control_scope r on r.id = v.local_control_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED'");
-      case LOCAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_requirement_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_requirement_scope r on r.id = v.local_requirement_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED'");
-      case LOCAL_POLICY_ORGANIZATION_SCOPE -> local(targetType, targetId, "select p.organization_id from local_policy_organization_scope p where p.id = ? and p.status <> 'DELETED'");
-      case LOCAL_POLICY_SUBPROCESS_SCOPE -> local(targetType, targetId, "select c.organization_id from local_policy_subprocess_scope p join local_organization_subprocess_scope c on c.id = p.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED'");
-      case LOCAL_POLICY_CONTROL_SCOPE -> local(targetType, targetId, "select c.organization_id from local_policy_control_scope p join local_subprocess_control_scope s on s.id = p.local_control_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED'");
-      case LOCAL_POLICY_REQUIREMENT_SCOPE -> local(targetType, targetId, "select c.organization_id from local_policy_requirement_scope p join local_subprocess_requirement_scope s on s.id = p.local_requirement_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED'");
+              "select id from central_policy where profile_id = ? and id = ? and status <> 'DELETED'");
+      case LOCAL_ORGANIZATION_SUBPROCESS_SCOPE -> local(targetType, targetId, "select c.organization_id from local_organization_subprocess_scope c where c.profile_id = ? and c.id = ? and c.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_CONTROL_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_control_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.profile_id = ? and s.id = ? and s.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_RISK_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_risk_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.profile_id = ? and s.id = ? and s.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_control_objective_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.profile_id = ? and s.id = ? and s.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_REQUIREMENT_SCOPE -> local(targetType, targetId, "select c.organization_id from local_subprocess_requirement_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.profile_id = ? and s.id = ? and s.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_RISK_CONTROL_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_risk_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.profile_id = ? and v.id = ? and v.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_risk_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.profile_id = ? and v.id = ? and v.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_control_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_control_scope r on r.id = v.local_control_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.profile_id = ? and v.id = ? and v.status <> 'DELETED'");
+      case LOCAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE -> local(targetType, targetId, "select c.organization_id from local_subprocess_requirement_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_requirement_scope r on r.id = v.local_requirement_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.profile_id = ? and v.id = ? and v.status <> 'DELETED'");
+      case LOCAL_POLICY_ORGANIZATION_SCOPE -> local(targetType, targetId, "select p.organization_id from local_policy_organization_scope p where p.profile_id = ? and p.id = ? and p.status <> 'DELETED'");
+      case LOCAL_POLICY_SUBPROCESS_SCOPE -> local(targetType, targetId, "select c.organization_id from local_policy_subprocess_scope p join local_organization_subprocess_scope c on c.id = p.organization_subprocess_scope_id where p.profile_id = ? and p.id = ? and p.status <> 'DELETED'");
+      case LOCAL_POLICY_CONTROL_SCOPE -> local(targetType, targetId, "select c.organization_id from local_policy_control_scope p join local_subprocess_control_scope s on s.id = p.local_control_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.profile_id = ? and p.id = ? and p.status <> 'DELETED'");
+      case LOCAL_POLICY_REQUIREMENT_SCOPE -> local(targetType, targetId, "select c.organization_id from local_policy_requirement_scope p join local_subprocess_requirement_scope s on s.id = p.local_requirement_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.profile_id = ? and p.id = ? and p.status <> 'DELETED'");
       case CENTRAL_SUBPROCESS_CONTROL_SCOPE,
               CENTRAL_SUBPROCESS_RISK_SCOPE,
               CENTRAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE,
@@ -139,54 +139,54 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
     String sql =
         switch (targetType) {
           case ORGANIZATION ->
-              "select id from organization where id = ? and status <> 'DELETED' for update";
+              "select id from organization where profile_id = ? and id = ? and status <> 'DELETED' for update";
           case OBJECTIVE ->
-              "select id from objective where id = ? and status <> 'DELETED' for update";
+              "select id from objective where profile_id = ? and id = ? and status <> 'DELETED' for update";
           case GLOBAL_CONTROL ->
-              "select id from global_control where id = ? and status <> 'DELETED' for update";
+              "select id from global_control where profile_id = ? and id = ? and status <> 'DELETED' for update";
           case CENTRAL_PROCESS ->
-              "select id from central_process where id = ? and status <> 'DELETED' for update";
+              "select id from central_process where profile_id = ? and id = ? and status <> 'DELETED' for update";
           case CENTRAL_SUBPROCESS ->
-              "select id from central_subprocess where id = ? and status <> 'DELETED' for update";
+              "select id from central_subprocess where profile_id = ? and id = ? and status <> 'DELETED' for update";
           case CENTRAL_CONTROL ->
-              "select id from central_control where id = ? and status <> 'DELETED' for update";
+              "select id from central_control where profile_id = ? and id = ? and status <> 'DELETED' for update";
           case CENTRAL_CONTROL_OBJECTIVE ->
-              "select id from central_control_objective where id = ? and status <> 'DELETED' for"
+              "select id from central_control_objective where profile_id = ? and id = ? and status <> 'DELETED' for"
                   + " update";
           case CENTRAL_RISK_CATEGORY ->
-              "select id from central_risk_category where id = ? and status <> 'DELETED' for"
+              "select id from central_risk_category where profile_id = ? and id = ? and status <> 'DELETED' for"
                   + " update";
           case CENTRAL_RISK_TEMPLATE ->
-              "select id from central_risk_template where id = ? and status <> 'DELETED' for"
+              "select id from central_risk_template where profile_id = ? and id = ? and status <> 'DELETED' for"
                   + " update";
           case CENTRAL_ACCOUNT_GROUP ->
-              "select id from central_account_group where id = ? and status <> 'DELETED' for"
+              "select id from central_account_group where profile_id = ? and id = ? and status <> 'DELETED' for"
                   + " update";
           case CENTRAL_REGULATION_GROUP ->
-              "select id from central_regulation_group where id = ? and status <> 'DELETED' for"
+              "select id from central_regulation_group where profile_id = ? and id = ? and status <> 'DELETED' for"
                   + " update";
           case CENTRAL_REGULATION ->
-              "select id from central_regulation where id = ? and status <> 'DELETED' for update";
+              "select id from central_regulation where profile_id = ? and id = ? and status <> 'DELETED' for update";
           case CENTRAL_REGULATION_REQUIREMENT ->
-              "select id from central_regulation_requirement where id = ? and status <> 'DELETED'"
+              "select id from central_regulation_requirement where profile_id = ? and id = ? and status <> 'DELETED'"
                   + " for update";
           case CENTRAL_POLICY_GROUP ->
-              "select id from central_policy_group where id = ? and status <> 'DELETED' for update";
+              "select id from central_policy_group where profile_id = ? and id = ? and status <> 'DELETED' for update";
           case CENTRAL_POLICY ->
-              "select id from central_policy where id = ? and status <> 'DELETED' for update";
-          case LOCAL_ORGANIZATION_SUBPROCESS_SCOPE -> "select c.id from local_organization_subprocess_scope c where c.id = ? and c.status <> 'DELETED' for update of c.id";
-          case LOCAL_SUBPROCESS_CONTROL_SCOPE -> "select s.id from local_subprocess_control_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED' for update of s.id";
-          case LOCAL_SUBPROCESS_RISK_SCOPE -> "select s.id from local_subprocess_risk_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED' for update of s.id";
-          case LOCAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE -> "select s.id from local_subprocess_control_objective_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED' for update of s.id";
-          case LOCAL_SUBPROCESS_REQUIREMENT_SCOPE -> "select s.id from local_subprocess_requirement_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.id = ? and s.status <> 'DELETED' for update of s.id";
-          case LOCAL_SUBPROCESS_RISK_CONTROL_COVERAGE -> "select v.id from local_subprocess_risk_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED' for update of v.id";
-          case LOCAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE -> "select v.id from local_subprocess_risk_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED' for update of v.id";
-          case LOCAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE -> "select v.id from local_subprocess_control_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_control_scope r on r.id = v.local_control_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED' for update of v.id";
-          case LOCAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE -> "select v.id from local_subprocess_requirement_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_requirement_scope r on r.id = v.local_requirement_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.id = ? and v.status <> 'DELETED' for update of v.id";
-          case LOCAL_POLICY_ORGANIZATION_SCOPE -> "select p.id from local_policy_organization_scope p where p.id = ? and p.status <> 'DELETED' for update of p.id";
-          case LOCAL_POLICY_SUBPROCESS_SCOPE -> "select p.id from local_policy_subprocess_scope p join local_organization_subprocess_scope c on c.id = p.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED' for update of p.id";
-          case LOCAL_POLICY_CONTROL_SCOPE -> "select p.id from local_policy_control_scope p join local_subprocess_control_scope s on s.id = p.local_control_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED' for update of p.id";
-          case LOCAL_POLICY_REQUIREMENT_SCOPE -> "select p.id from local_policy_requirement_scope p join local_subprocess_requirement_scope s on s.id = p.local_requirement_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.id = ? and p.status <> 'DELETED' for update of p.id";
+              "select id from central_policy where profile_id = ? and id = ? and status <> 'DELETED' for update";
+          case LOCAL_ORGANIZATION_SUBPROCESS_SCOPE -> "select c.id from local_organization_subprocess_scope c where c.profile_id = ? and c.id = ? and c.status <> 'DELETED' for update of c.id";
+          case LOCAL_SUBPROCESS_CONTROL_SCOPE -> "select s.id from local_subprocess_control_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.profile_id = ? and s.id = ? and s.status <> 'DELETED' for update of s.id";
+          case LOCAL_SUBPROCESS_RISK_SCOPE -> "select s.id from local_subprocess_risk_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.profile_id = ? and s.id = ? and s.status <> 'DELETED' for update of s.id";
+          case LOCAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE -> "select s.id from local_subprocess_control_objective_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.profile_id = ? and s.id = ? and s.status <> 'DELETED' for update of s.id";
+          case LOCAL_SUBPROCESS_REQUIREMENT_SCOPE -> "select s.id from local_subprocess_requirement_scope s join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where s.profile_id = ? and s.id = ? and s.status <> 'DELETED' for update of s.id";
+          case LOCAL_SUBPROCESS_RISK_CONTROL_COVERAGE -> "select v.id from local_subprocess_risk_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.profile_id = ? and v.id = ? and v.status <> 'DELETED' for update of v.id";
+          case LOCAL_SUBPROCESS_RISK_CONTROL_OBJECTIVE_COVERAGE -> "select v.id from local_subprocess_risk_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_risk_scope r on r.id = v.local_risk_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.profile_id = ? and v.id = ? and v.status <> 'DELETED' for update of v.id";
+          case LOCAL_SUBPROCESS_CONTROL_CONTROL_OBJECTIVE_COVERAGE -> "select v.id from local_subprocess_control_control_objective_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_control_scope r on r.id = v.local_control_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_objective_scope x on x.id = v.local_control_objective_scope_id and x.organization_subprocess_scope_id = c.id where v.profile_id = ? and v.id = ? and v.status <> 'DELETED' for update of v.id";
+          case LOCAL_SUBPROCESS_REQUIREMENT_CONTROL_COVERAGE -> "select v.id from local_subprocess_requirement_control_coverage v join local_organization_subprocess_scope c on c.id = v.organization_subprocess_scope_id join local_subprocess_requirement_scope r on r.id = v.local_requirement_scope_id and r.organization_subprocess_scope_id = c.id join local_subprocess_control_scope x on x.id = v.local_control_scope_id and x.organization_subprocess_scope_id = c.id where v.profile_id = ? and v.id = ? and v.status <> 'DELETED' for update of v.id";
+          case LOCAL_POLICY_ORGANIZATION_SCOPE -> "select p.id from local_policy_organization_scope p where p.profile_id = ? and p.id = ? and p.status <> 'DELETED' for update of p.id";
+          case LOCAL_POLICY_SUBPROCESS_SCOPE -> "select p.id from local_policy_subprocess_scope p join local_organization_subprocess_scope c on c.id = p.organization_subprocess_scope_id where p.profile_id = ? and p.id = ? and p.status <> 'DELETED' for update of p.id";
+          case LOCAL_POLICY_CONTROL_SCOPE -> "select p.id from local_policy_control_scope p join local_subprocess_control_scope s on s.id = p.local_control_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.profile_id = ? and p.id = ? and p.status <> 'DELETED' for update of p.id";
+          case LOCAL_POLICY_REQUIREMENT_SCOPE -> "select p.id from local_policy_requirement_scope p join local_subprocess_requirement_scope s on s.id = p.local_requirement_scope_id join local_organization_subprocess_scope c on c.id = s.organization_subprocess_scope_id where p.profile_id = ? and p.id = ? and p.status <> 'DELETED' for update of p.id";
           case CENTRAL_SUBPROCESS_CONTROL_SCOPE,
                   CENTRAL_SUBPROCESS_RISK_SCOPE,
                   CENTRAL_SUBPROCESS_CONTROL_OBJECTIVE_SCOPE,
@@ -238,7 +238,8 @@ public class JdbcDocumentTargetContextResolver implements DocumentTargetContextR
     return jdbcTemplate.query(
         connection -> {
           PreparedStatement statement = connection.prepareStatement(sql);
-          statement.setBytes(1, OracleRawUuid.toBytes(id));
+          statement.setBytes(1, com.digiaudit.grcpc.common.security.ProfileContext.raw(com.digiaudit.grcpc.common.security.ProfileContext.requireId()));
+          statement.setBytes(2, OracleRawUuid.toBytes(id));
           return statement;
         },
         resultSet -> {

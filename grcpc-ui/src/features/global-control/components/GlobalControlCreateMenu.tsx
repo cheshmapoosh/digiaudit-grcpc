@@ -5,8 +5,9 @@ import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 type CreateKind = "group" | "control";
 
-export default function GlobalControlCreateMenu({ disabled, groupEnabled, controlEnabled, onCreate }: {
+export default function GlobalControlCreateMenu({ disabled, slot, groupEnabled, controlEnabled, onCreate }: {
   disabled: boolean;
+  slot?: string;
   groupEnabled: boolean;
   controlEnabled: boolean;
   onCreate: (kind: CreateKind) => void;
@@ -15,7 +16,7 @@ export default function GlobalControlCreateMenu({ disabled, groupEnabled, contro
   const [open, setOpen] = useState(false);
   const [opener, setOpener] = useState<HTMLElement | undefined>();
   return <>
-    <Button design="Emphasized" disabled={disabled || (!groupEnabled && !controlEnabled)} endIcon="slim-arrow-down"
+    <Button slot={slot} className="createMenuButton" design="Emphasized" disabled={disabled || (!groupEnabled && !controlEnabled)} endIcon="slim-arrow-down"
       accessibilityAttributes={{ hasPopup: "menu", expanded: open ? "true" : "false" }}
       onClick={(event) => {
         setOpener(event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined);

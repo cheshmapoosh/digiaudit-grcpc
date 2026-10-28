@@ -7,15 +7,14 @@
 .riskFclColumn {
   height: 100%;
   min-height: 0;
-  padding: 1rem;
+  padding: 0;
   box-sizing: border-box;
-  background: var(--sapBackgroundColor);
 }
 
 .riskListReport {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: var(--sapContent_Space_Tiny);
   height: 100%;
   min-height: 0;
 }
@@ -27,12 +26,10 @@
 }
 
 .riskTreeFrame {
-  grid-row: 4;
+  grid-row: 3;
   min-height: 0;
   overflow: auto;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapList_Background);
-  padding: 0.5rem;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -51,16 +48,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--sapTextColor);
-}
-
-.riskTreeItemTitleSelected {
-  font-weight: 700;
 }
 
 .riskTreeItemType {
-  color: var(--sapContent_LabelColor);
-  font-size: var(--sapFontSmallSize);
   white-space: nowrap;
 }
 
@@ -76,8 +66,6 @@
   gap: 0.875rem;
   align-content: start;
   padding: 1rem;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapGroup_ContentBackground);
 }
 
 .riskSummaryRow {
@@ -112,15 +100,12 @@
   display: grid;
   gap: 0.75rem;
   min-width: 0;
-  background: var(--sapBackgroundColor);
 }
 
 .riskObjectHeader {
   display: grid;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapGroup_ContentBackground);
 }
 
 .riskHeaderGrid,
@@ -155,8 +140,6 @@
 .riskObjectBody {
   min-height: 22rem;
   padding: 1rem;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapGroup_ContentBackground);
 }
 
 .riskTabPanel {
@@ -180,8 +163,6 @@
   min-height: 22rem;
   max-height: 55vh;
   overflow: auto;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapList_Background);
   padding: 0.5rem;
 }
 
@@ -214,4 +195,8 @@
     width: 82vw;
     max-width: 82vw;
   }
+}
+
+@media (min-width: 1101px) {
+  .riskHeaderGrid, .riskFormGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem 1rem; }
 }

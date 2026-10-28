@@ -1,9 +1,10 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Button,
     Dialog,
-    Input,
     List,
     ListItemStandard,
 } from "@ui5/webcomponents-react";
@@ -72,15 +73,11 @@ export default function ParentValueHelpDialog({
             style={{ width: "90vw", maxWidth: "90vw" }}
             onClose={onClose}
         >
-            <ModalDialogHeader title={dialogTitle} onClose={onClose} />
-            <div style={{ display: "grid", gap: "1rem", minWidth: "32rem", maxWidth: "90vw" }}>
-                <Input
-                    value={searchText}
-                    placeholder={t("organization.parent.dialog.search", {
+            <ModalDialogHeader title={dialogTitle} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} accessibleName={t("organization.parent.dialog.search", {
                         defaultValue: "جستجو بر اساس کد",
-                    })}
-                    onInput={(event) => setSearchText(event.target.value)}
-                />
+                    })} />} />
+            <div style={{ display: "grid", gap: "1rem", minWidth: "32rem", maxWidth: "90vw" }}>
+
 
                 <List separators="Inner">
                     <ListItemStandard selected={!selectedParentId} onClick={() => onSelect(null)}>
@@ -100,11 +97,11 @@ export default function ParentValueHelpDialog({
                     ))}
                 </List>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+                <DialogFooter>
                     <Button design="Transparent" disabled={busy} onClick={onClose}>
                         {t("common.close", { defaultValue: "بستن" })}
                     </Button>
-                </div>
+                </DialogFooter>
             </div>
         </Dialog>
     );

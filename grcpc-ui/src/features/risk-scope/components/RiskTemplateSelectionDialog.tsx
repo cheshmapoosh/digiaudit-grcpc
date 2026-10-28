@@ -1,6 +1,8 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, CheckBox, Dialog, Input, List, ListItemCustom, ListItemGroup, Text } from "@ui5/webcomponents-react";
+import { Button, CheckBox, Dialog, List, ListItemCustom, ListItemGroup, Text } from "@ui5/webcomponents-react";
 import type { CentralRiskCategorySummary, CentralRiskTemplateSummary } from "@/features/risk/domain/centralRisk.model";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import type { RiskScopeDraftRow } from "../domain/riskScope.model";
@@ -131,9 +133,9 @@ export default function RiskTemplateSelectionDialog({
 
   return (
     <Dialog open={open} accessibleName={t("riskScope.dialog.valueHelpTitle")} onClose={onClose} className="riskScopeValueHelpDialog">
-      <ModalDialogHeader title={t("riskScope.dialog.valueHelpTitle")} onClose={onClose} />
+      <ModalDialogHeader title={t("riskScope.dialog.valueHelpTitle")} onClose={onClose}  actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} accessibleName={t("riskScope.dialog.search")} />} />
       <div className="riskScopeValueHelpBody">
-        <Input value={search} placeholder={t("riskScope.dialog.search")} onInput={(event) => setSearch(event.target.value)} />
+
         <List className="riskScopeSelectionList" separators="Inner" accessibleName={t("riskScope.dialog.valueHelpTitle")} noDataText={t("riskScope.dialog.noRiskTemplates")}>
           {groupedRiskTemplates.map((group) => <ListItemGroup key={group.id} headerText={group.label} headerAccessibleName={group.label}>
             {group.riskTemplates.map((riskTemplate) => {
@@ -151,7 +153,7 @@ export default function RiskTemplateSelectionDialog({
             })}
           </ListItemGroup>)}
         </List>
-        <div className="riskScopeDialogFooter"><Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{t("riskScope.actions.confirmSelection")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></div>
+        <DialogFooter><Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{t("riskScope.actions.confirmSelection")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></DialogFooter>
       </div>
     </Dialog>
   );

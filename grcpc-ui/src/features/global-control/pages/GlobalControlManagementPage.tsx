@@ -1,3 +1,5 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { createElement, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -390,11 +392,13 @@ export default function GlobalControlManagementPage() {
 
   const startColumn = createElement("div", { slot: "startColumn", className: "globalControlFclColumn" }, <div className="globalControlListReport">
     <Bar startContent={<Title level="H4">{t("globalControl.title")}</Title>}
-      endContent={<div className="globalControlToolbar">
+      endContent={<>
+        <HeaderSearch value={search} onChange={(value) => setSearch(value)} accessibleName={t("globalControl.search")} />
         <GlobalControlCreateMenu disabled={!manage || busy}
           groupEnabled={!selected || selectedGroup?.status === "ACTIVE"}
           controlEnabled={selectedGroup?.status === "ACTIVE"}
           onCreate={(kind) => kind === "group" ? beginGroup(false) : beginControl(false)} />
+
         <Button disabled={!selected || busy} onClick={() => {
           setActiveTab("general"); setViewOpen(true);
         }}>{t("common.view")}</Button>
@@ -404,9 +408,8 @@ export default function GlobalControlManagementPage() {
             if (value) setDeleteCandidate({ kind: selectedGroup ? "group" : "control",
               id: value.id, name: value.name, version: value.version });
           }}>{t("common.delete")}</Button>
-      </div>} />
-    <Input value={search} placeholder={t("globalControl.search")}
-      onInput={(event) => setSearch(event.target.value)} />
+      </>} />
+
     <div className="globalControlTreeFrame">
     {loading || busy ? <BusyIndicator active delay={0} /> : null}
     <div className="globalControlTreeHeader">
@@ -432,9 +435,7 @@ export default function GlobalControlManagementPage() {
       <div className="globalControlRegulationToolbar">
         <div className="globalControlRegulationSearch">
           <Label showColon>{t("globalControl.tabs.regulations")}</Label>
-          <Input value={regulationSearch} placeholder={t("globalControl.regulations.search")}
-            accessibleName={t("globalControl.regulations.search")}
-            onInput={(event) => setRegulationSearch(event.target.value)} />
+
         </div>
         <div className="globalControlRegulationStatus">
           <Label showColon>{t("common.status")}</Label>
@@ -446,9 +447,11 @@ export default function GlobalControlManagementPage() {
             <Option value="DRAFT_PENDING_DELETE">{t("common.relationStatus.DRAFT_PENDING_DELETE")}</Option>
           </Select>
         </div>
+        <HeaderSearch value={regulationSearch} onChange={(value) => setRegulationSearch(value)} accessibleName={t("globalControl.regulations.search")} />
         {editor?.startsWith("control") ? <Button design="Emphasized"
           disabled={!manage || busy || relationsLoading || relationsLoadFailed}
           onClick={() => setRegulationPickerOpen(true)}>{t("common.select")}</Button> : null}
+
       </div>
       {relationsLoading ? <BusyIndicator active delay={0} /> : <>
       <Table headerRow={<TableHeaderRow>
@@ -471,7 +474,7 @@ export default function GlobalControlManagementPage() {
       </>}
     </div>;
   const viewDetails = details ? <div className="globalControlDialogContent">
-    <MasterDataObjectHeader title={details.name} fields={[
+    <MasterDataObjectHeader title={details.name} columns={selectedGroup ? 2 : 3} fields={[
       { label: t("globalControl.code"), value: details.code },
       { label: t("globalControl.name"), value: details.name },
       { label: t("globalControl.tree.kind"), value: t(selectedGroup ? "globalControl.group.menu" : "globalControl.control.menu") },
@@ -497,43 +500,36 @@ export default function GlobalControlManagementPage() {
     </DetailTabContainer>
     {activeTab === "general" || selectedGroup ?
       <div className="globalControlForm">
-      <div className="masterDataFormGrid">
-        <MasterDataFormField label={t("globalControl.code")}><Input value={details.code} readonly /></MasterDataFormField>
-        <MasterDataFormField label={t("globalControl.name")}><Input value={details.name} readonly /></MasterDataFormField>
-        {selectedGroup ? <MasterDataFormField label={t("globalControl.group.parent")}><Input value={
-          groups.find((item) => item.id === selectedGroup.parentId)?.name
-          || t("globalControl.group.none")} readonly /></MasterDataFormField> : null}
+      <div className={selectedGroup ? "masterDataFormGrid modalTwoColumnGrid" : "masterDataFormGrid"}>
+        <MasterDataFormField label={t("globalControl.code")}><Text className="objectPageValue">{(details.code) || "—"}</Text></MasterDataFormField>
+        <MasterDataFormField label={t("globalControl.name")}><Text className="objectPageValue">{(details.name) || "—"}</Text></MasterDataFormField>
+        {selectedGroup ? <MasterDataFormField label={t("globalControl.group.parent")}><Text className="objectPageValue">{(groups.find((item) => item.id === selectedGroup.parentId)?.name
+          || t("globalControl.group.none")) || "—"}</Text></MasterDataFormField> : null}
         {selectedControl ? <>
-          <MasterDataFormField label={t("globalControl.group.select")}><Input value={
-            groups.find((item) => item.id === selectedControl.controlGroupId)?.name || "—"} readonly /></MasterDataFormField>
-          <MasterDataFormField label={t("globalControl.type")}><Input value={selectedControl.controlType} readonly /></MasterDataFormField>
-          <MasterDataFormField label={t("globalControl.testRequired")}><Input value={
-            t(selectedControl.testRequired ? "globalControl.yes" : "globalControl.no")} readonly /></MasterDataFormField>
+          <MasterDataFormField label={t("globalControl.group.select")}><Text className="objectPageValue">{groups.find((item) => item.id === selectedControl.controlGroupId)?.name || "—"}</Text></MasterDataFormField>
+          <MasterDataFormField label={t("globalControl.type")}><Text className="objectPageValue">{(selectedControl.controlType) || "—"}</Text></MasterDataFormField>
+          <MasterDataFormField label={t("globalControl.testRequired")}><Text className="objectPageValue">{(t(selectedControl.testRequired ? "globalControl.yes" : "globalControl.no")) || "—"}</Text></MasterDataFormField>
         </> : null}
         <div className="globalControlValidityRow">
           <MasterDataFormField label={t("globalControl.validFrom")}>
-            <PersianDatePicker value={details.validFrom ?? ""} readonly
-              accessibleName={t("globalControl.validFrom")}
-              invalidValueMessage={t("globalControl.errors.dates")} />
+            <Text className="objectPageValue">{(formatPersianDate(details.validFrom ?? "")) || "—"}</Text>
           </MasterDataFormField>
           <MasterDataFormField label={t("globalControl.validTo")}>
-            <PersianDatePicker value={details.validTo ?? ""} readonly
-              accessibleName={t("globalControl.validTo")}
-              invalidValueMessage={t("globalControl.errors.dates")} />
+            <Text className="objectPageValue">{(formatPersianDate(details.validTo ?? "")) || "—"}</Text>
           </MasterDataFormField>
         </div>
-        <MasterDataFormField label={t("globalControl.description")} wide><TextArea value={details.description || ""} readonly rows={3} /></MasterDataFormField>
+        <MasterDataFormField label={t("globalControl.description")} wide><Text className="objectPageValue">{(details.description || "") || "—"}</Text></MasterDataFormField>
       </div>
       </div> : null}
     {selectedControl && activeTab === "regulations" ? regulationPanel : null}
     {viewOpen && selectedControl && activeTab === "documents" ? <DocumentManager
       targetType="GLOBAL_CONTROL" targetId={selectedControl.id} readOnly
       title={t("globalControl.tabs.documents")} /> : null}
-    <div className="globalControlActions globalControlDialogActions">
+    <DialogFooter>
       <Button design="Emphasized" disabled={!manage || busy}
         onClick={() => selectedGroup ? beginGroup(true, true) : beginControl(true, true)}>{t("common.edit")}</Button>
       <Button design="Transparent" onClick={() => setViewOpen(false)}>{t("common.close")}</Button>
-    </div>
+    </DialogFooter>
   </div> : null;
 
   const summaryColumn = details ? createElement("div", { slot: "midColumn", className: "globalControlFclColumn" },
@@ -574,7 +570,7 @@ export default function GlobalControlManagementPage() {
       <ModalDialogHeader title={editor ? editorTitle : details?.name || t("globalControl.title")}
         onClose={editor ? closeEditor : () => setViewOpen(false)} />
       {editor ? <div className="globalControlDialogContent">
-      <MasterDataObjectHeader title={form.name || editorTitle} fields={[
+      <MasterDataObjectHeader title={form.name || editorTitle} columns={groupEditor ? 2 : 3} fields={[
         { label: t("globalControl.code"), value: form.code },
         { label: t("globalControl.name"), value: form.name },
         { label: t("globalControl.tree.kind"), value: t(groupEditor ? "globalControl.group.menu" : "globalControl.control.menu") },
@@ -598,7 +594,7 @@ export default function GlobalControlManagementPage() {
       </DetailTabContainer>
       <div className={editorTab === "general" || groupEditor
         ? "globalControlForm" : "globalControlForm globalControlHidden"}>
-        <div className="masterDataFormGrid">
+        <div className={groupEditor ? "masterDataFormGrid modalTwoColumnGrid" : "masterDataFormGrid"}>
         <MasterDataFormField label={t("globalControl.code")} required><Input value={form.code} readonly={editor === "groupEdit" || editor === "controlEdit"}
           disabled={busy} onInput={(event) => groupEditor
             ? setGroupForm((old) => ({ ...old, code: event.target.value }))
@@ -675,12 +671,12 @@ export default function GlobalControlManagementPage() {
           title={t("globalControl.tabs.documents")}
           draftResetKey={draftGeneration} onDraftStateChange={setDocuments} />
       </div> : null}
-      <div className="globalControlActions globalControlDialogActions">
+      <DialogFooter>
         <Button design="Emphasized" disabled={busy || (!groupEditor && (relationsLoading || relationsLoadFailed)) || !dirty || invalidDateDraft
           || (!groupEditor && (!documents.ready || documents.invalid || documents.uploading))}
           onClick={() => void save()}>{t("common.save")}</Button>
         <Button design="Transparent" onClick={closeEditor}>{t("common.cancel")}</Button>
-      </div>
+      </DialogFooter>
       </div> : viewDetails}
     </Dialog>
     <DeleteConfirmDialog open={Boolean(deleteCandidate)}
@@ -692,7 +688,7 @@ export default function GlobalControlManagementPage() {
       confirmText={t("common.delete")} cancelText={t("common.cancel")} loading={busy}
       onClose={() => setDeleteCandidate(null)} onConfirm={() => void confirmDelete()} />
     <HierarchyMultiSelectionDialog open={regulationPickerOpen}
-      title={t("globalControl.regulations.select")} searchPlaceholder={t("globalControl.regulations.search")}
+      title={t("globalControl.regulations.select")} searchAccessibleName={t("globalControl.regulations.search")}
       nodes={regulationNodes} selectedIds={selectedRegulationIds} busy={busy}
       confirmText={t("common.confirm")} cancelText={t("common.cancel")}
       onConfirm={(ids) => { setSelectedRegulationIds(ids); setRegulationPickerOpen(false); }}

@@ -1,6 +1,8 @@
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Dialog, Input, List, ListItemStandard } from "@ui5/webcomponents-react";
+import { Button, Dialog, List, ListItemStandard } from "@ui5/webcomponents-react";
 
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import type { CentralControlGroupSummary } from "../domain/centralControl.model";
@@ -51,14 +53,9 @@ export default function ControlGroupValueHelpDialog({
 
   return (
     <Dialog open={open} accessibleName={title} onClose={onClose}>
-      <ModalDialogHeader title={title} onClose={onClose} />
+      <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy} accessibleName={t("control.group.search", { defaultValue: "جستجوی گروه کنترل" })} />} />
       <div style={{ width: "32rem", maxWidth: "80vw", padding: "0.75rem", display: "grid", gap: "0.75rem" }}>
-        <Input
-          value={search}
-          disabled={busy}
-          placeholder={t("control.group.search", { defaultValue: "جستجوی گروه کنترل" })}
-          onInput={(event) => setSearch(event.target.value)}
-        />
+
         <List separators="Inner">
           {allowEmpty ? (
             <ListItemStandard selected={!selectedId} onClick={() => select(null)}>
@@ -77,9 +74,9 @@ export default function ControlGroupValueHelpDialog({
             </ListItemStandard>
           ))}
         </List>
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <DialogFooter>
           <Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.close", { defaultValue: "بستن" })}</Button>
-        </div>
+        </DialogFooter>
       </div>
     </Dialog>
   );

@@ -115,11 +115,6 @@ function failMutation(): void {
     invalidateReads();
 }
 
-function normalizeOptional(value: string | null | undefined): string | null {
-    const normalized = value?.trim();
-    return normalized || null;
-}
-
 export const useOrganizationState = create<OrganizationState>((set, get) => ({
     nodesById: {},
     childrenByParent: {},
@@ -138,23 +133,7 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
         const loadingEpoch = beginMutation(set);
         try {
             const result = await organizationService.create(payload);
-            const code = payload.code.trim().toLocaleUpperCase("en-US");
-            const confirmed: OrganizationNode = {
-                id: result.entityId,
-                code,
-                name: payload.name.trim(),
-                organizationType: payload.organizationType,
-                displayLabel: payload.name.trim(),
-                parentOrganizationId: payload.parentOrganizationId?.trim() || null,
-                status: "ACTIVE",
-                location: normalizeOptional(payload.location),
-                description: normalizeOptional(payload.description),
-                validFrom: normalizeOptional(payload.validFrom),
-                validTo: normalizeOptional(payload.validTo),
-                version: result.version,
-                deletedAt: null,
-                deletedBy: null,
-            };
+            const confirmed = result.organization;
             set((state) => withActiveNodes(state, {
                 ...state.nodesById,
                 [confirmed.id]: confirmed,
@@ -186,19 +165,7 @@ export const useOrganizationState = create<OrganizationState>((set, get) => ({
             const result = await organizationService.update(id, payload);
             set((state) => withActiveNodes(state, {
                 ...state.nodesById,
-                [id]: {
-                    ...current,
-                    name: payload.name.trim(),
-                    organizationType: payload.organizationType,
-                    displayLabel: payload.name.trim(),
-                    status: payload.status,
-                    parentOrganizationId: payload.parentOrganizationId?.trim() || null,
-                    location: normalizeOptional(payload.location),
-                    description: normalizeOptional(payload.description),
-                    validFrom: normalizeOptional(payload.validFrom),
-                    validTo: normalizeOptional(payload.validTo),
-                    version: result.version,
-                },
+                [id]: result.organization,
             }));
             useDocumentState.getState().applyAggregateResults(
                 "ORG",

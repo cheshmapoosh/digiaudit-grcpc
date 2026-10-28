@@ -1,6 +1,7 @@
 export { organizationRoutes } from "./routes";
 
 export type {
+    OrganizationOwnerOption,
     MasterDataAggregateMutationResponse,
     MasterDataRevisionMutationResponse,
     OrganizationLifecycleCommand,

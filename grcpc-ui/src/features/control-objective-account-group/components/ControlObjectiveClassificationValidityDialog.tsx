@@ -1,3 +1,4 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Dialog, Label, MessageStrip } from "@ui5/webcomponents-react";
@@ -80,14 +81,14 @@ export default function ControlObjectiveClassificationValidityDialog({
             />
           </div>
         </div>
-        <div className="controlObjectiveAccountGroupDialogFooter">
+        <DialogFooter>
           <Button design="Emphasized" disabled={busy} onClick={save}>
             {t("controlObjectiveAccountGroup.actions.apply")}
           </Button>
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.cancel")}
           </Button>
-        </div>
+        </DialogFooter>
       </div>
     </Dialog>
   );

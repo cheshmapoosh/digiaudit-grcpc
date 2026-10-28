@@ -1,27 +1,12 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { addCustomCSS } from "@ui5/webcomponents-base/dist/theming/CustomStyle.js";
 import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 import type { ProcessNodeType } from "../domain/process.model";
 
 const DEFAULT_CREATE_NODE_TYPES: ProcessNodeType[] = ["PROCESS", "SUBPROCESS"];
-const PROCESS_CREATE_MENU_BUTTON_CLASS = "process-create-menu-button";
 
-addCustomCSS(
-    "ui5-button",
-    `
-        :host(.${PROCESS_CREATE_MENU_BUTTON_CLASS}) .ui5-button-root {
-            justify-content: flex-start;
-        }
-
-        :host(.${PROCESS_CREATE_MENU_BUTTON_CLASS}) .ui5-button-end-icon {
-            margin-left: 0 !important;
-            margin-inline-start: auto !important;
-        }
-    `,
-);
 
 const createMenuItemIdByNodeType: Record<ProcessNodeType, string> = {
     PROCESS: "process-create-menu-process",
@@ -47,6 +32,7 @@ type ButtonClickEvent = {
 
 export interface ProcessCreateMenuProps {
     disabled?: boolean;
+    slot?: string;
     style?: CSSProperties;
     nodeTypes?: ProcessNodeType[];
     onCreate: (nodeType: ProcessNodeType) => void;
@@ -68,6 +54,7 @@ function canUsePortal(): boolean {
 
 export default function ProcessCreateMenu({
     disabled = false,
+    slot,
     style,
     nodeTypes = DEFAULT_CREATE_NODE_TYPES,
     onCreate,
@@ -118,7 +105,8 @@ export default function ProcessCreateMenu({
     return (
         <>
             <Button
-                className={PROCESS_CREATE_MENU_BUTTON_CLASS}
+                slot={slot}
+                className="createMenuButton"
                 design="Emphasized"
                 disabled={blocked}
                 style={style}

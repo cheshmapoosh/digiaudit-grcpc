@@ -14,6 +14,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
+@org.hibernate.annotations.Filter(name = "datasetProfile", condition = "profile_id = :profileId")
 @Table(name = "central_account_group")
 public class CentralAccountGroupEntity extends CentralDefinitionEntity {
   @JdbcTypeCode(SqlTypes.BINARY)

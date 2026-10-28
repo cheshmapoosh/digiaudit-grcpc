@@ -20,6 +20,8 @@ export const ORGANIZATION_TYPES = [
 
 export type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
 
+export interface OrganizationOwnerOption { id: string; displayLabel: string }
+
 export interface MasterDataRevisionMutationResponse {
     entityId: string;
     revisionId: string;
@@ -28,6 +30,7 @@ export interface MasterDataRevisionMutationResponse {
 
 export interface MasterDataAggregateMutationResponse extends MasterDataRevisionMutationResponse {
     finalizedDocuments: DocumentCommandResponse[];
+    organization: OrganizationNode;
 }
 
 export interface OrganizationNode extends AuditFields {
@@ -35,6 +38,8 @@ export interface OrganizationNode extends AuditFields {
     code: string;
     name: string;
     organizationType: OrganizationType;
+    ownerUserId?: string | null;
+    ownerDisplayLabel?: string | null;
     parentOrganizationId: string | null;
     displayLabel: string;
     status: OrganizationStatus;
@@ -60,6 +65,7 @@ export interface OrganizationNodeCreate {
     code: string;
     name: string;
     organizationType: OrganizationType;
+    ownerUserId?: string | null;
     parentOrganizationId?: string | null;
     location?: string | null;
     description?: string | null;
@@ -73,6 +79,7 @@ export interface OrganizationNodeUpdate {
     name: string;
     organizationType: OrganizationType;
     status: OrganizationEditableStatus;
+    ownerUserId?: string | null;
     parentOrganizationId?: string | null;
     location?: string | null;
     description?: string | null;

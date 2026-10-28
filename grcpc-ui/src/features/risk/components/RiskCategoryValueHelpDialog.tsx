@@ -1,6 +1,8 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Dialog, Input } from "@ui5/webcomponents-react";
+import { Button, Dialog } from "@ui5/webcomponents-react";
 
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import type { CentralRiskCategorySummary } from "../domain/centralRisk.model";
@@ -52,14 +54,9 @@ export default function RiskCategoryValueHelpDialog({
       style={{ width: "70vw", maxWidth: "70vw" }}
       onClose={onClose}
     >
-      <ModalDialogHeader title={title} onClose={onClose} />
+      <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} disabled={busy} accessibleName={t("risk.parent.search")} />} />
       <div className="riskParentDialogContent">
-        <Input
-          value={searchText}
-          disabled={busy}
-          placeholder={t("risk.parent.search")}
-          onInput={(event) => setSearchText(event.target.value)}
-        />
+
 
         {!requiredParent ? (
           <Button
@@ -88,11 +85,11 @@ export default function RiskCategoryValueHelpDialog({
           />
         </div>
 
-        <div className="riskParentDialogFooter">
+        <DialogFooter>
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.close", { defaultValue: "بستن" })}
           </Button>
-        </div>
+        </DialogFooter>
       </div>
     </Dialog>
   );

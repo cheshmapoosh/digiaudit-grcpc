@@ -4,25 +4,21 @@ import { AppFooter } from "@/shared/components/AppFooter";
 
 export default function PublicLayout() {
     const { pathname } = useLocation();
+    const hasAuthLayout = pathname === "/login" || pathname === "/setup";
     return (
         <div
-            style={{
-                minHeight: "100vh",
-                display: "flex",
-                flexDirection: "column",
-                background: "var(--sapBackgroundColor)",
-            }}
+            style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
         >
             <main
                 style={{
                     flex: 1,
-                    paddingBlockEnd: pathname === "/login" ? 0 : "2rem",
+                    paddingBlockEnd: hasAuthLayout ? 0 : "2rem",
                 }}
             >
                 <Outlet />
             </main>
 
-            {pathname !== "/login" && <AppFooter />}
+            {!hasAuthLayout && <AppFooter />}
         </div>
     );
 }

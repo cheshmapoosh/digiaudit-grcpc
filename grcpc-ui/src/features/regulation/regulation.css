@@ -1,28 +1,31 @@
 .regulationFcl { width: 100%; height: calc(100vh - 7rem); min-height: 38rem; }
-.regulationFclColumn { height: 100%; min-height: 0; padding: 1rem; box-sizing: border-box; background: var(--sapBackgroundColor); }
-.regulationListReport { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); gap: 1rem; height: 100%; min-height: 0; }
-.regulationTreeFrame { grid-row: 4; min-height: 0; overflow: auto; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapList_Background); padding: 0.5rem; box-sizing: border-box; }
+.regulationFclColumn { height: 100%; min-height: 0; padding: 0; box-sizing: border-box; }
+.regulationListReport { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: var(--sapContent_Space_Tiny); height: 100%; min-height: 0; }
+.regulationTreeFrame { grid-row: 3; min-height: 0; overflow: auto; padding: 0; box-sizing: border-box; }
 .regulationTreeItemContent { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.75rem; box-sizing: border-box; }
-.regulationTreeTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--sapTextColor); }
-.regulationTreeTitleSelected { font-weight: 700; }
-.regulationTreeType { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); white-space: nowrap; }
+.regulationTreeTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.regulationTreeType { white-space: nowrap; }
 .regulationSummaryPanel { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 1rem; min-height: 100%; }
-.regulationSummaryGrid { display: grid; gap: 0.875rem; align-content: start; padding: 1rem; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
+.regulationSummaryGrid { display: grid; gap: 0.875rem; align-content: start; padding: 1rem; }
 .regulationSummaryRow { display: grid; grid-template-columns: 10rem minmax(0, 1fr); gap: 0.75rem; align-items: start; }
 .regulationSummaryActions, .regulationObjectFooter { display: flex; justify-content: center; gap: 1rem; padding-block-start: 0.5rem; }
 .regulationObjectDialog, .regulationParentDialog { width: 90vw; max-width: 90vw; }
 .regulationDialogContent { width: 86vw; max-width: 86vw; min-width: 44rem; padding: 0.75rem; box-sizing: border-box; }
-.regulationObjectPage { display: grid; gap: 0.75rem; min-width: 0; background: var(--sapBackgroundColor); }
-.regulationObjectHeader { display: grid; gap: 0.75rem; padding: 0.75rem 1rem; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
+.regulationObjectPage { display: grid; gap: 0.75rem; min-width: 0; }
+.regulationObjectHeader { display: grid; gap: 0.75rem; padding: 0.75rem 1rem; }
 .regulationHeaderGrid, .regulationFormGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1.25rem; }
 .regulationHeaderItem, .regulationField { display: grid; gap: 0.35rem; }
 .regulationParentField { display: flex; gap: 0.5rem; align-items: end; }
 .regulationParentField > ui5-input { flex: 1; min-width: 0; }
-.regulationObjectBody { min-height: 24rem; padding: 1rem; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
+.regulationObjectBody { min-height: 24rem; padding: 1rem; }
 .regulationTabPanel { min-height: 22rem; }
 .regulationTabPanelHidden { display: none; }
 .regulationFieldWide { grid-column: 1 / -1; }
-.regulationParentDialogContent { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 0.75rem; width: 72vw; min-width: 36rem; max-width: 72vw; max-height: 70vh; padding: 0.75rem; box-sizing: border-box; }
+.regulationParentDialogContent { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 0.75rem; width: 72vw; min-width: 36rem; max-width: 72vw; max-height: 70vh; padding: 0.75rem; box-sizing: border-box; }
 .regulationParentList { min-height: 20rem; overflow: auto; }
 .regulationParentDialogFooter { display: flex; justify-content: flex-end; gap: 0.5rem; }
 @media (max-width: 900px) { .regulationDialogContent, .regulationParentDialogContent { min-width: 0; width: 84vw; max-width: 84vw; } .regulationHeaderGrid, .regulationFormGrid, .regulationSummaryRow { grid-template-columns: 1fr; } .regulationTreeItemContent { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; } }
+
+@media (min-width: 1101px) {
+  .regulationHeaderGrid, .regulationFormGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem 1rem; }
+}

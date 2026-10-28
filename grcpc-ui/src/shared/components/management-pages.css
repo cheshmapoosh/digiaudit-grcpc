@@ -1,0 +1,6 @@
+.managementListPage { min-width: 0; box-sizing: border-box; }
+.managementListContent { min-width: 0; gap: var(--sapContent_Space_Tiny); }
+.managementHeaderActions, .managementHeaderSearch { gap: var(--sapContent_Space_Tiny); }
+.managementHeaderSearch ui5-search { width: min(24rem, calc(100vw - 4rem)); margin: .5rem; }
+.managementDetailDialog { width: 90vw; max-width: 90vw; }
+.managementDialogContent { width: 86vw; max-width: 86vw; min-width: 0; padding: .75rem; gap: .75rem; box-sizing: border-box; }

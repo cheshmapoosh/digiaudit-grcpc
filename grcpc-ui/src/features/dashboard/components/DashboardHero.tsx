@@ -32,7 +32,6 @@ export default function DashboardHero() {
                         <Button
                             key={section.key}
                             className="dashboardHeroNavButton"
-                            design="Transparent"
                             icon={section.icon}
                             onClick={() => navigate(section.path)}
                         >

@@ -2,7 +2,6 @@ package com.digiaudit.grcpc.modules.masterdata.objective.api;
 
 import com.digiaudit.grcpc.modules.masterdata.objective.application.ObjectiveService;
 import com.digiaudit.grcpc.modules.masterdata.objective.application.OrganizationObjectiveService;
-import com.digiaudit.grcpc.modules.masterdata.catalog.shared.api.dto.CatalogLifecycleCommandRequest;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import jakarta.validation.Valid;
@@ -56,7 +55,7 @@ public class ObjectiveController {
   @PostMapping("/{id}/restore")
   @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
   public MasterDataRevisionMutationResponse restore(@PathVariable UUID id,
-      @Valid @RequestBody CatalogLifecycleCommandRequest request) {
-    return service.restore(id, request.version());
+      @Valid @RequestBody ObjectiveDtos.Restore request) {
+    return service.restore(id, request.version(), request.parentObjectiveId());
   }
 }

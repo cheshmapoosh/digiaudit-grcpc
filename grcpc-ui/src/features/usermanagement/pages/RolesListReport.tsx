@@ -3,15 +3,13 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Bar,
-    BusyIndicator,
-    Button,
-    Input,
-    Label,
-    Table, TableHeaderRow, TableHeaderCell, TableRow, TableCell, Link, ObjectStatus,
+    FlexBox,
+    Table, TableHeaderRow, TableHeaderCell, TableRow, TableCell, Text, ObjectStatus,
     MessageStrip,
     Title,
 } from "@ui5/webcomponents-react";
 
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import type { RoleSummary } from "../domain/usermanagement.model";
 
 type RolesListReportProps = {
@@ -21,7 +19,6 @@ type RolesListReportProps = {
     busy?: boolean;
     error?: string | null;
     onSearchTextChange: (value: string) => void;
-    onRefresh: () => void;
     onSelect: (id: string) => void;
 };
 
@@ -36,7 +33,6 @@ export default function RolesListReport({
     busy = false,
     error = null,
     onSearchTextChange,
-    onRefresh,
     onSelect,
 }: RolesListReportProps) {
     const { t } = useTranslation();
@@ -56,37 +52,19 @@ export default function RolesListReport({
     }, [items, searchText]);
 
     return (
-        <div style={{ display: "grid", gap: "1rem", minWidth: 0 }}>
+        <FlexBox direction="Column" className="managementListContent">
             <Bar
                 startContent={
                     <Title level="H4">
                         {t("usermanagement.roles.listTitle", {
-                            defaultValue: "فهرست نقش‌ها",
+                            defaultValue: "نقش ها",
                         })}
                     </Title>
                 }
                 endContent={
-                    <Button design="Transparent" icon="refresh" onClick={onRefresh}>
-                        {t("common.refresh", { defaultValue: "بازآوری" })}
-                    </Button>
+                    <HeaderSearch value={searchText} onChange={onSearchTextChange} />
                 }
             />
-
-            <div style={{ display: "grid", gap: ".5rem" }}>
-                <Label for="roles-search">
-                    {t("usermanagement.roles.searchLabel", {
-                        defaultValue: "جستجو",
-                    })}
-                </Label>
-                <Input
-                    id="roles-search"
-                    value={searchText}
-                    placeholder={t("usermanagement.roles.searchPlaceholder", {
-                        defaultValue: "کد، عنوان یا توضیح نقش",
-                    })}
-                    onInput={(event) => onSearchTextChange(event.target.value)}
-                />
-            </div>
 
             {error ? (
                 <MessageStrip design="Negative" hideCloseButton>
@@ -94,22 +72,20 @@ export default function RolesListReport({
                 </MessageStrip>
             ) : null}
 
-            {busy ? <BusyIndicator active delay={0} /> : null}
-
-            <Table noDataText={t("usermanagement.roles.empty")} headerRow={
+            <Table loading={busy} onRowClick={(event) => { if (event.detail.row.rowKey) onSelect(event.detail.row.rowKey); }} noDataText={t("usermanagement.roles.empty")} headerRow={
                 <TableHeaderRow>
                     <TableHeaderCell>{t("usermanagement.roles.fields.title")}</TableHeaderCell>
                     <TableHeaderCell>{t("usermanagement.roles.fields.status")}</TableHeaderCell>
                 </TableHeaderRow>
             }>
                 {filteredItems.map((item) => (
-                    <TableRow key={item.id} rowKey={item.id} className={selectedId === item.id ? "userManagementSelectedRow" : undefined}>
-                        <TableCell><Link onClick={() => onSelect(item.id)}>{item.title && item.title !== item.code ? item.title : t("usermanagement.roles.untitled")}</Link></TableCell>
+                    <TableRow key={item.id} rowKey={item.id} interactive navigated={selectedId === item.id} className={selectedId === item.id ? "userManagementSelectedRow" : undefined}>
+                        <TableCell><Text>{item.title && item.title !== item.code ? item.title : t("usermanagement.roles.untitled")}</Text></TableCell>
 
                         <TableCell><ObjectStatus state={item.enabled ? "Positive" : "None"}>{t(item.enabled ? "usermanagement.roles.status.enabled" : "usermanagement.roles.status.disabled")}</ObjectStatus></TableCell>
                     </TableRow>
                 ))}
             </Table>
-        </div>
+        </FlexBox>
     );
 }

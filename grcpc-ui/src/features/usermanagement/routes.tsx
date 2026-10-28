@@ -1,6 +1,7 @@
 import { Route } from "react-router-dom";
 import UsersFclShellPage from "./pages/UsersFclShellPage";
 import RolesFclShellPage from "./pages/RolesFclShellPage";
+import LegacyRoleRedirect from "./pages/LegacyRoleRedirect";
 import LoginPageGuard from "@/app/guards/LoginPageGuard.tsx";
 import LoginPage from "@/pages/LoginPage.tsx";
 
@@ -10,6 +11,8 @@ export const usermanagementRoutes = (
         <Route path="/access-control/users/:userId" element={<UsersFclShellPage />} />
         <Route path="/access-control/roles" element={<RolesFclShellPage />} />
         <Route path="/access-control/roles/:roleId" element={<RolesFclShellPage />} />
+        <Route path="/settings/roles" element={<LegacyRoleRedirect />} />
+        <Route path="/settings/roles/:roleId" element={<LegacyRoleRedirect />} />
     </>
 );
 

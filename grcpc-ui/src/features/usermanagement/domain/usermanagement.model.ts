@@ -3,6 +3,7 @@ export interface UserRoleAssignment {
     roleId: string;
     roleCode: string;
     roleTitle: string;
+    profileId: string;
     scopeType: string;
     scopeOrgUnitId: string | null;
     validFrom: string | null;
@@ -22,6 +23,8 @@ export interface UserSummary {
     enabled: boolean;
     locked: boolean;
     rootUser: boolean;
+    profileId: string | null;
+    profileAdmin: boolean;
     defaultOrgUnitId: string | null;
     createdAt: string | null;
 }
@@ -30,6 +33,7 @@ export interface UserDetail extends UserSummary {
     lastLoginAt: string | null;
     updatedAt: string | null;
     assignments: UserRoleAssignment[];
+    profileAccessIds: string[];
 }
 
 export interface LocalizedText {
@@ -71,9 +75,13 @@ export interface RoleDetail {
 export interface CreateUserInput {
     username: string; password: string; firstName: string; lastName: string;
     email?: string | null; mobile?: string | null; enabled: boolean; defaultOrgUnitId: null;
+    profileId: string | null; profileAdmin: boolean; profileAccessIds: string[]; roleIds?: string[]; roleGrants?: ProfileRoleGrant[];
 }
 
-export interface AssignGlobalRoleInput {
-    roleId: string; scopeType: "GLOBAL"; scopeOrgUnitId: null;
-    validFrom: string | null; validTo: string | null;
+export interface UpdateUserInput {
+    firstName: string; lastName: string; email: string | null; mobile: string | null;
+    enabled: boolean; locked: boolean; defaultOrgUnitId: string | null;
+    profileId: string | null; profileAdmin: boolean; profileAccessIds: string[]; roleIds?: string[]; roleGrants?: ProfileRoleGrant[];
 }
+
+export interface ProfileRoleGrant { roleId: string; validFrom: string | null; validTo: string | null }

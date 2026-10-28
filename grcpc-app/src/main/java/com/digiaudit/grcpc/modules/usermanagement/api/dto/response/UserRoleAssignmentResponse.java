@@ -17,6 +17,7 @@ public record UserRoleAssignmentResponse(
         LocalDateTime validTo,
         UUID assignedBy,
         LocalDateTime assignedAt,
-        boolean active
+        boolean active,
+        UUID profileId
 ) {
 }

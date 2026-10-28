@@ -12,6 +12,7 @@ import com.digiaudit.grcpc.modules.masterdata.objective.api.ObjectiveDtos;
 import com.digiaudit.grcpc.modules.masterdata.objective.api.ObjectiveMapper;
 import com.digiaudit.grcpc.modules.masterdata.objective.api.OrganizationObjectiveDtos;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveEntity;
+import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveKind;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveRepository;
 import com.digiaudit.grcpc.modules.masterdata.objective.domain.OrganizationObjectiveRepository;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
@@ -87,9 +88,10 @@ public class ObjectiveService {
   }
 
   public MasterDataAggregateMutationResponse create(ObjectiveDtos.Create request) {
+    ObjectiveKind kind = request.kind() == null ? ObjectiveKind.OBJECTIVE : request.kind();
     String code = support.normalizeCode(request.code());
     String name = support.normalizeTitle(request.name());
-    support.validateValidity(request.validFrom(), request.validTo());
+    if (kind == ObjectiveKind.OBJECTIVE) support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     RevisionExecutionResult result = revisions.executeStructural(
         List.of(MasterDataHierarchyKey.OBJECTIVE, MasterDataHierarchyKey.ORGANIZATION),
@@ -101,11 +103,14 @@ public class ObjectiveService {
           Map<UUID, ObjectiveEntity> hierarchy = hierarchy();
           if (objectives.findByCode(code).isPresent()) throw support.duplicate(code);
           UUID id = UUID.randomUUID();
-          hierarchySupport.requireParent(id, request.parentObjectiveId(), hierarchy, "Objective parent");
+          validateStructure(id, kind, request.parentObjectiveId(), hierarchy);
+          validateStrategyOrganizations(id, kind, request.organizationIds());
           ObjectiveEntity entity = new ObjectiveEntity(id, code, name,
-              support.normalizeDescription(request.description()), normalizeType(request.objectiveType()),
-              request.parentObjectiveId(), request.validFrom(), request.validTo(),
-              actors.currentActorId(), Instant.now(clock));
+              support.normalizeDescription(request.description()),
+              kind == ObjectiveKind.STRATEGY ? null : normalizeType(request.objectiveType()),
+              request.parentObjectiveId(), kind == ObjectiveKind.STRATEGY ? null : request.validFrom(),
+              kind == ObjectiveKind.STRATEGY ? null : request.validTo(),
+              actors.currentActorId(), Instant.now(clock), kind);
           entity = objectives.saveAndFlush(entity);
           synchronizeOrganizations(id, request.organizationIds());
           finalized.set(documents.finalizePreparedAggregate(prepared, DocumentLinkTargetType.OBJECTIVE,
@@ -119,7 +124,6 @@ public class ObjectiveService {
   public MasterDataAggregateMutationResponse update(UUID id, ObjectiveDtos.Update request) {
     long expected = support.requireVersion(request.version());
     String name = support.normalizeTitle(request.name());
-    support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
     RevisionExecutionResult result = revisions.executeStructural(
         List.of(MasterDataHierarchyKey.OBJECTIVE, MasterDataHierarchyKey.ORGANIZATION),
@@ -132,13 +136,15 @@ public class ObjectiveService {
           ObjectiveEntity entity = hierarchy.get(id);
           if (entity == null || entity.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
           support.assertVersion(entity, expected);
-          hierarchySupport.requireParent(id, request.parentObjectiveId(), hierarchy, "Objective parent");
-          hierarchySupport.rejectCycle(id, request.parentObjectiveId(), hierarchy,
-              ObjectiveEntity::getParentObjectiveId);
+          ObjectiveKind kind = request.kind() == null ? entity.getKind() : request.kind();
+          if (kind == ObjectiveKind.OBJECTIVE) support.validateValidity(request.validFrom(), request.validTo());
+          validateStructure(id, kind, request.parentObjectiveId(), hierarchy);
+          validateStrategyOrganizations(id, kind, request.organizationIds());
           JsonNode before = support.snapshot(entity, typed(entity));
           entity.update(name, support.normalizeDescription(request.description()),
-              normalizeType(request.objectiveType()), request.parentObjectiveId(),
-              request.validFrom(), request.validTo(), actors.currentActorId(), Instant.now(clock));
+              kind == ObjectiveKind.STRATEGY ? null : normalizeType(request.objectiveType()), request.parentObjectiveId(),
+              kind == ObjectiveKind.STRATEGY ? null : request.validFrom(),
+              kind == ObjectiveKind.STRATEGY ? null : request.validTo(), actors.currentActorId(), Instant.now(clock), kind);
           entity = objectives.saveAndFlush(entity);
           synchronizeOrganizations(id, request.organizationIds());
           finalized.set(documents.finalizePreparedAggregate(prepared, DocumentLinkTargetType.OBJECTIVE,
@@ -174,6 +180,10 @@ public class ObjectiveService {
   }
 
   public MasterDataRevisionMutationResponse restore(UUID id, Long version) {
+    return restore(id, version, null);
+  }
+
+  public MasterDataRevisionMutationResponse restore(UUID id, Long version, UUID requestedParentId) {
     long expected = support.requireVersion(version);
     RevisionExecutionResult result = revisions.executeStructural(
         MasterDataHierarchyKey.OBJECTIVE,
@@ -185,11 +195,12 @@ public class ObjectiveService {
           if (entity == null) throw notFound(id);
           support.assertVersion(entity, expected);
           support.validateLifecycle(entity, RevisionOperationType.RESTORE);
-          hierarchySupport.requireParent(id, entity.getParentObjectiveId(), hierarchy, "Objective parent");
-          hierarchySupport.rejectCycle(id, entity.getParentObjectiveId(), hierarchy,
-              ObjectiveEntity::getParentObjectiveId);
+          UUID parentId = requestedParentId != null ? requestedParentId
+              : entity.getKind() == ObjectiveKind.STRATEGY ? null : entity.getParentObjectiveId();
+          validateStructure(id, entity.getKind(), parentId, hierarchy);
+          validateStrategyOrganizations(id, entity.getKind(), null);
           JsonNode before = support.snapshot(entity, typed(entity));
-          entity.restore(actors.currentActorId(), Instant.now(clock));
+          entity.restore(actors.currentActorId(), Instant.now(clock), parentId);
           entity = objectives.saveAndFlush(entity);
           return support.completed(context, entity, RevisionEntityType.OBJECTIVE,
               RevisionOperationType.RESTORE, expected, before, typed(entity));
@@ -200,6 +211,45 @@ public class ObjectiveService {
   private Map<UUID, ObjectiveEntity> hierarchy() {
     return objectives.findAllByOrderByTitleAscIdAsc().stream()
         .collect(Collectors.toMap(ObjectiveEntity::getId, Function.identity()));
+  }
+
+  private void validateStructure(UUID id, ObjectiveKind kind, UUID parentId,
+      Map<UUID, ObjectiveEntity> hierarchy) {
+    if (kind == ObjectiveKind.STRATEGY && parentId != null) {
+      throw new UnprocessableEntityException("STRATEGY_PARENT_NOT_ALLOWED",
+          "error.masterdata.objective.strategyParent", "A strategy cannot have a parent strategy");
+    }
+    ObjectiveEntity parent = hierarchySupport.requireParent(id, parentId, hierarchy, "Strategy");
+    if (kind == ObjectiveKind.OBJECTIVE && parent == null) {
+      throw new UnprocessableEntityException("OBJECTIVE_STRATEGY_REQUIRED",
+          "error.masterdata.objective.strategyRequired", "An objective requires one strategy");
+    }
+    if (parent != null && (parent.getKind() != ObjectiveKind.STRATEGY
+        || parent.getParentObjectiveId() != null)) {
+      throw new UnprocessableEntityException("INVALID_OBJECTIVE_STRATEGY",
+          "error.masterdata.objective.invalidStrategy", "The parent must be a strategy");
+    }
+    hierarchySupport.rejectCycle(id, parentId, hierarchy, ObjectiveEntity::getParentObjectiveId);
+    if (kind == ObjectiveKind.STRATEGY && hierarchy.values().stream().anyMatch(child ->
+        id.equals(child.getParentObjectiveId()) && child.getKind() == ObjectiveKind.STRATEGY
+            && child.getStatus() != MasterDataLifecycleStatus.DELETED)) {
+      throw new ConflictException("STRATEGY_HAS_STRATEGIES",
+          "error.masterdata.objective.strategyChildren", "Promote child strategies to roots first", id);
+    }
+    if (kind == ObjectiveKind.OBJECTIVE && hierarchy.values().stream().anyMatch(child ->
+        id.equals(child.getParentObjectiveId()) && child.getStatus() != MasterDataLifecycleStatus.DELETED)) {
+      throw new ConflictException("OBJECTIVE_HAS_CHILDREN",
+          "error.masterdata.objective.hasChildren", "An objective cannot have child nodes", id);
+    }
+  }
+
+  private void validateStrategyOrganizations(UUID id, ObjectiveKind kind, List<UUID> requestedIds) {
+    if (kind == ObjectiveKind.STRATEGY && (requestedIds == null
+        ? assignments.existsByObjectiveIdAndStatusNot(id, MasterDataLifecycleStatus.DELETED)
+        : !requestedIds.isEmpty())) {
+      throw new UnprocessableEntityException("STRATEGY_ORGANIZATION_ASSIGNMENT",
+          "error.masterdata.objective.strategyAssignment", "Only objectives can be assigned to organizations");
+    }
   }
 
   private void synchronizeOrganizations(UUID objectiveId, List<UUID> requestedIds) {
@@ -226,6 +276,7 @@ public class ObjectiveService {
 
   private Map<String, ?> typed(ObjectiveEntity e) {
     Map<String, Object> fields = new LinkedHashMap<>();
+    fields.put("kind", e.getKind());
     fields.put("objectiveType", e.getObjectiveType());
     fields.put("parentObjectiveId", e.getParentObjectiveId());
     return fields;

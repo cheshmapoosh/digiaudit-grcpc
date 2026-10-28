@@ -1,19 +1,10 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { RiskTemplateControlAssignmentsTab, useRiskControlAssignmentPermissions } from "@/features/risk-control-assignment";
 import { RiskTemplateControlObjectiveAssignmentsTab, useRiskControlObjectiveAssignmentPermissions } from "@/features/risk-control-objective-assignment";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
-import {
-  Button,
-  Input,
-  Label,
-  MessageStrip,
-  Option,
-  Select,
-  Tab,
-  TextArea,
-  Title,
-} from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
 
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
@@ -345,7 +336,7 @@ export default function CentralRiskObjectPage({
 
   const validFromField = (
     <Field label={t("risk.fields.validFrom")}>
-      <PersianDatePicker
+      {readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker
         value={form.validFrom}
         readonly={readOnly}
         disabled={busy}
@@ -353,12 +344,12 @@ export default function CentralRiskObjectPage({
         invalidValueMessage={t("risk.validation.invalidDate")}
         onChange={(next) => change("validFrom", next)}
         onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))}
-      />
+      />}
     </Field>
   );
   const validToField = (
     <Field label={t("risk.fields.validTo")}>
-      <PersianDatePicker
+      {readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker
         value={form.validTo}
         readonly={readOnly}
         disabled={busy}
@@ -366,7 +357,7 @@ export default function CentralRiskObjectPage({
         invalidValueMessage={t("risk.validation.invalidDate")}
         onChange={(next) => change("validTo", next)}
         onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))}
-      />
+      />}
     </Field>
   );
 
@@ -375,11 +366,11 @@ export default function CentralRiskObjectPage({
       <div className="riskObjectPage">
         <div className="riskObjectHeader">
           <Title level="H4">{form.title || t(`risk.object.${kind}`)}</Title>
-          <div className="riskHeaderGrid">
+          <div className={kind === "category" ? "riskHeaderGrid modalTwoColumnGrid" : "riskHeaderGrid"}>
             {headerValues.map(([label, displayValue]) => (
               <div className="riskHeaderItem" key={label}>
                 <Label showColon>{label}</Label>
-                <Input value={displayValue} readonly />
+                <Text className="objectPageValue">{(displayValue) || "—"}</Text>
               </div>
             ))}
           </div>
@@ -410,28 +401,28 @@ export default function CentralRiskObjectPage({
 
         <div className="riskObjectBody">
           <div className={activeTab === "general" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
-            <div className="riskFormGrid">
+            <div className={kind === "category" ? "riskFormGrid modalTwoColumnGrid" : "riskFormGrid"}>
               <Field label={t("risk.fields.code")} required>
-                <Input
+                {readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input
                   value={form.code}
                   readonly={mode !== "create"}
                   disabled={busy}
                   maxlength={64}
                   onInput={(event) => change("code", readValue(event))}
-                />
+                />}
               </Field>
               <Field label={t("risk.fields.name")} required>
-                <Input
+                {readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input
                   value={form.title}
                   readonly={readOnly}
                   disabled={busy}
                   maxlength={255}
                   onInput={(event) => change("title", readValue(event))}
-                />
+                />}
               </Field>
               <Field label={t(kind === "category" ? "risk.fields.parentCategory" : "risk.fields.riskCategory")} required={kind === "template"}>
                 <div className="riskParentField">
-                  <Input value={parentLabel} readonly />
+                  {readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly />}
                   {canChangeParent ? (
                     <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>
                       {t("risk.parent.select")}
@@ -441,7 +432,7 @@ export default function CentralRiskObjectPage({
               </Field>
               {kind === "template" ? (
                 <Field label={t("risk.fields.riskType")} required>
-                  <Select
+                  {readOnly ? <Text className="objectPageValue">{(form.riskType ? t("risk.riskType." + form.riskType) : "—") || "—"}</Text> : <Select
                     value={form.riskType}
                     disabled={readOnly || busy}
                     onChange={(event) => change("riskType", readValue(event) as FormState["riskType"])}
@@ -450,11 +441,11 @@ export default function CentralRiskObjectPage({
                     {RISK_TYPES.map((riskType) => (
                       <Option key={riskType} value={riskType}>{t(`risk.riskType.${riskType}`)}</Option>
                     ))}
-                  </Select>
+                  </Select>}
                 </Field>
               ) : null}
               <Field label={t("risk.fields.status")}>
-                <Select
+                {readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("risk.status." + form.status)}</ObjectStatus> : <Select
                   value={form.status}
                   disabled={!canChangeStatus || busy}
                   accessibleName={t("risk.fields.status")}
@@ -462,29 +453,22 @@ export default function CentralRiskObjectPage({
                 >
                   <Option value="ACTIVE">{t("risk.status.ACTIVE")}</Option>
                   <Option value="INACTIVE">{t("risk.status.INACTIVE")}</Option>
-                </Select>
+                </Select>}
               </Field>
 
-              {kind === "template" ? (
-                <div className="riskDateRange">
-                  {validFromField}
-                  {validToField}
-                </div>
-              ) : (
-                <>
-                  {validFromField}
-                  {validToField}
-                </>
-              )}
+              <div className="riskDateRange">
+                {validFromField}
+                {validToField}
+              </div>
 
               <Field label={t("risk.fields.description")} fullWidth>
-                <TextArea
+                {readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea
                   rows={5}
                   value={form.description}
                   readonly={readOnly}
                   disabled={busy}
                   onInput={(event) => change("description", readValue(event))}
-                />
+                />}
               </Field>
             </div>
           </div>
@@ -520,7 +504,7 @@ export default function CentralRiskObjectPage({
           titleKey="local.reverse.riskScopes" titleFa="انتساب‌های محلی این الگوی ریسک"
           areas={["PROCESS", "RISK"]} /> : null}
 
-        <div className="riskObjectFooter">
+        <DialogFooter>
           {mode === "view" ? (
             <>
               <Button design="Emphasized" disabled={busy || !permissions.update} onClick={onEdit}>
@@ -540,7 +524,7 @@ export default function CentralRiskObjectPage({
               </Button>
             </>
           )}
-        </div>
+        </DialogFooter>
       </div>
 
       <RiskCategoryValueHelpDialog

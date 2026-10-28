@@ -48,8 +48,7 @@ export default function LocalLinkedCoverageList<K extends LocalSectionKey>({
         return () => { active = false; };
     }, [section, organizationId, contextId, page, t]);
 
-    return <section style={{ display: "grid", gap: "0.5rem",
-        borderTop: "1px solid var(--sapGroup_ContentBorderColor)", paddingTop: "0.7rem" }}>
+    return <section style={{ display: "grid", gap: "0.5rem", paddingTop: "0.7rem" }}>
         <Title level="H6">{t(labelKey, { defaultValue: labelFa })}</Title>
         {loading ? <MessageStrip design="Information" hideCloseButton>
             {t("local.loading", { defaultValue: "در حال بارگذاری..." })}

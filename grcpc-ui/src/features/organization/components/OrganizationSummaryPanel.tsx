@@ -134,14 +134,7 @@ export default function OrganizationSummaryPanel({
 
                 {value ? (
                     <div
-                        style={{
-                            display: "grid",
-                            gap: "0.875rem",
-                            padding: "1rem",
-                            border: "1px solid var(--sapGroup_ContentBorderColor)",
-                            borderRadius: "0",
-                            background: "var(--sapGroup_ContentBackground)",
-                        }}
+                        style={{ display: "grid", gap: "0.875rem", padding: "1rem" }}
                     >
                         {rows.map((row) => (
                             <div
@@ -155,12 +148,7 @@ export default function OrganizationSummaryPanel({
                             >
                                 <Label showColon>{row.label}</Label>
                                 <span
-                                    style={{
-                                        minWidth: 0,
-                                        whiteSpace: "pre-wrap",
-                                        wordBreak: "break-word",
-                                        lineHeight: 1.6,
-                                    }}
+                                    style={{ minWidth: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}
                                 >
                                     {row.value}
                                 </span>

@@ -1,3 +1,4 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Dialog, Label, MessageStrip } from "@ui5/webcomponents-react";
@@ -57,7 +58,7 @@ export default function RiskScopeEditorDialog({ open, row, busy, onClose, onSave
           <div className="riskScopeField"><Label showColon>{t("riskScope.fields.validFrom")}</Label><PersianDatePicker value={validFrom} disabled={busy} accessibleName={t("riskScope.fields.validFrom")} invalidValueMessage={t("riskScope.validation.invalidDate")} onChange={setValidFrom} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} /></div>
           <div className="riskScopeField"><Label showColon>{t("riskScope.fields.validTo")}</Label><PersianDatePicker value={validTo} disabled={busy} accessibleName={t("riskScope.fields.validTo")} invalidValueMessage={t("riskScope.validation.invalidDate")} onChange={setValidTo} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))} /></div>
         </div>
-        <div className="riskScopeDialogFooter"><Button design="Emphasized" disabled={busy} onClick={save}>{t("riskScope.actions.applyDraft")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></div>
+        <DialogFooter><Button design="Emphasized" disabled={busy} onClick={save}>{t("riskScope.actions.applyDraft")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></DialogFooter>
       </div>
     </Dialog>
   );

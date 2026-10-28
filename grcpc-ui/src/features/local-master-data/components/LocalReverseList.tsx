@@ -83,8 +83,7 @@ export default function LocalReverseList<K extends LocalSectionKey>({
     };
 
     if (!allowed) return null;
-    return <section style={{ display: "grid", gap: "0.7rem",
-        border: "1px solid var(--sapGroup_ContentBorderColor)", padding: "0.75rem" }}>
+    return <section style={{ display: "grid", gap: "0.7rem", padding: "0.75rem" }}>
         <Title level="H5">{t(titleKey, { defaultValue: titleFa })}</Title>
         <MessageStrip design="Information" hideCloseButton>
             {t("local.reverse.readOnly", {

@@ -5,6 +5,7 @@ export const userRoleAssignmentSchema = z.object({
     roleId: z.string(),
     roleCode: z.string(),
     roleTitle: z.string(),
+    profileId: z.string(),
     scopeType: z.string(),
     scopeOrgUnitId: z.string().nullable(),
     validFrom: z.string().nullable(),
@@ -24,6 +25,8 @@ export const userSummarySchema = z.object({
     enabled: z.boolean(),
     locked: z.boolean(),
     rootUser: z.boolean(),
+    profileId: z.string().nullable(),
+    profileAdmin: z.boolean(),
     defaultOrgUnitId: z.string().nullable(),
     createdAt: z.string().nullable(),
 });
@@ -32,6 +35,7 @@ export const userDetailSchema = userSummarySchema.extend({
     lastLoginAt: z.string().nullable(),
     updatedAt: z.string().nullable(),
     assignments: z.array(userRoleAssignmentSchema),
+    profileAccessIds: z.array(z.string()),
 });
 
 export const localizedTextSchema = z.object({

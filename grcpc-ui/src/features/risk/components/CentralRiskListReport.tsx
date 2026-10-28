@@ -1,10 +1,9 @@
-import { useMemo, type CSSProperties } from "react";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useTranslation } from "react-i18next";
 import {
   Bar,
   Button,
   BusyIndicator,
-  Input,
   MessageStrip,
   Title,
 } from "@ui5/webcomponents-react";
@@ -56,34 +55,23 @@ export default function CentralRiskListReport({
   onSelect,
 }: Props) {
   const { t } = useTranslation();
-  const actionButtonStyle = useMemo<CSSProperties>(() => ({ minWidth: "8rem" }), []);
-  const actionGroupStyle = useMemo<CSSProperties>(
-    () => ({
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "0.5rem",
-      flexWrap: "wrap",
-      whiteSpace: "nowrap",
-    }),
-    [],
-  );
 
   return (
     <div className="riskListReport">
       <Bar
         startContent={<Title level="H4">{t("risk.list.title")}</Title>}
         endContent={
-          <div style={actionGroupStyle}>
+          <>
+            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("risk.list.search")} />
             <CentralRiskCreateMenu
               disabled={busy || !canCreate}
               templateEnabled={Boolean(contextCategoryId)}
-              style={actionButtonStyle}
               onCreate={onCreate}
             />
+
             <Button
               design="Emphasized"
               disabled={busy || !selectedKey}
-              style={actionButtonStyle}
               onClick={onShow}
             >
               {t("common.view", { defaultValue: "نمایش" })}
@@ -91,21 +79,14 @@ export default function CentralRiskListReport({
             <Button
               design="Negative"
               disabled={busy || !selectedKey || !canDelete}
-              style={{ ...actionButtonStyle, marginInlineStart: "0.75rem" }}
               onClick={onDelete}
             >
               {t("common.delete", { defaultValue: "حذف" })}
             </Button>
-          </div>
+          </>
         }
       />
 
-      <Input
-        value={searchText}
-        disabled={busy}
-        placeholder={t("risk.list.search")}
-        onInput={(event) => onSearchTextChange(event.target.value)}
-      />
 
       {error ? (
         <MessageStrip design="Negative" onClose={onErrorClose}>

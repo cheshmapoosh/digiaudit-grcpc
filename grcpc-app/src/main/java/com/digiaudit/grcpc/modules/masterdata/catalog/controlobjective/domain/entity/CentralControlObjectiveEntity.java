@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
+@org.hibernate.annotations.Filter(name = "datasetProfile", condition = "profile_id = :profileId")
 @Table(name = "central_control_objective")
 public class CentralControlObjectiveEntity extends CentralDefinitionEntity {
   @Column(name = "objective_class", length = 255)

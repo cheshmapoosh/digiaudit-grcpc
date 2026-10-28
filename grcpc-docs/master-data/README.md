@@ -1,5 +1,11 @@
 # Master Data V2 — Phase 1 Reference Pack
 
+**Accepted objective follow-up (2026-10-28):** [Strategy structure, form and Objective selection](accepted-corrections/2026-10-28-objective-strategy-corrections.md) restricts Strategies to root categories, simplifies their forms to General Information/Documents, and introduces the structural single-Objective selection dialog.
+
+**Accepted objective correction (2026-10-27):** [Objective strategy classification](accepted-corrections/2026-10-27-objective-strategy-classification.md) implements delivery item 3: strategy categories in the existing Objective tree, exactly one strategy per objective, and strategy selection/details/filtering on the Objectives page.
+
+**Accepted dataset correction (2026-10-27):** [Dataset profiles, profile-scoped user roles and Organization ownership](accepted-corrections/2026-10-27-dataset-profiles-and-organization-ownership.md) governs delivery items 1, 12 and 14. It adds dataset ownership while preserving the accepted Scope/Assignment/Coverage meanings and existing hierarchy Guard keys.
+
 **Approved Policy correction (2026-09-25):** The historical planning inventory
 below predates Policy simplification. The current active schema has 45 business
 tables, plus retained unmapped `central_policy_version` history and two

@@ -20,14 +20,7 @@ export default function PublicPageHeader({
 
     return (
         <div
-            style={{
-                width: "100%",
-                border: "1px solid var(--sapList_BorderColor)",
-                borderRadius: "1rem",
-                background: "var(--sapGroup_ContentBackground)",
-                boxShadow: "0 0.25rem 0.75rem rgba(0, 0, 0, 0.05)",
-                padding: "0.875rem 1rem",
-            }}
+            style={{ width: "100%", padding: "0.875rem 1rem" }}
         >
             <div
                 style={{
@@ -51,12 +44,7 @@ export default function PublicPageHeader({
                     </Title>
 
                     <Text
-                        style={{
-                            color: "var(--sapContent_LabelColor)",
-                            lineHeight: 1.6,
-                            whiteSpace: "normal",
-                            overflowWrap: "anywhere",
-                        }}
+                        style={{ whiteSpace: "normal", overflowWrap: "anywhere" }}
                     >
                         {t(subtitleKey, { defaultValue: subtitleDefault })}
                     </Text>
@@ -70,7 +58,7 @@ export default function PublicPageHeader({
                         justifyContent: "center",
                     }}
                 >
-                    <UiSettingsMenu trigger="button" />
+                    <UiSettingsMenu />
                 </div>
             </div>
         </div>

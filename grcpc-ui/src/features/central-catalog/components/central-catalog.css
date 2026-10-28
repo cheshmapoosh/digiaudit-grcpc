@@ -7,10 +7,9 @@
 .catalogListPage {
   min-height: 34rem;
   height: calc(100vh - 10rem);
-  padding: 1rem;
+  padding: 0;
   box-sizing: border-box;
   overflow: auto;
-  background: var(--sapBackgroundColor);
 }
 .catalogFcl {
   display: block;
@@ -30,7 +29,6 @@
   direction: inherit;
 }
 .catalogObjectDialogContent .catalogObjectPage {
-  border: 0;
   padding: 0.5rem;
 }
 .catalogObjectDialogContent .catalogObjectPage > .catalogToolbar {
@@ -44,29 +42,25 @@
   height: 100%;
   min-width: 0;
   overflow: auto;
-  padding: 0.25rem;
+  padding: 0;
 }
 .catalogColumnStack {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--sapContent_Space_Tiny);
   min-width: 0;
 }
 .catalogListReport,
-.catalogObjectPage,
 .catalogHierarchyColumn {
   min-width: 0;
+}
+.catalogObjectPage {
+  min-width: 0;
   padding: 0.75rem;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapGroup_ContentBackground);
 }
 .catalogHierarchyColumn {
   height: 100%;
   box-sizing: border-box;
   overflow: auto;
-}
-.catalogColumnTitle {
-  font-size: var(--sapFontHeader4Size);
-  font-weight: 700;
 }
 .catalogTreeRow {
   display: flex;
@@ -86,12 +80,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  gap: var(--sapContent_Space_Tiny);
+  margin-bottom: var(--sapContent_Space_Tiny);
 }
 .catalogToolbarActions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--sapContent_Space_Tiny);
   flex-wrap: wrap;
 }
 .catalogFormGrid {
@@ -105,9 +99,6 @@
 }
 .catalogWideField {
   grid-column: 1/-1;
-}
-.catalogSelectedRow {
-  background: var(--sapList_SelectionBackgroundColor);
 }
 .catalogHierarchyList,
 .policyVersionList {
@@ -128,4 +119,8 @@
   .catalogFormGrid {
     grid-template-columns: 1fr;
   }
+}
+
+@media (min-width: 1101px) {
+  .catalogFormGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem 1rem; }
 }

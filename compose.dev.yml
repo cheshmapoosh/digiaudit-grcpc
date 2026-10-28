@@ -21,7 +21,7 @@ services:
       start_period: 60s
 
   minio:
-    image: minio/minio:latest
+    image: coollabsio/minio:RELEASE.2025-10-15T17-29-55Z@sha256:69b55a1c1c5dc285ce04db96689f5b2102317fc77a50680a1874ca6efd1c87f9
     container_name: grcpc-dev-minio
     restart: unless-stopped
     command: server ${MINIO_DATA_DIR:-/var/lib/minio/data} --console-address ":9001"
@@ -37,7 +37,7 @@ services:
         target: /data
 
   minio-init:
-    image: minio/mc:latest
+    image: coollabsio/minio:RELEASE.2025-10-15T17-29-55Z@sha256:69b55a1c1c5dc285ce04db96689f5b2102317fc77a50680a1874ca6efd1c87f9
     container_name: grcpc-dev-minio-init
     depends_on:
       - minio

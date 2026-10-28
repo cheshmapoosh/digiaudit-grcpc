@@ -1,14 +1,17 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Button, Dialog, Input, Label, MessageStrip, Option, Select, Table, TableCell,
+  Button, Dialog, FlexBox, Input, MessageStrip, Table, TableCell, Text,
   TableHeaderCell, TableHeaderRow, TableRow, TextArea, Title,
 } from "@ui5/webcomponents-react";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
+import { MasterDataFormField } from "@/shared/components/MasterDataObjectHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import type { Objective, OrganizationObjective } from "../domain/objective.model";
 import { objectiveApi } from "../infra/objective.api.repo";
+import ObjectiveSelectionDialog from "./ObjectiveSelectionDialog";
 import "../pages/objective.css";
 
 type Form = { objectiveId: string; name: string; description: string; owner: string; validFrom: string; validTo: string };
@@ -31,6 +34,7 @@ export default function OrganizationObjectivesTab({ organizationId, manage, onDi
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [dateDrafts, setDateDrafts] = useState<Record<"validFrom" | "validTo", PersianDateDraftState>>({
     validFrom: { draftValue: "", valid: true, dirty: false },
     validTo: { draftValue: "", valid: true, dirty: false },
@@ -38,7 +42,12 @@ export default function OrganizationObjectivesTab({ organizationId, manage, onDi
   const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const dirty = editing !== null && (JSON.stringify(form) !== baseline || invalidDateDraft);
   const available = useMemo(() => central.filter((item) =>
-    item.status === "ACTIVE" && !rows.some((row) => row.objectiveId === item.id)), [central, rows]);
+    item.kind === "OBJECTIVE" && item.status === "ACTIVE"
+    && central.some((strategy) => strategy.id === item.parentObjectiveId && strategy.kind === "STRATEGY"
+      && !strategy.parentObjectiveId)
+    && !rows.some((row) => row.objectiveId === item.id)), [central, rows]);
+  const selectableIds = useMemo(() => new Set(available.map((item) => item.id)), [available]);
+  const chosenObjective = central.find((item) => item.id === form.objectiveId);
 
   useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
 
@@ -60,6 +69,7 @@ export default function OrganizationObjectivesTab({ organizationId, manage, onDi
   };
 
   const begin = (row: OrganizationObjective | "new") => {
+    setPickerOpen(false);
     const next = row === "new" ? { ...emptyForm } : {
       objectiveId: row.objectiveId, name: row.name, description: row.description ?? "",
       owner: row.owner ?? "", validFrom: row.validFrom ?? "", validTo: row.validTo ?? "",
@@ -75,7 +85,8 @@ export default function OrganizationObjectivesTab({ organizationId, manage, onDi
   };
 
   const save = async () => {
-    if (!organizationId || !form.objectiveId || !form.name.trim()) {
+    if (!organizationId || !form.objectiveId || !form.name.trim()
+      || (editing === "new" && !selectableIds.has(form.objectiveId))) {
       setError(t("objective.organization.errors.required"));
       return;
     }
@@ -116,6 +127,7 @@ export default function OrganizationObjectivesTab({ organizationId, manage, onDi
   };
 
   const closeEditor = () => {
+    setPickerOpen(false);
     if (dirty) setLeaveOpen(true);
     else setEditing(null);
   };
@@ -156,48 +168,61 @@ export default function OrganizationObjectivesTab({ organizationId, manage, onDi
       <ModalDialogHeader title={t(editing === "new" ? "objective.organization.assign" : "objective.organization.edit")}
         onClose={closeEditor} />
       <div className="objectiveForm">
-        <Label required>{t("objective.organization.central")}</Label>
-        <Select value={form.objectiveId} disabled={busy || editing !== "new"}
-          accessibleName={t("objective.organization.central")}
-          onChange={(event) => {
-            const id = event.target.value;
-            const objective = central.find((item) => item.id === id);
-            setForm((old) => ({ ...old, objectiveId: id, name: objective?.name ?? old.name }));
-          }}>
-          <Option value="">{t("objective.organization.choose")}</Option>
-          {(editing === "new" ? available : central).map((item) =>
-            <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-        </Select>
-        <Label required>{t("objective.name")}</Label>
+        <div className="modalTwoColumnGrid">
+        <MasterDataFormField label={t("objective.organization.central")} required>
+          {editing === "new" ? <FlexBox alignItems="Center" className="objectivePickerField">
+            <Input readonly value={chosenObjective ? `${chosenObjective.code} · ${chosenObjective.name}` : ""}
+              accessibleName={t("objective.organization.central")} />
+            <Button icon="value-help" disabled={busy} tooltip={t("objective.selection.title")}
+              accessibleName={t("objective.selection.title")} onClick={() => setPickerOpen(true)} />
+          </FlexBox> : <Text>{chosenObjective ? `${chosenObjective.code} · ${chosenObjective.name}` : form.objectiveId}</Text>}
+        </MasterDataFormField>
+        <MasterDataFormField label={t("objective.name")} required>
         <Input value={form.name} disabled={busy}
           onInput={(event) => setForm((old) => ({ ...old, name: event.target.value }))} />
-        <Label>{t("objective.owner")}</Label>
+        </MasterDataFormField>
+        <MasterDataFormField label={t("objective.owner")}>
         <Input value={form.owner} disabled={busy}
           onInput={(event) => setForm((old) => ({ ...old, owner: event.target.value }))} />
-        <Label>{t("objective.validFrom")}</Label>
+        </MasterDataFormField>
+        <div className="modalDateRange">
+        <MasterDataFormField label={t("objective.validFrom")}>
         <PersianDatePicker value={form.validFrom} disabled={busy} accessibleName={t("objective.validFrom")}
           invalidValueMessage={t("objective.errors.dates")}
           onChange={(value) => setForm((old) => ({ ...old, validFrom: value }))}
           onDraftStateChange={(state) => setDateDrafts((old) =>
             old.validFrom.valid === state.valid && old.validFrom.draftValue === state.draftValue
               && old.validFrom.dirty === state.dirty ? old : { ...old, validFrom: state })} />
-        <Label>{t("objective.validTo")}</Label>
+        </MasterDataFormField>
+        <MasterDataFormField label={t("objective.validTo")}>
         <PersianDatePicker value={form.validTo} disabled={busy} accessibleName={t("objective.validTo")}
           invalidValueMessage={t("objective.errors.dates")}
           onChange={(value) => setForm((old) => ({ ...old, validTo: value }))}
           onDraftStateChange={(state) => setDateDrafts((old) =>
             old.validTo.valid === state.valid && old.validTo.draftValue === state.draftValue
               && old.validTo.dirty === state.dirty ? old : { ...old, validTo: state })} />
-        <Label>{t("objective.description")}</Label>
+        </MasterDataFormField>
+        </div>
+        <MasterDataFormField label={t("objective.description")} wide>
         <TextArea value={form.description} disabled={busy} rows={3}
           onInput={(event) => setForm((old) => ({ ...old, description: event.target.value }))} />
-        <div className="objectiveActions">
+        </MasterDataFormField>
+        </div>
+        <DialogFooter>
           <Button design="Emphasized" disabled={busy || !dirty || invalidDateDraft} onClick={() => void save()}>
             {t("common.save")}</Button>
           <Button design="Transparent" onClick={closeEditor}>{t("common.cancel")}</Button>
-        </div>
+        </DialogFooter>
       </div>
     </Dialog>
+    <ObjectiveSelectionDialog open={pickerOpen && editing === "new"} items={central}
+      selectedId={form.objectiveId || null} selectableIds={selectableIds} busy={busy}
+      onClose={() => setPickerOpen(false)} onConfirm={(id) => {
+        const objective = available.find((item) => item.id === id);
+        if (!objective) return;
+        setForm((old) => ({ ...old, objectiveId: id, name: objective.name }));
+        setPickerOpen(false);
+      }} />
     <DeleteConfirmDialog open={Boolean(removeCandidate)}
       title={t("objective.organization.remove")}
       message={t("objective.organization.removeConfirm", { name: removeCandidate?.name ?? "" })}

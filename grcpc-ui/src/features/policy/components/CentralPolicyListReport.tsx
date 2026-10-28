@@ -1,6 +1,6 @@
-import { useMemo, type CSSProperties } from "react";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, BusyIndicator, Input, MessageStrip, Title } from "@ui5/webcomponents-react";
+import { Bar, Button, BusyIndicator, MessageStrip, Title } from "@ui5/webcomponents-react";
 
 import type {
   CentralPolicyGroupSummary,
@@ -49,44 +49,34 @@ export default function CentralPolicyListReport({
   onSelect,
 }: Props) {
   const { t } = useTranslation();
-  const actionButtonStyle = useMemo<CSSProperties>(() => ({ minWidth: "8rem" }), []);
-  const actionGroupStyle = useMemo<CSSProperties>(
-    () => ({ display: "inline-flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", whiteSpace: "nowrap" }),
-    [],
-  );
 
   return (
     <div className="policyListReport">
       <Bar
         startContent={<Title level="H4">{t("policy.list.title", { defaultValue: "ساختار سیاست" })}</Title>}
         endContent={
-          <div style={actionGroupStyle}>
+          <>
+            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("policy.list.search", { defaultValue: "جستجو در ساختار سیاست..." })} />
             <PolicyCreateMenu
               disabled={busy || !canCreate}
-              style={actionButtonStyle}
               nodeTypes={allowedCreateTypes}
               onCreate={onCreate}
             />
-            <Button design="Emphasized" disabled={busy || !selectedId} style={actionButtonStyle} onClick={onShow}>
+
+            <Button design="Emphasized" disabled={busy || !selectedId} onClick={onShow}>
               {t("common.view", { defaultValue: "نمایش" })}
             </Button>
             <Button
               design="Negative"
               disabled={busy || !selectedId || !canDelete}
-              style={{ ...actionButtonStyle, marginInlineStart: "0.75rem" }}
               onClick={onDelete}
             >
               {t("common.delete", { defaultValue: "حذف" })}
             </Button>
-          </div>
+          </>
         }
       />
-      <Input
-        value={searchText}
-        disabled={busy}
-        placeholder={t("policy.list.search", { defaultValue: "جستجو در ساختار سیاست..." })}
-        onInput={(event) => onSearchTextChange(event.target.value)}
-      />
+
       {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
       <div className="policyTreeFrame">
         {busy ? <BusyIndicator active delay={0} /> : null}

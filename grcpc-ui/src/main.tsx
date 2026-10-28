@@ -17,7 +17,7 @@ import "@ui5/webcomponents-icons-tnt/dist/AllIcons.js";
 import "@ui5/webcomponents-icons-business-suite/dist/AllIcons.js";
 
 import "./index.css";
-import "./ui/ui5-custom-css";
+import "./shared/components/modal-layout.css";
 
 
 import App from "./app/App";

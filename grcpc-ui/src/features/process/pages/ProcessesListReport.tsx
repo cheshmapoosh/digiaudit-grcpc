@@ -1,11 +1,10 @@
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
-import { useMemo, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Bar,
     BusyIndicator,
     Button,
-    Input,
     MessageStrip,
     Title,
 } from "@ui5/webcomponents-react";
@@ -30,10 +29,6 @@ export interface ProcessesListReportProps {
     onSelect: (id: string) => void;
 }
 
-function readInputValue(event: unknown): string {
-    return (event as { target?: { value?: string } }).target?.value ?? "";
-}
-
 export default function ProcessesListReport({
     items,
     selectedId,
@@ -52,32 +47,14 @@ export default function ProcessesListReport({
     const { t } = useTranslation();
     const { manage } = useMasterDataAccess("PROCESS");
 
-    const actionButtonStyle = useMemo<CSSProperties>(
-        () => ({
-            minWidth: "6rem",
-        }),
-        [],
-    );
-
-    const actionGroupStyle = useMemo<CSSProperties>(
-        () => ({
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            flexWrap: "wrap",
-            whiteSpace: "nowrap",
-        }),
-        [],
-    );
-
     const enabledCreateOptions: ProcessNodeType[] = selectedId ? createOptions : ["PROCESS"];
 
     return (
         <div
             style={{
                 display: "grid",
-                gridTemplateRows: "auto auto auto minmax(0, 1fr)",
-                gap: "1rem",
+                gridTemplateRows: "auto auto minmax(0, 1fr)",
+                gap: "var(--sapContent_Space_Tiny)",
                 height: "100%",
                 minHeight: 0,
             }}
@@ -89,18 +66,20 @@ export default function ProcessesListReport({
                     </Title>
                 }
                 endContent={
-                    <div style={actionGroupStyle}>
+                    <>
+                        <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("process.list.search", {
+                    defaultValue: "جستجو بر اساس نام، کد یا توضیحات",
+                })} />
                         {manage ? <ProcessCreateMenu
                             disabled={busy}
-                            style={actionButtonStyle}
                             nodeTypes={enabledCreateOptions}
                             onCreate={onCreate}
                         /> : null}
 
+
                         <Button
                             design="Emphasized"
                             disabled={!selectedId || busy}
-                            style={actionButtonStyle}
                             onClick={() => selectedId && onShow(selectedId)}
                         >
                             {t("common.view", { defaultValue: "نمایش" })}
@@ -110,23 +89,14 @@ export default function ProcessesListReport({
                             design="Negative"
                             hidden={!manage}
                             disabled={!selectedId || busy}
-                            style={actionButtonStyle}
                             onClick={() => selectedId && onDelete(selectedId)}
                         >
                             {t("common.delete", { defaultValue: "Delete" })}
                         </Button>
-                    </div>
+                    </>
                 }
             />
 
-            <Input
-                value={searchText}
-                disabled={busy}
-                placeholder={t("process.list.search", {
-                    defaultValue: "جستجو بر اساس نام، کد یا توضیحات",
-                })}
-                onInput={(event) => onSearchTextChange(readInputValue(event))}
-            />
 
             {error ? (
                 <MessageStrip design="Negative" onClose={onErrorClose}>
@@ -135,17 +105,7 @@ export default function ProcessesListReport({
             ) : null}
 
             <div
-                style={{
-                    gridRow: "4",
-                    minHeight: 0,
-                    overflowY: "auto",
-                    overflowX: "auto",
-                    border: "1px solid var(--sapGroup_ContentBorderColor)",
-                    borderRadius: "0",
-                    padding: "0.75rem",
-                    background: "var(--sapList_Background)",
-                    boxSizing: "border-box",
-                }}
+                style={{ gridRow: "3", minHeight: 0, overflowY: "auto", overflowX: "auto", boxSizing: "border-box" }}
             >
                 {busy ? <BusyIndicator active /> : null}
 

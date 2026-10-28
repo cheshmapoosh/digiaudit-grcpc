@@ -14,25 +14,10 @@ export default function NotFoundPage() {
 
     return (
         <div
-            style={{
-                minHeight: "calc(100vh - 3rem)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "2rem",
-                background: `
-                    radial-gradient(circle at top right, rgba(10, 132, 255, 0.08), transparent 24%),
-                    linear-gradient(135deg, var(--sapBackgroundColor), var(--sapGroup_ContentBackground))
-                `,
-            }}
+            style={{ minHeight: "calc(100vh - 3rem)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}
         >
             <Card
-                style={{
-                    width: "100%",
-                    maxWidth: "540px",
-                    borderRadius: "1.25rem",
-                    boxShadow: "0 1rem 2.25rem rgba(0, 0, 0, 0.08)",
-                }}
+                style={{ width: "100%", maxWidth: "540px" }}
                 header={
                     <CardHeader
                         titleText={t("common.notFound.pageTitle", {

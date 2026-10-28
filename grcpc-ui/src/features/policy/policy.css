@@ -14,25 +14,22 @@
 
 .policyFclColumn {
   height: 100%;
-  padding: 0.75rem;
+  padding: 0;
   overflow: auto;
-  background: var(--sapBackgroundColor);
 }
 
 .policyListReport {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--sapContent_Space_Tiny);
   height: 100%;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .policyTreeFrame {
-  grid-row: 4;
+  grid-row: 3;
   position: relative;
   min-height: 20rem;
   overflow: auto;
-  border: 1px solid var(--sapList_BorderColor);
-  background: var(--sapList_Background);
 }
 
 .policyTreeItemContent {
@@ -48,17 +45,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
-}
-
-.policyTreeTitleSelected {
-  font-weight: 700;
 }
 
 .policyTreeType {
   flex: 0 0 auto;
-  color: var(--sapContent_LabelColor);
-  font-size: 0.8125rem;
 }
 
 .policySummaryPanel {
@@ -73,8 +63,6 @@
   gap: 0.875rem;
   align-content: start;
   padding: 1rem;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapGroup_ContentBackground);
 }
 
 .policySummaryRow {
@@ -112,10 +100,6 @@
   justify-content: center;
 }
 
-.policyObjectDialog::part(content) {
-  padding: 0;
-}
-
 .policyDialogContent {
   width: min(92vw, 90rem);
   min-width: min(70vw, 58rem);
@@ -130,15 +114,8 @@
   gap: 0.75rem;
 }
 
-.policyObjectHeader {
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapGroup_ContentBackground);
-}
-
 .policyObjectHeaderTitle {
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapList_HeaderBackground);
 }
 
 .policyObjectHeaderGrid {
@@ -148,8 +125,6 @@
 .policyObjectBody {
   min-height: 24rem;
   padding: 1rem;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapBackgroundColor);
 }
 
 .policyFormGrid {
@@ -235,4 +210,8 @@
     min-width: 0;
     width: 94vw;
   }
+}
+
+@media (min-width: 1101px) {
+  .policyObjectHeaderGrid, .policyFormGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem 1rem; }
 }

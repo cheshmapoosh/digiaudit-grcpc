@@ -19,6 +19,7 @@ public record CreateOrganizationRequest(
         @NotNull
         OrganizationType organizationType,
         UUID parentOrganizationId,
+        UUID ownerUserId,
         @Size(max = 255)
         String location,
         String description,

@@ -1,20 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
     Button,
     BusyIndicator,
-    Card,
-    CardHeader,
+    FlexBox,
+    Form,
+    FormGroup,
+    FormItem,
     Input,
     Label,
     MessageStrip,
     Text,
-    Title,
 } from "@ui5/webcomponents-react";
 
 import { useSetupState } from "@/features/setup";
-import PublicPageHeader from "@/shared/components/PublicPageHeader";
+import PublicAuthLayout from "@/shared/components/PublicAuthLayout";
 import { useInitialAppReady } from "@/shared/bootstrap/useInitialAppReady";
 
 interface SetupFormState {
@@ -37,7 +39,7 @@ const INITIAL_FORM: SetupFormState = {
     email: "",
 };
 
-function extractErrorMessage(error: unknown, fallback: string): string {
+function extractErrorMessage(error: unknown, fallback: string, t: TFunction): string {
     if (typeof error === "object" && error !== null) {
         const apiError = error as Partial<{ message: string; details: string[] }>;
 
@@ -50,9 +52,9 @@ function extractErrorMessage(error: unknown, fallback: string): string {
                 case "System is already initialized":
                     return fallback;
                 case "Username already exists":
-                    return "این نام کاربری قبلا ثبت شده است";
+                    return t("setup.errors.usernameExists");
                 case "ROOT_ADMIN role seed was not found":
-                    return "نقش پایه ROOT_ADMIN در سیستم یافت نشد";
+                    return t("setup.errors.rootRoleMissing");
                 default:
                     return apiError.message;
             }
@@ -93,6 +95,7 @@ export default function SetupFeaturePage() {
                     t("setup.errors.loadStatus", {
                         defaultValue: "خطا در دریافت وضعیت راه‌اندازی",
                     }),
+                    t,
                 ),
             );
         });
@@ -178,7 +181,7 @@ export default function SetupFeaturePage() {
     }, [form, t]);
 
     const handleSubmit = useCallback(async () => {
-        if (initialized || !validate()) {
+        if (submitting || loading || initialized || !validate()) {
             return;
         }
 
@@ -212,415 +215,113 @@ export default function SetupFeaturePage() {
                     t("setup.errors.initialize", {
                         defaultValue: "خطا در انجام راه‌اندازی اولیه",
                     }),
+                    t,
                 ),
             );
         }
-    }, [clearError, form, initialize, initialized, navigate, t, validate]);
+    }, [clearError, form, initialize, initialized, loading, navigate, submitting, t, validate]);
 
     const handleGoHome = useCallback(() => {
         navigate("/");
     }, [navigate]);
 
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                display: "grid",
-                placeItems: "center",
-                padding: "2rem",
-                background: `
-                    radial-gradient(circle at top right, rgba(10, 132, 255, 0.10), transparent 28%),
-                    radial-gradient(circle at bottom left, rgba(0, 153, 102, 0.08), transparent 24%),
-                    linear-gradient(135deg, var(--sapBackgroundColor), var(--sapGroup_ContentBackground))
-                `,
-            }}
-        >
-            <div
-                style={{
-                    width: "100%",
-                    maxWidth: "1180px",
-                    display: "grid",
-                    gridTemplateColumns: "minmax(320px, 1fr) minmax(420px, 560px)",
-                    gap: "1.5rem",
-                    alignItems: "stretch",
+        <PublicAuthLayout panelLabel={t("setup.page.title")} compact>
+            <Text>{t("setup.page.subtitle")}</Text>
+            <form
+                aria-label={t("setup.form.title")}
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleSubmit();
                 }}
             >
-                <div
-                    style={{
-                        position: "relative",
-                        overflow: "hidden",
-                        borderRadius: "1.25rem",
-                        minHeight: "720px",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        padding: "2rem",
-                        color: "white",
-                        background: `
-                            linear-gradient(160deg, rgba(8, 57, 90, 0.92), rgba(7, 105, 81, 0.86)),
-                            linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))
-                        `,
-                        boxShadow: "0 1.5rem 3rem rgba(0, 0, 0, 0.16)",
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: ".5rem",
-                            padding: ".45rem .85rem",
-                            borderRadius: "999px",
-                            width: "fit-content",
-                            background: "rgba(255,255,255,0.12)",
-                            border: "1px solid rgba(255,255,255,0.16)",
-                            backdropFilter: "blur(4px)",
-                        }}
-                    >
-                        <span
-                            style={{
-                                width: ".6rem",
-                                height: ".6rem",
-                                borderRadius: "50%",
-                                background: "#79f2c0",
-                                display: "inline-block",
-                            }}
-                        />
-                        <Text style={{ color: "white" }}>
-                            {t("setup.hero.badge", {
-                                defaultValue: "مرحله راه‌اندازی اولیه سامانه",
-                            })}
-                        </Text>
-                    </div>
-
-                    <div style={{ display: "grid", gap: "1rem", maxWidth: "620px" }}>
-                        <Title
-                            level="H1"
-                            style={{
-                                color: "white",
-                                margin: 0,
-                                lineHeight: 1.2,
-                            }}
-                        >
-                            {t("setup.hero.title", {
-                                defaultValue: "تعریف کاربر ریشه و فعال‌سازی اولیه GRC",
-                            })}
-                        </Title>
-
-                        <Text style={{ color: "rgba(255,255,255,0.88)", fontSize: "1rem", lineHeight: 1.9 }}>
-                            {t("setup.hero.description", {
-                                defaultValue:
-                                    "در این مرحله تنها کاربر ریشه سامانه ایجاد می‌شود. پس از ثبت موفق، ادامه ورود و مدیریت کاربران از طریق همین حساب کاربری انجام خواهد شد.",
-                            })}
-                        </Text>
-                    </div>
-
-                    <div
-                        style={{
-                            display: "grid",
-                            gap: "1rem",
-                            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                        }}
-                    >
-                        <div
-                            style={{
-                                padding: "1rem",
-                                borderRadius: "1rem",
-                                background: "rgba(255,255,255,0.10)",
-                                border: "1px solid rgba(255,255,255,0.12)",
-                                backdropFilter: "blur(6px)",
-                            }}
-                        >
-                            <Title level="H5" style={{ color: "white", margin: 0 }}>
-                                {t("setup.hero.cards.rootUser.title", {
-                                    defaultValue: "کاربر ریشه",
-                                })}
-                            </Title>
-                            <Text style={{ color: "rgba(255,255,255,0.82)" }}>
-                                {t("setup.hero.cards.rootUser.description", {
-                                    defaultValue: "این کاربر اختیار راه‌اندازی و مدیریت اولیه سامانه را دارد.",
-                                })}
-                            </Text>
-                        </div>
-
-                        <div
-                            style={{
-                                padding: "1rem",
-                                borderRadius: "1rem",
-                                background: "rgba(255,255,255,0.10)",
-                                border: "1px solid rgba(255,255,255,0.12)",
-                                backdropFilter: "blur(6px)",
-                            }}
-                        >
-                            <Title level="H5" style={{ color: "white", margin: 0 }}>
-                                {t("setup.hero.cards.security.title", {
-                                    defaultValue: "امنیت",
-                                })}
-                            </Title>
-                            <Text style={{ color: "rgba(255,255,255,0.82)" }}>
-                                {t("setup.hero.cards.security.description", {
-                                    defaultValue: "برای حساب ریشه از رمز عبور قوی و اطلاعات معتبر استفاده کنید.",
-                                })}
-                            </Text>
-                        </div>
-
-                        <div
-                            style={{
-                                padding: "1rem",
-                                borderRadius: "1rem",
-                                background: "rgba(255,255,255,0.10)",
-                                border: "1px solid rgba(255,255,255,0.12)",
-                                backdropFilter: "blur(6px)",
-                            }}
-                        >
-                            <Title level="H5" style={{ color: "white", margin: 0 }}>
-                                {t("setup.hero.cards.oneTime.title", {
-                                    defaultValue: "فقط یک‌بار",
-                                })}
-                            </Title>
-                            <Text style={{ color: "rgba(255,255,255,0.82)" }}>
-                                {t("setup.hero.cards.oneTime.description", {
-                                    defaultValue: "این صفحه فقط برای راه‌اندازی اولیه قابل استفاده است.",
-                                })}
-                            </Text>
-                        </div>
-                    </div>
-                </div>
-
-                <div
-                    style={{
-                        display: "grid",
-                        gap: "1rem",
-                        alignSelf: "center",
-                    }}
-                >
-                    <PublicPageHeader
-                        titleKey="setup.page.title"
-                        subtitleKey="setup.page.subtitle"
-                        titleDefault="راه‌اندازی اولیه سامانه"
-                        subtitleDefault="ثبت کاربر ریشه و تکمیل اطلاعات اولیه"
-                    />
-
-                    <Card
-                        style={{
-                            width: "100%",
-                            borderRadius: "1.25rem",
-                            boxShadow: "0 1rem 2.5rem rgba(0, 0, 0, 0.10)",
-                        }}
-                        header={
-                            <CardHeader
-                                titleText={t("setup.form.title", {
-                                    defaultValue: "ثبت کاربر ریشه",
-                                })}
+                {loading && <BusyIndicator active delay={0} size="S" />}
+                {initialized && (
+                    <MessageStrip design="Positive" hideCloseButton>
+                        {t("setup.messages.alreadyInitialized")}
+                    </MessageStrip>
+                )}
+                {effectiveError && <MessageStrip design="Negative" hideCloseButton>{effectiveError}</MessageStrip>}
+                {validationError && <MessageStrip design="Negative" hideCloseButton>{validationError}</MessageStrip>}
+                {successMessage && <MessageStrip design="Positive" hideCloseButton>{successMessage}</MessageStrip>}
+                <Form accessibleMode="Edit" accessibleName={t("setup.form.title")} layout="S1 M1 L1 XL1" labelSpan="S4 M4 L4 XL4" itemSpacing="Normal">
+                    <FormGroup accessibleName={t("setup.fields.username")}>
+                        <FormItem labelContent={<Label required for="setup-username">{t("setup.fields.username")}</Label>}>
+                            <Input
+                                id="setup-username"
+                                value={form.username}
+                                disabled={submitting || initialized}
+                                onInput={(event) => handleChange("username", event.target.value)}
                             />
-                        }
-                    >
-
-                        <div
-                            style={{
-                                padding: "1.5rem",
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "1rem",
-                            }}
-                        >
-                            {loading ? <BusyIndicator active delay={0} size="S" /> : null}
-
-                            {initialized ? (
-                                <MessageStrip design="Positive" hideCloseButton>
-                                    {t("setup.messages.alreadyInitialized", {
-                                        defaultValue: "سامانه قبلا راه‌اندازی شده است و کاربر ریشه ثبت شده است.",
-                                    })}
-                                </MessageStrip>
-                            ) : null}
-
-                            {effectiveError ? (
-                                <MessageStrip design="Negative" hideCloseButton>
-                                    {effectiveError}
-                                </MessageStrip>
-                            ) : null}
-
-                            {validationError ? (
-                                <MessageStrip design="Negative" hideCloseButton>
-                                    {validationError}
-                                </MessageStrip>
-                            ) : null}
-
-                            {successMessage ? (
-                                <MessageStrip design="Positive" hideCloseButton>
-                                    {successMessage}
-                                </MessageStrip>
-                            ) : null}
-
-                            <div
-                                style={{
-                                    display: "grid",
-                                    gap: "1rem",
-                                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                                }}
-                            >
-                                <div style={{ display: "grid", gap: ".5rem" }}>
-                                    <Label required for="setup-username">
-                                        {t("setup.fields.username", { defaultValue: "نام کاربری" })}
-                                    </Label>
-                                    <Input
-                                        id="setup-username"
-                                        value={form.username}
-                                        disabled={submitting || initialized}
-                                        placeholder={t("setup.placeholders.username", {
-                                            defaultValue: "نام کاربری ریشه را وارد کنید",
-                                        })}
-                                        onInput={(event) => handleChange("username", event.target.value)}
-                                    />
-                                </div>
-
-                                <div style={{ display: "grid", gap: ".5rem" }}>
-                                    <Label for="setup-email">
-                                        {t("setup.fields.email", { defaultValue: "ایمیل" })}
-                                    </Label>
-                                    <Input
-                                        id="setup-email"
-                                        value={form.email}
-                                        disabled={submitting || initialized}
-                                        placeholder={t("setup.placeholders.email", {
-                                            defaultValue: "ایمیل را وارد کنید",
-                                        })}
-                                        onInput={(event) => handleChange("email", event.target.value)}
-                                    />
-                                </div>
-
-                                <div style={{ display: "grid", gap: ".5rem" }}>
-                                    <Label required for="setup-firstName">
-                                        {t("setup.fields.firstName", { defaultValue: "نام" })}
-                                    </Label>
-                                    <Input
-                                        id="setup-firstName"
-                                        value={form.firstName}
-                                        disabled={submitting || initialized}
-                                        placeholder={t("setup.placeholders.firstName", {
-                                            defaultValue: "نام را وارد کنید",
-                                        })}
-                                        onInput={(event) => handleChange("firstName", event.target.value)}
-                                    />
-                                </div>
-
-                                <div style={{ display: "grid", gap: ".5rem" }}>
-                                    <Label required for="setup-lastName">
-                                        {t("setup.fields.lastName", { defaultValue: "نام خانوادگی" })}
-                                    </Label>
-                                    <Input
-                                        id="setup-lastName"
-                                        value={form.lastName}
-                                        disabled={submitting || initialized}
-                                        placeholder={t("setup.placeholders.lastName", {
-                                            defaultValue: "نام خانوادگی را وارد کنید",
-                                        })}
-                                        onInput={(event) => handleChange("lastName", event.target.value)}
-                                    />
-                                </div>
-
-                                <div style={{ display: "grid", gap: ".5rem" }}>
-                                    <Label required for="setup-password">
-                                        {t("setup.fields.password", { defaultValue: "رمز عبور" })}
-                                    </Label>
-                                    <Input
-                                        id="setup-password"
-                                        type="Password"
-                                        value={form.password}
-                                        disabled={submitting || initialized}
-                                        placeholder={t("setup.placeholders.password", {
-                                            defaultValue: "رمز عبور را وارد کنید",
-                                        })}
-                                        onInput={(event) => handleChange("password", event.target.value)}
-                                    />
-                                </div>
-
-                                <div style={{ display: "grid", gap: ".5rem" }}>
-                                    <Label required for="setup-confirmPassword">
-                                        {t("setup.fields.confirmPassword", {
-                                            defaultValue: "تکرار رمز عبور",
-                                        })}
-                                    </Label>
-                                    <Input
-                                        id="setup-confirmPassword"
-                                        type="Password"
-                                        value={form.confirmPassword}
-                                        disabled={submitting || initialized}
-                                        placeholder={t("setup.placeholders.confirmPassword", {
-                                            defaultValue: "تکرار رمز عبور را وارد کنید",
-                                        })}
-                                        onInput={(event) => handleChange("confirmPassword", event.target.value)}
-                                    />
-                                </div>
-
-                                <div style={{ display: "grid", gap: ".5rem" }}>
-                                    <Label for="setup-mobile">
-                                        {t("setup.fields.mobile", { defaultValue: "موبایل" })}
-                                    </Label>
-                                    <Input
-                                        id="setup-mobile"
-                                        value={form.mobile}
-                                        disabled={submitting || initialized}
-                                        placeholder={t("setup.placeholders.mobile", {
-                                            defaultValue: "شماره موبایل را وارد کنید",
-                                        })}
-                                        onInput={(event) => handleChange("mobile", event.target.value)}
-                                    />
-                                </div>
-
-                                <div
-                                    style={{
-                                        gridColumn: "1 / -1",
-                                        padding: ".85rem 1rem",
-                                        borderRadius: ".85rem",
-                                        background: "var(--sapList_Background)",
-                                        border: "1px solid var(--sapList_BorderColor)",
-                                    }}
-                                >
-                                    <Text style={{ color: "var(--sapContent_LabelColor)" }}>
-                                        {t("setup.hints.password", {
-                                            defaultValue:
-                                                "پیشنهاد می‌شود رمز عبور حداقل 8 کاراکتر بوده و ترکیبی از حروف و اعداد باشد.",
-                                        })}
-                                    </Text>
-                                </div>
-                            </div>
-
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "flex-end",
-                                    gap: ".75rem",
-                                    marginTop: ".5rem",
-                                }}
-                            >
-                                <Button
-                                    design="Emphasized"
-                                    disabled={submitting || loading || initialized}
-                                    onClick={() => void handleSubmit()}
-                                >
-                                    {submitting
-                                        ? t("setup.actions.initializing", {
-                                            defaultValue: "در حال راه‌اندازی...",
-                                        })
-                                        : t("setup.actions.initialize", {
-                                            defaultValue: "راه‌اندازی اولیه",
-                                        })}
-                                </Button>
-
-                                <Button
-                                    design="Transparent"
-                                    disabled={submitting}
-                                    onClick={handleGoHome}
-                                >
-                                    {t("setup.actions.goHome", {
-                                        defaultValue: "بازگشت",
-                                    })}
-                                </Button>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            </div>
-        </div>
+                        </FormItem>
+                    </FormGroup>
+                    <FormGroup accessibleName={`${t("setup.fields.firstName")} / ${t("setup.fields.lastName")}`}>
+                        <FormItem labelContent={<Label required for="setup-firstName">{t("setup.fields.firstName")}</Label>}>
+                            <Input
+                                id="setup-firstName"
+                                value={form.firstName}
+                                disabled={submitting || initialized}
+                                onInput={(event) => handleChange("firstName", event.target.value)}
+                            />
+                        </FormItem>
+                        <FormItem labelContent={<Label required for="setup-lastName">{t("setup.fields.lastName")}</Label>}>
+                            <Input
+                                id="setup-lastName"
+                                value={form.lastName}
+                                disabled={submitting || initialized}
+                                onInput={(event) => handleChange("lastName", event.target.value)}
+                            />
+                        </FormItem>
+                    </FormGroup>
+                    <FormGroup accessibleName={`${t("setup.fields.password")} / ${t("setup.fields.confirmPassword")}`}>
+                        <FormItem labelContent={<Label required for="setup-password">{t("setup.fields.password")}</Label>}>
+                            <Input
+                                id="setup-password"
+                                type="Password"
+                                value={form.password}
+                                disabled={submitting || initialized}
+                                onInput={(event) => handleChange("password", event.target.value)}
+                            />
+                        </FormItem>
+                        <FormItem labelContent={<Label required for="setup-confirmPassword">{t("setup.fields.confirmPassword")}</Label>}>
+                            <Input
+                                id="setup-confirmPassword"
+                                type="Password"
+                                value={form.confirmPassword}
+                                disabled={submitting || initialized}
+                                onInput={(event) => handleChange("confirmPassword", event.target.value)}
+                            />
+                        </FormItem>
+                    </FormGroup>
+                    <FormGroup accessibleName={`${t("setup.fields.email")} / ${t("setup.fields.mobile")}`}>
+                        <FormItem labelContent={<Label for="setup-email">{t("setup.fields.email")}</Label>}>
+                            <Input
+                                id="setup-email"
+                                value={form.email}
+                                disabled={submitting || initialized}
+                                onInput={(event) => handleChange("email", event.target.value)}
+                            />
+                        </FormItem>
+                        <FormItem labelContent={<Label for="setup-mobile">{t("setup.fields.mobile")}</Label>}>
+                            <Input
+                                id="setup-mobile"
+                                value={form.mobile}
+                                disabled={submitting || initialized}
+                                onInput={(event) => handleChange("mobile", event.target.value)}
+                            />
+                        </FormItem>
+                    </FormGroup>
+                </Form>
+                <Text>{t("setup.hints.password")}</Text>
+                <FlexBox justifyContent="End">
+                    <Button design="Transparent" disabled={submitting} onClick={handleGoHome}>
+                        {t("setup.actions.goHome")}
+                    </Button>
+                    <Button type="Submit" design="Emphasized" disabled={submitting || loading || initialized}>
+                        {submitting ? t("setup.actions.initializing") : t("setup.actions.initialize")}
+                    </Button>
+                </FlexBox>
+            </form>
+        </PublicAuthLayout>
     );
 }

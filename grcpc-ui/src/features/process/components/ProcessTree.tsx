@@ -118,16 +118,7 @@ function ProcessTreeItem({
                 <div
                     data-process-node-id={node.id}
                     title={displayName}
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "minmax(16rem, 1fr) 9rem",
-                        alignItems: "center",
-                        minWidth: 0,
-                        width: "100%",
-                        columnGap: "1rem",
-                        color: "var(--sapTextColor)",
-                        fontWeight: isSelected ? 700 : 400,
-                    }}
+                    style={{ display: "grid", gridTemplateColumns: "minmax(16rem, 1fr) 9rem", alignItems: "center", minWidth: 0, width: "100%", columnGap: "1rem" }}
                 >
                     <span
                         style={{
@@ -293,25 +284,11 @@ export default function ProcessTree({
 
     return (
         <div
-            style={{
-                minWidth: "34rem",
-                border: "1px solid var(--sapList_BorderColor)",
-                background: "var(--sapList_Background)",
-            }}
+            style={{ minWidth: "34rem" }}
         >
             <div
                 role="row"
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "minmax(16rem, 1fr) 9rem",
-                    columnGap: "1rem",
-                    padding: "0.35rem 0.75rem",
-                    borderBlockEnd: "1px solid var(--sapList_BorderColor)",
-                    background: "var(--sapList_HeaderBackground)",
-                    color: "var(--sapTextColor)",
-                    fontWeight: 700,
-                    boxSizing: "border-box",
-                }}
+                style={{ display: "grid", gridTemplateColumns: "minmax(16rem, 1fr) 9rem", columnGap: "1rem", padding: "0.35rem 0.75rem", boxSizing: "border-box" }}
             >
                 <span>{t("process.fields.name", { defaultValue: "نام" })}</span>
                 <span style={{ textAlign: "center" }}>

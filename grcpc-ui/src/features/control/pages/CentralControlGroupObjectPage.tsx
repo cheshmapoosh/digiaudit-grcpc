@@ -1,6 +1,7 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Input, Label, MessageStrip, Select, Option, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Select, Option, TextArea, Title } from "@ui5/webcomponents-react";
 
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
@@ -123,7 +124,7 @@ export default function CentralControlGroupObjectPage({
     <div className="controlGroupObjectPage">
       <div className="controlObjectHeader">
         <Title level="H4">{mode === "create" ? groupLabel : title || groupLabel}</Title>
-        <div className="controlHeaderGrid">
+        <div className="controlHeaderGrid modalTwoColumnGrid">
           <HeaderItem label={t("control.fields.name")} value={title} />
           <HeaderItem label={t("control.fields.code")} value={code} />
           <HeaderItem label={t("control.fields.parentGroup")} value={parentLabel} />
@@ -136,30 +137,30 @@ export default function CentralControlGroupObjectPage({
 
       {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
       {validationError ? <MessageStrip design="Negative" onClose={() => setValidationError(null)}>{validationError}</MessageStrip> : null}
-      <div className="controlFormGrid">
-        <div className="controlField"><Label showColon required>{t("control.fields.code")}</Label><Input value={code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(e) => setCode(e.target.value)} /></div>
-        <div className="controlField"><Label showColon required>{t("control.fields.name")}</Label><Input value={title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => setTitle(e.target.value)} /></div>
+      <div className="controlFormGrid modalTwoColumnGrid">
+        <div className="controlField"><Label showColon required>{t("control.fields.code")}</Label>{readOnly ? <Text className="objectPageValue">{(code) || "—"}</Text> : <Input value={code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(e) => setCode(e.target.value)} />}</div>
+        <div className="controlField"><Label showColon required>{t("control.fields.name")}</Label>{readOnly ? <Text className="objectPageValue">{(title) || "—"}</Text> : <Input value={title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => setTitle(e.target.value)} />}</div>
         <div className="controlField">
           <Label showColon>{t("control.fields.parentGroup", { defaultValue: "گروه والد" })}</Label>
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <Input value={parentTitle} readonly style={{ flex: 1 }} />
-            <Button disabled={readOnly || busy} onClick={() => setValueHelpOpen(true)}>{t("common.select", { defaultValue: "انتخاب" })}</Button>
+            {readOnly ? <Text className="objectPageValue">{(parentTitle) || "—"}</Text> : <Input value={parentTitle} readonly style={{ flex: 1 }} />}
+            {!readOnly ? <Button disabled={busy} onClick={() => setValueHelpOpen(true)}>{t("common.select", { defaultValue: "انتخاب" })}</Button> : null}
           </div>
         </div>
-        <div className="controlField"><Label showColon>{t("control.fields.status")}</Label><Select value={status} disabled={mode !== "edit" || busy} onChange={(e) => setStatus(e.target.value as CentralControlEditableStatus)}><Option value="ACTIVE">{t("control.status.ACTIVE")}</Option><Option value="INACTIVE">{t("control.status.INACTIVE")}</Option></Select></div>
+        <div className="controlField"><Label showColon>{t("control.fields.status")}</Label>{readOnly ? <ObjectStatus state={status === "ACTIVE" ? "Positive" : "None"}>{t("control.status." + status)}</ObjectStatus> : <Select value={status} disabled={mode !== "edit" || busy} onChange={(e) => setStatus(e.target.value as CentralControlEditableStatus)}><Option value="ACTIVE">{t("control.status.ACTIVE")}</Option><Option value="INACTIVE">{t("control.status.INACTIVE")}</Option></Select>}</div>
         <div className="controlDateRangeRow">
-          <div className="controlField"><Label showColon>{t("control.fields.validFrom")}</Label><PersianDatePicker value={validFrom} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validFrom")} invalidValueMessage={t("control.validation.invalidDate")} onChange={setValidFrom} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} /></div>
-          <div className="controlField"><Label showColon>{t("control.fields.validTo")}</Label><PersianDatePicker value={validTo} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validTo")} invalidValueMessage={t("control.validation.invalidDate")} onChange={setValidTo} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))} /></div>
+          <div className="controlField"><Label showColon>{t("control.fields.validFrom")}</Label>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(validFrom)) || "—"}</Text> : <PersianDatePicker value={validFrom} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validFrom")} invalidValueMessage={t("control.validation.invalidDate")} onChange={setValidFrom} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} />}</div>
+          <div className="controlField"><Label showColon>{t("control.fields.validTo")}</Label>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(validTo)) || "—"}</Text> : <PersianDatePicker value={validTo} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validTo")} invalidValueMessage={t("control.validation.invalidDate")} onChange={setValidTo} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))} />}</div>
         </div>
-        <div className="controlField controlFieldWide"><Label showColon>{t("control.fields.description")}</Label><TextArea rows={5} value={description} readonly={readOnly} disabled={busy} onInput={(e) => setDescription(e.target.value)} /></div>
+        <div className="controlField controlFieldWide"><Label showColon>{t("control.fields.description")}</Label>{readOnly ? <Text className="objectPageValue">{(description) || "—"}</Text> : <TextArea rows={5} value={description} readonly={readOnly} disabled={busy} onInput={(e) => setDescription(e.target.value)} />}</div>
       </div>
-      <div className="controlObjectFooter">
+      <DialogFooter>
         {mode === "view" ? (
           <><Button design="Emphasized" disabled={busy} onClick={onEdit}>{t("common.edit", { defaultValue: "ویرایش" })}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.close", { defaultValue: "بستن" })}</Button></>
         ) : (
           <><Button design="Emphasized" disabled={busy || invalidDate || !dirty} onClick={submit}>{t("control.actions.submit")}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.cancel", { defaultValue: "انصراف" })}</Button></>
         )}
-      </div>
+      </DialogFooter>
       <ControlGroupValueHelpDialog
         open={valueHelpOpen}
         groups={groups}

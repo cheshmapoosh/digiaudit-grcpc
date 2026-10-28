@@ -12,6 +12,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
+@org.hibernate.annotations.Filter(name = "datasetProfile", condition = "profile_id = :profileId")
 @Table(name = "global_control")
 @AttributeOverride(name = "title", column = @Column(name = "name", nullable = false, length = 255))
 public class GlobalControlEntity extends CentralDefinitionEntity {

@@ -10,13 +10,14 @@ import java.util.UUID;
 
 public interface UserRoleAssignmentRepository extends JpaRepository<UserRoleAssignmentEntity, UUID> {
 
-    boolean existsByUser_IdAndRole_IdAndScopeTypeAndScopeOrgUnitIdAndActiveTrue(
+    boolean existsByUser_IdAndRole_IdAndProfileIdAndScopeTypeAndScopeOrgUnitIdAndActiveTrue(
             UUID userId,
             UUID roleId,
+            UUID profileId,
             ScopeType scopeType,
             UUID scopeOrgUnitId
     );
 
     @EntityGraph(attributePaths = {"role", "role.translations"})
-    List<UserRoleAssignmentEntity> findAllByUser_IdOrderByAssignedAtDesc(UUID userId);
+    List<UserRoleAssignmentEntity> findAllByUser_IdAndProfileIdOrderByAssignedAtDesc(UUID userId, UUID profileId);
 }

@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Button, CheckBox, Input, MessageStrip, Text } from "@ui5/webcomponents-react";
+import { Button, CheckBox, FlexBox, Form, FormItem, Icon, Input, Label, MessageStrip, Text, type InputDomRef } from "@ui5/webcomponents-react";
 import { useAuthState } from "@/features/auth";
 import { useInitialAppReady } from "@/shared/bootstrap/useInitialAppReady";
 import { resolveLoginReturnUrl, type LoginRouterState } from "@/features/auth/utils/returnUrl";
-import { applySettings, loadSettings, saveSettings } from "@/ui/ui-settings";
-import "./login.css";
+import PublicAuthLayout from "@/shared/components/PublicAuthLayout";
 
 const REMEMBERED_USERNAME_KEY = "grcpc.login.rememberedUsername";
 function rememberedUsername() {
@@ -16,7 +15,7 @@ function rememberedUsername() {
 
 export default function LoginFeaturePage() {
     useInitialAppReady();
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const submitting = useAuthState((state) => state.submitting);
@@ -31,23 +30,18 @@ export default function LoginFeaturePage() {
     const [remember, setRemember] = useState(() => rememberedUsername().length > 0);
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordHelp, setShowPasswordHelp] = useState(false);
+    const formRef = useRef<HTMLFormElement>(null);
+    const submissionInProgress = useRef(false);
     const redirectTo = useMemo(() => resolveLoginReturnUrl(location.search, location.state as LoginRouterState | null), [location.search, location.state]);
 
     useEffect(() => {
         if ((location.state as LoginRouterState | null)?.sessionExpired) markSessionExpired();
     }, [location.state, markSessionExpired]);
 
-    function toggleLanguage() {
-        const nextLang = i18n.language.startsWith("fa") ? "en" : "fa";
-        const settings = { ...loadSettings(), lang: nextLang, dir: nextLang === "fa" ? "rtl" : "ltr" } as const;
-        saveSettings(settings);
-        applySettings(settings);
-        void i18n.changeLanguage(nextLang);
-    }
-
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (submitting || !username.trim() || !password) return;
+        if (submitting || submissionInProgress.current || !username.trim() || !password) return;
+        submissionInProgress.current = true;
         clearError();
         clearSessionExpired();
         try {
@@ -59,58 +53,47 @@ export default function LoginFeaturePage() {
             setPassword("");
             navigate(useAuthState.getState().me?.passwordChangeRequired ? "/change-password" : redirectTo, { replace: true });
         } catch { setPassword(""); }
+        finally { submissionInProgress.current = false; }
     }
 
-    const isFa = i18n.language.startsWith("fa");
+    function handleInputKeyDown(event: KeyboardEvent<InputDomRef>) {
+        if (event.key !== "Enter" || event.nativeEvent.isComposing || event.target !== event.currentTarget) return;
+        event.preventDefault();
+        if (!event.repeat) formRef.current?.requestSubmit();
+    }
+
     return (
-        <div className="loginPage" dir={isFa ? "rtl" : "ltr"}>
-            <section className="loginHero" aria-label={t("auth.login.hero.ariaLabel")}>
-                <div className="loginHeroCopy">
-                    <img className="loginHeroBrand" src="/images/digi-audit-login-wordmark-light.svg" alt="Digi Audit" />
-                    <h1>{t("auth.login.hero.platform")}</h1>
-                    <p className="loginHeroModules">{t("auth.login.hero.modules")}</p>
-                    <p className="loginHeroTagline">{t("auth.login.hero.tagline")}</p>
-                </div>
-                <div className="loginHeroTraits">
-                    <span>{t("auth.login.hero.secure")}</span><span>{t("auth.login.hero.scalable")}</span>
-                    <span>{t("auth.login.hero.trusted")}</span><span>{t("auth.login.hero.efficient")}</span>
-                </div>
-            </section>
-            <section className="loginPanel" aria-label={t("auth.login.welcome")}>
-                <div className="loginLanguage"><Button design="Transparent" icon="world" onClick={toggleLanguage}>{isFa ? "فارسی" : "English"}</Button></div>
-                <div className="loginPanelContent">
-                    <img className="loginPanelBrand" src="/images/digi-audit-wordmark.svg" alt="Digi Audit" />
-                    <Text className="loginIntro">{t("auth.login.intro")}</Text>
-                    <form className="loginForm" onSubmit={(event) => void handleSubmit(event)}>
-                        {error && <MessageStrip design="Negative" onClose={clearError}>{error}</MessageStrip>}
-                        {sessionExpired && <MessageStrip design="Critical" onClose={clearSessionExpired}>{t("auth.sessionExpired")}</MessageStrip>}
-                        <div className="loginField">
-                            <label htmlFor="login-username">{t("auth.login.fields.username")}</label>
-                            <Input id="login-username" value={username} placeholder={t("auth.login.usernameOrEmail")} onInput={(event) => setUsername(event.target.value)} />
-                        </div>
-                        <div className="loginField">
-                            <label htmlFor="login-password">{t("auth.login.fields.password")}</label>
+        <PublicAuthLayout panelLabel={t("auth.login.welcome")}>
+            <Text>{t("auth.login.intro")}</Text>
+            <form ref={formRef} onSubmit={(event) => void handleSubmit(event)}>
+                <FlexBox direction="Column" gap="0.75rem">
+                    {error && <MessageStrip design="Negative" onClose={clearError}>{error}</MessageStrip>}
+                    {sessionExpired && <MessageStrip design="Critical" onClose={clearSessionExpired}>{t("auth.sessionExpired")}</MessageStrip>}
+                    <Form accessibleMode="Edit" accessibleName={t("auth.login.welcome")} layout="S1 M1 L1 XL1" labelSpan="S12 M12 L12 XL12" itemSpacing="Normal">
+                        <FormItem labelContent={<Label for="login-username" wrappingType="Normal">{t("auth.login.fields.username")}</Label>}>
+                            <Input id="login-username" value={username} icon={<Icon name="employee" />} onInput={(event) => setUsername(event.target.value)} onKeyDown={handleInputKeyDown} />
+                        </FormItem>
+                        <FormItem labelContent={<Label for="login-password">{t("auth.login.fields.password")}</Label>}>
                             <Input
                                 id="login-password"
                                 type={showPassword ? "Text" : "Password"}
                                 value={password}
-                                placeholder={t("auth.login.placeholders.password")}
                                 onInput={(event) => setPassword(event.target.value)}
+                                onKeyDown={handleInputKeyDown}
                                 icon={<Button design="Transparent" icon={showPassword ? "hide" : "show"} accessibleName={t(showPassword ? "auth.login.hidePassword" : "auth.login.showPassword")} onClick={() => setShowPassword((value) => !value)} />}
                             />
-                        </div>
-                        <div className="loginOptions">
-                            <CheckBox text={t("auth.login.rememberMe")} checked={remember} onChange={(event) => setRemember(event.target.checked)} />
-                            <Button design="Transparent" onClick={() => setShowPasswordHelp((value) => !value)}>{t("auth.login.forgotPassword")}</Button>
-                        </div>
-                        {showPasswordHelp && <MessageStrip design="Information" onClose={() => setShowPasswordHelp(false)}>{t("auth.login.passwordHelp")}</MessageStrip>}
-                        <Button className="loginSubmit" type="Submit" design="Emphasized" disabled={submitting || !username.trim() || !password}>
-                            {submitting ? t("auth.login.actions.submitting") : t("auth.login.actions.submit")}
-                        </Button>
-                    </form>
-                </div>
-                <div className="loginPowered"><img src="/images/digi-audit-mark.svg" alt="" /><span>{t("auth.login.poweredBy")} <strong>Digi Audit</strong><small>{t("auth.login.hero.platform")}</small></span></div>
-            </section>
-        </div>
+                        </FormItem>
+                    </Form>
+                    <FlexBox alignItems="Center" justifyContent="SpaceBetween" wrap="Wrap">
+                        <CheckBox text={t("auth.login.rememberMe")} checked={remember} onChange={(event) => setRemember(event.target.checked)} />
+                        <Button design="Transparent" onClick={() => setShowPasswordHelp((value) => !value)}>{t("auth.login.forgotPassword")}</Button>
+                    </FlexBox>
+                    {showPasswordHelp && <MessageStrip design="Information" onClose={() => setShowPasswordHelp(false)}>{t("auth.login.passwordHelp")}</MessageStrip>}
+                    <Button type="Submit" design="Emphasized" disabled={submitting || !username.trim() || !password}>
+                        {submitting ? t("auth.login.actions.submitting") : t("auth.login.actions.submit")}
+                    </Button>
+                </FlexBox>
+            </form>
+        </PublicAuthLayout>
     );
 }

@@ -12,6 +12,7 @@ import {
     FileUploader,
     Input,
     MessageStrip,
+    ObjectStatus,
     Table,
     TableCell,
     TableHeaderCell,
@@ -99,15 +100,7 @@ interface ActionMessage {
     text: string;
 }
 
-const PANEL_STYLE: CSSProperties = {
-    display: "grid",
-    gap: "0.75rem",
-    minHeight: "15rem",
-    minWidth: 0,
-    background: "var(--sapGroup_ContentBackground)",
-    border: "1px solid var(--sapList_BorderColor)",
-    padding: "1rem",
-};
+const PANEL_STYLE: CSSProperties = { display: "grid", gap: "0.75rem", minHeight: "15rem", minWidth: 0, padding: "1rem" };
 
 const HEADER_STYLE: CSSProperties = {
     display: "flex",
@@ -155,24 +148,7 @@ const UPLOAD_ITEM_HEADER_STYLE: CSSProperties = {
     flexWrap: "wrap",
 };
 
-const STAGED_METADATA_STYLE: CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))",
-    gap: "0.5rem",
-    alignItems: "end",
-};
-
-const META_TEXT_STYLE: CSSProperties = {
-    color: "var(--sapContent_LabelColor)",
-    fontSize: "0.8125rem",
-    overflowWrap: "anywhere",
-};
-
-const ERROR_TEXT_STYLE: CSSProperties = {
-    color: "var(--sapNegativeTextColor)",
-    fontSize: "0.8125rem",
-    overflowWrap: "anywhere",
-};
+const META_TEXT_STYLE: CSSProperties = { overflowWrap: "anywhere" };
 
 const NONE_TEXT = "-";
 const FALLBACK_PROGRESS_INTERVAL_MS = 300;
@@ -1071,7 +1047,7 @@ export default function DocumentManager({
                 }}
                 />
                 {metadataErrors[row.documentId]
-                    ? <span style={ERROR_TEXT_STYLE}>{metadataErrors[row.documentId]}</span>
+                    ? <MessageStrip design="Negative" hideCloseButton>{metadataErrors[row.documentId]}</MessageStrip>
                     : null}
             </div>
         );
@@ -1293,14 +1269,11 @@ export default function DocumentManager({
                                 </div>
 
                                 {showMetadata ? (
-                                    <div style={STAGED_METADATA_STYLE}>
+                                    <div className="modalThreeColumnGrid">
                                         {!item.existingDocument ? (
                                             <>
                                                 <Input
                                                     accessibleName={t("document.fields.title", {
-                                                        defaultValue: "Title",
-                                                    })}
-                                                    placeholder={t("document.fields.title", {
                                                         defaultValue: "Title",
                                                     })}
                                                     value={item.title}
@@ -1315,9 +1288,6 @@ export default function DocumentManager({
                                                     accessibleName={t("document.fields.code", {
                                                         defaultValue: "Code",
                                                     })}
-                                                    placeholder={t("document.fields.code", {
-                                                        defaultValue: "Code",
-                                                    })}
                                                     value={item.code}
                                                     maxlength={64}
                                                     disabled={busy || item.state === "FINALIZING"}
@@ -1329,9 +1299,6 @@ export default function DocumentManager({
                                                     accessibleName={t("document.fields.description", {
                                                         defaultValue: "Description",
                                                     })}
-                                                    placeholder={t("document.fields.description", {
-                                                        defaultValue: "Description",
-                                                    })}
                                                     value={item.description}
                                                     maxlength={1000}
                                                     disabled={busy || item.state === "FINALIZING"}
@@ -1341,7 +1308,7 @@ export default function DocumentManager({
                                                 />
                                             </>
                                         ) : null}
-                                        <PersianDatePicker
+                                        <div className="modalDateRange"><PersianDatePicker
                                             accessibleName={t("document.fields.validFrom", {
                                                 defaultValue: "Valid From",
                                             })}
@@ -1363,15 +1330,15 @@ export default function DocumentManager({
                                                 : t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
                                             onChange={(value) => updateStagedField(item.id, "validTo", value)}
                                             onDraftStateChange={(state) => updateUploadItem(item.id, { validToDraftValid: state.valid })}
-                                        />
-                                        {invalidValidityRange ? <span style={ERROR_TEXT_STYLE}>{t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })}</span> : null}
+                                        /></div>
+                                        {invalidValidityRange ? <MessageStrip design="Negative" hideCloseButton>{t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })}</MessageStrip> : null}
                                     </div>
                                 ) : null}
 
-                                <span style={item.failureState ? ERROR_TEXT_STYLE : META_TEXT_STYLE}>
+                                <ObjectStatus state={item.failureState ? "Negative" : "None"}>
                                     {statusText}
                                     {item.error ? ` - ${item.error}` : ""}
-                                </span>
+                                </ObjectStatus>
                             </div>
                         </UploadCollectionItem>
                     );

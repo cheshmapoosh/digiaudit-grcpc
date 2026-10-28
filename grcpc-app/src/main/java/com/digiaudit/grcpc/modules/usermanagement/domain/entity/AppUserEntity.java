@@ -21,6 +21,13 @@ import java.util.UUID;
 @SuperBuilder(toBuilder = true)
 public class AppUserEntity extends AuditableEntity {
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.BINARY)
+    @Column(name = "profile_id", columnDefinition = "RAW(16)")
+    private UUID profileId;
+
+    @Column(name = "profile_admin", nullable = false)
+    private boolean profileAdmin;
+
     @Id
     @GeneratedValue
     private UUID id;

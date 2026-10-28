@@ -14,6 +14,7 @@ public class MasterDataAuthorizationService {
     private static final Set<String> AREAS = Set.of("PROCESS", "RISK", "CONTROL", "GOVERNANCE", "REFERENCE");
     private final CurrentUserProvider currentUserProvider;
     private final AppUserRepository users;
+    private final com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService profileAccess;
 
     public boolean canView(String area) {
         return allowed(area, false);
@@ -47,9 +48,9 @@ public class MasterDataAuthorizationService {
     }
 
     private boolean allowed(String area, boolean manage) {
-        if (!AREAS.contains(area)) return false;
+        if (!AREAS.contains(area) || com.digiaudit.grcpc.common.security.ProfileContext.idOrNull() == null) return false;
         return currentUserProvider.getCurrentPrincipalOptional().map(principal -> {
-            if (principal.isRootUser()) return true;
+            if (principal.isRootUser() || profileAccess.isAdmin()) return true;
             // Read live assignments: expiry, deactivation and role changes apply to existing sessions.
             // Only GLOBAL/null assignments qualify. Organization scopes deliberately fail closed.
             var user = users.findById(principal.getUserId()).orElse(null);

@@ -93,6 +93,8 @@ public class GrcpcPersistenceConfiguration {
     PersistenceManagedTypes persistenceManagedTypes() {
         return PersistenceManagedTypes.of(
                 AuditableEntity.class.getName(),
+                com.digiaudit.grcpc.modules.datasetprofile.domain.DatasetProfileEntity.class.getName(),
+                com.digiaudit.grcpc.common.persistence.ProfileFilterDefinition.class.getName(),
                 BooleanNumberConverter.class.getName(),
                 AuditLogEntity.class.getName(),
                 DocumentEntity.class.getName(),

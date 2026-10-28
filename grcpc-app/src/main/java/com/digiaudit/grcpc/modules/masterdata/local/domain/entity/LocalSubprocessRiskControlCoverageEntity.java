@@ -12,8 +12,17 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
+@org.hibernate.annotations.Filter(name = "datasetProfile", condition = "profile_id = :profileId")
+@jakarta.persistence.EntityListeners(com.digiaudit.grcpc.common.persistence.ProfileEntityListener.class)
 @Table(name = "local_subprocess_risk_control_coverage")
-public class LocalSubprocessRiskControlCoverageEntity {
+public class LocalSubprocessRiskControlCoverageEntity implements com.digiaudit.grcpc.common.persistence.ProfileScoped {
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.BINARY)
+    @jakarta.persistence.Column(name = "profile_id", nullable = false, updatable = false, columnDefinition = "RAW(16)")
+    private java.util.UUID profileId;
+
+    public java.util.UUID getProfileId() { return profileId; }
+    public void setProfileId(java.util.UUID profileId) { this.profileId = profileId; }
+
   @Id
   @JdbcTypeCode(SqlTypes.BINARY)
   @Column(name = "id", nullable = false, columnDefinition = "RAW(16)")

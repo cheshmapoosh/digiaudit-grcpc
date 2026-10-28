@@ -78,7 +78,6 @@ export default function AppToast() {
     return (
         <Toast
             key={message.id}
-            className="grc-success-toast"
             duration={message.duration}
             open={open}
             placement="TopCenter"

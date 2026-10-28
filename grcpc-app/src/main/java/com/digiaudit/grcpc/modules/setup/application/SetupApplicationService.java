@@ -40,6 +40,7 @@ public class SetupApplicationService {
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final com.digiaudit.grcpc.modules.datasetprofile.domain.DatasetProfileRepository profiles;
 
     @Transactional
     public void initialize(InitializeSystemRequest request, HttpServletRequest httpServletRequest) {
@@ -60,6 +61,8 @@ public class SetupApplicationService {
 
         RoleEntity rootRole = roleRepository.findByCode(ROOT_ROLE_CODE)
                 .orElseThrow(() -> new NotFoundException("ROOT_ADMIN role seed was not found"));
+        var bootstrapProfiles = profiles.findAll();
+        if (bootstrapProfiles.size() != 1) throw new ConflictException("Expected the single migrated bootstrap dataset during first setup");
 
         log.info("Initializing system and creating root user. username={}", normalizedUsername);
         AppUserEntity rootUser = appUserRepository.save(
@@ -80,6 +83,7 @@ public class SetupApplicationService {
                 UserRoleAssignmentEntity.builder()
                         .user(rootUser)
                         .role(rootRole)
+                        .profileId(bootstrapProfiles.getFirst().getId())
                         .scopeType(ScopeType.GLOBAL)
                         .assignedAt(LocalDateTime.now())
                         .active(true)

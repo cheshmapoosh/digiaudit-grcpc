@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Button, FlexBox, Input, Label, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
+import { Button, FlexBox, Form, FormItem, Input, Label, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
 import { authService } from "../service/auth.service";
 import { useAuthState } from "../state/auth.state";
 import { isValidUsername } from "../domain/usernamePolicy";
@@ -57,13 +57,18 @@ export default function ChangeUsernamePage() {
     </MessageStrip>
     {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
     {!saved ? <>
-      <Label>{t("auth.username.current")}</Label>
-      <Text>{username}</Text>
-      <Label for="new-username" required>{t("auth.username.new")}</Label>
-      <Input id="new-username" value={newUsername} maxlength={100} disabled={busy} onInput={(event) => setNewUsername(event.target.value)} />
+      <Form accessibleMode="Edit" accessibleName={t("auth.username.title")} layout="S1 M1 L1 XL1" labelSpan="S4 M4 L4 XL4" itemSpacing="Normal">
+        <FormItem labelContent={<Label>{t("auth.username.current")}</Label>}>
+          <Text>{username}</Text>
+        </FormItem>
+        <FormItem labelContent={<Label for="new-username" required wrappingType="Normal">{t("auth.username.new")}</Label>}>
+          <Input id="new-username" value={newUsername} maxlength={100} disabled={busy} onInput={(event) => setNewUsername(event.target.value)} />
+        </FormItem>
+        <FormItem labelContent={<Label for="username-current-password" required wrappingType="Normal">{t("auth.password.current")}</Label>}>
+          <Input id="username-current-password" type="Password" value={currentPassword} maxlength={200} disabled={busy} onInput={(event) => setCurrentPassword(event.target.value)} />
+        </FormItem>
+      </Form>
       {newUsername && !isValidUsername(newUsername) ? <MessageStrip design="Negative" hideCloseButton>{t("usermanagement.security.invalidUsername")}</MessageStrip> : null}
-      <Label for="username-current-password" required>{t("auth.password.current")}</Label>
-      <Input id="username-current-password" type="Password" value={currentPassword} maxlength={200} disabled={busy} onInput={(event) => setCurrentPassword(event.target.value)} />
       <Button design="Emphasized" disabled={busy || !valid} onClick={() => void save()}>{t("common.save")}</Button>
     </> : null}
     <Button disabled={busy} onClick={leave}>{t(saved ? "auth.username.login" : "auth.credentials.back")}</Button>

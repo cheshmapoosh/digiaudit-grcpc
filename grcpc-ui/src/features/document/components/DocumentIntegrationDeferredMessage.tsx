@@ -6,15 +6,7 @@ interface DocumentIntegrationDeferredMessageProps {
     title?: string;
 }
 
-const WRAPPER_STYLE: CSSProperties = {
-    display: "grid",
-    gap: "0.75rem",
-    minHeight: "10rem",
-    minWidth: 0,
-    background: "var(--sapGroup_ContentBackground)",
-    border: "1px solid var(--sapList_BorderColor)",
-    padding: "1rem",
-};
+const WRAPPER_STYLE: CSSProperties = { display: "grid", gap: "0.75rem", minHeight: "10rem", minWidth: 0, padding: "1rem" };
 
 export default function DocumentIntegrationDeferredMessage({
     title,

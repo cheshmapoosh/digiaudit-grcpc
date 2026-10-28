@@ -1,3 +1,4 @@
+import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import {
   Button,
   Dialog,
@@ -42,7 +43,7 @@ function MoveDialogContent({
       open={open}
       headerText={t("centralCatalog.move", { defaultValue: "جابجایی" })}
       footer={
-        <div className="catalogToolbarActions">
+        <DialogFooterBar>
           <Button
             design="Emphasized"
             disabled={busy || (requiredParent && !parentId)}
@@ -53,7 +54,7 @@ function MoveDialogContent({
           <Button disabled={busy} onClick={onClose}>
             {t("common.cancel", { defaultValue: "انصراف" })}
           </Button>
-        </div>
+        </DialogFooterBar>
       }
     >
       <Label>

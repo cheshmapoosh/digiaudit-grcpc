@@ -18,6 +18,9 @@ public record UserDetailResponse(
         LocalDateTime lastLoginAt,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        List<UserRoleAssignmentResponse> assignments
+        List<UserRoleAssignmentResponse> assignments,
+        UUID profileId,
+        boolean profileAdmin,
+        List<UUID> profileAccessIds
 ) {
 }

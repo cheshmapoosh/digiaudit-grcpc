@@ -64,12 +64,7 @@ public class AuthController {
         }
 
         Set<String> authorities = currentUser.getAuthorities().stream()
-                .map(authority -> authority.getAuthority())
-                .filter(code -> !code.startsWith("MD_"))
-                .collect(Collectors.toSet());
-        authorities.addAll(users.findActiveBusinessPermissionCodes(currentUser.getUserId()).stream()
-                .filter(code -> code.startsWith("MD_"))
-                .toList());
+                .map(authority -> authority.getAuthority()).collect(Collectors.toSet());
 
         return ResponseEntity.ok(
                 new AuthMeResponse(

@@ -603,26 +603,15 @@ export default function OrganizationsFclShellPage() {
             minWidth: 0,
             maxWidth: "100%",
             boxSizing: "border-box",
-            padding: "1rem",
+            padding: 0,
             overflow: "hidden",
             direction: appDir,
-            background: "var(--sapBackgroundColor)",
+
         }),
         [appDir],
     );
 
-    const frameStyle: CSSProperties = {
-        height: "100%",
-        minHeight: 0,
-        minWidth: 0,
-        maxWidth: "100%",
-        overflow: "auto",
-        border: "1px solid var(--sapGroup_ContentBorderColor)",
-        borderRadius: "0",
-        background: "var(--sapBackgroundColor)",
-        boxSizing: "border-box",
-        padding: "1rem",
-    };
+    const frameStyle: CSSProperties = { height: "100%", minHeight: 0, minWidth: 0, maxWidth: "100%", overflow: "auto", boxSizing: "border-box" };
 
     const dialogContentStyle = useMemo<CSSProperties>(
         () => ({

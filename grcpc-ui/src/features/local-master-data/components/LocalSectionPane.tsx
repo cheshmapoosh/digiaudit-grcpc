@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import { useTranslation } from "react-i18next";
-import {
-    Button, Input, Label, MessageStrip, Option, Select, TextArea, Title,
-} from "@ui5/webcomponents-react";
+import { Text, Button, Label, MessageStrip, Option, Select, TextArea, Title } from "@ui5/webcomponents-react";
 import { DocumentManager } from "@/features/document";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
@@ -105,6 +104,7 @@ export default function LocalSectionPane({
     const [list, setList] = useState<LocalPage<LocalRows[LocalSectionKey]> | null>(null);
     const [row, setRow] = useState<LocalBaseRow | null>(null);
     const [creating, setCreating] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [draft, setDraft] = useState<Draft>(() => emptyDraft(spec));
     const [baseline, setBaseline] = useState("");
     const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE, validTo: EMPTY_DATE });
@@ -129,6 +129,7 @@ export default function LocalSectionPane({
         lastReset.current = resetKey;
         queueMicrotask(() => {
             setCreating(false);
+            setEditingId(null);
             setRow(null);
             setDraft(emptyDraft(spec));
             setBaseline("");
@@ -193,6 +194,7 @@ export default function LocalSectionPane({
 
     const resetEditor = () => {
         setCreating(false);
+        setEditingId(null);
         setRow(null);
         setDraft(emptyDraft(spec));
         setBaseline("");
@@ -392,6 +394,7 @@ export default function LocalSectionPane({
             setDraft(next);
             setBaseline(JSON.stringify(next));
             setCreating(false);
+            if (!documentDirty) setEditingId(null);
             setInfo(t("local.saved", { defaultValue: "تغییرات محلی ذخیره شد." }));
             onSelectRow(result.entityId);
             if (spec.key === "contexts") onContextCreated(result.entityId);
@@ -442,7 +445,8 @@ export default function LocalSectionPane({
         centralReferenceParams[identity.name] = draft[identity.name] ?? null;
     }
     const centralReferenceReady = spec.identityFields.every((field) => Boolean(draft[field.name]));
-    const readOnly = !canWrite || Boolean(row && row.status === "DELETED");
+    const readOnly = !canWrite || Boolean(row && row.status === "DELETED")
+        || (!creating && editingId !== row?.id);
 
     if (!active) return null;
     if (!ownerReady) {
@@ -486,8 +490,7 @@ export default function LocalSectionPane({
                 </Button>
             </div> : null}
         </div>
-        {(creating || row) ? <div style={{ display: "grid", gap: "0.75rem",
-            borderTop: "1px solid var(--sapGroup_ContentBorderColor)", paddingTop: "0.75rem" }}>
+        {(creating || row) ? <div style={{ display: "grid", gap: "0.75rem", paddingTop: "0.75rem" }}>
             {row ? <MessageStrip design="Information" hideCloseButton>
                 {t("local.rowState", { defaultValue: "وضعیت ذخیره‌شده" })}: {row.status}
                 {" · "}{t("local.version", { defaultValue: "نسخه" })}: {row.version}
@@ -495,8 +498,7 @@ export default function LocalSectionPane({
                 {textValue(row, "centralReferenceStatus")
                     ? ` · ${textValue(row, "centralReferenceStatus")}` : ""}
             </MessageStrip> : null}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                gap: "0.75rem" }}>
+            <div className={spec.key === "control-scopes" ? "modalThreeColumnGrid" : "modalTwoColumnGrid"}>
                 {spec.identityFields.map((field) => {
                     const path = field.local
                         ? contextId ? `organization-subprocess-scopes/${contextId}/${field.options}` : null
@@ -511,14 +513,14 @@ export default function LocalSectionPane({
                         onChange={(id) => change(field.name, id)} />
                         : <div key={field.name} style={{ display: "grid", gap: "0.3rem" }}>
                             <Label>{t(field.labelKey, { defaultValue: field.labelFa })}</Label>
-                            <Input readonly value={textValue(row!, field.name.replace(/Id$/, "Label"))
-                                ?? draft[field.name] ?? ""} />
+                            <Text className="objectPageValue">{(textValue(row!, field.name.replace(/Id$/, "Label"))
+                                ?? draft[field.name] ?? "") || "—"}</Text>
                         </div>;
                 })}
                 {spec.centralReferenceField ? <>
                     <div style={{ display: "grid", gap: "0.3rem" }}>
                         <Label required>{t("local.fields.sourceType", { defaultValue: "نوع منبع" })}</Label>
-                        <Select value={draft.sourceType ?? ""} disabled={!creating || busy}
+                        {readOnly ? <Text className="objectPageValue">{(draft.sourceType ? t(draft.sourceType === "INHERITED_FROM_CENTRAL" ? "local.source.inherited" : "local.source.added") : "—") || "—"}</Text> : <Select value={draft.sourceType ?? ""} disabled={!creating || busy}
                             accessibleName={t("local.fields.sourceType", { defaultValue: "نوع منبع" })}
                             onChange={(event) => {
                                 change("sourceType", event.target.value || null);
@@ -529,7 +531,7 @@ export default function LocalSectionPane({
                                 {t("local.source.inherited", { defaultValue: "موروث از مرکزی" })}</Option>
                             <Option value="LOCAL_ADDED">
                                 {t("local.source.added", { defaultValue: "افزودهٔ محلی" })}</Option>
-                        </Select>
+                        </Select>}
                     </div>
                     {draft.sourceType === "INHERITED_FROM_CENTRAL"
                         ? creating
@@ -544,26 +546,26 @@ export default function LocalSectionPane({
                                 <Label>{t("local.fields.centralReference", {
                                     defaultValue: "رابطهٔ مرکزی",
                                 })}</Label>
-                                <Input readonly value={draft[spec.centralReferenceField] ?? ""} />
+                                <Text className="objectPageValue">{(draft[spec.centralReferenceField] ?? "") || "—"}</Text>
                             </div>
                         : null}
                 </> : null}
                 {spec.policy ? <>
                     <div style={{ display: "grid", gap: "0.3rem" }}>
                         <Label required>{t("local.fields.scopeAction", { defaultValue: "تصمیم" })}</Label>
-                        <Select value={draft.scopeAction ?? ""} disabled={readOnly || busy}
+                        {readOnly ? <Text className="objectPageValue">{(draft.scopeAction ? t(draft.scopeAction === "INCLUDE" ? "local.action.include" : "local.action.exclude") : "—") || "—"}</Text> : <Select value={draft.scopeAction ?? ""} disabled={readOnly || busy}
                             accessibleName={t("local.fields.scopeAction", { defaultValue: "تصمیم" })}
                             onChange={(event) => change("scopeAction", event.target.value || null)}>
                             <Option value="">{t("local.options.none", { defaultValue: "انتخاب نشده" })}</Option>
                             <Option value="INCLUDE">{t("local.action.include", { defaultValue: "شامل" })}</Option>
                             <Option value="EXCLUDE">{t("local.action.exclude", { defaultValue: "مستثنا" })}</Option>
-                        </Select>
+                        </Select>}
                     </div>
                     {spec.key === "organization-policies" ? <div style={{ display: "grid", gap: "0.3rem" }}>
                         <Label required>{t("local.fields.propagationMode", {
                             defaultValue: "نحوهٔ انتشار",
                         })}</Label>
-                        <Select value={draft.propagationMode ?? ""} disabled={readOnly || busy}
+                        {readOnly ? <Text className="objectPageValue">{(draft.propagationMode ? t(draft.propagationMode === "DIRECT_ONLY" ? "local.propagation.direct" : "local.propagation.descendants") : "—") || "—"}</Text> : <Select value={draft.propagationMode ?? ""} disabled={readOnly || busy}
                             accessibleName={t("local.fields.propagationMode", {
                                 defaultValue: "نحوهٔ انتشار",
                             })}
@@ -573,32 +575,35 @@ export default function LocalSectionPane({
                                 {t("local.propagation.direct", { defaultValue: "فقط مستقیم" })}</Option>
                             <Option value="INCLUDE_DESCENDANTS">
                                 {t("local.propagation.descendants", { defaultValue: "شامل زیرمجموعه‌ها" })}</Option>
-                        </Select>
+                        </Select>}
                     </div> : null}
                 </> : null}
                 {spec.key === "control-scopes" ? <>
-                    <LocalOptionPicker label={t("local.fields.actualOwner", {
+                    {readOnly ? <div style={{ display: "grid", gap: "0.3rem" }}>
+                        <Label>{t("local.fields.actualOwner")}</Label>
+                        <Text className="objectPageValue">{row ? textValue(row, "actualOwnerLabel") || "—" : "—"}</Text>
+                    </div> : <LocalOptionPicker label={t("local.fields.actualOwner", {
                         defaultValue: "مسئول واقعی",
                     })} path={canWrite ? "options/control-owners" : null}
                         value={draft.actualOwnerId ?? null}
                         currentLabel={row ? textValue(row, "actualOwnerLabel") : null}
                         disabled={readOnly || busy}
-                        onChange={(id) => change("actualOwnerId", id)} />
+                        onChange={(id) => change("actualOwnerId", id)} />}
                     {(["frequencyCode", "executionMethodCode", "testMethodCode"] as const)
                         .map((field) => <div key={field} style={{ display: "grid", gap: "0.3rem" }}>
                             <Label>{t(`local.fields.${field}`, { defaultValue: field })}</Label>
-                            <Select value={draft[field] ?? ""} disabled={readOnly || busy}
+                            {readOnly ? <Text className="objectPageValue">{(draft[field]) || "—"}</Text> : <Select value={draft[field] ?? ""} disabled={readOnly || busy}
                                 accessibleName={t(`local.fields.${field}`, { defaultValue: field })}
                                 onChange={(event) => change(field, event.target.value || null)}>
                                 <Option value="">{t("local.options.none", { defaultValue: "انتخاب نشده" })}</Option>
                                 {(settings?.[`${field.slice(0, -4)}Codes` as keyof typeof settings]
                                     ?? []).map((code) => <Option key={code} value={code}>{code}</Option>)}
-                            </Select>
+                            </Select>}
                         </div>)}
                 </> : null}
-                <div style={{ display: "grid", gap: "0.3rem" }}>
+                <div className="modalDateRange"><div style={{ display: "grid", gap: "0.3rem" }}>
                     <Label>{t("local.fields.validFrom", { defaultValue: "معتبر از" })}</Label>
-                    <PersianDatePicker value={draft.validFrom ?? ""} readonly={readOnly}
+                    {readOnly ? <Text className="objectPageValue">{(formatPersianDate(draft.validFrom ?? "")) || "—"}</Text> : <PersianDatePicker value={draft.validFrom ?? ""} readonly={readOnly}
                         disabled={busy} accessibleName={t("local.fields.validFrom", {
                             defaultValue: "معتبر از",
                         })} invalidValueMessage={t("common.invalidPersianDate", {
@@ -606,11 +611,11 @@ export default function LocalSectionPane({
                         })} onChange={(value) => change("validFrom", value)}
                         onDraftStateChange={(state) => setDateDrafts((previous) => ({
                             ...previous, validFrom: state,
-                        }))} />
+                        }))} />}
                 </div>
                 <div style={{ display: "grid", gap: "0.3rem" }}>
                     <Label>{t("local.fields.validTo", { defaultValue: "معتبر تا" })}</Label>
-                    <PersianDatePicker value={draft.validTo ?? ""} readonly={readOnly}
+                    {readOnly ? <Text className="objectPageValue">{(formatPersianDate(draft.validTo ?? "")) || "—"}</Text> : <PersianDatePicker value={draft.validTo ?? ""} readonly={readOnly}
                         disabled={busy} accessibleName={t("local.fields.validTo", {
                             defaultValue: "معتبر تا",
                         })} invalidValueMessage={t("common.invalidPersianDate", {
@@ -618,24 +623,26 @@ export default function LocalSectionPane({
                         })} onChange={(value) => change("validTo", value)}
                         onDraftStateChange={(state) => setDateDrafts((previous) => ({
                             ...previous, validTo: state,
-                        }))} />
-                </div>
+                        }))} />}
+                </div></div>
                 {spec.noteField ? <div style={{ gridColumn: "1 / -1", display: "grid", gap: "0.3rem" }}>
                     <Label>{t("local.fields.note", { defaultValue: "یادداشت محلی" })}</Label>
-                    <TextArea value={draft[spec.noteField] ?? ""} readonly={readOnly}
+                    {readOnly ? <Text className="objectPageValue">{(draft[spec.noteField] ?? "") || "—"}</Text> : <TextArea value={draft[spec.noteField] ?? ""} readonly={readOnly}
                         disabled={busy} maxlength={1000} rows={3}
                         accessibleName={t("local.fields.note", { defaultValue: "یادداشت محلی" })}
-                        onInput={(event) => change(spec.noteField!, event.target.value)} />
+                        onInput={(event) => change(spec.noteField!, event.target.value)} />}
                 </div> : null}
             </div>
             {!validityReady ? <MessageStrip design="Negative" hideCloseButton>
                 {t("local.errors.dateRange", { defaultValue: "بازهٔ اعتبار نامعتبر است." })}
             </MessageStrip> : null}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                {readOnly && canWrite && row && row.status !== "DELETED" ? <Button design="Emphasized" disabled={busy}
+                    onClick={() => setEditingId(row.id)}>{t("common.edit")}</Button> : null}
                 {!readOnly ? <Button design="Emphasized" disabled={!saveReady}
                     onClick={() => void save()}>{t("common.save", { defaultValue: "ذخیره" })}</Button> : null}
                 <Button design="Transparent" disabled={busy} onClick={() => select(null)}>
-                    {t("common.cancel", { defaultValue: "انصراف" })}</Button>
+                    {t(readOnly ? "common.close" : "common.cancel")}</Button>
                 {row && canWrite && !dirty ? <>
                     {row.status === "INACTIVE" ? <Button onClick={() => void lifecycle("activate")}>
                         {t("local.lifecycle.activate", { defaultValue: "فعال‌سازی" })}</Button> : null}
@@ -651,7 +658,7 @@ export default function LocalSectionPane({
             {row && row.status !== "DELETED" ? <DocumentManager
                 title={t("local.documents", { defaultValue: "اسناد این ردیف" })}
                 targetType={LOCAL_DOCUMENT_TARGETS[spec.key]} targetId={row.id}
-                readOnly={!canWrite} showActions={canWrite} persistenceMode="STANDALONE"
+                readOnly={readOnly} showActions={!readOnly} persistenceMode="STANDALONE"
                 onDirtyChange={setDocumentDirty} /> : null}
         </div> : null}
         <DeleteConfirmDialog open={pendingSelection !== undefined}

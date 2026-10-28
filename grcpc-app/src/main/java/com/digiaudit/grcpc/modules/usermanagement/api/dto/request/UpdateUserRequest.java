@@ -13,6 +13,11 @@ public record UpdateUserRequest(
         @Email @Size(max = 200) String email,
         UUID defaultOrgUnitId,
         Boolean enabled,
-        Boolean locked
+        Boolean locked,
+        UUID profileId,
+        Boolean profileAdmin,
+        java.util.List<UUID> profileAccessIds,
+        java.util.List<UUID> roleIds,
+        @jakarta.validation.Valid java.util.List<com.digiaudit.grcpc.modules.usermanagement.api.dto.ProfileRoleGrantRequest> roleGrants
 ) {
 }

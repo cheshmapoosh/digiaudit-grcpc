@@ -1,6 +1,8 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, CheckBox, Dialog, Input, List, ListItemCustom, ListItemGroup, Text } from "@ui5/webcomponents-react";
+import { Button, CheckBox, Dialog, List, ListItemCustom, ListItemGroup, Text } from "@ui5/webcomponents-react";
 import type {
   CentralRegulationGroupSummary,
   CentralRegulationRequirementSummary,
@@ -146,9 +148,9 @@ export default function RequirementSelectionDialog({
 
   return (
     <Dialog open={open} accessibleName={t("requirementScope.dialog.valueHelpTitle")} onClose={onClose} className="requirementScopeValueHelpDialog">
-      <ModalDialogHeader title={t("requirementScope.dialog.valueHelpTitle")} onClose={onClose} />
+      <ModalDialogHeader title={t("requirementScope.dialog.valueHelpTitle")} onClose={onClose}  actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} accessibleName={t("requirementScope.dialog.search")} />} />
       <div className="requirementScopeValueHelpBody">
-        <Input value={search} placeholder={t("requirementScope.dialog.search")} onInput={(event) => setSearch(event.target.value)} />
+
         <List className="requirementScopeSelectionList" separators="Inner" accessibleName={t("requirementScope.dialog.valueHelpTitle")} noDataText={t("requirementScope.dialog.noRequirements")}>
           {groupedRequirements.map((group) => <ListItemGroup key={group.id} headerText={group.label} headerAccessibleName={group.label}>
             {group.requirements.map((requirement) => {
@@ -166,7 +168,7 @@ export default function RequirementSelectionDialog({
             })}
           </ListItemGroup>)}
         </List>
-        <div className="requirementScopeDialogFooter"><Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{t("requirementScope.actions.confirmSelection")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></div>
+        <DialogFooter><Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{t("requirementScope.actions.confirmSelection")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></DialogFooter>
       </div>
     </Dialog>
   );

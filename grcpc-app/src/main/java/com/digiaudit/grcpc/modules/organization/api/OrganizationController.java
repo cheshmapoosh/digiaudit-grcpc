@@ -1,7 +1,7 @@
 package com.digiaudit.grcpc.modules.organization.api;
 
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
-import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
+import com.digiaudit.grcpc.modules.organization.api.dto.OrganizationAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.organization.api.dto.CreateOrganizationRequest;
 import com.digiaudit.grcpc.modules.organization.api.dto.MoveOrganizationRequest;
 import com.digiaudit.grcpc.modules.organization.api.dto.OrganizationLifecycleCommandRequest;
@@ -35,7 +35,7 @@ public class OrganizationController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
-    public MasterDataAggregateMutationResponse create(@Valid @RequestBody CreateOrganizationRequest request) {
+    public OrganizationAggregateMutationResponse create(@Valid @RequestBody CreateOrganizationRequest request) {
         return organizationService.create(request);
     }
 
@@ -45,6 +45,16 @@ public class OrganizationController {
             @RequestParam(required = false) String lifecycleStatus
     ) {
         return organizationService.findAll(lifecycleStatus);
+    }
+
+    @GetMapping("/owner-options")
+    @PreAuthorize("@profileAccess.canManageUsers()")
+    public List<OrganizationService.OwnerOption> ownerOptions() { return organizationService.ownerOptions(); }
+
+    @GetMapping("/ownership-scope")
+    @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
+    public java.util.Set<UUID> ownedScope(org.springframework.security.core.Authentication authentication) {
+        return organizationService.ownedOrganizationIds(((com.digiaudit.grcpc.common.security.CurrentUser) authentication.getPrincipal()).getUserId());
     }
 
     @GetMapping("/tree")
@@ -61,7 +71,7 @@ public class OrganizationController {
 
     @PatchMapping("/{organizationId}")
     @PreAuthorize("@masterDataAuthorization.canManage('REFERENCE')")
-    public MasterDataAggregateMutationResponse update(
+    public OrganizationAggregateMutationResponse update(
             @PathVariable UUID organizationId,
             @Valid @RequestBody UpdateOrganizationRequest request
     ) {

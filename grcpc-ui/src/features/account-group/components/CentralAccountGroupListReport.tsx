@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, BusyIndicator, Input, MessageStrip, Title } from "@ui5/webcomponents-react";
+import { Bar, Button, BusyIndicator, MessageStrip, Title } from "@ui5/webcomponents-react";
 
 import type { CentralAccountGroupSummary } from "../domain/centralAccountGroup.model";
 import type { CentralAccountGroupTreeNode } from "../utils/centralAccountGroup.tree";
@@ -40,7 +40,6 @@ export default function CentralAccountGroupListReport({
   onSelect,
 }: Props) {
   const { t } = useTranslation();
-  const actionButtonStyle = useMemo(() => ({ minWidth: "8rem" }), []);
 
   return (
     <div className="accountGroupListReport">
@@ -48,16 +47,17 @@ export default function CentralAccountGroupListReport({
         startContent={<Title level="H4">{t("accountGroup.list.title")}</Title>}
         endContent={
           <>
-            <Button design="Emphasized" disabled={busy || !canCreate} style={actionButtonStyle} onClick={onCreate}>
+            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("accountGroup.list.search")} />
+            <Button design="Emphasized" disabled={busy || !canCreate} onClick={onCreate}>
               {t("common.create", { defaultValue: "ایجاد" })}
             </Button>
-            <Button design="Emphasized" disabled={busy || !selectedId} style={actionButtonStyle} onClick={onShow}>
+
+            <Button design="Emphasized" disabled={busy || !selectedId} onClick={onShow}>
               {t("common.view", { defaultValue: "نمایش" })}
             </Button>
             <Button
               design="Negative"
               disabled={busy || !selectedId || !canDelete}
-              style={{ ...actionButtonStyle, marginInlineStart: "0.75rem" }}
               onClick={onDelete}
             >
               {t("common.delete", { defaultValue: "حذف" })}
@@ -66,12 +66,6 @@ export default function CentralAccountGroupListReport({
         }
       />
 
-      <Input
-        value={searchText}
-        disabled={busy}
-        placeholder={t("accountGroup.list.search")}
-        onInput={(event) => onSearchTextChange(event.target.value)}
-      />
 
       {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
 

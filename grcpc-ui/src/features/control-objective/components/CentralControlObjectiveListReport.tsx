@@ -1,10 +1,10 @@
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Bar,
   Button,
   BusyIndicator,
-  Input,
   List,
   ListItemCustom,
   MessageStrip,
@@ -46,7 +46,6 @@ export default function CentralControlObjectiveListReport({
   onSelect,
 }: Props) {
   const { t } = useTranslation();
-  const actionButtonStyle = useMemo(() => ({ minWidth: "8rem" }), []);
   const visibleItems = useMemo(() => {
     const query = searchText.trim().toLocaleLowerCase();
     if (!query) return items;
@@ -59,18 +58,18 @@ export default function CentralControlObjectiveListReport({
         startContent={<Title level="H4">{t("controlObjective.list.title")}</Title>}
         endContent={
           <>
+            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("controlObjective.list.search")} />
             <Button
               design="Emphasized"
               disabled={busy || !canCreate}
-              style={actionButtonStyle}
               onClick={onCreate}
             >
               {t("common.create", { defaultValue: "ایجاد" })}
             </Button>
+
             <Button
               design="Emphasized"
               disabled={busy || !selectedId}
-              style={actionButtonStyle}
               onClick={() => selectedId && onShow(selectedId)}
             >
               {t("controlObjective.actions.view")}
@@ -78,7 +77,6 @@ export default function CentralControlObjectiveListReport({
             <Button
               design="Negative"
               disabled={busy || !selectedId || !canDelete}
-              style={{ ...actionButtonStyle, marginInlineStart: "0.75rem" }}
               onClick={() => selectedId && onDelete(selectedId)}
             >
               {t("common.delete", { defaultValue: "حذف" })}
@@ -87,12 +85,6 @@ export default function CentralControlObjectiveListReport({
         }
       />
 
-      <Input
-        value={searchText}
-        disabled={busy}
-        placeholder={t("controlObjective.list.search")}
-        onInput={(event) => onSearchTextChange(event.target.value)}
-      />
 
       {error ? (
         <MessageStrip design="Negative" onClose={onErrorClose}>

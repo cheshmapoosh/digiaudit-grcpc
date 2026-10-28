@@ -1,189 +1,79 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { UserMenu, UserMenuAccount, UserMenuItem } from "@ui5/webcomponents-react";
+import { userInitials } from "../userInitials";
+import UiSettingsDialog from "./UiSettingsDialog";
 
-import {
-    Avatar,
-    Button,
-    List,
-    ListItemStandard,
-    ResponsivePopover,
-    ShellBarItem,
-    type ResponsivePopoverDomRef,
-} from "@ui5/webcomponents-react";
+type MenuAction = "settings" | "change-username" | "change-password" | "sign-out";
 
 type Props = {
+    open: boolean;
+    opener: HTMLElement | null;
+    onClose: () => void;
     fullName: string;
-    trigger?: "shellbar" | "button";
+    username?: string;
     email?: string;
-    initials?: string;
     onLogout?: () => void;
-    onOpenProfile?: () => void;
-    onChangeUsername: () => void;
-    onChangePassword: () => void;
+    onChangeUsername?: () => void;
+    onChangePassword?: () => void;
 };
 
 export default function UserProfileMenu({
-                                            fullName,
-                                            trigger = "shellbar",
-                                            email,
-                                            initials,
-                                            onLogout,
-                                            onOpenProfile,
-                                            onChangeUsername,
-                                            onChangePassword,
-                                        }: Props) {
+    open, opener, onClose, fullName, username, email,
+    onLogout, onChangeUsername, onChangePassword,
+}: Props) {
     const { t } = useTranslation();
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const pendingAction = useRef<MenuAction | null>(null);
 
-    const [open, setOpen] = useState(false);
+    function handleClose() {
+        onClose();
+        const action = pendingAction.current;
+        pendingAction.current = null;
+        // Open the next dialog/page only after the native menu restores focus.
+        if (action === "settings") setSettingsOpen(true);
+        else if (action === "change-username") onChangeUsername?.();
+        else if (action === "change-password") onChangePassword?.();
+        else if (action === "sign-out") onLogout?.();
+    }
 
-    const openerId = "userProfileOpener";
-    const popoverRef = useRef<ResponsivePopoverDomRef | null>(null);
+    if (typeof document === "undefined") return null;
 
-    const userInitials = useMemo(() => {
-        if (initials) {
-            return initials;
-        }
-
-        const parts = fullName.trim().split(/\s+/).filter(Boolean);
-        const first = parts[0]?.[0] ?? "U";
-        const second = parts[1]?.[0] ?? "";
-
-        return `${first}${second}`.toUpperCase();
-    }, [fullName, initials]);
-
-    const openMenu = () => {
-        queueMicrotask(() => setOpen(true));
-    };
-
-    const closeMenu = () => {
-        setOpen(false);
-    };
-
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-
-        const onPointerDown = (event: PointerEvent) => {
-            const target = event.target as Node | null;
-            if (!target) {
-                return;
-            }
-
-            const openerElement = document.getElementById(openerId);
-            const popoverElement = popoverRef.current;
-
-            if (openerElement?.contains(target)) {
-                return;
-            }
-
-            if (popoverElement?.contains(target)) {
-                return;
-            }
-
-            setOpen(false);
-        };
-
-        document.addEventListener("pointerdown", onPointerDown, true);
-
-        return () => {
-            document.removeEventListener("pointerdown", onPointerDown, true);
-        };
-    }, [open]);
-
-    const popoverNode =
-        typeof document !== "undefined"
-            ? createPortal(
-                <ResponsivePopover
-                    ref={popoverRef}
-                    open={open}
-                    opener={openerId}
-                    placement="Bottom"
-                    modal={false}
-                    headerText={t("user.menu")}
-                    style={{ minWidth: 280 }}
-                >
-                    <div
-                        style={{
-                            padding: 12,
-                            display: "flex",
-                            gap: 12,
-                            alignItems: "center",
-                        }}
-                    >
-                        <Avatar initials={userInitials} />
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                            <div style={{ fontWeight: 700 }}>{fullName}</div>
-                            {email ? (
-                                <div style={{ fontSize: 12, opacity: 0.7 }}>{email}</div>
-                            ) : null}
-                        </div>
-                    </div>
-
-                    <List>
-                        <ListItemStandard
-                            onClick={() => {
-                                closeMenu();
-                                onOpenProfile?.();
-                            }}
-                        >
-                            {t("user.profile")}
-                        </ListItemStandard>
-
-                        <ListItemStandard type="Active" onClick={() => { closeMenu(); onChangeUsername(); }}>
-                            {t("user.changeUsername")}
-                        </ListItemStandard>
-                        <ListItemStandard type="Active" onClick={() => { closeMenu(); onChangePassword(); }}>
-                            {t("user.changePassword")}
-                        </ListItemStandard>
-
-                        <ListItemStandard onClick={closeMenu}>
-                            {t("user.preferences")}
-                        </ListItemStandard>
-
-                        <ListItemStandard
-                            onClick={() => {
-                                closeMenu();
-                                onLogout?.();
-                            }}
-                        >
-                            {t("user.logout")}
-                        </ListItemStandard>
-                    </List>
-
-                    <div
-                        style={{
-                            padding: 12,
-                            display: "flex",
-                            justifyContent: "flex-end",
-                        }}
-                    >
-                        <Button design="Transparent" onClick={closeMenu}>
-                            {t("common.close")}
-                        </Button>
-                    </div>
-                </ResponsivePopover>,
-                document.body,
-            )
-            : null;
-
-    return (
+    return createPortal(
         <>
-            {trigger === "shellbar" ? <ShellBarItem
-                id={openerId}
-                icon="employee"
-                text={t("user.me")}
-                onClick={openMenu}
-            /> : <Button
-                id={openerId}
-                className="governanceProfileButton"
-                icon="employee"
-                design="Transparent"
-                accessibleName={t("user.menu")}
-                onClick={openMenu}
-            >{fullName}</Button>}
-            {popoverNode}
-        </>
+            <UserMenu
+                open={open}
+                opener={opener}
+                showOtherAccounts={false}
+                showManageAccount={false}
+                showEditAccounts={false}
+                showEditButton={false}
+                accounts={<UserMenuAccount
+                    selected
+                    avatarInitials={userInitials(fullName)}
+                    titleText={fullName}
+                    subtitleText={email || username}
+                />}
+                onClose={handleClose}
+                onItemClick={(event) => {
+                    const action = event.detail.item.dataset.action;
+                    if (action === "settings" || action === "change-username" || action === "change-password") {
+                        pendingAction.current = action;
+                        onClose();
+                    }
+                }}
+                onSignOutClick={() => {
+                    pendingAction.current = "sign-out";
+                    onClose();
+                }}
+            >
+                <UserMenuItem text={t("nav.settings")} icon="action-settings" data-action="settings" />
+                {onChangeUsername && <UserMenuItem text={t("user.changeUsername")} icon="employee" data-action="change-username" />}
+                {onChangePassword && <UserMenuItem text={t("user.changePassword")} icon="key" data-action="change-password" />}
+            </UserMenu>
+            {settingsOpen && <UiSettingsDialog onClose={() => setSettingsOpen(false)} />}
+        </>,
+        document.body,
     );
 }

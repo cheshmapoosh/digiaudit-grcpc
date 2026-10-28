@@ -1040,10 +1040,14 @@ The Objective extension adds exactly two business tables through `V1186__objecti
 
 | Table | Purpose | Keys and relationships |
 | --- | --- | --- |
-| `objective` | Hierarchical central business objective with code, name, description, objective type, validity, and lifecycle. | Unique code; nullable self-FK `parent_objective_id`; `OBJECTIVE` Guard. |
+| `objective` | Profile-scoped root Strategy categories and business Objectives, distinguished by `objective_kind`; Strategies use code/name/description, Objectives also retain objective type and validity. | Profile-scoped unique code and self-FK `parent_objective_id`; each Objective requires one root Strategy parent, while a Strategy has no parent; `OBJECTIVE` Guard. |
 | `organization_objective` | Local use of a central objective by any Organization node, with local name, description, owner, validity, and lifecycle. | Unique `(organization_id, objective_id)`; FKs to `organization` and `objective`. |
 
 These are separate from `central_control_objective` and its typed Subprocess scopes. Objective documents use the existing `document_link` target code `OBJECTIVE`; the local assignment does not introduce a new document target.
+
+The accepted [Objective strategy classification correction](accepted-corrections/2026-10-27-objective-strategy-classification.md) adds `objective_kind` through V1191 without adding tables. Existing rows retain their Objective meaning and require explicit classification on edit; the new parent check is enabled with NOVALIDATE for those pre-existing rows.
+
+The [2026-10-28 follow-up](accepted-corrections/2026-10-28-objective-strategy-corrections.md) adds the Strategy-root check through V1195 with NOVALIDATE for existing nested categories. Application commands reject nested Strategies and non-root Strategy parents; no automatic flattening or historical Revision rewrite occurs.
 
 This extension follows the current Oracle V2 runtime and Flyway profile. PostgreSQL support requires a separate port of the existing V2 schema and persistence mappings.
 

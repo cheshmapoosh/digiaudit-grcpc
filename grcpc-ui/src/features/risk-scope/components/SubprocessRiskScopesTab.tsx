@@ -1,6 +1,7 @@
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionSheet, BusyIndicator, Button, Dialog, Icon, Input, Label, Link, MessageStrip, ObjectStatus, Option, Select, Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow, Tag, Title } from "@ui5/webcomponents-react";
+import { ActionSheet, BusyIndicator, Button, Dialog, Icon, Label, Link, MessageStrip, ObjectStatus, Option, Select, Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow, Tag, Title } from "@ui5/webcomponents-react";
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import type { CentralRiskTemplateDetail } from "@/features/risk/domain/centralRisk.model";
 import { centralRiskApi } from "@/features/risk/infra/centralRisk.api";
@@ -195,7 +196,9 @@ export default function SubprocessRiskScopesTab({ subprocessId, readOnly, busy: 
 
   if (!permissions.view) return <MessageStrip design="Information">{t("riskScope.errors.forbidden")}</MessageStrip>;
   return <section className="riskScopeTab">
-    <div className="riskScopeToolbar"><Title level="H5">{t("riskScope.title")}</Title><div className="riskScopeToolbarGroup"><Input className="riskScopeToolbarSearch" value={search} placeholder={t("riskScope.dialog.search")} disabled={mutationBusy} onInput={(event) => setSearch(event.target.value)} /><div className="riskScopeFilter"><Label showColon>{t("riskScope.filter.label")}</Label><Select value={filter} disabled={mutationBusy} onChange={(event) => setFilter(readFilter(event))}><Option value="ALL">{t("riskScope.filter.all")}</Option><Option value="ACTIVE">{t("riskScope.status.ACTIVE")}</Option><Option value="INACTIVE">{t("riskScope.status.INACTIVE")}</Option></Select></div>{!readOnly && (permissions.create || permissions.restore || permissions.delete) ? <Button design="Emphasized" disabled={mutationBusy || !loaded} onClick={() => setSelectionOpen(true)}>{t("riskScope.actions.selectRiskTemplates")}</Button> : null}</div></div>
+    <div className="riskScopeToolbar"><Title level="H5">{t("riskScope.title")}</Title><div className="riskScopeToolbarGroup"><div className="riskScopeFilter"><Label showColon>{t("riskScope.filter.label")}</Label><Select value={filter} disabled={mutationBusy} onChange={(event) => setFilter(readFilter(event))}><Option value="ALL">{t("riskScope.filter.all")}</Option><Option value="ACTIVE">{t("riskScope.status.ACTIVE")}</Option><Option value="INACTIVE">{t("riskScope.status.INACTIVE")}</Option></Select></div><HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={mutationBusy} accessibleName={t("riskScope.dialog.search")} />
+    {!readOnly && (permissions.create || permissions.restore || permissions.delete) ? <Button design="Emphasized" disabled={mutationBusy || !loaded} onClick={() => setSelectionOpen(true)}>{t("riskScope.actions.selectRiskTemplates")}</Button> : null}
+    </div></div>
     {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}<Button design="Transparent" onClick={() => void load()}>{t("riskScope.actions.retry")}</Button></MessageStrip> : null}
     {loading ? <BusyIndicator active delay={0} /> : loaded && visibleRows.length ? <Table headerRow={<TableHeaderRow><TableHeaderCell>{t("riskScope.fields.riskTemplate")}</TableHeaderCell><TableHeaderCell>{t("riskScope.fields.riskType")}</TableHeaderCell><TableHeaderCell>{t("riskScope.fields.validFrom")}</TableHeaderCell><TableHeaderCell>{t("riskScope.fields.validTo")}</TableHeaderCell><TableHeaderCell>{t("riskScope.fields.lifecycle")}</TableHeaderCell>{!readOnly ? <TableHeaderCell>{t("common.actions")}</TableHeaderCell> : null}</TableHeaderRow>}>
       {visibleRows.map((row) => {

@@ -1,21 +1,29 @@
+import ProfileSelector from "@/features/dataset-profile/components/ProfileSelector";
+import { useProfileState } from "@/features/dataset-profile/state/profile.state";
 import { MASTER_DATA_AREAS, canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
-import {useEffect, useMemo, useState} from "react";
+import {useMemo, useRef, useState} from "react";
+import { isPhone } from "@ui5/webcomponents-base/dist/Device.js";
 import {Outlet, useLocation, useNavigate} from "react-router-dom";
 import {useTranslation} from "react-i18next";
 
 import {
+    Avatar,
     Button,
+    Breadcrumbs,
+    BreadcrumbsItem,
     FlexBox,
-    Input,
     Link,
+    NavigationLayout,
+    ShellBar,
     SideNavigation,
     SideNavigationItem,
     SideNavigationSubItem,
+    type NavigationLayoutDomRef,
 } from "@ui5/webcomponents-react";
 
 import "./layout.css";
 
-import UiSettingsMenu from "./components/UiSettingsMenu";
+import { userInitials } from "./userInitials";
 import NotificationMenu, {
     type NotificationItem,
 } from "./components/NotificationMenu";
@@ -30,6 +38,7 @@ type SelectionChangeDetail = {
 
 type SelectionChangeEvent = {
     detail?: SelectionChangeDetail;
+    preventDefault?: () => void;
 };
 
 type NavItem = {
@@ -48,27 +57,22 @@ function getPathFromSelectionEvent(event: SelectionChangeEvent): string | null {
     return route || null;
 }
 
-const SIDENAV_WIDTH = 216;
-const SIDENAV_COLLAPSED_WIDTH = 56;
 const EMPTY_NOTIFICATIONS: NotificationItem[] = [];
 
-const MASTER_DATA_PATH_PREFIXES = [
-    "/master-data",
-    "/organizations",
-    "/processes",
-    "/controls",
-    "/global-controls",
-    "/control-objectives",
-    "/objectives",
-    "/regulations",
-    "/risks",
-    "/account-groups",
-    "/policies",
+// Catalog URLs are flat, but their navigation parent is Governance and Control.
+const MASTER_DATA_CATALOG_ROUTES = [
+    { route: "/organizations", labelKey: "masterData.items.organizations" },
+    { route: "/processes", labelKey: "masterData.items.processes" },
+    { route: "/controls", labelKey: "masterData.items.controls" },
+    { route: "/global-controls", labelKey: "masterData.items.globalControls" },
+    { route: "/control-objectives", labelKey: "masterData.items.objectives" },
+    { route: "/objectives", labelKey: "masterData.items.businessObjectives" },
+    { route: "/regulations", labelKey: "masterData.items.regulations" },
+    { route: "/risks", labelKey: "masterData.items.risks" },
+    { route: "/account-groups", labelKey: "masterData.items.accountGroups" },
+    { route: "/policies", labelKey: "masterData.items.policies" },
 ];
-
-function hasAnyAuthority(authorities: Set<string>, required: string[]): boolean {
-    return required.some((authority) => authorities.has(authority));
-}
+const MASTER_DATA_PATH_PREFIXES = ["/master-data", ...MASTER_DATA_CATALOG_ROUTES.map((item) => item.route)];
 
 function isPathInPrefixes(path: string, prefixes: string[]): boolean {
     return prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
@@ -76,17 +80,14 @@ function isPathInPrefixes(path: string, prefixes: string[]): boolean {
 
 export default function MainLayout() {
     useInitialAppReady();
+    useProfileState((state) => state.profiles);
 
     const {t, i18n} = useTranslation();
 
-    const [collapsed, setCollapsed] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 42rem)").matches);
-
-    useEffect(() => {
-        const media = window.matchMedia("(max-width: 42rem)");
-        const updateCollapsed = (event: MediaQueryListEvent) => setCollapsed(event.matches);
-        media.addEventListener("change", updateCollapsed);
-        return () => media.removeEventListener("change", updateCollapsed);
-    }, []);
+    const navigationLayoutRef = useRef<NavigationLayoutDomRef>(null);
+    const [navigationMode, setNavigationMode] = useState<"Auto" | "Collapsed" | "Expanded">("Auto");
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [userMenuOpener, setUserMenuOpener] = useState<HTMLElement | null>(null);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -95,13 +96,6 @@ export default function MainLayout() {
     const logout = useAuthState((state) => state.logout);
 
     const selectedPath = useMemo(() => location.pathname, [location.pathname]);
-    const isMasterDataPage = selectedPath === "/master-data";
-    const masterDataSearch = isMasterDataPage ? new URLSearchParams(location.search).get("q") ?? "" : "";
-    const sideNavWidth = collapsed ? SIDENAV_COLLAPSED_WIDTH : SIDENAV_WIDTH;
-
-    function navigateToMasterDataSearch(value: string) {
-        navigate({ pathname: "/master-data", search: value ? `?q=${encodeURIComponent(value)}` : "" }, { replace: true });
-    }
 
     async function handleLogout() {
         try {
@@ -113,12 +107,15 @@ export default function MainLayout() {
     }
 
     function navigateToPath(path: string) {
+        if (isPhone()) setNavigationMode("Auto");
         if (path !== location.pathname) {
             navigate(path);
         }
     }
 
     function onSelectionChange(event: SelectionChangeEvent) {
+        // Route state remains authoritative if an unsaved-changes guard blocks navigation.
+        event.preventDefault?.();
         const path = getPathFromSelectionEvent(event);
         if (path) {
             navigateToPath(path);
@@ -135,31 +132,9 @@ export default function MainLayout() {
         [me?.authorities],
     );
 
-    const isRootAdmin =
-        Boolean(me?.rootUser) ||
-        authoritySet.has("ROLE_ROOT") ||
-        authoritySet.has("ROLE_ROOT_ADMIN");
-
-    const canViewUsers =
-        isRootAdmin ||
-        hasAnyAuthority(authoritySet, [
-            "USER_VIEW",
-            "USER_CREATE",
-            "USER_EDIT",
-            "USER_DISABLE",
-            "USER_ASSIGN_ROLE",
-        ]);
-
-    const canViewRoles =
-        isRootAdmin ||
-        hasAnyAuthority(authoritySet, [
-            "ROLE_VIEW",
-            "ROLE_CREATE",
-            "ROLE_EDIT",
-            "ROLE_ASSIGN_PERMISSION",
-            "ROLE_ASSIGN_BUSINESS_PERMISSION",
-            "ROLE_ASSIGN_DELEGATION",
-        ]);
+    const isRootAdmin = Boolean(me?.rootUser);
+    const canViewUsers = isRootAdmin || authoritySet.has("ROLE_PROFILE_ADMIN");
+    const canViewRoles = isRootAdmin;
 
     const showAccessControl = canViewUsers || canViewRoles;
 
@@ -182,99 +157,129 @@ export default function MainLayout() {
         { key: "compliance", text: t("nav.complianceManagement"), icon: "document-text", route: "/coming-soon/compliance", selected: selectedPath === "/coming-soon/compliance" },
         { key: "audit", text: t("nav.internalAuditManagement"), icon: "search", route: "/coming-soon/internal-audit", selected: selectedPath === "/coming-soon/internal-audit" },
         { key: "reports", text: t("nav.reports"), icon: "pie-chart", route: "/coming-soon/reports", selected: selectedPath === "/coming-soon/reports" },
-        { key: "settings", text: t("nav.settings"), icon: "action-settings", route: "/coming-soon/settings", selected: selectedPath === "/coming-soon/settings" },
     ];
 
+    const currentSection = mainItems.find((item) => item.selected);
+    const currentCatalog = MASTER_DATA_CATALOG_ROUTES.find((item) => isPathInPrefixes(selectedPath, [item.route]));
+    const breadcrumbItems = [{ route: "/dashboard", text: t("nav.home") }];
+    if (selectedPath !== "/dashboard") {
+        if (currentSection) {
+            breadcrumbItems.push({ route: currentSection.route, text: currentSection.text });
+            if (currentCatalog) breadcrumbItems.push({ route: currentCatalog.route, text: t(currentCatalog.labelKey) });
+        } else if (isPathInPrefixes(selectedPath, ["/access-control"])) {
+            breadcrumbItems.push({ route: "/access-control/users", text: t("nav.userManagement") });
+            const roles = isPathInPrefixes(selectedPath, ["/access-control/roles"]);
+            breadcrumbItems.push({ route: roles ? "/access-control/roles" : "/access-control/users", text: t(roles ? "nav.roles" : "nav.users") });
+        } else if (isPathInPrefixes(selectedPath, ["/profiles"])) {
+            breadcrumbItems.push({ route: "/profiles", text: t("profile.management") });
+        } else {
+            breadcrumbItems.push({ route: selectedPath, text: t("app.platformTitle") });
+        }
+    }
+
     return (
-        <div className={`appRoot${isMasterDataPage ? " appRoot--masterData" : ""}${collapsed ? " appRoot--sideNavCollapsed" : ""}`} dir={i18n.language.startsWith("fa") ? "rtl" : "ltr"} data-ui5-compact-size>
-            <FlexBox className="governanceHeader" dir="ltr">
-                <img className="governanceHeaderLogo" src="/images/digi-audit-mark.svg" alt="Digi Audit" />
-                <UserProfileMenu
-                    trigger="button"
-                    fullName={fullName}
-                    onOpenProfile={() => navigate("/profile")}
-                    onChangeUsername={() => navigate("/change-username")}
-                    onChangePassword={() => navigate("/change-password")}
-                    onLogout={() => void handleLogout()}
-                />
-                <UiSettingsMenu trigger="button" />
-                <div className="governanceHeaderSearch">
-                    <Input
-                        value={masterDataSearch}
-                        placeholder={t("masterData.searchPlaceholder")}
-                        accessibleName={t("masterData.searchLabel")}
-                        icon={<Button design="Transparent" icon="search" accessibleName={t("masterData.searchLabel")} onClick={() => navigateToMasterDataSearch(masterDataSearch)} />}
-                        onInput={(event) => navigateToMasterDataSearch(event.target.value)}
-                    />
-                </div>
-                <FlexBox className="governanceHeaderActions" dir="ltr">
-                    <NotificationMenu trigger="button" items={EMPTY_NOTIFICATIONS} />
-                    <Button icon="menu2" design="Transparent" accessibleName={t("nav.menu")} onClick={() => setCollapsed((value) => !value)} />
-                </FlexBox>
-            </FlexBox>
-
-            <div className="appBody" dir={i18n.language.startsWith("fa") ? "rtl" : "ltr"}>
-                <aside
-                    className="sideNav"
-                    style={{ width: sideNavWidth }}
+        <NavigationLayout
+            ref={navigationLayoutRef}
+            className="appNavigationLayout"
+            mode={navigationMode}
+            dir={i18n.language.startsWith("fa") ? "rtl" : "ltr"}
+            header={
+                <ShellBar
+                    primaryTitle={t("auth.login.hero.platform")}
+                    logo={<img src="/images/digi-grc-reference-login-logo.png" alt={t("brand.referenceLogoAlt")} />}
+                    onLogoClick={() => navigateToPath("/dashboard")}
+                    profile={<Avatar initials={userInitials(fullName)} size="XS" />}
+                    accessibilityAttributes={{ profile: { name: t("user.menu"), expanded: userMenuOpen, hasPopup: "dialog" } }}
+                    onProfileClick={(event) => {
+                        setUserMenuOpener(event.detail.targetRef);
+                        setUserMenuOpen(true);
+                    }}
+                    content={<ProfileSelector />}
+                    startButton={<Button
+                        icon="menu2"
+                        design="Transparent"
+                        accessibleName={t("nav.menu")}
+                        onClick={() => setNavigationMode(navigationLayoutRef.current?.isSideCollapsed() ? "Expanded" : "Collapsed")}
+                    />}
                 >
-                    <div className="sideNavBrand">
-                        <Link className="sideNavBrandLink" accessibleName={t("nav.home")} onClick={() => navigateToPath("/dashboard")}>
-                            {collapsed ? <img className="sideNavBrandMark" src="/images/digi-audit-mark-light.svg" alt="" /> : <img className="sideNavBrandWordmark" src="/images/digi-audit-wordmark-light.svg" alt="" />}
+                    <NotificationMenu items={EMPTY_NOTIFICATIONS} />
+                </ShellBar>
+            }
+            sideContent={
+                <SideNavigation
+                    accessibleName={t("nav.mainNavigation")}
+                    onSelectionChange={onSelectionChange}
+                    header={<FlexBox direction="Column" alignItems="Center" className="sideNavBrand">
+                        <Link accessibleName={t("nav.home")} onClick={() => navigateToPath("/dashboard")}>
+                            <img className="sideNavBrandImage" src="/images/digi-grc-reference-navigation-logo.png" alt={t("brand.referenceLogoAlt")} />
                         </Link>
-                    </div>
-                    <SideNavigation collapsed={collapsed} onSelectionChange={onSelectionChange}>
-                        {mainItems.filter((item) => item.key !== "masterData" || MASTER_DATA_AREAS.some((area) => canAccessMasterData(me, area))).map((item) => (
-                            <SideNavigationItem
-                                key={item.key}
-                                text={item.text}
-                                icon={item.icon}
-                                selected={item.selected}
-                                data-route={item.route}
-                                onClick={() => navigateToPath(item.route)}
-                            />
-                        ))}
-
-                        {showAccessControl ? (
-                            <SideNavigationItem
-                                text={t("nav.userManagement")}
-                                icon="key-user-settings"
-                                selected={selectedPath.startsWith("/access-control")}
-                            >
-                                {canViewUsers ? (
-                                    <SideNavigationSubItem
-                                        text={t("nav.users", {defaultValue: "کاربران"})}
-                                        icon="group"
-                                        selected={selectedPath.startsWith("/access-control/users")}
-                                        data-route="/access-control/users"
-                                    />
-                                ) : null}
-
-                                {canViewRoles ? (
-                                    <SideNavigationSubItem
-                                        text={t("nav.roles")}
-                                        icon="role"
-                                        selected={selectedPath.startsWith("/access-control/roles")}
-                                        data-route="/access-control/roles"
-                                    />
-                                ) : null}
-                            </SideNavigationItem>
-                        ) : null}
-
+                    </FlexBox>}
+                    fixedItems={[
                         <SideNavigationItem
-                            slot="fixedItems"
+                            key="help"
                             text={t("nav.help")}
                             icon="sys-help"
                             data-route="/help"
                             selected={selectedPath.startsWith("/help")}
+                        />,
+                        <SideNavigationItem key="logout" text={t("user.logout")} icon="log" onClick={() => void handleLogout()} />,
+                    ]}
+                >
+                    {mainItems.filter((item) => item.key !== "masterData" || MASTER_DATA_AREAS.some((area) => canAccessMasterData(me, area))).map((item) => (
+                        <SideNavigationItem
+                            key={item.key}
+                            text={item.text}
+                            icon={item.icon}
+                            selected={item.selected}
+                            data-route={item.route}
                         />
-                    </SideNavigation>
-                </aside>
-
-                <main className="mainContent">
-                    <Outlet/>
-                </main>
-            </div>
-        </div>
+                    ))}
+                    {showAccessControl ? (
+                        <SideNavigationItem
+                            text={t("nav.userManagement")}
+                            icon="key-user-settings"
+                            selected={selectedPath.startsWith("/access-control")}
+                        >
+                            {canViewUsers ? <SideNavigationSubItem
+                                text={t("nav.users")}
+                                selected={selectedPath.startsWith("/access-control/users")}
+                                data-route="/access-control/users"
+                            /> : null}
+                            {canViewRoles ? <SideNavigationSubItem
+                                text={t("nav.roles")}
+                                selected={selectedPath.startsWith("/access-control/roles")}
+                                data-route="/access-control/roles"
+                            /> : null}
+                        </SideNavigationItem>
+                    ) : null}
+                    {isRootAdmin ? <SideNavigationItem text={t("profile.management")} icon="database" data-route="/profiles" selected={isPathInPrefixes(selectedPath, ["/profiles"])} /> : null}
+                </SideNavigation>
+            }
+        >
+            <main className="mainContent">
+                <Breadcrumbs className="pageBreadcrumbs" data-ui5-compact-size="" onItemClick={(event) => {
+                    event.preventDefault();
+                    const path = event.detail.item.href;
+                    if (path) navigateToPath(path);
+                }}>
+                    {breadcrumbItems.map((item, index) => (
+                        <BreadcrumbsItem key={`${item.route}-${index}`} href={index < breadcrumbItems.length - 1 ? item.route : undefined}>
+                            {item.text}
+                        </BreadcrumbsItem>
+                    ))}
+                </Breadcrumbs>
+                <Outlet />
+                <UserProfileMenu
+                    open={userMenuOpen}
+                    opener={userMenuOpener}
+                    onClose={() => setUserMenuOpen(false)}
+                    fullName={fullName}
+                    username={me?.username ?? undefined}
+                    onChangeUsername={() => navigateToPath("/change-username")}
+                    onChangePassword={() => navigateToPath("/change-password")}
+                    onLogout={() => void handleLogout()}
+                />
+            </main>
+        </NavigationLayout>
     );
 }

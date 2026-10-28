@@ -1,3 +1,4 @@
+import { selectedProfileId, assertRequestProfile } from "@/shared/infra/profileSelection";
 import { httpClient, HttpError } from "@/shared/infra/http.client";
 import i18n from "@/i18n/i18n";
 import type {
@@ -95,10 +96,13 @@ function uploadWithProgress<T>(
     onProgress?: (progress: number) => void,
 ): Promise<T> {
     return new Promise((resolve, reject) => {
+        const profileId = selectedProfileId();
+        if (!profileId) { reject(new HttpError(i18n.t("profile.required"), 403, "PROFILE_REQUIRED")); return; }
         const xhr = new XMLHttpRequest();
 
         xhr.open("POST", buildUrl(url));
         xhr.withCredentials = true;
+        xhr.setRequestHeader("X-Profile-Id", profileId);
         xhr.setRequestHeader("Accept", "application/json");
         xhr.setRequestHeader("Accept-Language", getCurrentLanguage());
 
@@ -112,6 +116,7 @@ function uploadWithProgress<T>(
         };
 
         xhr.onload = () => {
+            try { assertRequestProfile(profileId); } catch (error) { reject(error); return; }
             if (xhr.status >= 200 && xhr.status < 300) {
                 onProgress?.(100);
                 const payload = xhr.responseText ? (JSON.parse(xhr.responseText) as T) : undefined;

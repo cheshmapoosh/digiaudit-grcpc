@@ -27,12 +27,15 @@ public class UserQueryService {
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
     private final CurrentUserProvider currentUserProvider;
     private final LocalizationSupport localizationSupport;
+    private final com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService profileAccess;
+    private final com.digiaudit.grcpc.modules.usermanagement.application.ProfileUserService profileUsers;
 
     @Transactional(readOnly = true)
     public List<UserSummaryResponse> getUsers() {
-        currentUserProvider.assertCurrentUserIsRoot();
+        profileAccess.requireManager();
         log.debug("Loading user list for root UI");
-        return appUserRepository.findAll().stream()
+        return (profileAccess.isRoot() ? appUserRepository.findAll()
+                : appUserRepository.findByProfileIdAndRootUserFalseAndProfileAdminFalse(com.digiaudit.grcpc.common.security.ProfileContext.requireId())).stream()
                 .sorted(Comparator.comparing(AppUserEntity::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(this::toSummary)
                 .toList();
@@ -40,24 +43,28 @@ public class UserQueryService {
 
     @Transactional(readOnly = true)
     public UserDetailResponse getUser(UUID userId, String locale) {
-        currentUserProvider.assertCurrentUserIsRoot();
+        profileAccess.requireManager();
         String normalizedLocale = localizationSupport.normalizeLocale(locale);
-        AppUserEntity user = appUserRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User was not found"));
+        AppUserEntity user = findVisibleUser(userId);
         log.debug("Loading user detail. userId={}, locale={}", userId, normalizedLocale);
+        profileAccess.requireManagedUser(user);
         return toDetail(user, normalizedLocale);
     }
 
     @Transactional(readOnly = true)
     public List<UserRoleAssignmentResponse> getUserAssignments(UUID userId, String locale) {
-        currentUserProvider.assertCurrentUserIsRoot();
+        profileAccess.requireManager();
         String normalizedLocale = localizationSupport.normalizeLocale(locale);
-        if (!appUserRepository.existsById(userId)) {
-            throw new NotFoundException("User was not found");
-        }
-        return userRoleAssignmentRepository.findAllByUser_IdOrderByAssignedAtDesc(userId).stream()
+        profileAccess.requireManagedUser(findVisibleUser(userId));
+        return userRoleAssignmentRepository.findAllByUser_IdAndProfileIdOrderByAssignedAtDesc(userId, com.digiaudit.grcpc.common.security.ProfileContext.requireId()).stream()
                 .map(item -> toAssignment(item, normalizedLocale))
                 .toList();
+    }
+
+    private AppUserEntity findVisibleUser(UUID userId) {
+        return (profileAccess.isRoot() ? appUserRepository.findById(userId)
+                : appUserRepository.findByIdAndProfileId(userId, com.digiaudit.grcpc.common.security.ProfileContext.requireId()))
+                .orElseThrow(() -> new NotFoundException("User was not found"));
     }
 
     private UserSummaryResponse toSummary(AppUserEntity user) {
@@ -72,15 +79,15 @@ public class UserQueryService {
                 user.isLocked(),
                 user.isRootUser(),
                 user.getDefaultOrgUnitId(),
-                user.getCreatedAt()
+                user.getCreatedAt(), user.getProfileId(), user.isProfileAdmin()
         );
     }
 
     private UserDetailResponse toDetail(AppUserEntity user, String locale) {
-        List<UserRoleAssignmentResponse> assignments = userRoleAssignmentRepository.findAllByUser_IdOrderByAssignedAtDesc(user.getId())
-                .stream()
-                .map(item -> toAssignment(item, locale))
-                .toList();
+        UUID profileId = user.getProfileId() == null ? com.digiaudit.grcpc.common.security.ProfileContext.idOrNull() : user.getProfileId();
+        List<UserRoleAssignmentResponse> assignments = profileId == null ? List.of()
+                : userRoleAssignmentRepository.findAllByUser_IdAndProfileIdOrderByAssignedAtDesc(user.getId(), profileId)
+                .stream().map(item -> toAssignment(item, locale)).toList();
 
         return new UserDetailResponse(
                 user.getId(),
@@ -96,7 +103,8 @@ public class UserQueryService {
                 user.getLastLoginAt(),
                 user.getCreatedAt(),
                 user.getUpdatedAt(),
-                assignments
+                assignments, user.getProfileId(), user.isProfileAdmin(),
+                profileAccess.isRoot() ? profileUsers.accessIds(user.getId()) : List.of()
         );
     }
 
@@ -116,7 +124,7 @@ public class UserQueryService {
                 item.getValidTo(),
                 item.getAssignedBy(),
                 item.getAssignedAt(),
-                item.isActive()
+                item.isActive(), item.getProfileId()
         );
     }
 }

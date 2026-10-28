@@ -17,12 +17,12 @@ export interface ProcessSummaryPanelProps {
 }
 
 const ACTION_STYLE: CSSProperties = { minWidth: "8rem" };
-const BODY_STYLE: CSSProperties = { minHeight: "18rem", padding: "1rem", border: "1px solid var(--sapGroup_ContentBorderColor)", background: "var(--sapGroup_ContentBackground)" };
+const BODY_STYLE: CSSProperties = { minHeight: "18rem", padding: "1rem" };
 const ROW_STYLE: CSSProperties = { display: "grid", gridTemplateColumns: "minmax(7rem, max-content) minmax(0, 1fr)", gap: "0.5rem", alignItems: "start" };
 
 function typeLabel(type: ProcessNodeType, t: ReturnType<typeof useTranslation>["t"]) { return type === "PROCESS" ? t("process.nodeType.process", { defaultValue: "Process" }) : t("process.nodeType.subProcess", { defaultValue: "Subprocess" }); }
 function statusLabel(status: ProcessStatus, t: ReturnType<typeof useTranslation>["t"]) { return status === "ACTIVE" ? t("common.active", { defaultValue: "Active" }) : status === "INACTIVE" ? t("common.inactive", { defaultValue: "Inactive" }) : t("common.deleted", { defaultValue: "Deleted" }); }
-function DetailRow({ label, value }: { label: string; value?: ReactNode }) { return <div style={ROW_STYLE}><Label showColon wrappingType="None">{label}</Label><span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.7 }}>{value || "-"}</span></div>; }
+function DetailRow({ label, value }: { label: string; value?: ReactNode }) { return <div style={ROW_STYLE}><Label showColon wrappingType="None">{label}</Label><span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{value || "-"}</span></div>; }
 
 export default function ProcessSummaryPanel({ value, allItems = [], busy = false, error, onErrorClose, onEdit, onClose }: ProcessSummaryPanelProps) {
     const { t } = useTranslation();

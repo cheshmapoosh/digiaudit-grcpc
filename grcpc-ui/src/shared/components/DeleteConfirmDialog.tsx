@@ -1,3 +1,4 @@
+import { DialogFooterBar } from "./DialogFooter";
 import { Button, Dialog, Text } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
 import { ModalDialogHeader } from "./ModalDialogHeader";
@@ -31,14 +32,14 @@ export function DeleteConfirmDialog({
             accessibleName={title}
             onClose={onClose}
             footer={
-                <>
+                <DialogFooterBar>
                     <Button design="Negative" onClick={onConfirm} disabled={loading}>
                         {confirmText ?? t("common.delete", { defaultValue: "حذف" })}
                     </Button>
                     <Button design="Transparent" onClick={onClose} disabled={loading}>
                         {cancelText ?? t("common.cancel", { defaultValue: "انصراف" })}
                     </Button>
-                </>
+                </DialogFooterBar>
             }
         >
             <ModalDialogHeader title={title} onClose={onClose} />

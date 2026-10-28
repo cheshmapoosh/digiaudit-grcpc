@@ -45,6 +45,22 @@ function translatedUi5Text(key: string, params: Array<number | string>): string 
     if (!isPersian()) return null;
 
     switch (key) {
+        case "USER_MENU_SIGN_OUT_BUTTON_TXT":
+            return i18n.t("user.logout");
+        case "USER_MENU_CLOSE_BUTTON_TXT":
+        case "USER_MENU_CLOSE_DIALOG_BUTTON":
+        case "USER_SETTINGS_DIALOG_CLOSE_BUTTON_TEXT":
+            return i18n.t("common.close");
+        case "USER_MENU_POPOVER_ACCESSIBLE_NAME":
+            return i18n.t("user.menu");
+        case "USER_MENU_CURRENT_INFORMATION_TXT":
+            return i18n.t("ui5.userMenu.currentInformation");
+        case "USER_MENU_ACTIONS_TXT":
+            return i18n.t("common.actions");
+        case "USER_SETTINGS_DIALOG_ACCESSIBLE_NAME":
+            return i18n.t("nav.settings");
+        case "USER_SETTINGS_LIST_ARIA_ROLE_DESC":
+            return i18n.t("ui5.userSettings.item");
         case "MCB_SELECTED_ITEMS":
             return i18n.t("ui5.multiComboBox.selectAll", {
                 selected: localizedNumber(params[0]),

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
+import { Label, ObjectStatus, Text } from "@ui5/webcomponents-react";
 
 import type { RoleDetail } from "@/features/usermanagement";
 import PermissionCatalogList from "../components/PermissionCatalogList";
@@ -10,14 +10,13 @@ type RoleObjectPageProps = {
     value: RoleDetail;
     busy?: boolean;
     error?: string | null;
-    onCancel: () => void;
 };
 
 function formatDateTime(value?: string | null): string {
     return formatPersianDateTime(value);
 }
 
-export default function RoleObjectPage({ value, onCancel }: RoleObjectPageProps) {
+export default function RoleObjectPage({ value }: RoleObjectPageProps) {
     const { t, i18n } = useTranslation();
 
     const resolvedText = useMemo(() => {
@@ -37,21 +36,6 @@ export default function RoleObjectPage({ value, onCancel }: RoleObjectPageProps)
 
     return (
         <div style={{ display: "grid", gap: "1rem", minWidth: 0 }}>
-            <Bar
-                startContent={
-                    <Title level="H4">
-                        {t("usermanagement.roles.detailTitle", {
-                            defaultValue: "جزئیات نقش",
-                        })}
-                    </Title>
-                }
-                endContent={
-                    <Button design="Transparent" onClick={onCancel}>
-                        {t("common.close", { defaultValue: "بستن" })}
-                    </Button>
-                }
-            />
-
             <div
                 style={{
                     display: "grid",

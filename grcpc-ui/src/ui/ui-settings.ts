@@ -13,6 +13,21 @@ export type UiSettings = {
 
 const UI_SETTINGS_STORAGE_KEY = "grcpc.ui.settings";
 const UI5_FA_LOCALE = "fa-IR-u-ca-persian-nu-arabext";
+const UI_FONT_FAMILY = '"Vazirmatn", system-ui, -apple-system, "Segoe UI", Arial, sans-serif';
+const UI_FONT_TOKENS = [
+    "--sapFontFamily",
+    "--sapFontHeaderFamily",
+    "--sapFontLightFamily",
+    "--sapFontBoldFamily",
+    "--sapFontSemiboldFamily",
+    "--sapFontSemiboldDuplexFamily",
+    "--sapFontBlackFamily",
+    "--sapButton_FontFamily",
+    "--sapButton_Emphasized_FontFamily",
+    "--sapObjectHeader_Title_FontFamily",
+    "--sapShell_FontFamily",
+    "--sapShell_FontHeaderFamily",
+] as const;
 
 export const defaultSettings: UiSettings = {
     theme: "sap_horizon",
@@ -46,6 +61,7 @@ function normalizeSettings(value: unknown): UiSettings {
     const partial = value as Partial<Record<keyof UiSettings, unknown>>;
 
     return {
+        // Previously saved Quartz settings fall back to standard Horizon.
         theme: isUiTheme(partial.theme) ? partial.theme : defaultSettings.theme,
         lang: isUiLang(partial.lang) ? partial.lang : defaultSettings.lang,
         dir: isUiDir(partial.dir) ? partial.dir : defaultSettings.dir,
@@ -97,7 +113,10 @@ export function applySettings(settings: UiSettings) {
     // UI5 runtime configs
     void setTheme(normalizedSettings.theme);
     void setLanguage(normalizedSettings.lang === "fa" ? UI5_FA_LOCALE : "en");
-    applyUiFont();
+    // Typography is the sole authorized customization of the standard theme.
+    for (const token of UI_FONT_TOKENS) {
+        document.documentElement.style.setProperty(token, UI_FONT_FAMILY);
+    }
 
     // Document level direction + lang
     document.documentElement.setAttribute("dir", normalizedSettings.dir);
@@ -105,20 +124,4 @@ export function applySettings(settings: UiSettings) {
 
     // Optional: align body text direction too
     document.body.dir = normalizedSettings.dir;
-}
-
-export function applyUiFont() {
-    const root = document.documentElement;
-    root.style.setProperty(
-        "--sapFontFamily",
-        '"Vazirmatn", system-ui, -apple-system, "Segoe UI", Arial, sans-serif',
-    );
-    root.style.setProperty(
-        "--sapFontHeaderFamily",
-        '"Vazirmatn", system-ui, -apple-system, "Segoe UI", Arial, sans-serif',
-    );
-    root.style.setProperty(
-        "--sapFontBoldFamily",
-        '"Vazirmatn", system-ui, -apple-system, "Segoe UI", Arial, sans-serif',
-    );
 }

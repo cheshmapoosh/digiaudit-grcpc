@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Button, FlexBox, Input, Label, MessageStrip, Title } from "@ui5/webcomponents-react";
+import { Button, FlexBox, Form, FormItem, Input, Label, MessageStrip, Title } from "@ui5/webcomponents-react";
 import { authService } from "../service/auth.service";
 import { useAuthState } from "../state/auth.state";
 import { isValidPassword } from "../domain/passwordPolicy";
@@ -67,12 +67,17 @@ export default function ChangePasswordPage() {
     <MessageStrip design={saved ? "Positive" : "Information"} hideCloseButton>{t(saved ? "auth.password.saved" : required ? "auth.password.required" : "auth.password.voluntary")}</MessageStrip>
     {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
     {!saved ? <>
-      <Label for="current-password" required>{t("auth.password.current")}</Label>
-      <Input id="current-password" type="Password" value={currentPassword} disabled={busy} maxlength={200} onInput={(event) => setCurrentPassword(event.target.value)} />
-      <Label for="new-password" required>{t("auth.password.new")}</Label>
-      <Input id="new-password" type="Password" value={newPassword} disabled={busy} maxlength={72} onInput={(event) => setNewPassword(event.target.value)} />
-      <Label for="confirm-password" required>{t("auth.password.confirm")}</Label>
-      <Input id="confirm-password" type="Password" value={confirmation} disabled={busy} maxlength={72} onInput={(event) => setConfirmation(event.target.value)} />
+      <Form accessibleMode="Edit" accessibleName={t("auth.password.title")} layout="S1 M1 L1 XL1" labelSpan="S4 M4 L4 XL4" itemSpacing="Normal">
+        <FormItem labelContent={<Label for="current-password" required wrappingType="Normal">{t("auth.password.current")}</Label>}>
+          <Input id="current-password" type="Password" value={currentPassword} disabled={busy} maxlength={200} onInput={(event) => setCurrentPassword(event.target.value)} />
+        </FormItem>
+        <FormItem labelContent={<Label for="new-password" required wrappingType="Normal">{t("auth.password.new")}</Label>}>
+          <Input id="new-password" type="Password" value={newPassword} disabled={busy} maxlength={72} onInput={(event) => setNewPassword(event.target.value)} />
+        </FormItem>
+        <FormItem labelContent={<Label for="confirm-password" required wrappingType="Normal">{t("auth.password.confirm")}</Label>}>
+          <Input id="confirm-password" type="Password" value={confirmation} disabled={busy} maxlength={72} onInput={(event) => setConfirmation(event.target.value)} />
+        </FormItem>
+      </Form>
       <MessageStrip design="Information" hideCloseButton>{t("auth.password.rules")}</MessageStrip>
       {confirmation && confirmation !== newPassword ? <MessageStrip design="Negative" hideCloseButton>{t("auth.password.mismatch")}</MessageStrip> : null}
       <Button design="Emphasized" disabled={busy || !valid} onClick={() => void save()}>{t("common.save")}</Button>

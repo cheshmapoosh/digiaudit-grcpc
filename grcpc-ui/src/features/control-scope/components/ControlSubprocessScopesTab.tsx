@@ -1,10 +1,10 @@
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
   BusyIndicator,
   Button,
-  Input,
   Label,
   MessageStrip,
   Option,
@@ -66,7 +66,7 @@ export default function ControlSubprocessScopesTab({ controlId }: Props) {
       <div className="controlScopeToolbar">
         <Title level="H5">{t("control.tabs.subprocesses")}</Title>
         <div className="controlScopeToolbarGroup">
-          <Input className="controlScopeToolbarSearch" value={search} placeholder={t("controlScope.dialog.subprocessSearch")} disabled={busy} onInput={(event) => setSearch(event.target.value)} />
+          <HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy} accessibleName={t("controlScope.dialog.subprocessSearch")} />
           <div className="controlScopeFilter">
             <Label showColon>{t("controlScope.filter.label")}</Label>
             <Select value={filter} disabled={busy} onChange={(event) => setFilter(event.target.value as ControlScopeStatusFilter)}>

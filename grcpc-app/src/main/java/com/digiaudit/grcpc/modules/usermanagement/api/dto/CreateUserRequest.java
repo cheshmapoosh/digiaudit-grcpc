@@ -15,6 +15,11 @@ public record CreateUserRequest(
         @Size(max = 20) String mobile,
         @Email @Size(max = 200) String email,
         UUID defaultOrgUnitId,
-        Boolean enabled
+        Boolean enabled,
+        UUID profileId,
+        Boolean profileAdmin,
+        java.util.List<UUID> profileAccessIds,
+        java.util.List<UUID> roleIds,
+        @jakarta.validation.Valid java.util.List<ProfileRoleGrantRequest> roleGrants
 ) {
 }

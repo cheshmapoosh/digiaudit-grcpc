@@ -398,6 +398,8 @@ public class LocalOptionsService {
   private <T> LocalOptionDtos.Page<T> page(String sql, MapSqlParameterSource parameters,
       int page, int size, String sort, String direction, RowMapper<T> mapper) {
     rules.pageable(page, size, sort, direction);
+    sql += " and x.profile_id = :datasetProfile";
+    parameters.addValue("datasetProfile", com.digiaudit.grcpc.common.security.ProfileContext.raw(com.digiaudit.grcpc.common.security.ProfileContext.requireId()));
     String orderColumn = sort.equals("createdAt") ? "x.created_at" : "x.id";
     String ordering = " order by " + orderColumn + " " + direction + ", x.id asc";
     Long total = jdbc.queryForObject("select count(*) from (" + sql + ")",

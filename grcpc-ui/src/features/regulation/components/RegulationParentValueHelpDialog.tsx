@@ -1,9 +1,10 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
   Dialog,
-  Input,
   List,
   ListItemStandard,
 } from "@ui5/webcomponents-react";
@@ -62,16 +63,11 @@ export default function RegulationParentValueHelpDialog({
       className="regulationParentDialog"
       onClose={onClose}
     >
-      <ModalDialogHeader title={title} onClose={onClose} />
-      <div className="regulationParentDialogContent">
-        <Input
-          value={searchText}
-          disabled={busy}
-          placeholder={t("regulation.parent.search", {
+      <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} disabled={busy} accessibleName={t("regulation.parent.search", {
             defaultValue: "جستجو بر اساس شناسه یا نام",
-          })}
-          onInput={(event) => setSearchText(event.target.value)}
-        />
+          })} />} />
+      <div className="regulationParentDialogContent">
+
         <div className="regulationParentList">
           <List separators="Inner">
             {allowNoParent ? (
@@ -95,11 +91,11 @@ export default function RegulationParentValueHelpDialog({
             ))}
           </List>
         </div>
-        <div className="regulationParentDialogFooter">
+        <DialogFooter>
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.close", { defaultValue: "بستن" })}
           </Button>
-        </div>
+        </DialogFooter>
       </div>
     </Dialog>
   );

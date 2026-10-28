@@ -17,6 +17,7 @@ function toCreateBody(payload: OrganizationNodeCreate) {
         name: payload.name,
         organizationType: payload.organizationType,
         parentOrganizationId: payload.parentOrganizationId ?? null,
+        ownerUserId: payload.ownerUserId ?? null,
         location: payload.location ?? null,
         description: payload.description ?? null,
         validFrom: payload.validFrom ?? null,
@@ -32,6 +33,7 @@ function toUpdateBody(payload: OrganizationNodeUpdate) {
         organizationType: payload.organizationType,
         status: payload.status,
         parentOrganizationId: payload.parentOrganizationId ?? null,
+        ownerUserId: payload.ownerUserId ?? null,
         location: payload.location ?? null,
         description: payload.description ?? null,
         validFrom: payload.validFrom ?? null,
@@ -41,6 +43,9 @@ function toUpdateBody(payload: OrganizationNodeUpdate) {
 }
 
 export class OrganizationApiRepo implements OrganizationRepo {
+    ownerOptions(): Promise<{ id: string; displayLabel: string }[]> {
+        return httpClient.get(`${BASE_URL}/owner-options`);
+    }
     async list(): Promise<OrganizationNode[]> {
         return httpClient.get<OrganizationNode[]>(BASE_URL);
     }

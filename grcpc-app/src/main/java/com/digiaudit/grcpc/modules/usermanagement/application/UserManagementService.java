@@ -42,10 +42,12 @@ public class UserManagementService {
     private final PasswordEncoder passwordEncoder;
     private final CurrentUserProvider currentUserProvider;
     private final AuditService auditService;
+    private final ProfileUserService profileUsers;
+    private final com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService profileAccess;
 
     @Transactional
     public UUID createUser(CreateUserRequest request, HttpServletRequest httpServletRequest) {
-        currentUserProvider.assertCurrentUserIsRoot();
+        profileAccess.requireManager();
 
         String normalizedUsername = UsernamePolicy.normalize(request.username());
         PasswordPolicy.validate(request.password());
@@ -56,8 +58,7 @@ public class UserManagementService {
         UUID actorUserId = currentUserProvider.getCurrentUserIdOrNull();
         log.info("Creating new user. actorUserId={}, username={}", actorUserId, normalizedUsername);
 
-        AppUserEntity user = appUserRepository.save(
-                AppUserEntity.builder()
+        AppUserEntity user = AppUserEntity.builder()
                         .username(normalizedUsername)
                         .passwordHash(passwordEncoder.encode(request.password()))
                         .passwordChangeRequired(true)
@@ -68,11 +69,15 @@ public class UserManagementService {
                         .enabled(request.enabled() == null || request.enabled())
                         .locked(false)
                         .rootUser(false)
-                        .defaultOrgUnitId(request.defaultOrgUnitId())
                         .createdBy(actorUserId)
                         .updatedBy(actorUserId)
-                        .build()
-        );
+                        .build();
+        profileUsers.configure(user, request.profileId(), request.profileAdmin(), request.profileAccessIds(), true);
+        profileUsers.validateDefaultOrganization(user, request.defaultOrgUnitId(), false);
+        user.setDefaultOrgUnitId(request.defaultOrgUnitId());
+        appUserRepository.saveAndFlush(user);
+        profileUsers.saveAccess(user, request.profileAccessIds());
+        profileUsers.replaceRoles(user, request.profileId(), request.roleIds(), request.roleGrants());
 
         auditService.log(
                 AuditEventType.USER_CREATED,
@@ -81,7 +86,7 @@ public class UserManagementService {
                 ActionResult.SUCCESS,
                 actorUserId,
                 httpServletRequest,
-                Map.of("username", user.getUsername())
+                Map.of("username", user.getUsername(), "profileId", String.valueOf(user.getProfileId()), "profileAdmin", user.isProfileAdmin(), "profileAccessIds", request.profileAccessIds() == null ? java.util.List.of() : request.profileAccessIds(), "roleIds", request.roleIds() == null ? java.util.List.of() : request.roleIds(), "roleGrants", request.roleGrants() == null ? java.util.List.of() : request.roleGrants())
         );
 
         return user.getId();
@@ -89,9 +94,9 @@ public class UserManagementService {
 
     @Transactional
     public void updateUser(UUID userId, UpdateUserRequest request, HttpServletRequest httpServletRequest) {
-        currentUserProvider.assertCurrentUserIsRoot();
-        AppUserEntity user = appUserRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new NotFoundException("User was not found"));
+        profileAccess.requireManager();
+        AppUserEntity user = lockManagedUser(userId);
+        profileAccess.requireManagedUser(user);
 
         UUID actorUserId = currentUserProvider.getCurrentUserIdOrNull();
         log.info("Updating user. actorUserId={}, userId={}", actorUserId, userId);
@@ -105,6 +110,9 @@ public class UserManagementService {
                     "Use the enable operation with a new password to reactivate this account");
         }
 
+        UUID previousProfileId = user.getProfileId();
+        profileUsers.configure(user, request.profileId(), request.profileAdmin(), request.profileAccessIds(), false);
+        profileUsers.validateDefaultOrganization(user, request.defaultOrgUnitId(), !java.util.Objects.equals(previousProfileId, user.getProfileId()));
         user.setFirstName(request.firstName().trim());
         user.setLastName(request.lastName().trim());
         user.setMobile(blankToNull(request.mobile()));
@@ -120,6 +128,8 @@ public class UserManagementService {
         }
         user.setUpdatedBy(actorUserId);
         appUserRepository.save(user);
+        profileUsers.saveAccess(user, request.profileAccessIds());
+        profileUsers.replaceRoles(user, request.profileId(), request.roleIds(), request.roleGrants());
 
         auditService.log(
                 AuditEventType.USER_UPDATED,
@@ -128,16 +138,16 @@ public class UserManagementService {
                 ActionResult.SUCCESS,
                 actorUserId,
                 httpServletRequest,
-                Map.of("username", user.getUsername(), "enabled", user.isEnabled(), "locked", user.isLocked())
+                Map.of("username", user.getUsername(), "enabled", user.isEnabled(), "locked", user.isLocked(), "profileId", String.valueOf(user.getProfileId()), "profileAdmin", user.isProfileAdmin(), "profileAccessIds", request.profileAccessIds() == null ? java.util.List.of() : request.profileAccessIds(), "roleIds", request.roleIds() == null ? java.util.List.of() : request.roleIds(), "roleGrants", request.roleGrants() == null ? java.util.List.of() : request.roleGrants())
         );
     }
 
     @Transactional
     public void enableUser(UUID userId, String password, HttpServletRequest httpServletRequest) {
-        currentUserProvider.assertCurrentUserIsRoot();
+        profileAccess.requireManager();
         PasswordPolicy.validate(password);
-        AppUserEntity user = appUserRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new NotFoundException("User was not found"));
+        AppUserEntity user = lockManagedUser(userId);
+        profileAccess.requireManagedUser(user);
         if (user.isEnabled()) {
             throw new ConflictException("USER_ALREADY_ENABLED", "security.user.alreadyEnabled", "User is already enabled");
         }
@@ -162,23 +172,26 @@ public class UserManagementService {
 
     @Transactional
     public void assignRole(UUID userId, AssignRoleRequest request, HttpServletRequest httpServletRequest) {
-        currentUserProvider.assertCurrentUserIsRoot();
+        profileAccess.requireManager();
 
-        AppUserEntity user = appUserRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new NotFoundException("User was not found"));
+        AppUserEntity user = lockManagedUser(userId);
+        profileAccess.requireManagedUser(user);
 
         RoleEntity role = roleRepository.findById(request.roleId())
                 .orElseThrow(() -> new NotFoundException("Role was not found"));
 
         validateScope(request.scopeType(), request.scopeOrgUnitId());
+        if (request.profileId() == null || !request.profileId().equals(user.getProfileId())) com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService.deny();
+        if ("PROFILE_ADMIN".equals(role.getCode()) || (!profileAccess.isRoot() && "ROOT_ADMIN".equals(role.getCode()))) com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService.deny();
         if (!role.isEnabled()) throw new ConflictException("Disabled role cannot be assigned");
         if (request.validFrom() != null && request.validTo() != null && request.validTo().isBefore(request.validFrom())) {
             throw new ConflictException("validTo must not precede validFrom");
         }
 
-        boolean exists = userRoleAssignmentRepository.existsByUser_IdAndRole_IdAndScopeTypeAndScopeOrgUnitIdAndActiveTrue(
+        boolean exists = userRoleAssignmentRepository.existsByUser_IdAndRole_IdAndProfileIdAndScopeTypeAndScopeOrgUnitIdAndActiveTrue(
                 user.getId(),
                 role.getId(),
+                request.profileId(),
                 request.scopeType(),
                 request.scopeOrgUnitId()
         );
@@ -193,6 +206,7 @@ public class UserManagementService {
         UserRoleAssignmentEntity entity = UserRoleAssignmentEntity.builder()
                 .user(user)
                 .role(role)
+                .profileId(request.profileId())
                 .scopeType(request.scopeType())
                 .scopeOrgUnitId(request.scopeOrgUnitId())
                 .validFrom(request.validFrom())
@@ -220,9 +234,9 @@ public class UserManagementService {
     }
 
     private void updateEnabledFlag(UUID userId, boolean enabled, HttpServletRequest httpServletRequest) {
-        currentUserProvider.assertCurrentUserIsRoot();
-        AppUserEntity user = appUserRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new NotFoundException("User was not found"));
+        profileAccess.requireManager();
+        AppUserEntity user = lockManagedUser(userId);
+        profileAccess.requireManagedUser(user);
         UUID actorUserId = currentUserProvider.getCurrentUserIdOrNull();
         if (user.isRootUser() && !enabled) throw new ConflictException("Root user cannot be disabled");
         if (user.isEnabled() != enabled) user.setCredentialVersion(user.getCredentialVersion() + 1);
@@ -244,10 +258,10 @@ public class UserManagementService {
 
     @Transactional
     public void resetPassword(UUID userId, String password, HttpServletRequest httpRequest) {
-        currentUserProvider.assertCurrentUserIsRoot();
+        profileAccess.requireManager();
         PasswordPolicy.validate(password);
-        AppUserEntity user = appUserRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new NotFoundException("User was not found"));
+        AppUserEntity user = lockManagedUser(userId);
+        profileAccess.requireManagedUser(user);
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setPasswordChangeRequired(true);
         user.setCredentialVersion(user.getCredentialVersion() + 1);
@@ -261,6 +275,12 @@ public class UserManagementService {
         if (scopeType != ScopeType.GLOBAL || scopeOrgUnitId != null) {
             throw new ConflictException("Only GLOBAL assignments with no organization are supported in this phase");
         }
+    }
+
+    private AppUserEntity lockManagedUser(UUID userId) {
+        return (profileAccess.isRoot() ? appUserRepository.findByIdForUpdate(userId)
+                : appUserRepository.findOrdinaryByIdForUpdate(userId, com.digiaudit.grcpc.common.security.ProfileContext.requireId()))
+                .orElseThrow(() -> new NotFoundException("User was not found"));
     }
 
     private String blankToNull(String value) {

@@ -7,26 +7,23 @@
 .controlFclColumn {
   height: 100%;
   min-height: 0;
-  padding: 1rem;
+  padding: 0;
   box-sizing: border-box;
-  background: var(--sapBackgroundColor);
 }
 
 .controlListReport {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: var(--sapContent_Space_Tiny);
   height: 100%;
   min-height: 0;
 }
 
 .controlTreeFrame {
-  grid-row: 4;
+  grid-row: 3;
   min-height: 0;
   overflow: auto;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapList_Background);
-  padding: 0.5rem;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -46,14 +43,8 @@
   white-space: nowrap;
 }
 
-.controlTreeTitleSelected {
-  font-weight: 700;
-}
-
 .controlTreeType {
   flex: none;
-  color: var(--sapContent_LabelColor);
-  font-size: var(--sapFontSmallSize);
 }
 
 .controlSummaryPanel {
@@ -68,8 +59,6 @@
   gap: 0.875rem;
   align-content: start;
   padding: 1rem;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapGroup_ContentBackground);
 }
 
 .controlSummaryRow {
@@ -97,15 +86,12 @@
   display: grid;
   gap: 0.75rem;
   min-width: 0;
-  background: var(--sapBackgroundColor);
 }
 
 .controlObjectHeader {
   display: grid;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapGroup_ContentBackground);
 }
 
 .controlHeaderGrid {
@@ -124,8 +110,6 @@
 .controlObjectBody {
   min-height: 22rem;
   padding: 1rem;
-  border: 1px solid var(--sapGroup_ContentBorderColor);
-  background: var(--sapGroup_ContentBackground);
 }
 
 .controlTabPanel {
@@ -194,4 +178,8 @@
   .controlFieldWide {
     grid-column: auto;
   }
+}
+
+@media (min-width: 1101px) {
+  .controlHeaderGrid, .controlFormGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem 1rem; }
 }

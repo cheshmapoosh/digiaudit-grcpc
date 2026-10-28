@@ -142,6 +142,9 @@ public class SecurityConfig {
             SecurityContextRepository securityContextRepository,
             AuthenticationFilter jsonLoginAuthenticationFilter,
             AppUserRepository users,
+            com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService profileAccess,
+            DatabaseUserDetailsService userDetails,
+            MessageSource messageSource,
             ObjectMapper objectMapper
     ) throws Exception {
         log.info("Configuring Spring Security filter chain");
@@ -182,6 +185,7 @@ public class SecurityConfig {
                 )
                 .addFilterAt(jsonLoginAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new AccountSessionFilter(users, objectMapper), AuthorizationFilter.class)
+                .addFilterAfter(new ProfileRequestFilter(profileAccess, userDetails, objectMapper, messageSource), AccountSessionFilter.class)
                 .build();
     }
 

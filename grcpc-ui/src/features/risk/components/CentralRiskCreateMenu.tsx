@@ -1,26 +1,11 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { addCustomCSS } from "@ui5/webcomponents-base/dist/theming/CustomStyle.js";
 import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 import type { CentralRiskCreateKind } from "../domain/centralRisk.model";
 
-const RISK_CREATE_MENU_BUTTON_CLASS = "risk-create-menu-button";
 
-addCustomCSS(
-  "ui5-button",
-  `
-    :host(.${RISK_CREATE_MENU_BUTTON_CLASS}) .ui5-button-root {
-      justify-content: flex-start;
-    }
-
-    :host(.${RISK_CREATE_MENU_BUTTON_CLASS}) .ui5-button-end-icon {
-      margin-left: 0 !important;
-      margin-inline-start: auto !important;
-    }
-  `,
-);
 
 const kindByMenuItemId: Record<string, CentralRiskCreateKind> = {
   "risk-create-menu-category": "category",
@@ -39,6 +24,7 @@ type ButtonClickEvent = {
 
 interface Props {
   disabled?: boolean;
+  slot?: string;
   templateEnabled: boolean;
   style?: CSSProperties;
   onCreate: (kind: CentralRiskCreateKind) => void;
@@ -60,6 +46,7 @@ function canUsePortal(): boolean {
 
 export default function CentralRiskCreateMenu({
   disabled = false,
+  slot,
   templateEnabled,
   style,
   onCreate,
@@ -102,7 +89,8 @@ export default function CentralRiskCreateMenu({
   return (
     <>
       <Button
-        className={RISK_CREATE_MENU_BUTTON_CLASS}
+        slot={slot}
+        className="createMenuButton"
         design="Emphasized"
         disabled={disabled}
         style={style}

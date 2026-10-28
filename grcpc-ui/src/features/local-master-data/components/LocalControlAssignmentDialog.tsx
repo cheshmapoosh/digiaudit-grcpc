@@ -1,3 +1,4 @@
+import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -80,17 +81,17 @@ export default function LocalControlAssignmentDialog({ open, controlId, onClose 
     return <Dialog open={open} accessibleName={t("local.assign.control", {
         defaultValue: "انتساب کنترل به سازمان",
     })} onClose={onClose}
-        footer={<div style={{ display: "flex", gap: "0.5rem" }}>
+        footer={<DialogFooterBar>
             <Button design="Emphasized" disabled={!valid || busy}
                 onClick={() => void submit()}>
                 {t("local.assign.submit", { defaultValue: "ثبت انتساب" })}</Button>
             <Button design="Transparent" disabled={busy} onClick={onClose}>
                 {t("common.cancel", { defaultValue: "انصراف" })}</Button>
-        </div>}>
+        </DialogFooterBar>}>
         <ModalDialogHeader title={t("local.assign.control", {
             defaultValue: "انتساب کنترل به سازمان",
         })} onClose={onClose} />
-        <div style={{ display: "grid", gap: "0.8rem", minWidth: "28rem", padding: "0.75rem" }}>
+        <div className="modalThreeColumnGrid modalDialogFormContent">
             <LocalOptionPicker label={t("local.fields.organization", { defaultValue: "سازمان" })}
                 path="options/organizations" value={organizationId} required disabled={busy}
                 onChange={setOrganizationId} />
@@ -142,7 +143,7 @@ export default function LocalControlAssignmentDialog({ open, controlId, onClose 
                         </Select>
                     </div>;
                 })}
-            <div style={{ display: "grid", gap: "0.3rem" }}>
+            <div className="modalDateRange"><div style={{ display: "grid", gap: "0.3rem" }}>
                 <Label>{t("local.fields.validFrom", { defaultValue: "معتبر از" })}</Label>
                 <PersianDatePicker value={validFrom} disabled={busy}
                     accessibleName={t("local.fields.validFrom", { defaultValue: "معتبر از" })}
@@ -157,8 +158,8 @@ export default function LocalControlAssignmentDialog({ open, controlId, onClose 
                     invalidValueMessage={t("common.invalidPersianDate", {
                         defaultValue: "تاریخ نامعتبر",
                     })} onChange={setValidTo} onDraftStateChange={setToDraft} />
-            </div>
-            <div style={{ display: "grid", gap: "0.3rem" }}>
+            </div></div>
+            <div className="modalWideField" style={{ display: "grid", gap: "0.3rem" }}>
                 <Label>{t("local.fields.note", { defaultValue: "یادداشت محلی" })}</Label>
                 <TextArea value={localContextNote} maxlength={1000} rows={3} disabled={busy}
                     accessibleName={t("local.fields.note", { defaultValue: "یادداشت محلی" })}

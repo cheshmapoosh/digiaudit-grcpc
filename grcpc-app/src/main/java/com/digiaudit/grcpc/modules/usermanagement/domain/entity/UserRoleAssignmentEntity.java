@@ -19,6 +19,10 @@ import java.util.UUID;
 @SuperBuilder(toBuilder = true)
 public class UserRoleAssignmentEntity extends AuditableEntity {
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.BINARY)
+    @Column(name = "profile_id", nullable = false, columnDefinition = "RAW(16)")
+    private UUID profileId;
+
     @Id
     @GeneratedValue
     private UUID id;

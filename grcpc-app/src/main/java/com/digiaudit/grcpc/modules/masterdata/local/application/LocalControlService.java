@@ -370,9 +370,9 @@ public class LocalControlService {
   }
 
   private void validateOwner(UUID ownerId) {
-    var owner = users.findByIdForUpdate(ownerId)
+    var owner = users.findOrdinaryByIdForUpdate(ownerId, com.digiaudit.grcpc.common.security.ProfileContext.requireId())
         .orElseThrow(() -> rules.invalid("LOCAL_OWNER_NOT_ELIGIBLE", "Owner is unavailable"));
-    if (!owner.isEnabled() || owner.isLocked()) {
+    if (!owner.isEnabled() || owner.isLocked() || !com.digiaudit.grcpc.common.security.ProfileContext.requireId().equals(owner.getProfileId())) {
       throw rules.invalid("LOCAL_OWNER_NOT_ELIGIBLE", "Owner is disabled or locked");
     }
   }
@@ -446,7 +446,8 @@ public class LocalControlService {
         : centralReferences.findById(row.getCentralControlScopeId())
             .orElseThrow(() -> rules.referenceNotFound(row.getCentralControlScopeId()));
     String ownerLabel = row.getActualOwnerId() == null ? null
-        : users.findById(row.getActualOwnerId())
+        : users.findByIdAndProfileId(row.getActualOwnerId(), com.digiaudit.grcpc.common.security.ProfileContext.requireId())
+            .filter(owner -> com.digiaudit.grcpc.common.security.ProfileContext.requireId().equals(owner.getProfileId()))
             .map(owner -> (owner.getFirstName() + " " + owner.getLastName()).trim()).orElse(null);
     return new LocalControlDtos.Row(row.getId(), context.getOrganizationId(), org.getCode(),
         org.getName(), context.getId(), context.getSubprocessId(), subprocess.getCode(),

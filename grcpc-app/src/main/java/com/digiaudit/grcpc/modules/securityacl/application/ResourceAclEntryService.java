@@ -31,13 +31,17 @@ public class ResourceAclEntryService {
     private final ResourceAclEntryMapper mapper;
     private final AuditService auditService;
     private final CurrentUserProvider currentUserProvider;
+    private final ProfileAclBoundary profileBoundary;
 
     public List<ResourceAclEntryResponse> list(String targetType, UUID targetId) {
+        profileBoundary.target(targetType, targetId);
         return repository.findByTargetTypeAndTargetId(targetType, targetId).stream().map(mapper::toResponse).toList();
     }
 
     @Transactional
     public ResourceAclEntryResponse upsert(ResourceAclEntryRequest request, HttpServletRequest httpRequest) {
+        profileBoundary.target(request.targetType(), request.targetId());
+        profileBoundary.subject(request.subjectType(), request.subjectId());
         if (request.validFrom() != null && request.validTo() != null && request.validTo().isBefore(request.validFrom())) {
             throw new ConflictException("ACL_INVALID_RANGE", "error.masterdata.invalidDateRange", "ACL validTo cannot be before validFrom");
         }

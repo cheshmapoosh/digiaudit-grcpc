@@ -1,18 +1,7 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Button,
-  Input,
-  Label,
-  MessageStrip,
-  MultiComboBox,
-  MultiComboBoxItem,
-  Option,
-  Select,
-  Tab,
-  TextArea,
-  Title,
-} from "@ui5/webcomponents-react";
+import { ObjectStatus, Button, Input, Label, MessageStrip, MultiComboBox, MultiComboBoxItem, Option, Select, Tab, Text, TextArea, Title } from "@ui5/webcomponents-react";
 
 import {
   DocumentManager,
@@ -306,14 +295,14 @@ export default function CentralControlObjectPage({
   ], [form.code, form.validFrom, form.validTo, t, value?.createdAt]);
 
   const selectField = <T extends string>(label: string, selectedValue: T | "", values: readonly T[], key: keyof FormState, prefix: string) => (
-    <Field label={label}><Select value={selectedValue} disabled={readOnly || busy} onChange={(event) => change(key, readValue(event) as never)}><Option value="">{t("common.notSpecified", { defaultValue: "تعیین نشده" })}</Option>{values.map((item) => <Option key={item} value={item}>{t(`${prefix}.${item}`)}</Option>)}</Select></Field>
+    <Field label={label}>{readOnly ? <Text className="objectPageValue">{(selectedValue ? t(prefix + "." + selectedValue) : "—") || "—"}</Text> : <Select value={selectedValue} disabled={readOnly || busy} onChange={(event) => change(key, readValue(event) as never)}><Option value="">{t("common.notSpecified", { defaultValue: "تعیین نشده" })}</Option>{values.map((item) => <Option key={item} value={item}>{t(`${prefix}.${item}`)}</Option>)}</Select>}</Field>
   );
 
   return (
     <div className="controlObjectPage">
       <div className="controlObjectHeader">
         <Title level="H4">{form.title || t("control.object.title")}</Title>
-        <div className="controlHeaderGrid">{headerValues.map(([label, displayValue]) => <div className="controlHeaderItem" key={label}><Label showColon>{label}</Label><Input value={displayValue} readonly /></div>)}</div>
+        <div className="controlHeaderGrid">{headerValues.map(([label, displayValue]) => <div className="controlHeaderItem" key={label}><Label showColon>{label}</Label><Text className="objectPageValue">{(displayValue) || "—"}</Text></div>)}</div>
       </div>
 
       <DetailTabContainer onTabSelect={(event) => {
@@ -336,9 +325,9 @@ export default function CentralControlObjectPage({
       <div className="controlObjectBody">
         <div className={activeTab === "general" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>
           <div className="controlFormGrid">
-            <Field label={t("control.fields.code")} required><Input value={form.code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(e) => change("code", e.target.value)} /></Field>
-            <Field label={t("control.fields.name")} required><Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", e.target.value)} /></Field>
-            <Field label={t("control.fields.controlGroup")}><div style={{ display: "flex", gap: "0.5rem" }}><Input value={groupTitle} readonly style={{ flex: 1 }} /><Button disabled={readOnly || busy} onClick={() => setGroupHelpOpen(true)}>{t("common.select", { defaultValue: "انتخاب" })}</Button></div></Field>
+            <Field label={t("control.fields.code")} required>{readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(e) => change("code", e.target.value)} />}</Field>
+            <Field label={t("control.fields.name")} required>{readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", e.target.value)} />}</Field>
+            <Field label={t("control.fields.controlGroup")}><div style={{ display: "flex", gap: "0.5rem" }}>{readOnly ? <Text className="objectPageValue">{(groupTitle) || "—"}</Text> : <><Input value={groupTitle} readonly style={{ flex: 1 }} /><Button disabled={busy} onClick={() => setGroupHelpOpen(true)}>{t("common.select", { defaultValue: "انتخاب" })}</Button></>}</div></Field>
             {selectField(t("control.fields.controlClass"), form.controlClass, CONTROL_CLASSES, "controlClass", "control.controlClass")}
             {selectField(t("control.fields.importance"), form.importance, IMPORTANCE_VALUES, "importance", "control.importance")}
             {selectField(t("control.fields.controlRisk"), form.controlRisk, CONTROL_RISKS, "controlRisk", "control.controlRisk")}
@@ -346,7 +335,7 @@ export default function CentralControlObjectPage({
             {selectField(t("control.fields.controlPurpose"), form.controlPurpose, PURPOSES, "controlPurpose", "control.controlPurpose")}
             {selectField(t("control.fields.nature"), form.nature, NATURES, "nature", "control.nature")}
             <Field label={t("control.fields.controlRelevance")} fullWidth>
-              <div className="controlRelevanceField">
+              {readOnly ? <Text className="objectPageValue">{form.controlRelevance.map((item) => t(`control.controlRelevance.${item}`)).join("، ") || "—"}</Text> : <div className="controlRelevanceField">
                 <div className="controlRelevanceActions">
                   <Button
                     design="Transparent"
@@ -368,37 +357,37 @@ export default function CentralControlObjectPage({
                 >
                   {RELEVANCE_VALUES.map((item) => <MultiComboBoxItem key={item} data-value={item} text={t(`control.controlRelevance.${item}`)} selected={form.controlRelevance.includes(item)} />)}
                 </MultiComboBox>
-              </div>
+              </div>}
             </Field>
             <Field label={t("control.fields.triggerType")}>
-              <Select value={form.triggerType} disabled={readOnly || busy} onChange={(event) => changeTrigger(readValue(event) as FormState["triggerType"])}>
+              {readOnly ? <Text className="objectPageValue">{(form.triggerType ? t("control.triggerType." + form.triggerType) : "—") || "—"}</Text> : <Select value={form.triggerType} disabled={readOnly || busy} onChange={(event) => changeTrigger(readValue(event) as FormState["triggerType"])}>
                 <Option value="">{t("common.notSpecified", { defaultValue: "تعیین نشده" })}</Option>
                 {TRIGGERS.map((item) => <Option key={item} value={item}>{t(`control.triggerType.${item}`)}</Option>)}
-              </Select>
+              </Select>}
             </Field>
-            <Field label={t("control.fields.operationFrequency")}><Select value={form.operationFrequency} disabled={readOnly || busy || form.triggerType !== "DATE"} onChange={(e) => change("operationFrequency", e.target.value as FormState["operationFrequency"])}><Option value="">{t("common.notSpecified", { defaultValue: "تعیین نشده" })}</Option>{FREQUENCIES.map((item) => <Option key={item} value={item}>{t(`control.operationFrequency.${item}`)}</Option>)}</Select></Field>
+            <Field label={t("control.fields.operationFrequency")}>{readOnly ? <Text className="objectPageValue">{(form.operationFrequency ? t("control.operationFrequency." + form.operationFrequency) : "—") || "—"}</Text> : <Select value={form.operationFrequency} disabled={readOnly || busy || form.triggerType !== "DATE"} onChange={(e) => change("operationFrequency", e.target.value as FormState["operationFrequency"])}><Option value="">{t("common.notSpecified", { defaultValue: "تعیین نشده" })}</Option>{FREQUENCIES.map((item) => <Option key={item} value={item}>{t(`control.operationFrequency.${item}`)}</Option>)}</Select>}</Field>
             <Field label={t("control.fields.eventDescription")} fullWidth>
-              <TextArea
+              {readOnly ? <Text className="objectPageValue">{(form.eventDescription) || "—"}</Text> : <TextArea
                 rows={3}
                 value={form.eventDescription}
                 readonly={readOnly}
                 disabled={busy || form.triggerType !== "EVENT"}
                 maxlength={1000}
                 onInput={(event) => change("eventDescription", event.target.value)}
-              />
+              />}
             </Field>
-            <Field label={t("control.fields.toBeTested")}><Select value={form.toBeTested} disabled={readOnly || busy} onChange={(e) => change("toBeTested", e.target.value as FormState["toBeTested"])}><Option value="">{t("common.notSpecified", { defaultValue: "تعیین نشده" })}</Option><Option value="true">{t("common.yes", { defaultValue: "بله" })}</Option><Option value="false">{t("common.no", { defaultValue: "خیر" })}</Option></Select></Field>
+            <Field label={t("control.fields.toBeTested")}>{readOnly ? <Text className="objectPageValue">{(form.toBeTested ? t(form.toBeTested === "true" ? "common.yes" : "common.no") : "—") || "—"}</Text> : <Select value={form.toBeTested} disabled={readOnly || busy} onChange={(e) => change("toBeTested", e.target.value as FormState["toBeTested"])}><Option value="">{t("common.notSpecified", { defaultValue: "تعیین نشده" })}</Option><Option value="true">{t("common.yes", { defaultValue: "بله" })}</Option><Option value="false">{t("common.no", { defaultValue: "خیر" })}</Option></Select>}</Field>
             {selectField(t("control.fields.testAutomationType"), form.testAutomationType, TEST_AUTOMATION, "testAutomationType", "control.testAutomationType")}
             {selectField(t("control.fields.testingTechnique"), form.testingTechnique, TESTING_TECHNIQUES, "testingTechnique", "control.testingTechnique")}
             {selectField(t("control.fields.evidenceLevel"), form.evidenceLevel, EVIDENCE_LEVELS, "evidenceLevel", "control.evidenceLevel")}
-            <Field label={t("control.fields.testPlan")}><Input value="" disabled placeholder={t("control.testPlan.deferred")} /></Field>
-            <Field label={t("control.fields.status")}><Select value={form.status} disabled={mode !== "edit" || busy} onChange={(e) => change("status", e.target.value as CentralControlEditableStatus)}><Option value="ACTIVE">{t("control.status.ACTIVE")}</Option><Option value="INACTIVE">{t("control.status.INACTIVE")}</Option></Select></Field>
-            <Field label={t("control.fields.createdAt")}><Input value={formatPersianDateTime(value?.createdAt)} readonly /></Field>
+            <Field label={t("control.fields.testPlan")}>{readOnly ? <Text className="objectPageValue">{"—"}</Text> : <Input value="" disabled accessibleName={t("control.fields.testPlan")} />}<Text>{t("control.testPlan.deferred")}</Text></Field>
+            <Field label={t("control.fields.status")}>{readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("control.status." + form.status)}</ObjectStatus> : <Select value={form.status} disabled={mode !== "edit" || busy} onChange={(e) => change("status", e.target.value as CentralControlEditableStatus)}><Option value="ACTIVE">{t("control.status.ACTIVE")}</Option><Option value="INACTIVE">{t("control.status.INACTIVE")}</Option></Select>}</Field>
+            <Field label={t("control.fields.createdAt")}>{readOnly ? <Text className="objectPageValue">{(formatPersianDateTime(value?.createdAt)) || "—"}</Text> : <Input value={formatPersianDateTime(value?.createdAt)} readonly />}</Field>
             <div className="controlDateRangeRow">
-              <Field label={t("control.fields.validFrom")}><PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validFrom")} invalidValueMessage={t("control.validation.invalidDate")} onChange={(next) => change("validFrom", next)} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} /></Field>
-              <Field label={t("control.fields.validTo")}><PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validTo")} invalidValueMessage={t("control.validation.invalidDate")} onChange={(next) => change("validTo", next)} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))} /></Field>
+              <Field label={t("control.fields.validFrom")}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validFrom")} invalidValueMessage={t("control.validation.invalidDate")} onChange={(next) => change("validFrom", next)} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} />}</Field>
+              <Field label={t("control.fields.validTo")}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validTo")} invalidValueMessage={t("control.validation.invalidDate")} onChange={(next) => change("validTo", next)} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))} />}</Field>
             </div>
-            <Field label={t("control.fields.description")} fullWidth><TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", e.target.value)} /></Field>
+            <Field label={t("control.fields.description")} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", e.target.value)} />}</Field>
           </div>
         </div>
 
@@ -419,12 +408,12 @@ export default function CentralControlObjectPage({
         </div>
       </div>
 
-      <div className="controlObjectFooter">
+      <DialogFooter>
         {mode === "view" ? <>
           <Button design="Emphasized" disabled={busy || !permissions.update} onClick={onEdit}>{t("common.edit", { defaultValue: "ویرایش" })}</Button>
           <Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.close", { defaultValue: "بستن" })}</Button>
         </> : <><Button design="Emphasized" disabled={saveDisabled} onClick={submit}>{t("control.actions.submit")}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.cancel", { defaultValue: "انصراف" })}</Button></>}
-      </div>
+      </DialogFooter>
 
       <ControlGroupValueHelpDialog open={groupHelpOpen} groups={groups} selectedId={form.controlGroupId} onClose={() => setGroupHelpOpen(false)} onSelect={(id) => { change("controlGroupId", id); setGroupHelpOpen(false); }} />
     </div>

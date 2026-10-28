@@ -1,9 +1,10 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
   Dialog,
-  Input,
   List,
   ListItemStandard,
   Tree,
@@ -86,14 +87,9 @@ export default function AccountGroupParentValueHelpDialog({
 
   return (
     <Dialog open={open} accessibleName={title} className="accountGroupParentDialog" onClose={onClose}>
-      <ModalDialogHeader title={title} onClose={onClose} />
+      <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} disabled={busy} accessibleName={t("accountGroup.parent.search")} />} />
       <div className="accountGroupParentDialogContent">
-        <Input
-          value={searchText}
-          disabled={busy}
-          placeholder={t("accountGroup.parent.search")}
-          onInput={(event) => setSearchText(event.target.value)}
-        />
+
         <List separators="Inner">
           <ListItemStandard selected={!selectedParentId} onClick={() => onSelect(null)}>
             {t("accountGroup.parent.none")}
@@ -112,11 +108,11 @@ export default function AccountGroupParentValueHelpDialog({
             ))}
           </Tree>
         </div>
-        <div className="accountGroupParentDialogFooter">
+        <DialogFooter>
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.close", { defaultValue: "بستن" })}
           </Button>
-        </div>
+        </DialogFooter>
       </div>
     </Dialog>
   );

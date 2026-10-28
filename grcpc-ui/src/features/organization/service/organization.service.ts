@@ -10,6 +10,7 @@ import type {
     OrganizationNode,
     OrganizationNodeCreate,
     OrganizationNodeUpdate,
+    OrganizationOwnerOption,
 } from "@/features/organization";
 import type { OrganizationRepo } from "../infra/organization.repo";
 import { createOrganizationRepo } from "../infra/organization.factory";
@@ -41,6 +42,7 @@ function normalizeCreatePayload(payload: OrganizationNodeCreate): OrganizationNo
         name: normalizeRequiredText(parsed.name),
         organizationType: parsed.organizationType,
         parentOrganizationId: parsed.parentOrganizationId?.trim() || null,
+        ownerUserId: parsed.ownerUserId ?? null,
         location: normalizeOptionalText(parsed.location),
         description: normalizeOptionalText(parsed.description),
         validFrom: normalizeOptionalDate(parsed.validFrom),
@@ -58,6 +60,7 @@ function normalizeUpdatePayload(payload: OrganizationNodeUpdate): OrganizationNo
         organizationType: parsed.organizationType,
         status: parsed.status,
         parentOrganizationId: parsed.parentOrganizationId?.trim() || null,
+        ownerUserId: parsed.ownerUserId ?? null,
         location: normalizeOptionalText(parsed.location),
         description: normalizeOptionalText(parsed.description),
         validFrom: normalizeOptionalDate(parsed.validFrom),
@@ -73,6 +76,7 @@ function normalizeLifecyclePayload(
 }
 
 export interface OrganizationService {
+    ownerOptions(): Promise<OrganizationOwnerOption[]>;
     list(): Promise<OrganizationNode[]>;
     getById(id: string): Promise<OrganizationNode | null>;
     create(payload: OrganizationNodeCreate): Promise<MasterDataAggregateMutationResponse>;
@@ -90,6 +94,7 @@ export function createOrganizationService(
     repo: OrganizationRepo,
 ): OrganizationService {
     return {
+        ownerOptions: () => repo.ownerOptions(),
         async list() {
             const items = await repo.list();
             return sortOrganizations(items);

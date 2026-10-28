@@ -11,6 +11,7 @@ public record AssignRoleRequest(
         @NotNull ScopeType scopeType,
         UUID scopeOrgUnitId,
         LocalDateTime validFrom,
-        LocalDateTime validTo
+        LocalDateTime validTo,
+        UUID profileId
 ) {
 }

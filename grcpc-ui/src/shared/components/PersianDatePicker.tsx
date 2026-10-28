@@ -107,6 +107,7 @@ export function PersianDatePicker({
             primaryCalendarType="Persian"
             value={displayValue}
             displayFormat="yyyy/MM/dd"
+            placeholder={" " /* UI5 restores its automatic format hint for an empty string. */}
             valueState={draftInvalid || valueState === "Negative" ? "Negative" : "None"}
             valueStateMessage={<Text>{invalidValueMessage}</Text>}
             onInput={(event) => reportDraft(event.target, event.target.value)}

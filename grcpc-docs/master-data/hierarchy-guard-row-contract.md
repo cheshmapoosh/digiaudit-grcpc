@@ -60,7 +60,7 @@ The table has one row per approved independent hierarchy, not one row per busine
 | `CONTROL` | `central_control_group`, `central_control` | Existing Control hierarchy/aggregate Guard; direct Assignments union referenced `RISK`/`REGULATION` Guards and classification changes retain `ACCOUNT_GROUP`. Control Objective remains non-hierarchical. |
 | `REGULATION` | `central_regulation_group`, `central_regulation`, `central_regulation_requirement` | The complete Regulation family shares this Guard. |
 | `POLICY` | `central_policy_group`, `central_policy` | Policy Group and Policy structural mutations share this Guard; Policy aggregate Update acquires it even if the submitted group is unchanged. Four typed Policy relation collections add their referenced hierarchy Guards. |
-| `OBJECTIVE` | `objective` | Objective create, update, delete, and restore share this Guard. Organization Objective assignment also acquires `OBJECTIVE` and `ORGANIZATION` in lexical order. |
+| `OBJECTIVE` | `objective` | Strategy categories and Objective create, update (including kind/parent changes), delete, and restore share this Guard. Organization Objective assignment also acquires `OBJECTIVE` and `ORGANIZATION` in lexical order. |
 | `GLOBAL_CONTROL` | `control_group`, `global_control` | Group and Global Control create, update, delete, and restore share this Guard. Global Control–Regulation link mutation also acquires `REGULATION` in lexical order. |
 
 Future feature procedure:

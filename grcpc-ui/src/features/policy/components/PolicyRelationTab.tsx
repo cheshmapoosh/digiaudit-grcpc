@@ -1,7 +1,9 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActionSheet, BusyIndicator, Button, CheckBox, Dialog, Input, Link, List,
+  ActionSheet, BusyIndicator, Button, CheckBox, Dialog, Link, List,
   ListItemCustom, ListItemGroup, MessageStrip, ObjectStatus, Option, Select,
   Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow,
 } from "@ui5/webcomponents-react";
@@ -293,13 +295,15 @@ export default function PolicyRelationTab({
   if (!canView) return <MessageStrip design="Information" hideCloseButton>{t("policy.relations.noAccess")}</MessageStrip>;
   return <section className="policyRelationTab">
     <div className="policyRelationToolbar">
-      <Input value={search} placeholder={t("policy.relations.search")} onInput={e => setSearch(e.target.value)} />
+
       <Select value={filter} onChange={e => setFilter(e.detail.selectedOption?.value ?? "ALL")}>
         <Option value="ALL">{t("policy.relations.all")}</Option>
         <Option value="ACTIVE">{t("common.active")}</Option>
         <Option value="INACTIVE">{t("common.inactive")}</Option>
       </Select>
+      <HeaderSearch value={search} onChange={(value) => setSearch(value)} accessibleName={t("policy.relations.search")} />
       {!readOnly && canManage ? <Button design="Emphasized" disabled={busy} onClick={() => void openSelection()}>{t("policy.relations.select")}</Button> : null}
+
     </div>
     {error ? <MessageStrip design="Negative" hideCloseButton>{t("policy.relations.loadError")}</MessageStrip> : null}
     {loading ? <BusyIndicator active delay={0} /> : visible.length ? <Table headerRow={<TableHeaderRow>
@@ -339,8 +343,8 @@ export default function PolicyRelationTab({
       </>}
     </ActionSheet> : null}
     <Dialog open={selectionOpen} accessibleName={t("policy.relations.select")} onClose={e => { if (isOwnClose(e)) setSelectionOpen(false); }}>
-      <ModalDialogHeader title={t("policy.relations.select")} onClose={() => setSelectionOpen(false)} />
-      <Input value={selectionSearch} placeholder={t("policy.relations.search")} onInput={e => setSelectionSearch(e.target.value)} />
+      <ModalDialogHeader title={t("policy.relations.select")} onClose={() => setSelectionOpen(false)}  actions={<HeaderSearch value={selectionSearch} onChange={(value) => setSelectionSearch(value)} accessibleName={t("policy.relations.search")} />} />
+
       <List separators="Inner" accessibleName={t("policy.relations.select")}>
         {grouped.map(([group, members]) => <ListItemGroup key={group} headerText={group} headerAccessibleName={group}>
           {members.map(choice => <ListItemCustom key={choice.endpointId} type="Inactive" accessibleName={`${choice.code} ${choice.title}`}>
@@ -351,7 +355,7 @@ export default function PolicyRelationTab({
           </ListItemCustom>)}
         </ListItemGroup>)}
       </List>
-      <div className="policyRelationDialogActions"><Button design="Emphasized" onClick={confirmSelection}>{t("common.save")}</Button><Button design="Transparent" onClick={() => setSelectionOpen(false)}>{t("common.cancel")}</Button></div>
+      <DialogFooter><Button design="Emphasized" onClick={confirmSelection}>{t("common.save")}</Button><Button design="Transparent" onClick={() => setSelectionOpen(false)}>{t("common.cancel")}</Button></DialogFooter>
     </Dialog>
     <Dialog open={Boolean(editor)} accessibleName={t("policy.relations.edit")} onClose={e => { if (isOwnClose(e)) { setEditor(null); onInvalid(false); } }}>
       <ModalDialogHeader title={t("policy.relations.edit")} onClose={() => { setEditor(null); onInvalid(false); }} />
@@ -359,7 +363,7 @@ export default function PolicyRelationTab({
         onChange={setEditorFrom} onDraftStateChange={setFromDraft} />
       <PersianDatePicker value={editorTo} accessibleName={t("policy.fields.validTo")} invalidValueMessage={t("common.invalidPersianDate")}
         onChange={setEditorTo} onDraftStateChange={setToDraft} />
-      <div className="policyRelationDialogActions"><Button design="Emphasized" disabled={invalidDate} onClick={saveEditor}>{t("common.save")}</Button><Button design="Transparent" onClick={() => { setEditor(null); onInvalid(false); }}>{t("common.cancel")}</Button></div>
+      <DialogFooter><Button design="Emphasized" disabled={invalidDate} onClick={saveEditor}>{t("common.save")}</Button><Button design="Transparent" onClick={() => { setEditor(null); onInvalid(false); }}>{t("common.cancel")}</Button></DialogFooter>
     </Dialog>
     {view ? <PolicyReferenceView key={`${kind}:${view.objectId}`} kind={kind}
       objectId={view.objectId} onClose={() => setView(null)} /> : null}

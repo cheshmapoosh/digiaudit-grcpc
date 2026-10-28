@@ -27,7 +27,8 @@
       "validity": "Validity",
       "version": "Version",
       "createdAt": "Created At",
-      "updatedAt": "Updated At"
+      "updatedAt": "Updated At",
+      "owner": "Organization owner"
     },
     "tabs": {
       "general": "General Information",
@@ -53,7 +54,9 @@
       "GROUP": "Group",
       "OTHER": "Other"
     },
-    "tree": { "inactive": "Inactive organization" },
+    "tree": {
+      "inactive": "Inactive organization"
+    },
     "documents": {
       "empty": "No document has been registered for this organization.",
       "saveFirst": "Save the organization before finalizing documents.",
@@ -117,6 +120,10 @@
       "locationMaxLength": "Location cannot exceed 255 characters",
       "invalidDate": "Date must use yyyy-MM-dd",
       "invalidValidityRange": "Validity range is not valid"
+    },
+    "owner": {
+      "none": "No owner",
+      "loadError": "Could not load eligible users in this profile."
     }
   }
 }

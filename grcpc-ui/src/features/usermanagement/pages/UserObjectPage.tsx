@@ -1,111 +1,20 @@
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Card, CardHeader, FlexBox, Label, ObjectStatus, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
+import { FlexBox, Form, FormItem, Label, ObjectStatus, MessageStrip, Text } from "@ui5/webcomponents-react";
 import type { UserDetail } from "@/features/usermanagement";
-import UserAssignmentsList from "../components/UserAssignmentsList";
 import { formatPersianDateTime } from "@/shared/utils/date.utils";
 
-export interface UserObjectPageProps {
-    value: UserDetail | null;
-    busy?: boolean;
-    error?: string | null;
-    onResetPassword?: () => void;
-    onToggleEnabled?: () => void;
-    onAssignRole?: () => void;
-    onCancel: () => void;
-}
-
-function formatDate(value?: string | null): string {
-    return formatPersianDateTime(value);
-}
-
-export default function UserObjectPage({ value, busy = false, error, onCancel, onAssignRole, onResetPassword, onToggleEnabled }: UserObjectPageProps) {
-    const { t } = useTranslation();
-
-    if (!value) {
-        return null;
-    }
-
-    return (
-        <div style={{ display: "grid", gap: "1rem" }}>
-            <Bar
-                startContent={
-                    <Title level="H4">
-                        {t("usermanagement.users.detailTitle", {
-                            defaultValue: "جزئیات کاربر",
-                        })}
-                    </Title>
-                }
-                endContent={
-                    <Button design="Transparent" disabled={busy} onClick={onCancel}>
-                        {t("common.close", { defaultValue: "بستن" })}
-                    </Button>
-                }
-            />
-
-            {error ? (
-                <MessageStrip design="Negative" hideCloseButton>
-                    {error}
-                </MessageStrip>
-            ) : null}
-
-            <FlexBox alignItems="Center" wrap="Wrap" className="userManagementActions">
-                <ObjectStatus state={value.enabled ? "Positive" : "None"}>{t(value.enabled ? "usermanagement.users.status.enabled" : "usermanagement.users.status.disabled")}</ObjectStatus>
-                {onResetPassword && !value.rootUser ? <Button disabled={busy} onClick={onResetPassword}>{t("usermanagement.security.resetPassword")}</Button> : null}
-                {onToggleEnabled && !value.rootUser ? <Button disabled={busy} onClick={onToggleEnabled}>{t(value.enabled ? "usermanagement.security.disable" : "usermanagement.security.enable")}</Button> : null}
-            </FlexBox>
-
-            <div
-                style={{
-                    display: "grid",
-                    gap: "1rem",
-                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                }}
-            >
-                <div style={{ display: "grid", gap: ".5rem" }}>
-                    <Label>{t("usermanagement.users.fields.username", { defaultValue: "نام کاربری" })}</Label>
-                    <Text>{value.username}</Text>
-                </div>
-
-                <div style={{ display: "grid", gap: ".5rem" }}>
-                    <Label>{t("usermanagement.users.fields.fullName", { defaultValue: "نام و نام خانوادگی" })}</Label>
-                    <Text>{`${value.firstName} ${value.lastName}`.trim() || "-"}</Text>
-                </div>
-
-                <div style={{ display: "grid", gap: ".5rem" }}>
-                    <Label>{t("usermanagement.users.fields.email", { defaultValue: "ایمیل" })}</Label>
-                    <Text>{value.email || "-"}</Text>
-                </div>
-
-                <div style={{ display: "grid", gap: ".5rem" }}>
-                    <Label>{t("usermanagement.users.fields.mobile", { defaultValue: "موبایل" })}</Label>
-                    <Text>{value.mobile || "-"}</Text>
-                </div>
-
-                <div style={{ display: "grid", gap: ".5rem" }}>
-                    <Label>{t("usermanagement.users.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}</Label>
-                    <Text>{formatDate(value.createdAt)}</Text>
-                </div>
-
-                <div style={{ display: "grid", gap: ".5rem" }}>
-                    <Label>{t("usermanagement.users.fields.lastLoginAt", { defaultValue: "آخرین ورود" })}</Label>
-                    <Text>{formatDate(value.lastLoginAt)}</Text>
-                </div>
-            </div>
-
-            <Card
-                header={
-                    <CardHeader
-                        titleText={t("usermanagement.users.assignmentsTitle", {
-                            defaultValue: "نقش‌های تخصیص‌یافته",
-                        })}
-                    />
-                }
-            >
-                <div style={{ padding: "1rem" }}>
-                    {onAssignRole ? <Button design="Emphasized" onClick={onAssignRole}>{t("usermanagement.demo.assignRole")}</Button> : null}
-                    <UserAssignmentsList items={value.assignments} />
-                </div>
-            </Card>
-        </div>
-    );
+export default function UserObjectPage({ value, error }: { value: UserDetail; error?: string | null }) {
+  const { t } = useTranslation();
+  const fields = [
+    ["username", value.username], ["fullName", `${value.firstName} ${value.lastName}`.trim() || "-"],
+    ["email", value.email || "-"], ["mobile", value.mobile || "-"],
+    ["createdAt", formatPersianDateTime(value.createdAt)], ["lastLoginAt", formatPersianDateTime(value.lastLoginAt)],
+  ];
+  return <FlexBox direction="Column" className="managementListContent">
+    {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
+    <ObjectStatus state={value.enabled ? "Positive" : "None"}>{t(value.enabled ? "usermanagement.users.status.enabled" : "usermanagement.users.status.disabled")}</ObjectStatus>
+    <Form accessibleMode="Display" accessibleName={t("usermanagement.users.detailTitle")} layout="S1 M2 L2 XL2" labelSpan="S12 M12 L12 XL12" itemSpacing="Normal">
+      {fields.map(([key, text]) => <FormItem key={key} labelContent={<Label>{t(`usermanagement.users.fields.${key}`)}</Label>}><Text>{text}</Text></FormItem>)}
+    </Form>
+  </FlexBox>;
 }

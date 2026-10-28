@@ -1,6 +1,8 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Dialog, Input, List, ListItemStandard } from "@ui5/webcomponents-react";
+import { Button, Dialog, List, ListItemStandard } from "@ui5/webcomponents-react";
 
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 
@@ -46,14 +48,9 @@ export default function PolicyParentValueHelpDialog({
 
   return (
     <Dialog open={open} accessibleName={title} onClose={onClose}>
-      <ModalDialogHeader title={title} onClose={onClose} />
+      <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} disabled={busy} accessibleName={t("policy.parent.search", { defaultValue: "جستجو بر اساس شناسه یا نام" })} />} />
       <div className="policyParentDialogContent">
-        <Input
-          value={searchText}
-          disabled={busy}
-          placeholder={t("policy.parent.search", { defaultValue: "جستجو بر اساس شناسه یا نام" })}
-          onInput={(event) => setSearchText(event.target.value)}
-        />
+
         <List separators="Inner">
           {allowNoParent ? (
             <ListItemStandard selected={!selectedParentId} onClick={() => select(null)}>
@@ -72,11 +69,11 @@ export default function PolicyParentValueHelpDialog({
             </ListItemStandard>
           ))}
         </List>
-        <div className="policyParentDialogFooter">
+        <DialogFooter>
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.close", { defaultValue: "بستن" })}
           </Button>
-        </div>
+        </DialogFooter>
       </div>
     </Dialog>
   );

@@ -1,0 +1,18 @@
+.profileSelector { min-width: 0; }
+.profileSelectorBox { width: max-content; max-width: min(24rem, calc(100vw - 4rem)); }
+.profileSelectorIdentity { width: 100%; gap: .5rem; min-width: 0; }
+.profileSelectorIdentity > ui5-avatar { flex-shrink: 0; }
+.profileSelectorIdentity > ui5-text { flex: 1; min-width: 0; }
+.profileSelectorIdentity, .profileChoice { pointer-events: none; }
+.profileFieldLabel { width: 100%; gap: .5rem; }
+.profileChoices { width: min(24rem, calc(100vw - 3rem)); padding: .5rem; box-sizing: border-box; }
+.profileChoice { width: 100%; padding-block: .5rem; }
+.profileChoiceName { flex: 1; min-width: 0; }
+.profileManagementContent { min-width: 0; width: 100%; gap: 1rem; }
+.profileManagementIdentity, .profileManagementActions { gap: .75rem; }
+.profileAvatarField { padding: .25rem; box-sizing: border-box; }
+.profileManagementIdentity > ui5-avatar, .profileAvatarField > ui5-avatar { flex-shrink: 0; }
+.profileManagementForm { padding: 1rem; width: 86vw; max-width: 86vw; box-sizing: border-box; gap: 1rem; }
+.profileManagementForm ui5-input, .profileManagementForm ui5-textarea { width: 100%; }
+.profileManagementAvatar { gap: .5rem; }
+.profileIconChoices { width: min(22rem, calc(100vw - 4rem)); max-height: 22rem; overflow: auto; }

@@ -1,24 +1,12 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { addCustomCSS } from "@ui5/webcomponents-base/dist/theming/CustomStyle.js";
 import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 import type { CentralPolicyNodeType } from "../domain/centralPolicy.model";
 
-const POLICY_CREATE_MENU_BUTTON_CLASS = "policy-create-menu-button";
 const ALL_POLICY_CREATE_TYPES: CentralPolicyNodeType[] = ["GROUP", "POLICY"];
 
-addCustomCSS(
-  "ui5-button",
-  `
-    :host(.${POLICY_CREATE_MENU_BUTTON_CLASS}) .ui5-button-root { justify-content: flex-start; }
-    :host(.${POLICY_CREATE_MENU_BUTTON_CLASS}) .ui5-button-end-icon {
-      margin-left: 0 !important;
-      margin-inline-start: auto !important;
-    }
-  `,
-);
 
 const itemIdByType: Record<CentralPolicyNodeType, string> = {
   GROUP: "policy-create-group",
@@ -34,6 +22,7 @@ type ButtonClickEvent = { currentTarget?: EventTarget | null };
 
 interface Props {
   disabled?: boolean;
+  slot?: string;
   style?: CSSProperties;
   nodeTypes: CentralPolicyNodeType[];
   onCreate: (nodeType: CentralPolicyNodeType) => void;
@@ -44,7 +33,7 @@ function readButtonElement(event: unknown): HTMLElement | undefined {
   return target instanceof HTMLElement ? target : undefined;
 }
 
-export default function PolicyCreateMenu({ disabled = false, style, nodeTypes, onCreate }: Props) {
+export default function PolicyCreateMenu({ disabled = false, slot, style, nodeTypes, onCreate }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [opener, setOpener] = useState<HTMLElement | undefined>();
@@ -86,7 +75,8 @@ export default function PolicyCreateMenu({ disabled = false, style, nodeTypes, o
   return (
     <>
       <Button
-        className={POLICY_CREATE_MENU_BUTTON_CLASS}
+        slot={slot}
+        className="createMenuButton"
         design="Emphasized"
         disabled={blocked}
         style={style}

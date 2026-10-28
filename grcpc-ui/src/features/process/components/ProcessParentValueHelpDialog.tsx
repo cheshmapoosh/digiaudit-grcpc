@@ -1,9 +1,10 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
   Dialog,
-  Input,
   List,
   ListItemStandard,
 } from "@ui5/webcomponents-react";
@@ -57,11 +58,11 @@ export default function ProcessParentValueHelpDialog({
       style={{ width: "72vw", maxWidth: "72vw" }}
       onClose={onClose}
     >
-      <ModalDialogHeader title={title} onClose={onClose} />
+      <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={searchText} onChange={(value) => setSearchText(value)} disabled={busy} accessibleName={t("process.parent.search", { defaultValue: "جستجو بر اساس شناسه یا نام" })} />} />
       <div
         style={{
           display: "grid",
-          gridTemplateRows: "auto minmax(0, 1fr) auto",
+          gridTemplateRows: "minmax(0, 1fr) auto",
           gap: "0.75rem",
           width: "68vw",
           minWidth: "32rem",
@@ -71,12 +72,7 @@ export default function ProcessParentValueHelpDialog({
           boxSizing: "border-box",
         }}
       >
-        <Input
-          value={searchText}
-          disabled={busy}
-          placeholder={t("process.parent.search", { defaultValue: "جستجو بر اساس شناسه یا نام" })}
-          onInput={(event) => setSearchText(event.target.value)}
-        />
+
 
         <div style={{ overflow: "auto", minHeight: "18rem" }}>
           <List separators="Inner">
@@ -102,11 +98,11 @@ export default function ProcessParentValueHelpDialog({
           </List>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <DialogFooter>
           <Button design="Transparent" disabled={busy} onClick={onClose}>
             {t("common.close", { defaultValue: "بستن" })}
           </Button>
-        </div>
+        </DialogFooter>
       </div>
     </Dialog>
   );

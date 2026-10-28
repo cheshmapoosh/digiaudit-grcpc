@@ -1,14 +1,15 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bar, Button, Dialog, FlexBox, Input, Label, MessageStrip, Text } from "@ui5/webcomponents-react";
-import type { UserDetail } from "../domain/usermanagement.model";
+import { Button, Dialog, FlexBox, Input, Label, MessageStrip, Text } from "@ui5/webcomponents-react";
+import type { UserSummary } from "../domain/usermanagement.model";
 import { userManagementService } from "../service/usermanagement.service";
 import { isValidPassword } from "@/features/auth/domain/passwordPolicy";
 import { HttpError } from "@/shared/infra/http.client";
 import "./user-management-forms.css";
+import { DialogFooterBar } from "@/shared/components/DialogFooter";
 
 export default function UserSecurityDialog({ user, mode, onClose, onSaved }: {
-  user: UserDetail;
+  user: UserSummary;
   mode: "password" | "status";
   onClose: () => void;
   onSaved: () => void;
@@ -45,7 +46,7 @@ export default function UserSecurityDialog({ user, mode, onClose, onSaved }: {
   }
 
   return <Dialog open headerText={title} onBeforeClose={(event) => { if (saving.current) event.preventDefault(); }} onClose={onClose}
-    footer={<Bar endContent={<><Button design="Emphasized" disabled={busy || !valid} onClick={() => void save()}>{t("common.save")}</Button><Button disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></>} />}>
+    footer={<DialogFooterBar><Button design="Emphasized" disabled={busy || !valid} onClick={() => void save()}>{t("common.save")}</Button><Button disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></DialogFooterBar>}>
     <FlexBox direction="Column" className="userManagementForm">
       <Text>{`${user.firstName} ${user.lastName} (${user.username})`}</Text>
       {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}

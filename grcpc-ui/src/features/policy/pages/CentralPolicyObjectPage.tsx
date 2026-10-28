@@ -1,19 +1,10 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
 import { useAuthState } from "@/features/auth";
 import { canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
-import {
-  Button,
-  Input,
-  Label,
-  MessageStrip,
-  Option,
-  Select,
-  Tab,
-  TextArea,
-  Title,
-} from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
 
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
@@ -368,7 +359,7 @@ export default function CentralPolicyObjectPage({
         <div className="policyObjectHeaderTitle">
           <Title level="H4">{mode === "create" ? nodeTypeLabel : title || nodeTypeLabel}</Title>
         </div>
-        <div className="policyObjectHeaderGrid">
+        <div className={nodeType === "GROUP" ? "policyObjectHeaderGrid modalTwoColumnGrid" : "policyObjectHeaderGrid"}>
           <HeaderItem label={t("policy.fields.name", { defaultValue: "نام" })} value={title} />
           <HeaderItem label={t("policy.fields.identifier", { defaultValue: "شناسه" })} value={code} />
           <HeaderItem label={t("policy.fields.parent", { defaultValue: "والد" })} value={parentLabel} />
@@ -420,28 +411,28 @@ export default function CentralPolicyObjectPage({
 
       <div className="policyObjectBody">
         <div style={{ display: activeTab === "general" ? "block" : "none" }}>
-          <div className="policyFormGrid">
+          <div className={nodeType === "GROUP" ? "policyFormGrid modalTwoColumnGrid" : "policyFormGrid"}>
             <FormField label={t("policy.fields.identifier", { defaultValue: "شناسه" })} required>
-              <Input
+              {readOnly ? <Text className="objectPageValue">{(code) || "—"}</Text> : <Input
                 value={code}
                 readonly={mode !== "create"}
                 disabled={busy}
                 maxlength={64}
                 onInput={(event) => setCode(readValue(event))}
-              />
+              />}
             </FormField>
             <FormField label={t("policy.fields.name", { defaultValue: "نام" })} required>
-              <Input
+              {readOnly ? <Text className="objectPageValue">{(title) || "—"}</Text> : <Input
                 value={title}
                 readonly={readOnly}
                 disabled={busy}
                 maxlength={255}
                 onInput={(event) => setTitle(readValue(event))}
-              />
+              />}
             </FormField>
             <FormField label={t("policy.fields.parent", { defaultValue: "والد" })} required={nodeType === "POLICY"}>
               <div className="policyParentField">
-                <Input value={parentLabel} readonly />
+                {readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly />}
                 {canChangeParent ? (
                   <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>
                     {t("common.select", { defaultValue: "انتخاب" })}
@@ -450,20 +441,20 @@ export default function CentralPolicyObjectPage({
               </div>
             </FormField>
             <FormField label={t("policy.fields.status", { defaultValue: "وضعیت" })}>
-              <Select
+              {readOnly ? <ObjectStatus state={status === "ACTIVE" ? "Positive" : "None"}>{t(status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select
                 value={status}
                 disabled={!canChangeStatus || busy}
                 onChange={(event) => setStatus(selectedValue(event) as "ACTIVE" | "INACTIVE")}
               >
                 <Option data-value="ACTIVE" value="ACTIVE">{t("common.active", { defaultValue: "فعال" })}</Option>
                 <Option data-value="INACTIVE" value="INACTIVE">{t("common.inactive", { defaultValue: "غیرفعال" })}</Option>
-              </Select>
+              </Select>}
             </FormField>
 
             {nodeType === "POLICY" ? (
               <>
                 <FormField label={t("policy.fields.policyType", { defaultValue: "نوع سیاست" })} required>
-                  <Select
+                  {readOnly ? <Text className="objectPageValue">{(policyTypeLabel(policyType, t)) || "—"}</Text> : <Select
                     value={policyType}
                     disabled={readOnly || busy}
                     onChange={(event) => setPolicyType(selectedValue(event) as CentralPolicyType)}
@@ -471,19 +462,19 @@ export default function CentralPolicyObjectPage({
                     {(["POLICY", "PROCEDURE", "ANNOUNCEMENT", "WORK_INSTRUCTION"] as CentralPolicyType[]).map((type) => (
                       <Option key={type} data-value={type} value={type}>{policyTypeLabel(type, t)}</Option>
                     ))}
-                  </Select>
+                  </Select>}
                 </FormField>
                 <FormField label={t("policy.fields.responsibleOrganization", { defaultValue: "سازمان مسئول" })}>
-                  <Input
+                  {readOnly ? <Text className="objectPageValue">{(responsibleOrganization) || "—"}</Text> : <Input
                     value={responsibleOrganization}
                     readonly={readOnly}
                     disabled={busy}
                     maxlength={255}
                     onInput={(event) => setResponsibleOrganization(readValue(event))}
-                  />
+                  />}
                 </FormField>
                 <FormField label={t("policy.fields.communicationMethods", { defaultValue: "روش‌های اطلاع‌رسانی" })}>
-                  <Select
+                  {readOnly ? <Text className="objectPageValue">{(communicationMethod ? communicationMethodLabel(communicationMethod, t) : t("common.none")) || "—"}</Text> : <Select
                     value={communicationMethod}
                     disabled={readOnly || busy}
                     onChange={(event) =>
@@ -496,10 +487,10 @@ export default function CentralPolicyObjectPage({
                         {communicationMethodLabel(method, t)}
                       </Option>
                     ))}
-                  </Select>
+                  </Select>}
                 </FormField>
                 <FormField label={t("policy.fields.nextReviewDate", { defaultValue: "تاریخ بازنگری بعدی" })}>
-                  <PersianDatePicker
+                  {readOnly ? <Text className="objectPageValue">{(formatPersianDate(nextReviewDate)) || "—"}</Text> : <PersianDatePicker
                     value={nextReviewDate}
                     readonly={readOnly}
                     disabled={busy}
@@ -509,14 +500,14 @@ export default function CentralPolicyObjectPage({
                     onDraftStateChange={(next) =>
                       setDateDrafts((current) => ({ ...current, nextReviewDate: next }))
                     }
-                  />
+                  />}
                 </FormField>
               </>
             ) : null}
 
             <div className="policyDateRange">
               <FormField label={t("policy.fields.validFrom", { defaultValue: "تاریخ اعتبار از" })}>
-                <PersianDatePicker
+                {readOnly ? <Text className="objectPageValue">{(formatPersianDate(validFrom)) || "—"}</Text> : <PersianDatePicker
                   value={validFrom}
                   readonly={readOnly}
                   disabled={busy}
@@ -524,10 +515,10 @@ export default function CentralPolicyObjectPage({
                   invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "تاریخ نامعتبر است" })}
                   onChange={setValidFrom}
                   onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))}
-                />
+                />}
               </FormField>
               <FormField label={t("policy.fields.validTo", { defaultValue: "تاریخ اعتبار تا" })}>
-                <PersianDatePicker
+                {readOnly ? <Text className="objectPageValue">{(formatPersianDate(validTo)) || "—"}</Text> : <PersianDatePicker
                   value={validTo}
                   readonly={readOnly}
                   disabled={busy}
@@ -535,37 +526,37 @@ export default function CentralPolicyObjectPage({
                   invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "تاریخ نامعتبر است" })}
                   onChange={setValidTo}
                   onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))}
-                />
+                />}
               </FormField>
             </div>
 
             {nodeType === "POLICY" ? (
               <FormField label={t("policy.fields.objective", { defaultValue: "هدف" })} fullWidth>
-                <TextArea
+                {readOnly ? <Text className="objectPageValue">{(objective) || "—"}</Text> : <TextArea
                   rows={3}
                   value={objective}
                   readonly={readOnly}
                   disabled={busy}
                   onInput={(event) => setObjective(readValue(event))}
-                />
+                />}
               </FormField>
             ) : null}
 
             {nodeType === "POLICY" ? (
               <FormField label={t("policy.fields.content")} fullWidth>
-                <TextArea rows={10} value={content} readonly={readOnly} disabled={busy}
-                  onInput={(event) => setContent(readValue(event))} />
+                {readOnly ? <Text className="objectPageValue">{(content) || "—"}</Text> : <TextArea rows={10} value={content} readonly={readOnly} disabled={busy}
+                  onInput={(event) => setContent(readValue(event))} />}
               </FormField>
             ) : null}
 
             <FormField label={t("policy.fields.description", { defaultValue: "شرح" })} fullWidth>
-              <TextArea
+              {readOnly ? <Text className="objectPageValue">{(description) || "—"}</Text> : <TextArea
                 rows={5}
                 value={description}
                 readonly={readOnly}
                 disabled={busy}
                 onInput={(event) => setDescription(readValue(event))}
-              />
+              />}
             </FormField>
           </div>
         </div>
@@ -630,7 +621,7 @@ export default function CentralPolicyObjectPage({
           areas={["PROCESS", "GOVERNANCE"]} />
       </div> : null}
 
-      <div className="policyObjectFooter">
+      <DialogFooter>
         {mode === "view" && permissions.update ? (
           <Button design="Emphasized" disabled={busy} onClick={onEdit}>
             {t("common.edit", { defaultValue: "ویرایش" })}
@@ -646,7 +637,7 @@ export default function CentralPolicyObjectPage({
             ? t("common.close", { defaultValue: "بستن" })
             : t("common.cancel", { defaultValue: "انصراف" })}
         </Button>
-      </div>
+      </DialogFooter>
 
       <PolicyParentValueHelpDialog
         open={parentDialogOpen}

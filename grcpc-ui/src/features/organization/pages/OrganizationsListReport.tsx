@@ -1,11 +1,10 @@
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Bar,
     Button,
     BusyIndicator,
-    Input,
     MessageStrip,
     Title,
 } from "@ui5/webcomponents-react";
@@ -45,19 +44,12 @@ export default function OrganizationsListReport({
     const { t } = useTranslation();
     const { manage } = useMasterDataAccess("REFERENCE");
 
-    const actionButtonStyle = useMemo(
-        () => ({
-            minWidth: "8rem",
-        }),
-        [],
-    );
-
     return (
         <div
             style={{
                 display: "grid",
-                gridTemplateRows: "auto auto auto minmax(0, 1fr)",
-                gap: "1rem",
+                gridTemplateRows: "auto auto minmax(0, 1fr)",
+                gap: "var(--sapContent_Space_Tiny)",
                 height: "100%",
                 minHeight: 0,
             }}
@@ -70,20 +62,22 @@ export default function OrganizationsListReport({
                 }
                 endContent={
                     <>
+                        <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("organization.list.search", {
+                    defaultValue: "جستجو بر اساس کد",
+                })} />
                         <Button
                             design="Emphasized"
                             disabled={busy}
-                            style={actionButtonStyle}
                             hidden={!manage}
                             onClick={onCreate}
                         >
                             {t("common.create", { defaultValue: "ایجاد" })}
                         </Button>
 
+
                         <Button
                             design="Emphasized"
                             disabled={!selectedId || busy}
-                            style={actionButtonStyle}
                             onClick={() => selectedId && onShow(selectedId)}
                         >
                             {t("common.view", { defaultValue: "نمایش" })}
@@ -93,10 +87,6 @@ export default function OrganizationsListReport({
                             design="Negative"
                             hidden={!manage}
                             disabled={!selectedId || busy}
-                            style={{
-                                ...actionButtonStyle,
-                                marginInlineStart: "0.75rem",
-                            }}
                             onClick={() => selectedId && onDelete(selectedId)}
                         >
                             {t("common.delete", { defaultValue: "حذف" })}
@@ -105,14 +95,6 @@ export default function OrganizationsListReport({
                 }
             />
 
-            <Input
-                value={searchText}
-                disabled={busy}
-                placeholder={t("organization.list.search", {
-                    defaultValue: "جستجو بر اساس کد",
-                })}
-                onInput={(event) => onSearchTextChange(event.target.value)}
-            />
 
             {error ? (
                 <MessageStrip design="Negative" onClose={onErrorClose}>
@@ -121,17 +103,7 @@ export default function OrganizationsListReport({
             ) : null}
 
             <div
-                style={{
-                    gridRow: "4",
-                    minHeight: 0,
-                    overflowY: "auto",
-                    overflowX: "hidden",
-                    border: "1px solid var(--sapGroup_ContentBorderColor)",
-                    borderRadius: "0",
-                    padding: "0.75rem",
-                    background: "var(--sapList_Background)",
-                    boxSizing: "border-box",
-                }}
+                style={{ gridRow: "3", minHeight: 0, overflowY: "auto", overflowX: "hidden", boxSizing: "border-box" }}
             >
                 {busy ? <BusyIndicator active /> : null}
 

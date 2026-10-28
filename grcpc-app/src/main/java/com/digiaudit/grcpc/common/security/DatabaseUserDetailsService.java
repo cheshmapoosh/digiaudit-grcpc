@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 public class DatabaseUserDetailsService implements UserDetailsService {
 
     private final AppUserRepository appUserRepository;
+    private final com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService profileAccess;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -54,7 +55,7 @@ public class DatabaseUserDetailsService implements UserDetailsService {
 
         appUserRepository.findActiveRoleCodes(user.getId())
                 .stream()
-                .filter(code -> code != null && !code.isBlank())
+                .filter(code -> code != null && !code.isBlank() && !"ROOT_ADMIN".equals(code) && !"PROFILE_ADMIN".equals(code))
                 .map(code -> new SimpleGrantedAuthority("ROLE_" + code))
                 .forEach(authorities::add);
 
@@ -70,6 +71,13 @@ public class DatabaseUserDetailsService implements UserDetailsService {
                 .map(SimpleGrantedAuthority::new)
                 .forEach(authorities::add);
 
+        if (ProfileContext.idOrNull() != null && user.isProfileAdmin() && profileAccess.isAdmin(user.getId(), ProfileContext.requireId())) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_PROFILE_ADMIN"));
+            for (String area : java.util.List.of("PROCESS", "RISK", "CONTROL", "GOVERNANCE", "REFERENCE"))
+                authorities.add(new SimpleGrantedAuthority("MD_" + area + "_MANAGE"));
+            for (String permission : java.util.List.of("USER_VIEW", "USER_CREATE", "USER_EDIT", "USER_DISABLE", "USER_ASSIGN_ROLE"))
+                authorities.add(new SimpleGrantedAuthority(permission));
+        }
         log.debug(
                 "User details loaded. username={}, authorityCount={}",
                 username,

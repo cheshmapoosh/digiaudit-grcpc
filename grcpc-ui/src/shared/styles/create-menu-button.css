@@ -1,0 +1,5 @@
+/* UI5 2.18 uses a physical margin-left for endIcon. Keep it at the logical end. */
+.createMenuButton::part(endIcon) {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}

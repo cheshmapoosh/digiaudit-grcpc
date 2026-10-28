@@ -83,15 +83,7 @@ function OrganizationTreeItem({
             content={
                 <span
                     title={label}
-                    style={{
-                        display: "block",
-                        minWidth: 0,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        color: "var(--sapTextColor)",
-                        fontWeight: isSelected ? 700 : 400,
-                    }}
+                    style={{ display: "block", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                 >
                     {label}
                 </span>

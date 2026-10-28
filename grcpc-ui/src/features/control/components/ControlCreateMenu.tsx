@@ -1,24 +1,12 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { addCustomCSS } from "@ui5/webcomponents-base/dist/theming/CustomStyle.js";
 import { Button, Menu, MenuItem } from "@ui5/webcomponents-react";
 
 import type { CentralControlNodeType } from "../domain/centralControl.model";
 
-const BUTTON_CLASS = "control-create-menu-button";
 const ALL_TYPES: CentralControlNodeType[] = ["GROUP", "CONTROL"];
 
-addCustomCSS(
-  "ui5-button",
-  `
-    :host(.${BUTTON_CLASS}) .ui5-button-root { justify-content: flex-start; }
-    :host(.${BUTTON_CLASS}) .ui5-button-end-icon {
-      margin-left: 0 !important;
-      margin-inline-start: auto !important;
-    }
-  `,
-);
 
 const itemIdByType: Record<CentralControlNodeType, string> = {
   GROUP: "control-create-group",
@@ -34,12 +22,13 @@ type ButtonClickEvent = { currentTarget?: EventTarget | null };
 
 interface Props {
   disabled?: boolean;
+  slot?: string;
   style?: CSSProperties;
   nodeTypes: CentralControlNodeType[];
   onCreate: (nodeType: CentralControlNodeType) => void;
 }
 
-export default function ControlCreateMenu({ disabled = false, style, nodeTypes, onCreate }: Props) {
+export default function ControlCreateMenu({ disabled = false, slot, style, nodeTypes, onCreate }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [opener, setOpener] = useState<HTMLElement | undefined>();
@@ -77,7 +66,8 @@ export default function ControlCreateMenu({ disabled = false, style, nodeTypes, 
   return (
     <>
       <Button
-        className={BUTTON_CLASS}
+        slot={slot}
+        className="createMenuButton"
         design="Emphasized"
         disabled={blocked}
         style={style}

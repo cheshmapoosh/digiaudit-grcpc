@@ -1,20 +1,9 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-    Button,
-    ShellBar,
-} from "@ui5/webcomponents-react";
-
-import UiSettingsMenu from "./components/UiSettingsMenu";
+import { Avatar, Button, ShellBar } from "@ui5/webcomponents-react";
 import UserProfileMenu from "./components/UserProfileMenu";
-import NotificationMenu from "./components/NotificationMenu";
-
-type NotificationItem = {
-    id: string;
-    title: string;
-    description: string;
-    time: string;
-    unread: boolean;
-};
+import NotificationMenu, { type NotificationItem } from "./components/NotificationMenu";
+import { userInitials } from "./userInitials";
 
 type AppShellHeaderProps = {
     authenticated: boolean;
@@ -25,59 +14,46 @@ type AppShellHeaderProps = {
     notifications?: NotificationItem[];
     fullName?: string;
     email?: string;
-    onOpenProfile?: () => void;
+    onChangeUsername?: () => void;
+    onChangePassword?: () => void;
     onLogout?: () => void;
 };
 
 export default function AppShellHeader({
-                                           authenticated,
-                                           title,
-                                           subtitle,
-                                           showMenuButton = false,
-                                           onToggleMenu,
-                                           notifications = [],
-                                           fullName,
-                                           email,
-                                           onOpenProfile,
-                                           onLogout,
-                                       }: AppShellHeaderProps) {
+    authenticated, title, subtitle, showMenuButton = false, onToggleMenu,
+    notifications = [], fullName, email, onChangeUsername, onChangePassword, onLogout,
+}: AppShellHeaderProps) {
     const { t } = useTranslation();
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [userMenuOpener, setUserMenuOpener] = useState<HTMLElement | null>(null);
 
     return (
-        <ShellBar
-            primaryTitle={title ?? t("app.title")}
-            secondaryTitle={subtitle ?? t("app.subtitle")}
-        >
-            {authenticated && showMenuButton ? (
-                <Button
-                    slot="startButton"
-                    icon="menu2"
-                    design="Transparent"
-                    onClick={onToggleMenu}
-                />
-            ) : null}
-
-            <UiSettingsMenu trigger="shellbar"/>
-
-            {authenticated ? (
-                <NotificationMenu
-                    items={notifications}
-                    onOpenItem={(item) => console.log("open notification", item.id)}
-                    onMarkAllRead={() => console.log("mark all as read")}
-                />
-            ) : null}
-
-            {authenticated && fullName ? (
-                <UserProfileMenu
-                    fullName={fullName}
-                    email={email}
-                    onOpenProfile={onOpenProfile}
-                    onLogout={onLogout} onChangeUsername={function (): void {
-                    throw new Error("Function not implemented.");
-                }} onChangePassword={function (): void {
-                    throw new Error("Function not implemented.");
-                }}                />
-            ) : null}
-        </ShellBar>
+        <>
+            <ShellBar
+                primaryTitle={title ?? t("app.title")}
+                secondaryTitle={subtitle ?? t("app.subtitle")}
+                startButton={authenticated && showMenuButton ? (
+                    <Button icon="menu2" design="Transparent" accessibleName={t("nav.menu")} onClick={onToggleMenu} />
+                ) : undefined}
+                profile={authenticated && fullName ? <Avatar initials={userInitials(fullName)} size="XS" /> : undefined}
+                accessibilityAttributes={{ profile: { name: t("user.menu"), expanded: userMenuOpen, hasPopup: "dialog" } }}
+                onProfileClick={(event) => {
+                    setUserMenuOpener(event.detail.targetRef);
+                    setUserMenuOpen(true);
+                }}
+            >
+                {authenticated && <NotificationMenu items={notifications} />}
+            </ShellBar>
+            {authenticated && fullName && <UserProfileMenu
+                open={userMenuOpen}
+                opener={userMenuOpener}
+                onClose={() => setUserMenuOpen(false)}
+                fullName={fullName}
+                email={email}
+                onChangeUsername={onChangeUsername}
+                onChangePassword={onChangePassword}
+                onLogout={onLogout}
+            />}
+        </>
     );
 }

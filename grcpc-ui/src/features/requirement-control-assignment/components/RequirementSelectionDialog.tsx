@@ -1,6 +1,8 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, CheckBox, Dialog, Input, ObjectStatus, Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow } from "@ui5/webcomponents-react";
+import { Button, CheckBox, Dialog, ObjectStatus, Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow } from "@ui5/webcomponents-react";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { RequirementOption, AssignmentDraftRow } from "../domain/requirementControlAssignment.model";
@@ -21,9 +23,9 @@ export default function RequirementSelectionDialog({ open, options, rows, busy, 
   }, [options, rows, search]);
   const toggle = (id: string, checked: boolean) => setSelected(current => { const next = new Set(current); if (checked) next.add(id); else next.delete(id); return next; });
   return <Dialog open={open} accessibleName={t("requirementControlAssignment.selection.title")} className="centralAssignmentDialog" onClose={onClose}>
-    <ModalDialogHeader title={t("requirementControlAssignment.selection.title")} onClose={onClose} />
+    <ModalDialogHeader title={t("requirementControlAssignment.selection.title")} onClose={onClose}  actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy} accessibleName={t("requirementControlAssignment.search")} />} />
     <div className="centralAssignmentDialogBody">
-      <Input value={search} placeholder={t("requirementControlAssignment.search")} disabled={busy} onInput={e => setSearch(e.target.value)} />
+
       <Table headerRow={<TableHeaderRow><TableHeaderCell>{t("requirementControlAssignment.actions.select")}</TableHeaderCell><TableHeaderCell>{t("requirementControlAssignment.fields.endpoint")}</TableHeaderCell><TableHeaderCell>{t("requirementControlAssignment.fields.endpointStatus")}</TableHeaderCell><TableHeaderCell>{t("requirementControlAssignment.fields.endpointValidity")}</TableHeaderCell></TableHeaderRow>}>
         {items.map(item => { const checked = selected.has(item.id); return <TableRow key={item.id}>
           <TableCell><CheckBox accessibleName={`${item.code} ${item.title}`} checked={checked} disabled={busy || (checked ? !canDelete : !canSelect || item.status !== "ACTIVE")} onChange={e => toggle(item.id, e.target.checked)} /></TableCell>
@@ -31,7 +33,7 @@ export default function RequirementSelectionDialog({ open, options, rows, busy, 
           <TableCell>{formatPersianDate(item.validFrom)} – {formatPersianDate(item.validTo)}</TableCell>
         </TableRow>; })}
       </Table>
-      <div className="centralAssignmentDialogFooter"><Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{t("requirementControlAssignment.actions.confirm")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></div>
+      <DialogFooter><Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{t("requirementControlAssignment.actions.confirm")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></DialogFooter>
     </div>
   </Dialog>;
 }

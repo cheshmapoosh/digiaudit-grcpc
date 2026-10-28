@@ -31,7 +31,7 @@ export default function PermissionCatalogList({
                     {items.map((item) => (
                         <ListItemCustom key={item.id}>
                             <div style={{ display: "grid", gap: ".25rem", padding: ".25rem 0" }}>
-                                <div style={{ fontWeight: 700 }}>{item.title || item.code}</div>
+                                <div>{item.title || item.code}</div>
                                 <Text>{item.code}</Text>
                                 <Text>{item.moduleName}</Text>
                                 {item.description ? <Text>{item.description}</Text> : null}

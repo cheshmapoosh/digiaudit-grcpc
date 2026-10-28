@@ -1,12 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Button,
-  Input,
-  Label,
-  MessageStrip,
-  TextArea,
-  Title,
-} from "@ui5/webcomponents-react";
+import { formatPersianDate } from "@/shared/utils/date.utils";
+import { Text, Button, Input, Label, MessageStrip, TextArea, Title } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
 import {
   DocumentManager,
@@ -193,28 +187,28 @@ export function DefinitionObjectPage<T extends DefinitionDetailFields>({
           })}
         </MessageStrip>
       ) : null}
-      <div className="catalogFormGrid">
+      <div className="catalogFormGrid modalTwoColumnGrid">
         <Label>
           {t("common.code", { defaultValue: "کد" })}
-          <Input
+          {readOnly ? <Text className="objectPageValue">{(draft.code) || "—"}</Text> : <Input
             value={draft.code}
             readonly={!creating}
             disabled={busy}
             onInput={(event) => change("code", readValue(event))}
-          />
+          />}
         </Label>
         <Label>
           {t("common.title", { defaultValue: "عنوان" })}
-          <Input
+          {readOnly ? <Text className="objectPageValue">{(draft.title) || "—"}</Text> : <Input
             value={draft.title}
             readonly={readOnly}
             disabled={busy}
             onInput={(event) => change("title", readValue(event))}
-          />
+          />}
         </Label>
-        <Label>
+        <div className="modalDateRange"><Label>
           {t("centralCatalog.validFrom", { defaultValue: "اعتبار از" })}
-          <PersianDatePicker
+          {readOnly ? <Text className="objectPageValue">{(formatPersianDate(draft.validFrom)) || "—"}</Text> : <PersianDatePicker
             value={draft.validFrom}
             readonly={readOnly}
             disabled={busy}
@@ -228,11 +222,11 @@ export function DefinitionObjectPage<T extends DefinitionDetailFields>({
             onDraftStateChange={(next) =>
               setDateDrafts((current) => ({ ...current, validFrom: next }))
             }
-          />
+          />}
         </Label>
         <Label>
           {t("centralCatalog.validTo", { defaultValue: "اعتبار تا" })}
-          <PersianDatePicker
+          {readOnly ? <Text className="objectPageValue">{(formatPersianDate(draft.validTo)) || "—"}</Text> : <PersianDatePicker
             value={draft.validTo}
             readonly={readOnly}
             disabled={busy}
@@ -246,17 +240,17 @@ export function DefinitionObjectPage<T extends DefinitionDetailFields>({
             onDraftStateChange={(next) =>
               setDateDrafts((current) => ({ ...current, validTo: next }))
             }
-          />
-        </Label>
+          />}
+        </Label></div>
         <Label className="catalogWideField">
           {t("common.description", { defaultValue: "شرح" })}
-          <TextArea
+          {readOnly ? <Text className="objectPageValue">{(draft.description) || "—"}</Text> : <TextArea
             rows={5}
             value={draft.description}
             readonly={readOnly}
             disabled={busy}
             onInput={(event) => change("description", readValue(event))}
-          />
+          />}
         </Label>
       </div>
       {children}

@@ -1,17 +1,16 @@
 import "../components/user-management-forms.css";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Bar,
-    BusyIndicator,
     Button,
-    Input,
-    Label,
-    Table, TableHeaderRow, TableHeaderCell, TableRow, TableCell, ObjectStatus,
+    FlexBox,
+    Table, TableHeaderRow, TableHeaderCell, TableRow, TableCell, TableSelectionSingle, ObjectStatus,
     MessageStrip,
     Title,
 } from "@ui5/webcomponents-react";
 
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import type { UserSummary } from "@/features/usermanagement";
 
 type UsersListReportProps = {
@@ -22,8 +21,9 @@ type UsersListReportProps = {
     error?: string | null;
     onSearchTextChange: (value: string) => void;
     onCreate?: () => void;
-    onRefresh: () => void;
-    onSelect: (id: string) => void;
+    actions?: ReactNode;
+    onSelect: (id: string | null) => void;
+    onShow: (id: string) => void;
 };
 
 function normalize(value: string | null | undefined): string {
@@ -42,9 +42,10 @@ export default function UsersListReport({
                                             busy = false,
                                             error = null,
                                             onSearchTextChange,
-                                            onRefresh,
                                             onCreate,
+                                            actions,
                                             onSelect,
+                                            onShow,
                                         }: UsersListReportProps) {
     const { t } = useTranslation();
 
@@ -71,40 +72,24 @@ export default function UsersListReport({
     }, [items, searchText]);
 
     return (
-        <div style={{ display: "grid", gap: "1rem", minWidth: 0 }}>
+        <FlexBox direction="Column" className="managementListContent">
             <Bar
                 startContent={
                     <Title level="H4">
                         {t("usermanagement.users.listTitle", {
-                            defaultValue: "فهرست کاربران",
+                            defaultValue: "کاربران",
                         })}
                     </Title>
                 }
                 endContent={
                     <>
-                    {onCreate ? <Button design="Emphasized" icon="add" onClick={onCreate}>{t("usermanagement.demo.createUser")}</Button> : null}
-                    <Button design="Transparent" icon="refresh" onClick={onRefresh}>
-                        {t("common.refresh", { defaultValue: "بازآوری" })}
-                    </Button>
+                    <HeaderSearch value={searchText} onChange={onSearchTextChange} />
+                    {onCreate ? <Button design="Emphasized" disabled={busy} onClick={onCreate}>{t("usermanagement.demo.createUser")}</Button> : null}
+                    <Button design="Emphasized" disabled={busy || !selectedId} onClick={() => selectedId && onShow(selectedId)}>{t("management.view")}</Button>
+                    {actions}
                     </>
                 }
             />
-
-            <div style={{ display: "grid", gap: ".5rem" }}>
-                <Label for="users-search">
-                    {t("usermanagement.users.searchLabel", {
-                        defaultValue: "جستجو",
-                    })}
-                </Label>
-                <Input
-                    id="users-search"
-                    value={searchText}
-                    placeholder={t("usermanagement.users.searchPlaceholder", {
-                        defaultValue: "نام، نام کاربری، ایمیل یا موبایل",
-                    })}
-                    onInput={(event) => onSearchTextChange(event.target.value)}
-                />
-            </div>
 
             {error ? (
                 <MessageStrip design="Negative" hideCloseButton>
@@ -112,14 +97,9 @@ export default function UsersListReport({
                 </MessageStrip>
             ) : null}
 
-            {busy ? <BusyIndicator active delay={0} /> : null}
-
-            <Table
+            <Table loading={busy} features={<TableSelectionSingle selected={selectedId ?? undefined} behavior="RowOnly"
+                onChange={(event) => { if (!busy) onSelect(event.target.selected ?? null); }} />}
                 noDataText={t("usermanagement.users.empty")}
-                onRowClick={(event) => {
-                    const id = event.detail.row.rowKey;
-                    if (id) onSelect(id);
-                }}
                 headerRow={
                 <TableHeaderRow>
                     <TableHeaderCell>{t("usermanagement.users.fields.fullName")}</TableHeaderCell>
@@ -135,6 +115,6 @@ export default function UsersListReport({
                     </TableRow>
                 ))}
             </Table>
-        </div>
+        </FlexBox>
     );
 }

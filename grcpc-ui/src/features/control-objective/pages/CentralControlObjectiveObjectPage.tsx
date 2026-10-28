@@ -1,19 +1,10 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { ControlObjectiveRiskTemplateAssignmentsTab, EMPTY_RISK_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE, useRiskControlObjectiveAssignmentPermissions, type RiskControlObjectiveAssignmentDraftState } from "@/features/risk-control-objective-assignment";
 import { ControlObjectiveControlAssignmentsTab, useControlControlObjectiveAssignmentPermissions } from "@/features/control-control-objective-assignment";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
-import {
-  Button,
-  Input,
-  Label,
-  MessageStrip,
-  Option,
-  Select,
-  Tab,
-  TextArea,
-  Title,
-} from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
 
 import {
   DocumentManager,
@@ -278,11 +269,11 @@ export default function CentralControlObjectiveObjectPage({
     <div className="controlObjectiveObjectPage">
       <div className="controlObjectiveObjectHeader">
         <Title level="H4">{form.title || t("controlObjective.object.title")}</Title>
-        <div className="controlObjectiveHeaderGrid">
+        <div className="controlObjectiveHeaderGrid modalTwoColumnGrid">
           {headerValues.map(([label, displayValue]) => (
             <div className="controlObjectiveHeaderItem" key={label}>
               <Label showColon>{label}</Label>
-              <Input value={displayValue} readonly />
+              <Text className="objectPageValue">{(displayValue) || "—"}</Text>
             </div>
           ))}
         </div>
@@ -318,18 +309,18 @@ export default function CentralControlObjectiveObjectPage({
 
       <div className="controlObjectiveObjectBody">
         <div className={activeTab === "general" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
-          <div className="controlObjectiveFormGrid">
+          <div className="controlObjectiveFormGrid modalTwoColumnGrid">
             <Field label={t("controlObjective.fields.code")} required>
-              <Input value={form.code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(event) => change("code", readValue(event))} />
+              {readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(event) => change("code", readValue(event))} />}
             </Field>
             <Field label={t("controlObjective.fields.name")} required>
-              <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(event) => change("title", readValue(event))} />
+              {readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(event) => change("title", readValue(event))} />}
             </Field>
             <Field label={t("controlObjective.fields.objectiveClass")}>
-              <Input value={form.objectiveClass} readonly={readOnly} disabled={busy} maxlength={255} onInput={(event) => change("objectiveClass", readValue(event))} />
+              {readOnly ? <Text className="objectPageValue">{(form.objectiveClass) || "—"}</Text> : <Input value={form.objectiveClass} readonly={readOnly} disabled={busy} maxlength={255} onInput={(event) => change("objectiveClass", readValue(event))} />}
             </Field>
             <Field label={t("controlObjective.fields.status")}>
-              <Select
+              {readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("controlObjective.status." + form.status)}</ObjectStatus> : <Select
                 value={form.status}
                 disabled={mode !== "edit" || busy}
                 accessibleName={t("controlObjective.fields.status")}
@@ -337,10 +328,10 @@ export default function CentralControlObjectiveObjectPage({
               >
                 <Option value="ACTIVE">{t("controlObjective.status.ACTIVE")}</Option>
                 <Option value="INACTIVE">{t("controlObjective.status.INACTIVE")}</Option>
-              </Select>
+              </Select>}
             </Field>
-            <Field label={t("controlObjective.fields.validFrom")}>
-              <PersianDatePicker
+            <div className="modalDateRange"><Field label={t("controlObjective.fields.validFrom")}>
+              {readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker
                 value={form.validFrom}
                 readonly={readOnly}
                 disabled={busy}
@@ -348,10 +339,10 @@ export default function CentralControlObjectiveObjectPage({
                 invalidValueMessage={t("controlObjective.validation.invalidDate")}
                 onChange={(next) => change("validFrom", next)}
                 onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))}
-              />
+              />}
             </Field>
             <Field label={t("controlObjective.fields.validTo")}>
-              <PersianDatePicker
+              {readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker
                 value={form.validTo}
                 readonly={readOnly}
                 disabled={busy}
@@ -359,10 +350,10 @@ export default function CentralControlObjectiveObjectPage({
                 invalidValueMessage={t("controlObjective.validation.invalidDate")}
                 onChange={(next) => change("validTo", next)}
                 onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))}
-              />
-            </Field>
+              />}
+            </Field></div>
             <Field label={t("controlObjective.fields.description")} fullWidth>
-              <TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(event) => change("description", readValue(event))} />
+              {readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(event) => change("description", readValue(event))} />}
             </Field>
           </div>
         </div>
@@ -414,7 +405,7 @@ export default function CentralControlObjectiveObjectPage({
         titleKey="local.reverse.objectiveScopes" titleFa="انتساب‌های محلی این هدف کنترل"
         areas={["PROCESS", "CONTROL"]} /> : null}
 
-      <div className="controlObjectiveObjectFooter">
+      <DialogFooter>
         {mode === "view" ? (
           <>
             <Button design="Emphasized" disabled={busy || !permissions.update} onClick={onEdit}>
@@ -434,7 +425,7 @@ export default function CentralControlObjectiveObjectPage({
             </Button>
           </>
         )}
-      </div>
+      </DialogFooter>
     </div>
   );
 }

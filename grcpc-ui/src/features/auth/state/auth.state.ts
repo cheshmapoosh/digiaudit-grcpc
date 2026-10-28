@@ -1,3 +1,5 @@
+import { useProfileState } from "@/features/dataset-profile/state/profile.state";
+import { selectedProfileId, storeProfileSelection } from "@/shared/infra/profileSelection";
 import { create } from "zustand";
 
 import { authService, type AuthMeResponse } from "@/features/auth/service/auth.service";
@@ -12,6 +14,7 @@ export interface AuthState {
     mePromise: Promise<AuthMeResponse> | null;
 
     loadMe: () => Promise<AuthMeResponse>;
+    refreshMe: () => Promise<void>;
     login: (payload: { username: string; password: string }) => Promise<void>;
     logout: () => Promise<void>;
     clearError: () => void;
@@ -40,6 +43,14 @@ const anonymousUser: AuthMeResponse = {
     authorities: [],
 };
 
+async function initializeUserProfile(me: AuthMeResponse): Promise<AuthMeResponse> {
+    if (!me.authenticated || !me.userId || me.passwordChangeRequired) return me;
+    const previous = selectedProfileId();
+    await useProfileState.getState().load(me.userId);
+    // Authorities in /auth/me are scoped to the selected profile.
+    return selectedProfileId() && selectedProfileId() !== previous ? authService.me() : me;
+}
+
 export const useAuthState = create<AuthState>((set, get) => ({
     me: null,
     loading: false,
@@ -63,7 +74,7 @@ export const useAuthState = create<AuthState>((set, get) => ({
             set({ loading: true, error: null });
 
             try {
-                const meResponse = await authService.me();
+                const meResponse = await initializeUserProfile(await authService.me());
                 set({ me: meResponse });
                 return meResponse;
             } catch (error) {
@@ -82,12 +93,21 @@ export const useAuthState = create<AuthState>((set, get) => ({
         return request;
     },
 
+    refreshMe: async () => {
+        try {
+            const me = await authService.me();
+            set({ me: useProfileState.getState().userId ? me : await initializeUserProfile(me) });
+        } catch { /* The HTTP layer handles expired sessions. */ }
+    },
+
     login: async (payload) => {
         set({ submitting: true, error: null, sessionExpired: false });
 
         try {
+            storeProfileSelection(null);
+            useProfileState.getState().reset();
             await authService.login(payload);
-            const meResponse = await authService.me();
+            const meResponse = await initializeUserProfile(await authService.me());
             resetUnauthorizedSessionHandling();
             set({ me: meResponse, sessionExpired: false });
         } catch (error) {
@@ -105,6 +125,8 @@ export const useAuthState = create<AuthState>((set, get) => ({
 
         try {
             await authService.logout();
+            storeProfileSelection(null);
+            useProfileState.getState().reset();
             resetUnauthorizedSessionHandling();
             set({
                 me: anonymousUser,

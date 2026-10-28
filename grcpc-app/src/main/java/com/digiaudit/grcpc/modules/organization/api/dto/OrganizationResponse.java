@@ -25,6 +25,8 @@ public record OrganizationResponse(
         UUID createdBy,
         UUID updatedBy,
         Instant deletedAt,
-        UUID deletedBy
+        UUID deletedBy,
+        UUID ownerUserId,
+        String ownerDisplayLabel
 ) {
 }

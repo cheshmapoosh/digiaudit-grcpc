@@ -18,6 +18,14 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
 
     Optional<AppUserEntity> findByUsername(String username);
 
+    List<AppUserEntity> findByProfileIdAndRootUserFalseAndProfileAdminFalse(UUID profileId);
+
+    Optional<AppUserEntity> findByIdAndProfileId(UUID id, UUID profileId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from AppUserEntity u where u.id = :id and u.profileId = :profileId and u.rootUser = false and u.profileAdmin = false")
+    Optional<AppUserEntity> findOrdinaryByIdForUpdate(@Param("id") UUID id, @Param("profileId") UUID profileId);
+
     boolean existsByUsername(String username);
 
     boolean existsByRootUserTrue();
@@ -27,6 +35,7 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
             from UserRoleAssignmentEntity ura
             join ura.role r
             where ura.user.id = :userId
+              and ura.profileId = :profileId
               and ura.active = true
               and ura.scopeType = com.digiaudit.grcpc.modules.usermanagement.domain.enums.ScopeType.GLOBAL
               and ura.scopeOrgUnitId is null
@@ -34,13 +43,14 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
               and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
               and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
             """)
-    List<String> findActiveRoleCodes(@Param("userId") UUID userId);
+    List<String> findActiveRoleCodes(@Param("userId") UUID userId, @Param("profileId") UUID profileId);
 
     @Query("""
             select distinct r.id
             from UserRoleAssignmentEntity ura
             join ura.role r
             where ura.user.id = :userId
+              and ura.profileId = :profileId
               and ura.active = true
               and ura.scopeType = com.digiaudit.grcpc.modules.usermanagement.domain.enums.ScopeType.GLOBAL
               and ura.scopeOrgUnitId is null
@@ -48,7 +58,7 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
               and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
               and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
             """)
-    List<UUID> findActiveRoleIds(@Param("userId") UUID userId);
+    List<UUID> findActiveRoleIds(@Param("userId") UUID userId, @Param("profileId") UUID profileId);
 
     @Query("""
             select distinct p.code
@@ -57,6 +67,7 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
             join RolePermissionEntity rp on rp.role = r
             join rp.permission p
             where ura.user.id = :userId
+              and ura.profileId = :profileId
               and ura.active = true
               and ura.scopeType = com.digiaudit.grcpc.modules.usermanagement.domain.enums.ScopeType.GLOBAL
               and ura.scopeOrgUnitId is null
@@ -64,7 +75,7 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
               and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
               and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
             """)
-    List<String> findActivePermissionCodes(@Param("userId") UUID userId);
+    List<String> findActivePermissionCodes(@Param("userId") UUID userId, @Param("profileId") UUID profileId);
 
     @Query("""
             select distinct bp.code
@@ -73,6 +84,7 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
             join RoleBusinessPermissionEntity rbp on rbp.role = r
             join rbp.businessPermission bp
             where ura.user.id = :userId
+              and ura.profileId = :profileId
               and ura.active = true
               and ura.scopeType = com.digiaudit.grcpc.modules.usermanagement.domain.enums.ScopeType.GLOBAL
               and ura.scopeOrgUnitId is null
@@ -80,5 +92,21 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
               and (ura.validFrom is null or ura.validFrom <= CURRENT_TIMESTAMP)
               and (ura.validTo is null or ura.validTo >= CURRENT_TIMESTAMP)
             """)
-    List<String> findActiveBusinessPermissionCodes(@Param("userId") UUID userId);
+    List<String> findActiveBusinessPermissionCodes(@Param("userId") UUID userId, @Param("profileId") UUID profileId);
+    default List<String> findActiveRoleCodes(UUID userId) {
+        UUID profileId = com.digiaudit.grcpc.common.security.ProfileContext.idOrNull();
+        return profileId == null ? List.of() : findActiveRoleCodes(userId, profileId);
+    }
+    default List<UUID> findActiveRoleIds(UUID userId) {
+        UUID profileId = com.digiaudit.grcpc.common.security.ProfileContext.idOrNull();
+        return profileId == null ? List.of() : findActiveRoleIds(userId, profileId);
+    }
+    default List<String> findActivePermissionCodes(UUID userId) {
+        UUID profileId = com.digiaudit.grcpc.common.security.ProfileContext.idOrNull();
+        return profileId == null ? List.of() : findActivePermissionCodes(userId, profileId);
+    }
+    default List<String> findActiveBusinessPermissionCodes(UUID userId) {
+        UUID profileId = com.digiaudit.grcpc.common.security.ProfileContext.idOrNull();
+        return profileId == null ? List.of() : findActiveBusinessPermissionCodes(userId, profileId);
+    }
 }

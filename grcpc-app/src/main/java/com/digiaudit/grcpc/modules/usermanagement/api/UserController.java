@@ -30,16 +30,21 @@ public class UserController {
 
     private final UserManagementService userManagementService;
     private final UserQueryService userQueryService;
+    private final com.digiaudit.grcpc.modules.usermanagement.application.ProfileUserService profileUsers;
+
+    @GetMapping("/assignable-roles")
+    @PreAuthorize("@profileAccess.canManageUsers()")
+    public List<com.digiaudit.grcpc.modules.usermanagement.application.ProfileUserService.RoleChoice> roleChoices(@RequestParam(required = false) String locale) { return profileUsers.roleChoices(locale); }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('USER_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.canManageUsers()")
     public List<UserSummaryResponse> getUsers() {
         log.debug("HTTP GET /api/usermanagement/users");
         return userQueryService.getUsers();
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasAuthority('USER_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.canManageUsers()")
     public UserDetailResponse getUser(
             @PathVariable UUID userId,
             @RequestParam(required = false) String locale
@@ -49,7 +54,7 @@ public class UserController {
     }
 
     @GetMapping("/{userId}/roles")
-    @PreAuthorize("hasAuthority('USER_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.canManageUsers()")
     public List<UserRoleAssignmentResponse> getUserAssignments(
             @PathVariable UUID userId,
             @RequestParam(required = false) String locale
@@ -60,7 +65,7 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('USER_CREATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.canManageUsers()")
     public IdResponse createUser(@Valid @RequestBody CreateUserRequest request, HttpServletRequest httpServletRequest) {
         log.debug("HTTP POST /api/usermanagement/users for username={}", request.username());
         return new IdResponse(userManagementService.createUser(request, httpServletRequest));
@@ -68,7 +73,7 @@ public class UserController {
 
     @PutMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('USER_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.canManageUsers()")
     public void updateUser(
             @PathVariable UUID userId,
             @Valid @RequestBody UpdateUserRequest request,
@@ -80,7 +85,7 @@ public class UserController {
 
     @PatchMapping("/{userId}/enable")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('USER_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.canManageUsers()")
     public void enableUser(@PathVariable UUID userId, @Valid @RequestBody EnableUserRequest request, HttpServletRequest httpServletRequest) {
         log.debug("HTTP PATCH /api/usermanagement/users/{}/enable", userId);
         userManagementService.enableUser(userId, request.password(), httpServletRequest);
@@ -88,7 +93,7 @@ public class UserController {
 
     @PatchMapping("/{userId}/disable")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('USER_DISABLE') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.canManageUsers()")
     public void disableUser(@PathVariable UUID userId, HttpServletRequest httpServletRequest) {
         log.debug("HTTP PATCH /api/usermanagement/users/{}/disable", userId);
         userManagementService.disableUser(userId, httpServletRequest);
@@ -96,7 +101,7 @@ public class UserController {
 
     @PostMapping("/{userId}/reset-password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.canManageUsers()")
     public void resetPassword(@PathVariable UUID userId,
             @Valid @RequestBody ResetPasswordRequest request,
             HttpServletRequest httpRequest) {
@@ -105,7 +110,7 @@ public class UserController {
 
     @PostMapping("/{userId}/roles")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('USER_ASSIGN_ROLE') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.canManageUsers()")
     public void assignRole(
             @PathVariable UUID userId,
             @Valid @RequestBody AssignRoleRequest request,

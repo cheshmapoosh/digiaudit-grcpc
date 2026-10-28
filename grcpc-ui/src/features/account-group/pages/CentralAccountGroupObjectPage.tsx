@@ -1,16 +1,7 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Button,
-  Input,
-  Label,
-  MessageStrip,
-  Option,
-  Select,
-  Tab,
-  TextArea,
-  Title,
-} from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
 
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
@@ -266,7 +257,7 @@ export default function CentralAccountGroupObjectPage({
             {headerValues.map(([label, displayValue]) => (
               <div className="accountGroupHeaderItem" key={label}>
                 <Label showColon>{label}</Label>
-                <Input value={displayValue} readonly />
+                <Text className="objectPageValue">{(displayValue) || "—"}</Text>
               </div>
             ))}
           </div>
@@ -300,26 +291,26 @@ export default function CentralAccountGroupObjectPage({
           <div className={activeTab === "general" ? "accountGroupTabPanel" : "accountGroupTabPanel accountGroupTabPanelHidden"}>
             <div className="accountGroupFormGrid">
               <Field label={t("accountGroup.fields.code")} required>
-                <Input
+                {readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input
                   value={form.code}
                   readonly={mode !== "create"}
                   disabled={busy}
                   maxlength={64}
                   onInput={(event) => change("code", readValue(event))}
-                />
+                />}
               </Field>
               <Field label={t("accountGroup.fields.name")} required>
-                <Input
+                {readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input
                   value={form.title}
                   readonly={readOnly}
                   disabled={busy}
                   maxlength={255}
                   onInput={(event) => change("title", readValue(event))}
-                />
+                />}
               </Field>
               <Field label={t("accountGroup.fields.parent")}>
                 <div className="accountGroupParentField">
-                  <Input value={parentLabel} readonly />
+                  {readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly />}
                   {canChangeParent ? (
                     <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>
                       {t("accountGroup.parent.select")}
@@ -328,17 +319,17 @@ export default function CentralAccountGroupObjectPage({
                 </div>
               </Field>
               <Field label={t("accountGroup.fields.status")}>
-                <Select
+                {readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("accountGroup.status." + form.status)}</ObjectStatus> : <Select
                   value={form.status}
                   disabled={!canChangeStatus || busy}
                   onChange={(event) => change("status", readValue(event) as CentralAccountGroupEditableStatus)}
                 >
                   <Option value="ACTIVE">{t("accountGroup.status.ACTIVE")}</Option>
                   <Option value="INACTIVE">{t("accountGroup.status.INACTIVE")}</Option>
-                </Select>
+                </Select>}
               </Field>
               <Field label={t("accountGroup.fields.importance")} required>
-                <Select
+                {readOnly ? <Text className="objectPageValue">{(t("accountGroup.importance." + form.importance)) || "—"}</Text> : <Select
                   value={form.importance}
                   disabled={readOnly || busy}
                   onChange={(event) => change("importance", readValue(event) as CentralAccountGroupImportance)}
@@ -346,22 +337,22 @@ export default function CentralAccountGroupObjectPage({
                   {CENTRAL_ACCOUNT_GROUP_IMPORTANCE.map((importance) => (
                     <Option key={importance} value={importance}>{t(`accountGroup.importance.${importance}`)}</Option>
                   ))}
-                </Select>
+                </Select>}
               </Field>
               <Field label={t("accountGroup.fields.reasonableAssurance")}>
-                <Select
+                {readOnly ? <Text className="objectPageValue">{(t(form.reasonableAssurance ? "common.yes" : "common.no")) || "—"}</Text> : <Select
                   value={form.reasonableAssurance ? "true" : "false"}
                   disabled={readOnly || busy}
                   onChange={(event) => change("reasonableAssurance", readValue(event) === "true")}
                 >
                   <Option value="true">{t("common.yes", { defaultValue: "بله" })}</Option>
                   <Option value="false">{t("common.no", { defaultValue: "خیر" })}</Option>
-                </Select>
+                </Select>}
               </Field>
 
               <div className="accountGroupDateRange">
                 <Field label={t("accountGroup.fields.validFrom")}>
-                  <PersianDatePicker
+                  {readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker
                     value={form.validFrom}
                     readonly={readOnly}
                     disabled={busy}
@@ -369,10 +360,10 @@ export default function CentralAccountGroupObjectPage({
                     invalidValueMessage={t("accountGroup.validation.invalidDate")}
                     onChange={(next) => change("validFrom", next)}
                     onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))}
-                  />
+                  />}
                 </Field>
                 <Field label={t("accountGroup.fields.validTo")}>
-                  <PersianDatePicker
+                  {readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker
                     value={form.validTo}
                     readonly={readOnly}
                     disabled={busy}
@@ -380,18 +371,18 @@ export default function CentralAccountGroupObjectPage({
                     invalidValueMessage={t("accountGroup.validation.invalidDate")}
                     onChange={(next) => change("validTo", next)}
                     onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))}
-                  />
+                  />}
                 </Field>
               </div>
 
               <Field label={t("accountGroup.fields.description")} fullWidth>
-                <TextArea
+                {readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea
                   rows={5}
                   value={form.description}
                   readonly={readOnly}
                   disabled={busy}
                   onInput={(event) => change("description", readValue(event))}
-                />
+                />}
               </Field>
             </div>
           </div>
@@ -424,7 +415,7 @@ export default function CentralAccountGroupObjectPage({
           </div>
         </div>
 
-        <div className="accountGroupObjectFooter">
+        <DialogFooter>
           {mode === "view" ? (
             <>
               <Button design="Emphasized" disabled={busy || !permissions.update} onClick={onEdit}>
@@ -444,7 +435,7 @@ export default function CentralAccountGroupObjectPage({
               </Button>
             </>
           )}
-        </div>
+        </DialogFooter>
       </div>
 
       <AccountGroupParentValueHelpDialog

@@ -1,6 +1,8 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, CheckBox, Dialog, Input, ObjectStatus, Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow } from "@ui5/webcomponents-react";
+import { Button, CheckBox, Dialog, ObjectStatus, Table, TableCell, TableHeaderCell, TableHeaderRow, TableRow } from "@ui5/webcomponents-react";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { RiskTemplateOption, AssignmentDraftRow } from "../domain/riskControlAssignment.model";
@@ -21,9 +23,9 @@ export default function RiskTemplateSelectionDialog({ open, options, rows, busy,
   }, [options, rows, search]);
   const toggle = (id: string, checked: boolean) => setSelected(current => { const next = new Set(current); if (checked) next.add(id); else next.delete(id); return next; });
   return <Dialog open={open} accessibleName={t("riskControlAssignment.selection.title")} className="centralAssignmentDialog" onClose={onClose}>
-    <ModalDialogHeader title={t("riskControlAssignment.selection.title")} onClose={onClose} />
+    <ModalDialogHeader title={t("riskControlAssignment.selection.title")} onClose={onClose}  actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy} accessibleName={t("riskControlAssignment.search")} />} />
     <div className="centralAssignmentDialogBody">
-      <Input value={search} placeholder={t("riskControlAssignment.search")} disabled={busy} onInput={e => setSearch(e.target.value)} />
+
       <Table headerRow={<TableHeaderRow><TableHeaderCell>{t("riskControlAssignment.actions.select")}</TableHeaderCell><TableHeaderCell>{t("riskControlAssignment.fields.endpoint")}</TableHeaderCell><TableHeaderCell>{t("riskControlAssignment.fields.endpointStatus")}</TableHeaderCell><TableHeaderCell>{t("riskControlAssignment.fields.endpointValidity")}</TableHeaderCell></TableHeaderRow>}>
         {items.map(item => { const checked = selected.has(item.id); return <TableRow key={item.id}>
           <TableCell><CheckBox accessibleName={`${item.code} ${item.title}`} checked={checked} disabled={busy || (checked ? !canDelete : !canSelect || item.status !== "ACTIVE")} onChange={e => toggle(item.id, e.target.checked)} /></TableCell>
@@ -31,7 +33,7 @@ export default function RiskTemplateSelectionDialog({ open, options, rows, busy,
           <TableCell>{formatPersianDate(item.validFrom)} – {formatPersianDate(item.validTo)}</TableCell>
         </TableRow>; })}
       </Table>
-      <div className="centralAssignmentDialogFooter"><Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{t("riskControlAssignment.actions.confirm")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></div>
+      <DialogFooter><Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{t("riskControlAssignment.actions.confirm")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></DialogFooter>
     </div>
   </Dialog>;
 }

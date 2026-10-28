@@ -1,8 +1,11 @@
 import type { DocumentAggregateRequest } from "@/features/document";
 
+export type ObjectiveKind = "STRATEGY" | "OBJECTIVE";
+
 export interface Objective {
   id: string;
   nodeType: "objective";
+  kind: ObjectiveKind;
   code: string;
   name: string;
   description: string | null;
@@ -17,6 +20,7 @@ export interface Objective {
 }
 
 export interface ObjectiveCreate {
+  kind: ObjectiveKind;
   code: string;
   name: string;
   description: string | null;
@@ -24,7 +28,7 @@ export interface ObjectiveCreate {
   parentObjectiveId: string | null;
   validFrom: string | null;
   validTo: string | null;
-  organizationIds: string[];
+  organizationIds?: string[];
   documents: DocumentAggregateRequest;
 }
 

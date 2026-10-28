@@ -231,6 +231,8 @@ Current API/storage evidence: `/api/account-groups`, `account_group` with JSON p
 
 ## 11. Generic Objective customer document comparison
 
+The historical comparison below predates the approved Objective extension. Delivery item 3 now follows the accepted [Objective strategy classification correction](accepted-corrections/2026-10-27-objective-strategy-classification.md): business Objective and Control Objective remain separate catalogs, and strategy categories are implemented in the business Objective tree. Its strategy deferral below is superseded for this explicit feature.
+
 Customer source: `اهداف- فرم ایجاد اطلاعات پایه- Master Data  .docx`.
 
 Current UI evidence: `features/objective/**`, Objective FCL shell, generic Objective state/API repository, and `/api/objectives`.

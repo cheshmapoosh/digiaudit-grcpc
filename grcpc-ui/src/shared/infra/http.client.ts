@@ -1,3 +1,4 @@
+import { selectedProfileId, assertRequestProfile, isDatasetUrl } from "@/shared/infra/profileSelection";
 import i18n from "@/i18n/i18n";
 import { showSuccessToast } from "@/shared/feedback/toast.store";
 import { notifyUnauthorizedSession } from "@/shared/infra/unauthorizedSession";
@@ -190,6 +191,9 @@ async function request<T>(
     options: RequestOptions = {},
 ): Promise<T> {
     const finalUrl = buildUrl(url);
+    const profileId = selectedProfileId();
+    const scoped = isDatasetUrl(url) || /\/api\/(usermanagement\/users|auth\/me)/.test(url);
+    if (isDatasetUrl(url) && !profileId) throw new HttpError(i18n.t("profile.required"), 403, "PROFILE_REQUIRED");
     const hasBody = options.body !== undefined;
     let response: Response;
 
@@ -201,6 +205,7 @@ async function request<T>(
                 "Accept-Language": getCurrentLanguage(),
                 ...(hasBody ? { "Content-Type": "application/json" } : {}),
                 ...options.headers,
+                ...(scoped && profileId ? { "X-Profile-Id": profileId } : {}),
             },
             body: hasBody ? JSON.stringify(options.body) : undefined,
             signal: options.signal,
@@ -219,9 +224,11 @@ async function request<T>(
     }
 
     const payload = await parseResponseBody(response);
+    if (scoped) assertRequestProfile(profileId);
     const errorCode = extractErrorCode(payload);
 
     if (!response.ok) {
+        if (scoped && ["PROFILE_ACCESS_DENIED", "PROFILE_READ_ONLY"].includes(errorCode ?? "") && !url.includes("/auth/me")) window.dispatchEvent(new Event("grcpc:profile-access-changed"));
         if (errorCode === "NETWORK_ERROR") {
             throw new HttpError(
                 getNetworkErrorMessage(),

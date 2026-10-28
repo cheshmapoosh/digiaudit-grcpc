@@ -1,6 +1,8 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, CheckBox, Dialog, Input, List, ListItemCustom, ListItemGroup, Text } from "@ui5/webcomponents-react";
+import { Button, CheckBox, Dialog, List, ListItemCustom, ListItemGroup, Text } from "@ui5/webcomponents-react";
 import type { CentralControlGroupSummary, CentralControlSummary } from "@/features/control/domain/centralControl.model";
 import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import type { ControlScopeDraftRow } from "../domain/controlScope.model";
@@ -72,9 +74,9 @@ export default function ControlSelectionDialog({ open, controls, groups, rows, b
 
   return (
     <Dialog open={open} accessibleName={t("controlScope.dialog.valueHelpTitle")} onClose={onClose} className="controlScopeValueHelpDialog">
-      <ModalDialogHeader title={t("controlScope.dialog.valueHelpTitle")} onClose={onClose} />
+      <ModalDialogHeader title={t("controlScope.dialog.valueHelpTitle")} onClose={onClose}  actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} accessibleName={t("controlScope.dialog.search")} />} />
       <div className="controlScopeValueHelpBody">
-        <Input value={search} placeholder={t("controlScope.dialog.search")} onInput={(event) => setSearch(event.target.value)} />
+
         <List className="controlScopeSelectionList" separators="Inner" accessibleName={t("controlScope.dialog.valueHelpTitle")} noDataText={t("controlScope.dialog.noControls")}>
           {groupedControls.map((group) => <ListItemGroup key={group.id} headerText={group.label} headerAccessibleName={group.label}>
             {group.controls.map((control) => {
@@ -92,7 +94,7 @@ export default function ControlSelectionDialog({ open, controls, groups, rows, b
             })}
           </ListItemGroup>)}
         </List>
-        <div className="controlScopeDialogFooter"><Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{t("controlScope.actions.confirmSelection")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></div>
+        <DialogFooter><Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{t("controlScope.actions.confirmSelection")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></DialogFooter>
       </div>
     </Dialog>
   );

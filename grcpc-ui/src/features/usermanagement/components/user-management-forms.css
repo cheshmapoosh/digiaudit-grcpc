@@ -1,6 +1,6 @@
 .userManagementForm {
-  gap: 0.75rem;
-  padding: 1rem;
+  gap: var(--sapContent_Space_Tiny);
+  padding: var(--sapContent_Space_Small);
   width: min(28rem, 75vw);
   box-sizing: border-box;
 }
@@ -9,6 +9,6 @@
 .userManagementForm ui5-select {
   width: 100%;
 }
+.userManagementActions { gap: var(--sapContent_Space_Tiny); }
 
-.userManagementSelectedRow { background: var(--sapList_SelectionBackgroundColor); }
-.userManagementActions { gap: 0.75rem; }
+.userManagementWideForm { width: 86vw; max-width: 86vw; }

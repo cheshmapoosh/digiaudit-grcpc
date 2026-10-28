@@ -1,5 +1,7 @@
+import { DialogFooter } from "./DialogFooter";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useEffect, useMemo, useState } from "react";
-import { Button, CheckBox, Dialog, Input, Text, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
+import { Button, CheckBox, Dialog, Text, Tree, TreeItemCustom } from "@ui5/webcomponents-react";
 import { ModalDialogHeader } from "./ModalDialogHeader";
 import "./hierarchyMultiSelectionDialog.css";
 
@@ -60,11 +62,11 @@ function ChoiceItem({ node, selected, collapsed, search, busy, onToggle }: {
   </TreeItemCustom>;
 }
 
-export function HierarchyMultiSelectionDialog({ open, title, searchPlaceholder, nodes,
+export function HierarchyMultiSelectionDialog({ open, title, searchAccessibleName, nodes,
   selectedIds, busy, confirmText, cancelText, onConfirm, onClose }: {
   open: boolean;
   title: string;
-  searchPlaceholder: string;
+  searchAccessibleName: string;
   nodes: HierarchySelectionNode[];
   selectedIds: Set<string>;
   busy: boolean;
@@ -106,20 +108,19 @@ export function HierarchyMultiSelectionDialog({ open, title, searchPlaceholder, 
   };
 
   return <Dialog open={open} accessibleName={title} className="hierarchyMultiSelectionDialog" onClose={onClose}>
-    <ModalDialogHeader title={title} onClose={onClose} />
+    <ModalDialogHeader title={title} onClose={onClose}  actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy} accessibleName={searchAccessibleName} />} />
     <div className="hierarchyMultiSelectionBody">
-      <Input value={search} placeholder={searchPlaceholder} disabled={busy}
-        onInput={(event) => setSearch(event.target.value)} />
+
       <div className="hierarchyMultiSelectionTree">
         <Tree onItemToggle={toggleExpansion}>
           {visible.map((node) => <ChoiceItem key={node.id} node={node} selected={selected}
             collapsed={collapsed} search={query} busy={busy} onToggle={toggle} />)}
         </Tree>
       </div>
-      <div className="hierarchyMultiSelectionActions">
+      <DialogFooter>
         <Button design="Emphasized" disabled={busy} onClick={() => onConfirm(selected)}>{confirmText}</Button>
         <Button design="Transparent" disabled={busy} onClick={onClose}>{cancelText}</Button>
-      </div>
+      </DialogFooter>
     </div>
   </Dialog>;
 }

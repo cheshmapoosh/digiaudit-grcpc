@@ -32,28 +32,28 @@ public class RoleController {
     private final RoleQueryService roleQueryService;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('ROLE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.isRoot()")
     public List<RoleSummaryResponse> getRoles(@RequestParam(required = false) String locale) {
         log.debug("HTTP GET /api/usermanagement/roles?locale={}", locale);
         return roleQueryService.getRoles(locale);
     }
 
     @GetMapping("/{roleId}")
-    @PreAuthorize("hasAuthority('ROLE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.isRoot()")
     public RoleDetailResponse getRole(@PathVariable UUID roleId, @RequestParam(required = false) String locale) {
         log.debug("HTTP GET /api/usermanagement/roles/{}?locale={}", roleId, locale);
         return roleQueryService.getRole(roleId, locale);
     }
 
     @GetMapping("/permissions")
-    @PreAuthorize("hasAuthority('ROLE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.isRoot()")
     public List<PermissionResponse> getSystemPermissions(@RequestParam(required = false) String locale) {
         log.debug("HTTP GET /api/usermanagement/roles/permissions?locale={}", locale);
         return roleQueryService.getSystemPermissions(locale);
     }
 
     @GetMapping("/business-permissions")
-    @PreAuthorize("hasAuthority('ROLE_VIEW') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.isRoot()")
     public List<PermissionResponse> getBusinessPermissions(@RequestParam(required = false) String locale) {
         log.debug("HTTP GET /api/usermanagement/roles/business-permissions?locale={}", locale);
         return roleQueryService.getBusinessPermissions(locale);
@@ -61,7 +61,7 @@ public class RoleController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('ROLE_CREATE') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.isRoot()")
     public IdResponse createRole(@Valid @RequestBody CreateRoleRequest request, HttpServletRequest httpServletRequest) {
         log.debug("HTTP POST /api/usermanagement/roles for code={}", request.code());
         return new IdResponse(roleManagementService.createRole(request, httpServletRequest));
@@ -69,7 +69,7 @@ public class RoleController {
 
     @PutMapping("/{roleId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ROLE_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.isRoot()")
     public void updateRole(
             @PathVariable UUID roleId,
             @Valid @RequestBody UpdateRoleRequest request,
@@ -81,7 +81,7 @@ public class RoleController {
 
     @PatchMapping("/{roleId}/enable")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ROLE_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.isRoot()")
     public void enableRole(@PathVariable UUID roleId, HttpServletRequest httpServletRequest) {
         log.debug("HTTP PATCH /api/usermanagement/roles/{}/enable", roleId);
         roleManagementService.enableRole(roleId, httpServletRequest);
@@ -89,7 +89,7 @@ public class RoleController {
 
     @PatchMapping("/{roleId}/disable")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ROLE_EDIT') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.isRoot()")
     public void disableRole(@PathVariable UUID roleId, HttpServletRequest httpServletRequest) {
         log.debug("HTTP PATCH /api/usermanagement/roles/{}/disable", roleId);
         roleManagementService.disableRole(roleId, httpServletRequest);
@@ -97,7 +97,7 @@ public class RoleController {
 
     @PutMapping("/{roleId}/permissions")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ROLE_ASSIGN_PERMISSION') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.isRoot()")
     public void replaceSystemPermissions(
             @PathVariable UUID roleId,
             @Valid @RequestBody ReplaceSystemPermissionsRequest request,
@@ -112,7 +112,7 @@ public class RoleController {
 
     @PutMapping("/{roleId}/business-permissions")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ROLE_ASSIGN_BUSINESS_PERMISSION') or hasAuthority('ROLE_ROOT_ADMIN')")
+    @PreAuthorize("@profileAccess.isRoot()")
     public void replaceBusinessPermissions(
             @PathVariable UUID roleId,
             @Valid @RequestBody ReplaceBusinessPermissionsRequest request,

@@ -1,195 +1,73 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { BusyIndicator, MessageStrip } from "@ui5/webcomponents-react";
-
+import { BusyIndicator, Button, FlexBox, MessageStrip } from "@ui5/webcomponents-react";
+import { ManagementDetailDialog } from "@/shared/components/ManagementDetailDialog";
 import { useUserManagementState } from "@/features/usermanagement";
 import { useAuthState } from "@/features/auth/state/auth.state";
-import type { UserDetail } from "../domain/usermanagement.model";
+import type { UserDetail, UserSummary } from "../domain/usermanagement.model";
 import UserSecurityDialog from "../components/UserSecurityDialog";
-import CreateUserDialog from "../components/CreateUserDialog";
-import AssignGlobalRoleDialog from "../components/AssignGlobalRoleDialog";
+import UserFormDialog from "../components/UserFormDialog";
 import UsersListReport from "./UsersListReport";
 import UserObjectPage from "./UserObjectPage";
 
-function mapError(error: unknown, fallback: string): string {
-    if (error instanceof Error && error.message.trim()) {
-        return error.message;
-    }
-
-    return fallback;
-}
-
 export default function UsersFclShellPage() {
-    const { t } = useTranslation();
-    const navigate = useNavigate();
-    const { userId } = useParams<{ userId: string }>();
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { userId } = useParams<{ userId: string }>();
+  const { usersById, userOrderedIds, selectedUser, loading, loadUsers, loadUser, refreshUsers, reset } = useUserManagementState();
+  const isRoot = useAuthState((state) => Boolean(state.me?.rootUser));
+  const canManage = useAuthState((state) => Boolean(state.me?.rootUser || state.me?.authorities.includes("ROLE_PROFILE_ADMIN")));
+  const [securityAction, setSecurityAction] = useState<{ user: UserSummary; mode: "password" | "status" } | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<UserDetail | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const activeId = userId ?? selectedId;
+  const [searchText, setSearchText] = useState("");
+  const [pageError, setPageError] = useState<string | null>(null);
+  const items = useMemo(() => userOrderedIds.map((id) => usersById[id]).filter(Boolean), [userOrderedIds, usersById]);
+  const visibleUser = selectedUser?.id === userId ? selectedUser : null;
+  const actionUser = activeId ? usersById[activeId] ?? (selectedUser?.id === activeId ? selectedUser : null) : null;
+  const canEdit = canManage && Boolean(actionUser && (isRoot || (!actionUser.rootUser && !actionUser.profileAdmin)));
+  const canChangeStatus = canEdit && !actionUser?.rootUser;
 
-    const usersById = useUserManagementState((state) => state.usersById ?? {});
-    const userOrderedIds = useUserManagementState((state) => state.userOrderedIds ?? []);
-    const selectedUser = useUserManagementState((state) => state.selectedUser);
-    const loading = useUserManagementState((state) => state.loading);
-    const loadUsers = useUserManagementState((state) => state.loadUsers);
-    const loadUser = useUserManagementState((state) => state.loadUser);
-    const refreshUsers = useUserManagementState((state) => state.refreshUsers);
-    const reset = useUserManagementState((state) => state.reset);
+  useEffect(() => {
+    void loadUsers().catch((error: unknown) => setPageError(error instanceof Error ? error.message : t("usermanagement.errors.loadList")));
+    return () => reset();
+  }, [loadUsers, reset, t]);
+  useEffect(() => {
+    if (userId) void loadUser(userId).catch((error: unknown) => setPageError(error instanceof Error ? error.message : t("usermanagement.errors.loadDetail")));
+  }, [userId, loadUser, t]);
 
-    const isRoot = useAuthState((state) => Boolean(state.me?.rootUser));
-    const [securityAction, setSecurityAction] = useState<{ user: UserDetail; mode: "password" | "status" } | null>(null);
-    const [createOpen, setCreateOpen] = useState(false);
-    const [assignOpen, setAssignOpen] = useState(false);
-    const [searchText, setSearchText] = useState("");
-    const [pageError, setPageError] = useState<string | null>(null);
+  function refreshDetail() {
+    void Promise.all([refreshUsers(), ...(userId ? [loadUser(userId)] : [])]).catch(() => setPageError(t("usermanagement.errors.refresh")));
+  }
 
-    const items = useMemo(
-        () =>
-            userOrderedIds
-                .map((id) => usersById[id])
-                .filter(Boolean),
-        [userOrderedIds, usersById],
-    );
-
-    const showDetailPane = Boolean(userId);
-    const visibleUser = selectedUser?.id === userId ? selectedUser : null;
-
-    useEffect(() => {
-        void loadUsers().catch((error: unknown) => {
-            setPageError(
-                mapError(
-                    error,
-                    t("usermanagement.errors.loadList", {
-                        defaultValue: "خطا در بارگذاری کاربران",
-                    }),
-                ),
-            );
-        });
-
-        return () => {
-            reset();
-        };
-    }, [loadUsers, reset, t]);
-
-    useEffect(() => {
-        if (!userId) {
-            return;
-        }
-
-        void loadUser(userId).catch((error: unknown) => {
-            setPageError(
-                mapError(
-                    error,
-                    t("usermanagement.errors.loadDetail", {
-                        defaultValue: "خطا در بارگذاری اطلاعات کاربر",
-                    }),
-                ),
-            );
-        });
-    }, [loadUser, t, userId]);
-
-    const handleRefresh = useCallback(() => {
-        setPageError(null);
-
-        void refreshUsers().catch((error: unknown) => {
-            setPageError(
-                mapError(
-                    error,
-                    t("usermanagement.errors.refresh", {
-                        defaultValue: "خطا در بروزرسانی اطلاعات",
-                    }),
-                ),
-            );
-        });
-    }, [refreshUsers, t]);
-
-    const handleSelect = useCallback(
-        (id: string) => {
-            navigate(`/access-control/users/${id}`);
-        },
-        [navigate],
-    );
-
-    const handleClose = useCallback(() => {
-        navigate("/access-control/users");
-    }, [navigate]);
-
-    return (
-        <>
-        {securityAction && isRoot ? <UserSecurityDialog user={securityAction.user} mode={securityAction.mode} onClose={() => setSecurityAction(null)} onSaved={() => {
-            setSecurityAction(null);
-            void Promise.all([refreshUsers(), ...(userId ? [loadUser(userId)] : [])]).catch(() => setPageError(t("usermanagement.errors.refresh")));
-        }} /> : null}
-        {createOpen && isRoot ? <CreateUserDialog onClose={() => setCreateOpen(false)} onCreated={(id) => { setCreateOpen(false); navigate(`/access-control/users/${id}`); void refreshUsers().catch(() => setPageError(t("usermanagement.errors.refresh"))); }} /> : null}
-        {assignOpen && isRoot && userId ? <AssignGlobalRoleDialog userId={userId} onClose={() => setAssignOpen(false)} onAssigned={() => { setAssignOpen(false); void loadUser(userId).catch(() => setPageError(t("usermanagement.errors.loadDetail"))); }} /> : null}
-        <div
-            style={{
-                display: "grid",
-                gridTemplateColumns: showDetailPane
-                    ? "28rem minmax(0, 1fr)"
-                    : "minmax(0, 1fr)",
-                gap: "1rem",
-                height: "calc(100vh - 10rem)",
-                alignItems: "stretch",
-            }}
-        >
-            <section
-                style={{
-                    minWidth: 0,
-                    overflow: "hidden",
-                    border: "1px solid var(--sapGroup_ContentBorderColor)",
-                    borderRadius: "1rem",
-                    padding: "1rem",
-                    boxSizing: "border-box",
-                    background: "var(--sapGroup_ContentBackground)",
-                }}
-            >
-                <UsersListReport
-                    items={items}
-                    selectedId={userId ?? null}
-                    searchText={searchText}
-                    busy={loading}
-                    error={pageError}
-                    onSearchTextChange={setSearchText}
-                    onCreate={isRoot ? () => setCreateOpen(true) : undefined}
-                    onRefresh={handleRefresh}
-                    onSelect={handleSelect}
-                />
-            </section>
-
-            {showDetailPane ? (
-                <section
-                    style={{
-                        minWidth: 0,
-                        overflow: "auto",
-                        border: "1px solid var(--sapGroup_ContentBorderColor)",
-                        borderRadius: "1rem",
-                        padding: "1rem",
-                        boxSizing: "border-box",
-                        background: "var(--sapGroup_ContentBackground)",
-                    }}
-                >
-                    {loading && !visibleUser ? (
-                        <BusyIndicator active />
-                    ) : visibleUser ? (
-                        <UserObjectPage
-                            key={visibleUser.id}
-                            value={visibleUser}
-                            busy={loading}
-                            error={pageError}
-                            onResetPassword={isRoot ? () => setSecurityAction({ user: visibleUser, mode: "password" }) : undefined}
-                            onToggleEnabled={isRoot ? () => setSecurityAction({ user: visibleUser, mode: "status" }) : undefined}
-                            onAssignRole={isRoot ? () => setAssignOpen(true) : undefined}
-                            onCancel={handleClose}
-                        />
-                    ) : (
-                        <MessageStrip design="Information" hideCloseButton>
-                            {t("usermanagement.users.notFound", {
-                                defaultValue: "کاربر انتخاب‌شده یافت نشد",
-                            })}
-                        </MessageStrip>
-                    )}
-                </section>
-            ) : null}
-        </div>
-        </>
-    );
+  return <>
+    <FlexBox direction="Column" className="managementListPage">
+      <UsersListReport items={items} selectedId={activeId} searchText={searchText} busy={loading} error={pageError}
+        onSearchTextChange={setSearchText} onCreate={canManage ? () => setCreateOpen(true) : undefined}
+        actions={canManage ? <>
+          <Button disabled={loading || !canChangeStatus} tooltip={actionUser?.rootUser ? t("usermanagement.security.rootStatusProtected") : undefined}
+            onClick={() => actionUser && canChangeStatus && setSecurityAction({ user: actionUser, mode: "status" })}>{t(actionUser?.enabled !== false ? "usermanagement.security.disable" : "usermanagement.security.enable")}</Button>
+          <Button disabled={loading || !canEdit} onClick={() => actionUser && canEdit && setSecurityAction({ user: actionUser, mode: "password" })}>{t("usermanagement.security.resetPassword")}</Button>
+        </> : undefined}
+        onSelect={(id) => { setSelectedId(id); setPageError(null); }}
+        onShow={(id) => navigate(`/access-control/users/${id}`)} />
+    </FlexBox>
+    {userId && !editing && !securityAction && !createOpen ? <ManagementDetailDialog title={t("usermanagement.users.detailTitle")} busy={loading}
+      onClose={() => { setSelectedId(userId); navigate("/access-control/users"); }} onEdit={visibleUser && canEdit ? () => setEditing(visibleUser) : undefined}>
+      {visibleUser ? <UserObjectPage value={visibleUser} error={pageError} /> : loading ? <BusyIndicator active /> :
+        <MessageStrip design={pageError ? "Negative" : "Information"} hideCloseButton>{pageError ?? t("usermanagement.users.notFound")}</MessageStrip>}
+    </ManagementDetailDialog> : null}
+    {securityAction && canManage ? <UserSecurityDialog user={securityAction.user} mode={securityAction.mode} onClose={() => setSecurityAction(null)}
+      onSaved={() => { setSecurityAction(null); refreshDetail(); }} /> : null}
+    {createOpen && canManage ? <UserFormDialog onClose={() => setCreateOpen(false)} onCreated={(id) => {
+      setCreateOpen(false); setSelectedId(id); navigate(`/access-control/users/${id}`);
+      void refreshUsers().catch(() => setPageError(t("usermanagement.errors.refresh")));
+    }} /> : null}
+    {editing && canManage ? <UserFormDialog user={editing} onClose={() => setEditing(null)} onCreated={(id) => {
+      setEditing(null); void Promise.all([refreshUsers(), loadUser(id)]).catch(() => setPageError(t("usermanagement.errors.refresh")));
+    }} /> : null}
+  </>;
 }

@@ -1,7 +1,8 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
 
 import { DocumentManager, EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE, toDocumentAggregateRequest, type DocumentAggregateDraftError, type DocumentLinkTargetType, type ParentSaveDocumentDraftState } from "@/features/document";
 import { EMPTY_CONTROL_SCOPE_DRAFT_STATE, SubprocessControlScopesTab, useControlScopePermissions, type ControlScopeDraftState } from "@/features/control-scope";
@@ -51,15 +52,12 @@ export interface ProcessObjectPageProps {
     onDocumentDirtyChange?: (dirty: boolean) => void;
 }
 
-const ROOT_STYLE: CSSProperties = { display: "grid", gap: "0.75rem", minWidth: 0, maxWidth: "100%", background: "var(--sapBackgroundColor)" };
-const HEADER_STYLE: CSSProperties = { border: "1px solid var(--sapGroup_ContentBorderColor)", background: "var(--sapGroup_ContentBackground)" };
-const HEADER_TITLE_STYLE: CSSProperties = { padding: "0.5rem 1rem", borderBottom: "1px solid var(--sapGroup_ContentBorderColor)", background: "var(--sapList_HeaderBackground)", fontWeight: 700 };
-const HEADER_GRID_STYLE: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0.35rem 2rem", padding: "0.75rem 1rem" };
+const ROOT_STYLE: CSSProperties = { display: "grid", gap: "0.75rem", minWidth: 0, maxWidth: "100%" };
+const HEADER_STYLE: CSSProperties = {  };
+const HEADER_TITLE_STYLE: CSSProperties = { padding: "0.5rem 1rem" };
 const HEADER_ROW_STYLE: CSSProperties = { display: "grid", gridTemplateColumns: "8rem minmax(0, 1fr)", gap: "0.5rem", alignItems: "center" };
-const FORM_GRID_STYLE: CSSProperties = { display: "grid", gap: "1rem", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" };
 const FIELD_STYLE: CSSProperties = { display: "grid", gap: "0.35rem" };
-const BODY_STYLE: CSSProperties = { border: "1px solid var(--sapGroup_ContentBorderColor)", minHeight: "22rem", padding: "1rem" };
-const FOOTER_STYLE: CSSProperties = { display: "flex", justifyContent: "center", gap: "2rem", paddingTop: "1rem" };
+const BODY_STYLE: CSSProperties = { minHeight: 0, padding: "0.75rem" };
 
 function toFormState(value: ProcessNode | null, parent: ProcessNode | null | undefined, requestedNodeType: ProcessNodeType | undefined): ProcessFormState {
     return {
@@ -189,7 +187,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
             <div style={ROOT_STYLE}>
                 <div style={HEADER_STYLE}>
                     <div style={HEADER_TITLE_STYLE}><Title level="H4">{mode === "create" ? t("process.object.createModalTitle", { defaultValue: "Create" }) : form.title}</Title></div>
-                    <div style={HEADER_GRID_STYLE}>
+                    <div className="modalThreeColumnGrid modalHeaderGrid">
                         <HeaderItem label={t("process.fields.name", { defaultValue: "Title" })} value={form.title} />
                         <HeaderItem label={t("process.fields.code", { defaultValue: "Code" })} value={form.code} />
                         <HeaderItem label={t("process.fields.nodeType", { defaultValue: "Node type" })} value={nodeTypeLabel(form.nodeType, t)} />
@@ -218,14 +216,14 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                 {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
                 {validationError ? <MessageStrip design="Negative" onClose={() => setValidationError(null)}>{validationError}</MessageStrip> : null}
                 <div style={BODY_STYLE}>
-                    <div style={{ display: activeTab === "general" ? "block" : "none" }}><div style={FORM_GRID_STYLE}>
-                        <FormField label={t("process.fields.code", { defaultValue: "Code" })} required><Input value={form.code} readonly={mode !== "create"} disabled={busy} onInput={(e) => change("code", readValue(e))} /></FormField>
-                        <FormField label={t("process.fields.name", { defaultValue: "Title" })} required><Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", readValue(e))} /></FormField>
-                        <FormField label={t("process.fields.nodeType", { defaultValue: "Node type" })}><Input value={nodeTypeLabel(form.nodeType, t)} readonly /></FormField>
-                        <FormField label={t("process.fields.status", { defaultValue: "Status" })}><Select value={form.status} disabled={mode !== "edit" || busy} accessibleName={t("process.fields.status", { defaultValue: "Status" })} onChange={(e) => change("status", readValue(e) as "ACTIVE" | "INACTIVE")}><Option value="ACTIVE">{t("common.active", { defaultValue: "Active" })}</Option><Option value="INACTIVE">{t("common.inactive", { defaultValue: "Inactive" })}</Option></Select></FormField>
+                    <div style={{ display: activeTab === "general" ? "block" : "none" }}><div className="modalThreeColumnGrid">
+                        <FormField label={t("process.fields.code", { defaultValue: "Code" })} required>{readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} onInput={(e) => change("code", readValue(e))} />}</FormField>
+                        <FormField label={t("process.fields.name", { defaultValue: "Title" })} required>{readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", readValue(e))} />}</FormField>
+                        <FormField label={t("process.fields.nodeType", { defaultValue: "Node type" })}>{readOnly ? <Text className="objectPageValue">{(nodeTypeLabel(form.nodeType, t)) || "—"}</Text> : <Input value={nodeTypeLabel(form.nodeType, t)} readonly />}</FormField>
+                        <FormField label={t("process.fields.status", { defaultValue: "Status" })}>{readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t(form.status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select value={form.status} disabled={mode !== "edit" || busy} accessibleName={t("process.fields.status", { defaultValue: "Status" })} onChange={(e) => change("status", readValue(e) as "ACTIVE" | "INACTIVE")}><Option value="ACTIVE">{t("common.active", { defaultValue: "Active" })}</Option><Option value="INACTIVE">{t("common.inactive", { defaultValue: "Inactive" })}</Option></Select>}</FormField>
                         <FormField label={form.nodeType === "PROCESS" ? t("process.fields.parentProcess", { defaultValue: "Parent process" }) : t("process.fields.owningProcess", { defaultValue: "Owning process" })} required={form.nodeType === "SUBPROCESS"}>
                             <div style={{ display: "flex", gap: "0.5rem", alignItems: "end" }}>
-                                <Input value={parentLabel} readonly style={{ flex: 1, minWidth: 0 }} />
+                                {readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly style={{ flex: 1, minWidth: 0 }} />}
                                 {!readOnly ? (
                                     <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>
                                         {t("process.parent.select", { defaultValue: "انتخاب" })}
@@ -233,10 +231,10 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                                 ) : null}
                             </div>
                         </FormField>
-                        <FormField label={t("process.fields.sortOrder", { defaultValue: "Sort order" })}><Input value={form.sortOrder} readonly={readOnly} disabled={busy} onInput={(e) => change("sortOrder", readValue(e))} /></FormField>
-                        <FormField label={t("process.fields.validFrom", { defaultValue: "Valid from" })}><PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validFrom", { defaultValue: "Valid from" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validFrom", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validFrom.valid === state.valid && current.validFrom.draftValue === state.draftValue && current.validFrom.dirty === state.dirty ? current : { ...current, validFrom: state })} /></FormField>
-                        <FormField label={t("process.fields.validTo", { defaultValue: "Valid to" })}><PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validTo", { defaultValue: "Valid to" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validTo", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validTo.valid === state.valid && current.validTo.draftValue === state.draftValue && current.validTo.dirty === state.dirty ? current : { ...current, validTo: state })} /></FormField>
-                        <FormField label={t("process.fields.description", { defaultValue: "Description" })} fullWidth><TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", readValue(e))} /></FormField>
+                        <FormField label={t("process.fields.sortOrder", { defaultValue: "Sort order" })}>{readOnly ? <Text className="objectPageValue">{(form.sortOrder) || "—"}</Text> : <Input value={form.sortOrder} readonly={readOnly} disabled={busy} onInput={(e) => change("sortOrder", readValue(e))} />}</FormField>
+                        <div className="modalDateRange"><FormField label={t("process.fields.validFrom", { defaultValue: "Valid from" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validFrom", { defaultValue: "Valid from" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validFrom", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validFrom.valid === state.valid && current.validFrom.draftValue === state.draftValue && current.validFrom.dirty === state.dirty ? current : { ...current, validFrom: state })} />}</FormField>
+                        <FormField label={t("process.fields.validTo", { defaultValue: "Valid to" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validTo", { defaultValue: "Valid to" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validTo", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validTo.valid === state.valid && current.validTo.draftValue === state.draftValue && current.validTo.dirty === state.dirty ? current : { ...current, validTo: state })} />}</FormField></div>
+                        <FormField label={t("process.fields.description", { defaultValue: "Description" })} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", readValue(e))} />}</FormField>
                     </div></div>
                     <div style={{ display: activeTab === "controls" ? "block" : "none" }}>
                         {form.nodeType === "SUBPROCESS" ? <SubprocessControlScopesTab subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlScopeDraft} /> : null}
@@ -256,9 +254,9 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                     <div style={{ display: activeTab === "documents" ? "block" : "none" }}><DocumentManager title={t("process.tabs.documents", { defaultValue: "Documents" })} targetType={documentTarget(form.nodeType)} targetId={value?.id || null} readOnly={readOnly} showActions={!readOnly} busy={busy} persistenceMode="PARENT_SAVE" aggregateError={documentAggregateError} onDirtyChange={onDocumentDirtyChange} onDraftStateChange={setDocumentDraft} /></div>
                 </div>
 
-                <div style={FOOTER_STYLE}>{mode === "view" ? <>
+                <DialogFooter>{mode === "view" ? <>
                     <Button design="Emphasized" hidden={!manage} disabled={busy || !onEdit} onClick={onEdit}>{t("common.edit", { defaultValue: "Edit" })}</Button>
-                </> : <Button design="Emphasized" disabled={saveDisabled} onClick={() => void submit()}>{t("common.save", { defaultValue: "Save" })}</Button>}<Button design="Transparent" disabled={busy} onClick={onCancel}>{mode === "view" ? t("common.close", { defaultValue: "Close" }) : t("common.cancel", { defaultValue: "Cancel" })}</Button></div>
+                </> : <Button design="Emphasized" disabled={saveDisabled} onClick={() => void submit()}>{t("common.save", { defaultValue: "Save" })}</Button>}<Button design="Transparent" disabled={busy} onClick={onCancel}>{mode === "view" ? t("common.close", { defaultValue: "Close" }) : t("common.cancel", { defaultValue: "Cancel" })}</Button></DialogFooter>
             </div>
 
             <ProcessParentValueHelpDialog

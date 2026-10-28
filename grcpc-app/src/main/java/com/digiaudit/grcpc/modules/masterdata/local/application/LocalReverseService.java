@@ -124,8 +124,9 @@ public class LocalReverseService {
       int page, int size, String sort, String direction) {
     rules.pageable(page, size, sort, direction);
     StringBuilder sql = new StringBuilder(selectSql).append(" where x.")
-        .append(parentColumn).append(" = :parent");
-    var parameters = new MapSqlParameterSource("parent", raw(parentId));
+        .append(parentColumn).append(" = :parent and x.profile_id = :datasetProfile");
+    var parameters = new MapSqlParameterSource("parent", raw(parentId))
+        .addValue("datasetProfile", raw(com.digiaudit.grcpc.common.security.ProfileContext.requireId()));
     if (organizationId != null) {
       sql.append(" and ").append(organizationColumn).append(" = :organization");
       parameters.addValue("organization", raw(organizationId));

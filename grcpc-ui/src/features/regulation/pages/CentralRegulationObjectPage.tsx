@@ -1,18 +1,9 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { RequirementControlAssignmentsTab, useRequirementControlAssignmentPermissions } from "@/features/requirement-control-assignment";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LocalReverseList } from "@/features/local-master-data";
-import {
-  Button,
-  Input,
-  Label,
-  MessageStrip,
-  Option,
-  Select,
-  Tab,
-  TextArea,
-  Title,
-} from "@ui5/webcomponents-react";
+import { Text, ObjectStatus, Button, Input, Label, MessageStrip, Option, Select, Tab, TextArea, Title } from "@ui5/webcomponents-react";
 
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
 import {
@@ -307,11 +298,11 @@ export default function CentralRegulationObjectPage({
           <Title level="H4">
             {form.title || t(`regulation.nodeType.${typeKey}`)}
           </Title>
-          <div className="regulationHeaderGrid">
+          <div className={nodeType === "GROUP" ? "regulationHeaderGrid modalTwoColumnGrid" : "regulationHeaderGrid"}>
             {headerValues.map(([label, displayValue]) => (
               <div className="regulationHeaderItem" key={label}>
                 <Label showColon>{label}</Label>
-                <Input value={displayValue} readonly />
+                <Text className="objectPageValue">{(displayValue) || "—"}</Text>
               </div>
             ))}
           </div>
@@ -365,34 +356,34 @@ export default function CentralRegulationObjectPage({
                 : "regulationTabPanel regulationTabPanelHidden"
             }
           >
-            <div className="regulationFormGrid">
+            <div className={nodeType === "GROUP" ? "regulationFormGrid modalTwoColumnGrid" : "regulationFormGrid"}>
               <Field label={t("regulation.fields.code")} required>
-                <Input
+                {readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input
                   value={form.code}
                   readonly={mode !== "create"}
                   disabled={busy}
                   maxlength={64}
                   onInput={(event) => change("code", readValue(event))}
-                />
+                />}
               </Field>
               <Field label={t("regulation.fields.name")} required>
-                <Input
+                {readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input
                   value={form.title}
                   readonly={readOnly}
                   disabled={busy}
                   maxlength={255}
                   onInput={(event) => change("title", readValue(event))}
-                />
+                />}
               </Field>
               <Field label={t("regulation.fields.type")}>
-                <Input value={t(`regulation.nodeType.${typeKey}`)} readonly />
+                {readOnly ? <Text className="objectPageValue">{(t(`regulation.nodeType.${typeKey}`)) || "—"}</Text> : <Input value={t(`regulation.nodeType.${typeKey}`)} readonly />}
               </Field>
               <Field
                 label={t("regulation.fields.parent")}
                 required={nodeType !== "GROUP"}
               >
                 <div className="regulationParentField">
-                  <Input value={parentLabel} readonly />
+                  {readOnly ? <Text className="objectPageValue">{(parentLabel) || "—"}</Text> : <Input value={parentLabel} readonly />}
                   {canChangeParent ? (
                     <Button disabled={busy} onClick={() => setParentDialogOpen(true)}>
                       {t("regulation.parent.select")}
@@ -401,7 +392,7 @@ export default function CentralRegulationObjectPage({
                 </div>
               </Field>
               <Field label={t("regulation.fields.status")}>
-                <Select
+                {readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t("regulation.status." + form.status)}</ObjectStatus> : <Select
                   value={form.status}
                   disabled={!canChangeStatus || busy}
                   onChange={(event) =>
@@ -413,11 +404,11 @@ export default function CentralRegulationObjectPage({
                 >
                   <Option value="ACTIVE">{t("regulation.status.ACTIVE")}</Option>
                   <Option value="INACTIVE">{t("regulation.status.INACTIVE")}</Option>
-                </Select>
+                </Select>}
               </Field>
               <div />
-              <Field label={t("regulation.fields.validFrom")}>
-                <PersianDatePicker
+              <div className="modalDateRange"><Field label={t("regulation.fields.validFrom")}>
+                {readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker
                   value={form.validFrom}
                   readonly={readOnly}
                   disabled={busy}
@@ -427,10 +418,10 @@ export default function CentralRegulationObjectPage({
                   onDraftStateChange={(next) =>
                     setDateDrafts((current) => ({ ...current, validFrom: next }))
                   }
-                />
+                />}
               </Field>
               <Field label={t("regulation.fields.validTo")}>
-                <PersianDatePicker
+                {readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker
                   value={form.validTo}
                   readonly={readOnly}
                   disabled={busy}
@@ -440,16 +431,16 @@ export default function CentralRegulationObjectPage({
                   onDraftStateChange={(next) =>
                     setDateDrafts((current) => ({ ...current, validTo: next }))
                   }
-                />
-              </Field>
+                />}
+              </Field></div>
               <Field label={t("regulation.fields.description")} fullWidth>
-                <TextArea
+                {readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea
                   rows={6}
                   value={form.description}
                   readonly={readOnly}
                   disabled={busy}
                   onInput={(event) => change("description", readValue(event))}
-                />
+                />}
               </Field>
             </div>
           </div>
@@ -494,7 +485,7 @@ export default function CentralRegulationObjectPage({
           titleKey="local.reverse.requirementScopes" titleFa="انتساب‌های محلی این الزام"
           areas={["PROCESS", "GOVERNANCE"]} /> : null}
 
-        <div className="regulationObjectFooter">
+        <DialogFooter>
           {mode === "view" && permissions.update ? (
             <Button design="Emphasized" disabled={busy} onClick={onEdit}>
               {t("common.edit", { defaultValue: "ویرایش" })}
@@ -510,7 +501,7 @@ export default function CentralRegulationObjectPage({
               ? t("common.close", { defaultValue: "بستن" })
               : t("common.cancel", { defaultValue: "انصراف" })}
           </Button>
-        </div>
+        </DialogFooter>
       </div>
 
       <RegulationParentValueHelpDialog

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Input, Label, MessageStrip, Option, Select } from "@ui5/webcomponents-react";
+import { Button, FlexBox, Label, MessageStrip, Option, Select } from "@ui5/webcomponents-react";
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { localApi } from "../infra/local.api.repo";
 import type { LocalOption, LocalPage } from "../domain/local.model";
 
@@ -68,11 +69,12 @@ export default function LocalOptionPicker({
     const selectedAvailable = items.some((item) => item.id === value);
     const selectedLabel = selectedAvailable ? null : currentLabel;
     return <div style={{ display: "grid", gap: "0.3rem", minWidth: 0 }}>
+        <FlexBox alignItems="Center" justifyContent="SpaceBetween">
         <Label required={required}>{label}</Label>
-        {searchable ? <Input value={search} disabled={disabled || !path} maxlength={100}
+        {searchable ? <HeaderSearch value={search} disabled={disabled || !path}
             accessibleName={t("local.options.search", { defaultValue: "جستجوی گزینه" })}
-            placeholder={t("local.options.search", { defaultValue: "جستجوی گزینه" })}
-            onInput={(event) => { setSearch(event.target.value); setPage(0); }} /> : null}
+            onChange={(value) => { setSearch(value.slice(0, 100)); setPage(0); }} /> : null}
+        </FlexBox>
         <Select value={value ?? ""} disabled={disabled || !path || loading}
             accessibleName={label}
             onChange={(event) => onChange(event.target.value || null)}>

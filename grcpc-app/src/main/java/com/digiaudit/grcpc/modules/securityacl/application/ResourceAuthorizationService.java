@@ -20,8 +20,11 @@ public class ResourceAuthorizationService {
     private final ResourceAclEntryRepository aclRepository;
     private final AppUserRepository appUserRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ProfileAclBoundary profileBoundary;
 
     public boolean canAccess(String targetType, UUID targetId, String permissionCode) {
+        if (com.digiaudit.grcpc.common.security.ProfileContext.idOrNull() == null) return false;
+        try { profileBoundary.target(targetType, targetId); } catch (com.digiaudit.grcpc.common.exception.BusinessException | IllegalArgumentException e) { return false; }
         Optional<CurrentUser> principal = currentUserProvider.getCurrentPrincipalOptional();
         if (principal.isEmpty()) {
             log.debug("Resource authorization denied for anonymous principal. targetType={}, targetId={}, permission={}", targetType, targetId, permissionCode);

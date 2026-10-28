@@ -15,6 +15,8 @@ public record UserSummaryResponse(
         boolean locked,
         boolean rootUser,
         UUID defaultOrgUnitId,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        UUID profileId,
+        boolean profileAdmin
 ) {
 }

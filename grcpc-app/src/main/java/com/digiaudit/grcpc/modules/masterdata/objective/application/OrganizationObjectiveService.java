@@ -87,6 +87,7 @@ public class OrganizationObjectiveService {
           requireGuards(context);
           requireOrganization(organizationId);
           ObjectiveEntity objective = requireObjective(request.objectiveId());
+          requireAssignableObjective(objective);
           String name = normalizedName(request.name(), objective.getName());
           var existing = assignments.findByOrganizationIdAndObjectiveId(
               organizationId, objective.getId()).orElse(null);
@@ -132,7 +133,7 @@ public class OrganizationObjectiveService {
         context -> {
           requireGuards(context);
           requireOrganization(organizationId);
-          requireObjective(objectiveId);
+          requireAssignableObjective(requireObjective(objectiveId));
           OrganizationObjectiveEntity entity = requireAssignment(organizationId, objectiveId);
           assertVersion(entity, expected);
           JsonNode before = snapshot(entity);
@@ -204,6 +205,21 @@ public class OrganizationObjectiveService {
     ObjectiveEntity objective = objectives.findById(id).orElseThrow(() -> objectiveNotFound(id));
     if (objective.getStatus() != MasterDataLifecycleStatus.ACTIVE) throw objectiveNotFound(id);
     return objective;
+  }
+
+  private void requireAssignableObjective(ObjectiveEntity objective) {
+    if (objective.getKind() != ObjectiveKind.OBJECTIVE) {
+      throw new UnprocessableEntityException("STRATEGY_ORGANIZATION_ASSIGNMENT",
+          "error.masterdata.objective.strategyAssignment", "Only objectives can be assigned to organizations");
+    }
+    ObjectiveEntity strategy = objective.getParentObjectiveId() == null ? null
+        : objectives.findById(objective.getParentObjectiveId()).orElse(null);
+    if (strategy == null || strategy.getKind() != ObjectiveKind.STRATEGY
+        || strategy.getParentObjectiveId() != null
+        || strategy.getStatus() == MasterDataLifecycleStatus.DELETED) {
+      throw new UnprocessableEntityException("OBJECTIVE_STRATEGY_REQUIRED",
+          "error.masterdata.objective.strategyRequired", "An objective requires one strategy");
+    }
   }
 
   private OrganizationObjectiveEntity requireAssignment(UUID organizationId, UUID objectiveId) {

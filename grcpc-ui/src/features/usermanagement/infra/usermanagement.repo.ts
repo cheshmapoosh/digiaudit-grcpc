@@ -1,4 +1,4 @@
-import type { CreateUserInput, AssignGlobalRoleInput } from "../domain/usermanagement.model";
+import type { CreateUserInput, UpdateUserInput } from "../domain/usermanagement.model";
 import type {
     RoleDetail,
     RoleSummary,
@@ -11,7 +11,8 @@ export interface UserManagementRepo {
     enableUser(userId: string, password: string): Promise<void>;
     disableUser(userId: string): Promise<void>;
     createUser(input: CreateUserInput): Promise<string>;
-    assignRole(userId: string, input: AssignGlobalRoleInput): Promise<void>;
+    updateUser(userId: string, input: UpdateUserInput): Promise<void>;
+    roleChoices(locale: string): Promise<{ id: string; code: string; title: string }[]>;
     listUsers(): Promise<UserSummary[]>;
     getUserById(id: string): Promise<UserDetail | null>;
     listRoles(): Promise<RoleSummary[]>;

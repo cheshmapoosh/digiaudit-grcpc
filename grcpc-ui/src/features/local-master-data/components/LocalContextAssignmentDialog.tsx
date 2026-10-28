@@ -1,3 +1,4 @@
+import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -73,16 +74,16 @@ export default function LocalContextAssignmentDialog({ open, subprocessId, onClo
     return <Dialog open={open} accessibleName={t("local.assign.subprocess", {
         defaultValue: "انتساب زیرفرآیند به سازمان",
     })} onClose={onClose}
-        footer={<div style={{ display: "flex", gap: "0.5rem" }}>
+        footer={<DialogFooterBar>
             <Button design="Emphasized" disabled={!valid || busy} onClick={() => void submit()}>
                 {t("local.assign.submit", { defaultValue: "ثبت انتساب" })}</Button>
             <Button design="Transparent" disabled={busy} onClick={onClose}>
                 {t("common.cancel", { defaultValue: "انصراف" })}</Button>
-        </div>}>
+        </DialogFooterBar>}>
         <ModalDialogHeader title={t("local.assign.subprocess", {
             defaultValue: "انتساب زیرفرآیند به سازمان",
         })} onClose={onClose} />
-        <div style={{ display: "grid", gap: "0.8rem", minWidth: "26rem", padding: "0.75rem" }}>
+        <div className="modalTwoColumnGrid modalDialogFormContent">
             <LocalOptionPicker label={t("local.fields.organization", { defaultValue: "سازمان" })}
                 path="options/organizations" value={organizationId} required disabled={busy}
                 onChange={setOrganizationId} />
@@ -92,7 +93,7 @@ export default function LocalContextAssignmentDialog({ open, subprocessId, onClo
                     accessibleName={t("local.fields.note", { defaultValue: "یادداشت محلی" })}
                     onInput={(event) => setContextNote(event.target.value)} />
             </div>
-            <div style={{ display: "grid", gap: "0.3rem" }}>
+            <div className="modalDateRange"><div style={{ display: "grid", gap: "0.3rem" }}>
                 <Label>{t("local.fields.validFrom", { defaultValue: "معتبر از" })}</Label>
                 <PersianDatePicker value={validFrom} disabled={busy}
                     accessibleName={t("local.fields.validFrom", { defaultValue: "معتبر از" })}
@@ -107,7 +108,7 @@ export default function LocalContextAssignmentDialog({ open, subprocessId, onClo
                     invalidValueMessage={t("common.invalidPersianDate", {
                         defaultValue: "تاریخ نامعتبر",
                     })} onChange={setValidTo} onDraftStateChange={setToDraft} />
-            </div>
+            </div></div>
             {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
             {existingContextId ? <Button design="Transparent"
                 onClick={() => goToContext(existingContextId)}>

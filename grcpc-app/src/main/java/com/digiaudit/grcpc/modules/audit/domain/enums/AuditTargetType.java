@@ -1,6 +1,7 @@
 package com.digiaudit.grcpc.modules.audit.domain.enums;
 
 public enum AuditTargetType {
+    DATASET_PROFILE,
     SYSTEM_SETUP,
     USER,
     ROLE,

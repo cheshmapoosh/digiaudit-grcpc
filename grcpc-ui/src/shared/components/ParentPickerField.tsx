@@ -5,7 +5,6 @@ export interface ParentPickerFieldProps {
     label: string;
     value: string;
     disabled?: boolean;
-    placeholder?: string;
     onOpen: () => void;
 }
 
@@ -13,7 +12,6 @@ export default function ParentPickerField({
                                               label,
                                               value,
                                               disabled = false,
-                                              placeholder = "",
                                               onOpen,
                                           }: ParentPickerFieldProps) {
     const { t } = useTranslation();
@@ -34,7 +32,7 @@ export default function ParentPickerField({
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <Input
                         value={value}
-                        placeholder={placeholder}
+                        accessibleName={label}
                         disabled
                         readonly
                         style={{ width: "100%" }}

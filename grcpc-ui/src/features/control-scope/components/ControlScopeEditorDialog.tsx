@@ -1,3 +1,4 @@
+import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Dialog, Label, MessageStrip, Option, Select } from "@ui5/webcomponents-react";
@@ -74,7 +75,7 @@ export default function ControlScopeEditorDialog({ open, row, options, busy, onC
           <div className="controlScopeField"><Label showColon>{t("controlScope.fields.validFrom")}</Label><PersianDatePicker value={validFrom} disabled={busy} accessibleName={t("controlScope.fields.validFrom")} invalidValueMessage={t("controlScope.validation.invalidDate")} onChange={setValidFrom} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} /></div>
           <div className="controlScopeField"><Label showColon>{t("controlScope.fields.validTo")}</Label><PersianDatePicker value={validTo} disabled={busy} accessibleName={t("controlScope.fields.validTo")} invalidValueMessage={t("controlScope.validation.invalidDate")} onChange={setValidTo} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))} /></div>
         </div>
-        <div className="controlScopeDialogFooter"><Button design="Emphasized" disabled={busy} onClick={save}>{t("controlScope.actions.applyDraft")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></div>
+        <DialogFooter><Button design="Emphasized" disabled={busy} onClick={save}>{t("controlScope.actions.applyDraft")}</Button><Button design="Transparent" disabled={busy} onClick={onClose}>{t("common.cancel")}</Button></DialogFooter>
       </div>
     </Dialog>
   );

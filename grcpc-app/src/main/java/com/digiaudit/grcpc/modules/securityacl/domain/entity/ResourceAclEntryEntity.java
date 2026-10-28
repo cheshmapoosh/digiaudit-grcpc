@@ -8,6 +8,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
+@org.hibernate.annotations.Filter(name = "datasetProfile", condition = "profile_id = :profileId")
+@jakarta.persistence.EntityListeners(com.digiaudit.grcpc.common.persistence.ProfileEntityListener.class)
 @Table(
         name = "resource_acl_entry",
         indexes = {
@@ -17,7 +19,7 @@ import lombok.experimental.SuperBuilder;
         },
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_resource_acl_entry",
-                columnNames = {"target_type", "target_id", "subject_type", "subject_id", "permission_code"}
+                columnNames = {"profile_id", "target_type", "target_id", "subject_type", "subject_id", "permission_code"}
         )
 )
 @Getter
@@ -25,7 +27,14 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder(toBuilder = true)
-public class ResourceAclEntryEntity extends AuditableEntity {
+public class ResourceAclEntryEntity extends AuditableEntity implements com.digiaudit.grcpc.common.persistence.ProfileScoped {
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.BINARY)
+    @jakarta.persistence.Column(name = "profile_id", nullable = false, updatable = false, columnDefinition = "RAW(16)")
+    private java.util.UUID profileId;
+
+    public java.util.UUID getProfileId() { return profileId; }
+    public void setProfileId(java.util.UUID profileId) { this.profileId = profileId; }
+
 
     @Id
     @GeneratedValue

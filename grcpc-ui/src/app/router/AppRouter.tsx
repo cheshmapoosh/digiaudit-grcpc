@@ -1,5 +1,6 @@
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route } from "react-router-dom";
 
+import ProfilesPage from "@/features/dataset-profile/pages/ProfilesPage";
 import MainLayout from "../../layout/MainLayout";
 import PublicLayout from "../../layout/components/PublicLayout";
 
@@ -56,6 +57,9 @@ export const appRouter = createBrowserRouter(
                 {processRoutes}
                 {centralCatalogRoutes}
                 {usermanagementRoutes}
+                <Route path="/profiles" element={<ProfilesPage />} />
+                <Route path="/profiles/:profileId" element={<ProfilesPage />} />
+                <Route path="/settings/profiles" element={<Navigate to="/profiles" replace />} />
                 <Route path="/coming-soon/:section" element={<ComingSoonPage />} />
                 </Route>
 

@@ -1,3 +1,4 @@
+import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -5,7 +6,6 @@ import {
   BusyIndicator,
   Button,
   Icon,
-  Input,
   Label,
   Link,
   MessageStrip,
@@ -356,13 +356,7 @@ export default function ControlObjectiveAccountGroupsTab({
       <div className="controlObjectiveAccountGroupToolbar">
         <Title level="H5">{t("controlObjectiveAccountGroup.title")}</Title>
         <div className="controlObjectiveAccountGroupToolbarGroup">
-          <Input
-            className="controlObjectiveAccountGroupSearch"
-            value={search}
-            placeholder={t("controlObjectiveAccountGroup.search")}
-            disabled={mutationBusy}
-            onInput={(event) => setSearch(event.target.value)}
-          />
+
           <div className="controlObjectiveAccountGroupFilter">
             <Label showColon>{t("controlObjectiveAccountGroup.fields.status")}</Label>
             <Select
@@ -375,6 +369,7 @@ export default function ControlObjectiveAccountGroupsTab({
               <Option value="INACTIVE">{t("controlObjectiveAccountGroup.status.INACTIVE")}</Option>
             </Select>
           </div>
+          <HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={mutationBusy} accessibleName={t("controlObjectiveAccountGroup.search")} />
           {!readOnly && (permissions.create || permissions.restore || permissions.delete) ? (
             <Button
               design="Emphasized"
@@ -384,6 +379,7 @@ export default function ControlObjectiveAccountGroupsTab({
               {t("controlObjectiveAccountGroup.actions.select")}
             </Button>
           ) : null}
+
         </div>
       </div>
 
