@@ -1,8 +1,6 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FlexBox, Link, MessageStrip, Text } from "@ui5/webcomponents-react";
-import { DocumentManager } from "@/features/document";
+import { FlexBox, MessageStrip, Text } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
@@ -45,13 +43,10 @@ export default function OrganizationRisksTable({ contexts, rows, drafts, onChang
     onSelect, onRetry, selectionBlocked = false, onStateChange, deepLinkRowId, onInvalidDeepLink,
     initialStatus = "ALL", onFilterChange }: Props) {
     const { t } = useTranslation();
-    const navigate = useNavigate();
     const [filter, setFilter] = useState<CatalogRelationFilter>(initialStatus);
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
-    const [documentId, setDocumentId] = useState<string | null>(null);
-    const [documentDirty, setDocumentDirty] = useState(false);
     const relevant = drafts.filter(draft => draft.section === "risk-scopes");
     const contextFor = (draft: OrganizationLocalDraft) => contexts.find(context => context.key === draft.ownerKey
         || Boolean(draft.contextRef?.contextId && draft.contextRef.contextId === context.id)
@@ -95,9 +90,8 @@ export default function OrganizationRisksTable({ contexts, rows, drafts, onChang
         || row.draft.status !== "DELETED" && Boolean(row.draft.metadata.validFrom && row.draft.metadata.validTo
             && row.draft.metadata.validFrom > row.draft.metadata.validTo));
     const dateDirty = allRows.some(row => hasDateDraft(row, state => state.dirty));
-    const dirty = documentDirty || dateDirty;
-    const ready = !documentDirty && !invalid && (!relevant.length || !loading && !error);
-    useEffect(() => { onStateChange({ pending: documentDirty, ready, dirty }); }, [dirty, documentDirty, onStateChange, ready]);
+    const ready = !invalid && (!relevant.length || !loading && !error);
+    useEffect(() => { onStateChange({ pending: false, ready, dirty: dateDirty }); }, [dateDirty, onStateChange, ready]);
     useEffect(() => () => onStateChange({ pending: false, ready: true, dirty: false }), [onStateChange]);
     useEffect(() => {
         if (!deepLinkRowId || loading || error) return;
@@ -139,10 +133,7 @@ export default function OrganizationRisksTable({ contexts, rows, drafts, onChang
             row.context?.name ?? row.original?.subprocessLabel,
         ].filter(Boolean).join(" — ") || t("catalogRelation.unavailable")}</Text> },
         { key: "code", header: t("catalogRelation.code"), cell: row => row.draft.code },
-        { key: "name", header: t("catalogRelation.name"), cell: row => {
-            const href = `/risks?riskTemplateId=${encodeURIComponent(row.draft.identityId)}`;
-            return <Link href={href} onClick={event => { event.preventDefault(); navigate(href); }}>{row.draft.name}</Link>;
-        } },
+        { key: "name", header: t("catalogRelation.name"), cell: row => <Text>{row.draft.name}</Text> },
         { key: "status", header: t("common.status"), cell: row => <CatalogRelationStatus status={row.draft.status}
             draft={!row.pending ? null : row.draft.operation === "CREATE_OR_RESTORE" ? "new" : row.draft.operation === "DELETE" ? "delete"
                 : row.draft.operation === "UPDATE" ? "edit" : row.draft.status === "ACTIVE" ? "active" : "inactive"} /> },
@@ -153,23 +144,16 @@ export default function OrganizationRisksTable({ contexts, rows, drafts, onChang
                 editable={editable && row.draft.status !== "DELETED"}
                 disabled={busy || loading || contextStatus(row) === "DELETED"} onChange={next => update(row, { [field]: next })}
                 onDraftStateChange={state => reportDate(row, field, state)} /> })),
-        { key: "documents", header: t("local.documents"), cell: row => row.original && row.original.status !== "DELETED"
-            ? <Link onClick={() => { if (!documentDirty) setDocumentId(row.original!.id); }}>{t("local.documents")}</Link> : "—" },
     ];
-    const documentRow = allRows.find(row => row.original?.id === documentId && row.original.status !== "DELETED");
-    const documentEditable = editable && Boolean(documentRow && contextStatus(documentRow) !== "DELETED");
     return <FlexBox direction="Column" className="organizationLocalDraftTable">
         <CatalogRelationToolbar title={t("local.riskTable.title")} search={search} onSearch={setSearch}
             filter={filter} onFilter={next => { setFilter(next); onFilterChange?.(next); }} editable={editable} busy={busy || loading}
-            canSelect={!error && !selectionBlocked && !documentDirty && contexts.some(context => context.status === "ACTIVE")}
+            canSelect={!error && !selectionBlocked && contexts.some(context => context.status === "ACTIVE")}
             canActivate={affected("ACTIVE").length > 0} canInactivate={affected("INACTIVE").length > 0} canDelete={affected("DELETED").length > 0}
             onSelect={onSelect} onActivate={() => batch("ACTIVE")} onInactivate={() => batch("INACTIVE")} onDelete={() => batch("DELETED")} />
         {error ? <MessageStrip design="Negative" hideCloseButton>{error}<CatalogActionButton disabled={busy || loading} onClick={onRetry}>{t("catalogRelation.retry")}</CatalogActionButton></MessageStrip> : null}
         {invalid ? <MessageStrip design="Negative" hideCloseButton>{t("catalogRelation.invalid")}</MessageStrip> : null}
         <CatalogRelationTable rows={displayed} rowKey={row => row.draft.key} columns={columns} selectedKeys={selected}
             onSelectionChange={setSelected} selectable={editable} loading={loading} busy={busy} accessibleName={t("local.riskTable.title")} />
-        {documentRow?.original ? <DocumentManager targetType="LOCAL_RISK_SCOPE" targetId={documentRow.original.id}
-            title={t("local.documents")} readOnly={!documentEditable} showActions={documentEditable} busy={busy}
-            persistenceMode="STANDALONE" onDirtyChange={setDocumentDirty} /> : null}
     </FlexBox>;
 }

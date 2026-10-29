@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useState } from "react";
@@ -118,7 +119,7 @@ export default function CentralControlGroupObjectPage({
 
       {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
       {validationError ? <MessageStrip design="Negative" onClose={() => setValidationError(null)}>{validationError}</MessageStrip> : null}
-      <div className="controlFormGrid modalTwoColumnGrid">
+      <CatalogFormGrid className="controlFormGrid modalTwoColumnGrid">
         <div className="controlField"><Label showColon required>{t("control.fields.code")}</Label>{readOnly ? <Text className="objectPageValue">{(code) || "—"}</Text> : <Input value={code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(e) => setCode(e.target.value)} />}</div>
         <div className="controlField"><Label showColon required>{t("control.fields.name")}</Label>{readOnly ? <Text className="objectPageValue">{(title) || "—"}</Text> : <Input value={title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => setTitle(e.target.value)} />}</div>
 
@@ -127,8 +128,8 @@ export default function CentralControlGroupObjectPage({
           <div className="controlField"><Label showColon>{t("control.fields.validFrom")}</Label>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(validFrom)) || "—"}</Text> : <PersianDatePicker value={validFrom} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validFrom")} invalidValueMessage={t("control.validation.invalidDate")} onChange={setValidFrom} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} />}</div>
           <div className="controlField"><Label showColon>{t("control.fields.validTo")}</Label>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(validTo)) || "—"}</Text> : <PersianDatePicker value={validTo} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validTo")} invalidValueMessage={t("control.validation.invalidDate")} onChange={setValidTo} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))} />}</div>
         </div>
-        <div className="controlField controlFieldWide"><Label showColon>{t("control.fields.description")}</Label>{readOnly ? <Text className="objectPageValue">{(description) || "—"}</Text> : <TextArea rows={5} value={description} readonly={readOnly} disabled={busy} onInput={(e) => setDescription(e.target.value)} />}</div>
-      </div>
+        <div className="controlField controlFieldWide"><Label showColon>{t("control.fields.description")}</Label>{readOnly ? <Text className="objectPageValue">{(description) || "—"}</Text> : <TextArea rows={3} value={description} readonly={readOnly} disabled={busy} onInput={(e) => setDescription(e.target.value)} />}</div>
+      </CatalogFormGrid>
       <DialogFooter>
         {mode === "view" ? (
           <><Button design="Emphasized" disabled={busy} onClick={onEdit}>{t("common.edit", { defaultValue: "ویرایش" })}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.close", { defaultValue: "بستن" })}</Button></>

@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -274,7 +275,7 @@ export default function CentralAccountGroupObjectPage({
 
         <div className="accountGroupObjectBody">
           <div className={activeTab === "general" ? "accountGroupTabPanel" : "accountGroupTabPanel accountGroupTabPanelHidden"}>
-            <div className="accountGroupFormGrid">
+            <CatalogFormGrid className="accountGroupFormGrid">
               <Field label={t("accountGroup.fields.code")} required>
                 {readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input
                   value={form.code}
@@ -352,14 +353,14 @@ export default function CentralAccountGroupObjectPage({
 
               <Field label={t("accountGroup.fields.description")} fullWidth>
                 {readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea
-                  rows={5}
+                  rows={3}
                   value={form.description}
                   readonly={readOnly}
                   disabled={busy}
                   onInput={(event) => change("description", readValue(event))}
                 />}
               </Field>
-            </div>
+            </CatalogFormGrid>
           </div>
 
           <div className={activeTab === "documents" ? "accountGroupTabPanel" : "accountGroupTabPanel accountGroupTabPanelHidden"}>
@@ -384,7 +385,6 @@ export default function CentralAccountGroupObjectPage({
             {value?.id && objectiveClassificationPermissions.view ? (
               <AccountGroupControlObjectivesTab
                 accountGroupId={value.id}
-                allowControlObjectiveNavigation
               />
             ) : null}
           </div>

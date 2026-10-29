@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
@@ -204,7 +205,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                 {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
                 {validationError ? <MessageStrip design="Negative" onClose={() => setValidationError(null)}>{validationError}</MessageStrip> : null}
                 <div style={BODY_STYLE}>
-                    <div style={{ display: activeTab === "general" ? "block" : "none" }}><div className="modalThreeColumnGrid">
+                    <div style={{ display: activeTab === "general" ? "block" : "none" }}><CatalogFormGrid className="modalThreeColumnGrid">
                         <FormField label={t("process.fields.code", { defaultValue: "Code" })} required>{readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} onInput={(e) => change("code", readValue(e))} />}</FormField>
                         <FormField label={t("process.fields.name", { defaultValue: "Title" })} required>{readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", readValue(e))} />}</FormField>
                         <FormField label={t("process.fields.nodeType", { defaultValue: "Node type" })}>{readOnly ? <Text className="objectPageValue">{(nodeTypeLabel(form.nodeType, t)) || "—"}</Text> : <Input value={nodeTypeLabel(form.nodeType, t)} readonly />}</FormField>
@@ -212,8 +213,8 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                         <FormField label={t("process.fields.sortOrder", { defaultValue: "Sort order" })}>{readOnly ? <Text className="objectPageValue">{(form.sortOrder) || "—"}</Text> : <Input value={form.sortOrder} readonly={readOnly} disabled={busy} onInput={(e) => change("sortOrder", readValue(e))} />}</FormField>
                         <div className="modalDateRange"><FormField label={t("process.fields.validFrom", { defaultValue: "Valid from" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validFrom", { defaultValue: "Valid from" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validFrom", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validFrom.valid === state.valid && current.validFrom.draftValue === state.draftValue && current.validFrom.dirty === state.dirty ? current : { ...current, validFrom: state })} />}</FormField>
                         <FormField label={t("process.fields.validTo", { defaultValue: "Valid to" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validTo", { defaultValue: "Valid to" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validTo", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validTo.valid === state.valid && current.validTo.draftValue === state.draftValue && current.validTo.dirty === state.dirty ? current : { ...current, validTo: state })} />}</FormField></div>
-                        <FormField label={t("process.fields.description", { defaultValue: "Description" })} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", readValue(e))} />}</FormField>
-                    </div></div>
+                        <FormField label={t("process.fields.description", { defaultValue: "Description" })} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={3} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", readValue(e))} />}</FormField>
+                    </CatalogFormGrid></div>
                     <div style={{ display: activeTab === "controls" ? "block" : "none" }}>
                         {form.nodeType === "SUBPROCESS" ? <SubprocessControlScopesTab canonicalRows={value?.controlScopes} subprocessId={value?.id || null} readOnly={readOnly} busy={busy} onDraftStateChange={setControlScopeDraft} /> : null}
                     </div>

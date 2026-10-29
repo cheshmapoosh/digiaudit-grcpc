@@ -130,8 +130,8 @@ export default function CentralPolicyTree({
     return result;
   }, [autoExpandedIds, manualCollapsedIds, manualExpandedIds, query]);
 
-  const handleItemClick = useCallback((event: TreeEvent) => {
-    const id = event.detail?.item?.dataset?.nodeId;
+  const selectItem = useCallback((item: HTMLElement | undefined) => {
+    const id = item?.dataset.nodeId;
     if (!id || id === selectedId) return;
     const node = findNode(tree, id);
     if (node) onSelect?.(node);
@@ -159,9 +159,10 @@ export default function CentralPolicyTree({
   }
 
   return (
-    <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
+    <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
+      onDragEnd={(event) => displayOrder?.onDragEnd(event, selectItem)}
       accessibleName={t("policy.list.title", { defaultValue: "ساختار سیاست" })}
-      onItemClick={handleItemClick}
+      onItemClick={(event) => selectItem(event.detail.item)}
       onItemToggle={handleItemToggle}
       style={{ minHeight: "100%" }}
     >

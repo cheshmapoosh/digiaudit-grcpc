@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -184,6 +185,9 @@ export default function CentralPolicyObjectPage({
   const [relationInvalid, setRelationInvalid] = useState<Record<PolicyRelationKind, boolean>>({
     subprocess: false, organization: false, control: false, requirement: false,
   });
+  const [relationPending, setRelationPending] = useState<Record<PolicyRelationKind, boolean>>({
+    subprocess: false, organization: false, control: false, requirement: false,
+  });
   const [description, setDescription] = useState(value?.description ?? "");
   const [validFrom, setValidFrom] = useState(value?.validFrom ?? "");
   const [validTo, setValidTo] = useState(value?.validTo ?? "");
@@ -245,7 +249,9 @@ export default function CentralPolicyObjectPage({
   const documentsInvalid = !documentDraft.ready || documentDraft.invalid || documentDraft.uploading;
   const relationsDirty = Object.values(relationChanges).some((changes) => changes.length > 0);
   const relationsInvalid = Object.values(relationInvalid).some(Boolean);
-  const dirty = generalDirty || relationsDirty || relationsInvalid || documentDraft.dirty || documentDraft.uploading || parentDialogOpen;
+  const relationsPending = Object.values(relationPending).some(Boolean);
+  const dirty = !readOnly && (generalDirty || relationsDirty || relationsPending ||
+    documentDraft.dirty || documentDraft.uploading || parentDialogOpen);
   const canChangeStatus = mode === "edit" && permissions.lifecycle;
   const canChangeParent = !readOnly && (mode === "create" || permissions.move);
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
@@ -370,7 +376,7 @@ export default function CentralPolicyObjectPage({
 
       <div className="policyObjectBody">
         <div style={{ display: activeTab === "general" ? "block" : "none" }}>
-          <div className={nodeType === "GROUP" ? "modalTwoColumnGrid" : "modalThreeColumnGrid"}>
+          <CatalogFormGrid className={nodeType === "GROUP" ? "modalTwoColumnGrid" : "modalThreeColumnGrid"}>
             <FormField label={t("policy.fields.identifier", { defaultValue: "شناسه" })} required>
               {readOnly ? <Text className="objectPageValue">{(code) || "—"}</Text> : <Input
                 value={code}
@@ -494,21 +500,21 @@ export default function CentralPolicyObjectPage({
 
             {nodeType === "POLICY" ? (
               <FormField label={t("policy.fields.content")} fullWidth>
-                {readOnly ? <Text className="objectPageValue">{(content) || "—"}</Text> : <TextArea rows={10} value={content} readonly={readOnly} disabled={busy}
+                {readOnly ? <Text className="objectPageValue">{(content) || "—"}</Text> : <TextArea rows={3} value={content} readonly={readOnly} disabled={busy}
                   onInput={(event) => setContent(readValue(event))} />}
               </FormField>
             ) : null}
 
             <FormField label={t("policy.fields.description", { defaultValue: "شرح" })} fullWidth>
               {readOnly ? <Text className="objectPageValue">{(description) || "—"}</Text> : <TextArea
-                rows={5}
+                rows={3}
                 value={description}
                 readonly={readOnly}
                 disabled={busy}
                 onInput={(event) => setDescription(readValue(event))}
               />}
             </FormField>
-          </div>
+          </CatalogFormGrid>
         </div>
 
         {nodeType === "POLICY" ? ([
@@ -523,6 +529,8 @@ export default function CentralPolicyObjectPage({
               canView={relationAccess[kind]} canManage={permissions.update && relationAccess[kind]}
               busy={busy}
               onChanges={(changes) => setRelationChanges((current) => ({ ...current, [kind]: changes }))}
+              onPendingChange={(pending) => setRelationPending((current) => current[kind] === pending
+                ? current : { ...current, [kind]: pending })}
               onInvalid={(invalid) => setRelationInvalid((current) => current[kind] === invalid
                 ? current : { ...current, [kind]: invalid })} />
           </div>

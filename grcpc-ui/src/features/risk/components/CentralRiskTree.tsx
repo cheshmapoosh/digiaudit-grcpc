@@ -161,9 +161,9 @@ export default function CentralRiskTree({
     return result;
   }, [autoExpandedKeys, manualCollapsedKeys, manualExpandedKeys, normalizedSearchText]);
 
-  const handleItemClick = useCallback(
-    (event: TreeEvent) => {
-      const key = event.detail?.item?.dataset?.nodeKey;
+  const selectItem = useCallback(
+    (item: HTMLElement | undefined) => {
+      const key = item?.dataset.nodeKey;
       if (!key || key === selectedKey) return;
       const node = findNode(tree, key);
       if (node) onSelect?.(node);
@@ -196,10 +196,11 @@ export default function CentralRiskTree({
   }
 
   return (
-    <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
+    <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
+      onDragEnd={(event) => displayOrder?.onDragEnd(event, selectItem)}
       accessibleName={t("risk.list.title")}
       noDataText={t("common.noData")}
-      onItemClick={handleItemClick}
+      onItemClick={(event) => selectItem(event.detail.item)}
       onItemToggle={handleItemToggle}
       style={{ minHeight: "100%" }}
     >

@@ -1,7 +1,7 @@
 import type { CentralControlObjectiveSummary } from "@/features/control-objective/domain/centralControlObjective.model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip, Tag } from "@ui5/webcomponents-react";
+import { MessageStrip, Tag } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -113,7 +113,7 @@ export default function SubprocessControlObjectiveScopesTab({ subprocessId, read
   });
   const columns: CatalogRelationColumn<ControlObjectiveScopeDraftRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.controlObjectiveCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={"/control-objectives/" + row.controlObjectiveId} wrappingType="Normal">{row.controlObjectiveTitle}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.controlObjectiveTitle },
     { key: "objectiveClass", header: t("controlObjectiveScope.fields.objectiveClass"), cell: row => row.objectiveClass ? <Tag design="Set1">{t(`controlObjective.objectiveClass.${row.objectiveClass}`)}</Tag> : "—" },
     ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: ControlObjectiveScopeDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_PENDING_DELETE"} disabled={busy || loading}
       onChange={value => updateDate(row.key, field, value)} onDraftStateChange={draft => reportDate(row.key + ":" + field, draft)} /> })),

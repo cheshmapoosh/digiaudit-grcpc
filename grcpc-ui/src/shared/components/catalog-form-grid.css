@@ -1,0 +1,31 @@
+/* Layout only; UI5 retains native Compact control sizes and appearance. */
+div.catalogAdaptiveFormGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .5rem 1rem;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+div.catalogAdaptiveFormGrid[data-columns="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+div.catalogAdaptiveFormGrid > * { min-width: 0; }
+div.catalogAdaptiveFormGrid > :is(.modalWideField, .controlFieldWide, .controlObjectiveFieldWide, .policyFieldWide,
+    .riskFieldWide, .regulationFieldWide, .masterDataFormFieldWide, .catalogWideField, .accountGroupFieldWide) { grid-column: 1 / -1; }
+div.catalogAdaptiveFormGrid > :is(.modalDateRange, .controlDateRangeRow, .accountGroupDateRange, .globalControlValidityRow) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-column: 1 / -1;
+    gap: .5rem 1rem;
+    min-width: 0;
+}
+div.catalogAdaptiveFormGrid :is(ui5-input, ui5-select, ui5-textarea, ui5-date-picker) { width: 100%; min-width: 0; }
+@media (min-width: 1101px) {
+    div.catalogAdaptiveFormGrid[data-columns="3"] > :is(.modalDateRange, .controlDateRangeRow, .accountGroupDateRange, .globalControlValidityRow) { grid-column: span 2; }
+}
+@media (max-width: 1100px) {
+    div.catalogAdaptiveFormGrid[data-columns="3"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+    div.catalogAdaptiveFormGrid, div.catalogAdaptiveFormGrid[data-columns="3"] { grid-template-columns: minmax(0, 1fr); }
+    div.catalogAdaptiveFormGrid > :is(.modalDateRange, .controlDateRangeRow, .accountGroupDateRange, .globalControlValidityRow) { grid-template-columns: minmax(0, 1fr); }
+}

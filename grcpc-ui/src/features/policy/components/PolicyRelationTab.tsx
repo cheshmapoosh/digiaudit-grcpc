@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip } from "@ui5/webcomponents-react";
+import { MessageStrip } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -12,7 +12,6 @@ import { ProcessApiRepo } from "@/features/process/infra/process.api.repo";
 import { OrganizationApiRepo } from "@/features/organization/infra/organization.api.repo";
 import { centralPolicyApi } from "../infra/centralPolicy.api";
 import { policySelectionHierarchy, type PolicyHierarchyChoice } from "../domain/policySelectionHierarchy";
-import PolicyReferenceView from "./PolicyReferenceView";
 import type { PolicyControlOption, PolicyControlScopeRow, PolicyOrganizationOption, PolicyOrganizationScopeRow, PolicyRequirementOption, PolicyRequirementScopeRow, PolicyScopeOperation, PolicySubprocessOption, PolicySubprocessScopeRow } from "../domain/centralPolicy.model";
 const EMPTY_SELECTION = new Set<string>();
 export type PolicyRelationKind = "subprocess" | "organization" | "control" | "requirement";
@@ -27,7 +26,6 @@ export interface PolicyRelationDraft {
 }
 interface Row {
   endpointId: string;
-  objectId: string;
   relationId: string | null;
   version: number | null;
   code: string;
@@ -65,28 +63,29 @@ interface Props {
   canonicalRows?: unknown[];
   onChanges: (changes: PolicyRelationDraft[]) => void;
   onInvalid: (invalid: boolean) => void;
+  onPendingChange: (pending: boolean) => void;
 }
 function normalizeRows(kind: PolicyRelationKind, source: unknown[]): Row[] {
   if (kind === "subprocess") return (source as PolicySubprocessScopeRow[]).map(r => ({
-    endpointId: r.subprocessId, objectId: r.subprocessId, relationId: r.id, version: r.version,
+    endpointId: r.subprocessId, relationId: r.id, version: r.version,
     code: r.subprocessCode, title: r.subprocessTitle,
     context: `${r.processCode} — ${r.processTitle}`,
     status: r.status, validFrom: r.validFrom, validTo: r.validTo,
   }));
   if (kind === "organization") return (source as PolicyOrganizationScopeRow[]).map(r => ({
-    endpointId: r.organizationId, objectId: r.organizationId, relationId: r.id, version: r.version,
+    endpointId: r.organizationId, relationId: r.id, version: r.version,
     code: r.organizationCode, title: r.organizationTitle,
     context: r.parentOrganizationCode ? `${r.parentOrganizationCode} — ${r.parentOrganizationTitle}` : "",
     status: r.status, validFrom: r.validFrom, validTo: r.validTo,
   }));
   if (kind === "control") return (source as PolicyControlScopeRow[]).map(r => ({
-    endpointId: r.centralControlScopeId, objectId: r.controlId, relationId: r.id, version: r.version,
+    endpointId: r.centralControlScopeId, relationId: r.id, version: r.version,
     code: r.controlCode, title: r.controlTitle,
     context: `${r.controlGroupCode ? `${r.controlGroupCode} — ${r.controlGroupTitle} / ` : ""}${r.subprocessCode} — ${r.subprocessTitle}`,
     status: r.status, validFrom: r.validFrom, validTo: r.validTo,
   }));
   return (source as PolicyRequirementScopeRow[]).map(r => ({
-    endpointId: r.centralRequirementScopeId, objectId: r.requirementId, relationId: r.id, version: r.version,
+    endpointId: r.centralRequirementScopeId, relationId: r.id, version: r.version,
     code: r.requirementCode, title: r.requirementTitle,
     context: `${r.regulationCode} — ${r.regulationTitle} / ${r.subprocessCode} — ${r.subprocessTitle}`,
     status: r.status, validFrom: r.validFrom, validTo: r.validTo,
@@ -94,19 +93,19 @@ function normalizeRows(kind: PolicyRelationKind, source: unknown[]): Row[] {
 }
 function normalizeOptions(kind: PolicyRelationKind, source: unknown[]): Choice[] {
   if (kind === "subprocess") return (source as PolicySubprocessOption[]).map(o => ({
-    endpointId: o.subprocessId, objectId: o.subprocessId, parentNodeId: `node:${o.processId}`, relationId: null, version: null,
+    endpointId: o.subprocessId, parentNodeId: `node:${o.processId}`, relationId: null, version: null,
     code: o.code, title: o.title, context: `${o.processCode} — ${o.processTitle}`,
     status: "ACTIVE", validFrom: o.validFrom, validTo: o.validTo, eligible: o.status === "ACTIVE",
     ancestors: [{ id: `node:${o.processId}`, parentId: null, code: o.processCode, name: o.processTitle, selectable: false }],
   }));
   if (kind === "organization") return (source as PolicyOrganizationOption[]).map(o => ({
-    endpointId: o.organizationId, objectId: o.organizationId, parentNodeId: o.parentOrganizationId, relationId: null, version: null,
+    endpointId: o.organizationId, parentNodeId: o.parentOrganizationId, relationId: null, version: null,
     code: o.code, title: o.title,
     context: o.parentOrganizationCode ? `${o.parentOrganizationCode} — ${o.parentOrganizationTitle}` : "",
     status: "ACTIVE", validFrom: o.validFrom, validTo: o.validTo, eligible: o.status === "ACTIVE",
   }));
   if (kind === "control") return (source as PolicyControlOption[]).map(o => ({
-    endpointId: o.centralControlScopeId, objectId: o.controlId,
+    endpointId: o.centralControlScopeId,
     parentNodeId: o.controlGroupCode ? `control-group:${o.subprocessId}:${encodeURIComponent(o.controlGroupCode)}` : `node:${o.subprocessId}`,
     relationId: null, version: null,
     code: o.controlCode, title: o.controlTitle,
@@ -119,7 +118,7 @@ function normalizeOptions(kind: PolicyRelationKind, source: unknown[]): Choice[]
     ],
   }));
   return (source as PolicyRequirementOption[]).map(o => ({
-    endpointId: o.centralRequirementScopeId, objectId: o.requirementId,
+    endpointId: o.centralRequirementScopeId,
     parentNodeId: `regulation:${o.subprocessId}:${encodeURIComponent(o.regulationCode)}`, relationId: null, version: null,
     code: o.requirementCode, title: o.requirementTitle,
     context: `${o.regulationCode} — ${o.regulationTitle} / ${o.subprocessCode} — ${o.subprocessTitle}`,
@@ -148,7 +147,7 @@ async function readOptions(kind: PolicyRelationKind): Promise<unknown[]> {
   }
 }
 
-export default function PolicyRelationTab({ kind, policyId, policyValidFrom, policyValidTo, readOnly, canView, canManage, busy, onChanges, onInvalid, canonicalRows }: Props) {
+export default function PolicyRelationTab({ kind, policyId, policyValidFrom, policyValidTo, readOnly, canView, canManage, busy, onChanges, onInvalid, onPendingChange, canonicalRows }: Props) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<Row[]>(() => canonicalRows ? normalizeRows(kind, canonicalRows) : []); const [options, setOptions] = useState<Choice[]>([]);
   const [ancestors, setAncestors] = useState<HierarchySelectionNode[]>([]);
@@ -159,7 +158,7 @@ export default function PolicyRelationTab({ kind, policyId, policyValidFrom, pol
   const [pickerOpen, setPickerOpen] = useState(false); const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pickerSelection, setPickerSelection] = useState<Set<string>>(EMPTY_SELECTION);
   const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
-  const [view, setView] = useState<Row | null>(null); const generation = useRef(0);
+  const generation = useRef(0);
   const [reload, setReload] = useState(0);
   useEffect(() => {
     if (!canView) return;
@@ -200,6 +199,8 @@ export default function PolicyRelationTab({ kind, policyId, policyValidFrom, pol
     const dates = displayDates(row, row.draft); return Boolean(dates.from && dates.to && dates.from > dates.to);
   });
   useEffect(() => onInvalid(canView && (loading || error || pickerOpen || pendingDates || invalid)), [canView, loading, error, pickerOpen, pendingDates, invalid, onInvalid]);
+  const pending = !readOnly && (pickerOpen || pendingDates);
+  useEffect(() => onPendingChange(pending), [pending, onPendingChange]);
   const visible = effective.filter(row => dateDrafts[row.endpointId + ":validFrom"]?.dirty || dateDrafts[row.endpointId + ":validTo"]?.dirty || row.draft || row.status !== "DELETED" && (filter === "ALL" || row.status === filter) && `${row.code} ${row.title} ${row.context}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const nodes = useMemo(() => {
     const occupied = new Set(effective.filter(row => displayStatus(row, row.draft) !== "DELETED").map(row => row.endpointId));
@@ -267,7 +268,7 @@ export default function PolicyRelationTab({ kind, policyId, policyValidFrom, pol
   type DisplayRow = typeof effective[number];
   const columns: CatalogRelationColumn<DisplayRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.code },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link accessibleRole="Button" onClick={event => { event.preventDefault(); setView(row); }}>{row.title}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.title },
     { key: "context", header: t("policy.relations.context"), cell: row => row.context || "—" },
     ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: DisplayRow) => <CatalogRelationDate value={displayDates(row, row.draft)[field === "validFrom" ? "from" : "to"]} label={t(`catalogRelation.${field}`)} editable={!readOnly && canManage && row.draft?.operation !== "DELETE"} disabled={busy || loading}
       onChange={value => updateDate(row, field, value)} onDraftStateChange={draft => reportDate(row.endpointId + ":" + field, draft)} /> })),
@@ -286,6 +287,5 @@ export default function PolicyRelationTab({ kind, policyId, policyValidFrom, pol
       busy={busy} loading={loading} error={error ? t("policy.relations.loadError") : null} confirmDisabled={!validSelection}
       onSelectionChange={setPickerSelection} confirmText={t("catalogRelation.select")} cancelText={t("common.cancel")}
       onConfirm={confirmSelection} onClose={() => setPickerOpen(false)} /> : null}
-    {view ? <PolicyReferenceView key={`${kind}:${view.objectId}`} kind={kind} objectId={view.objectId} onClose={() => setView(null)} /> : null}
   </section>;
 }

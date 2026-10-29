@@ -12,7 +12,8 @@ export interface CatalogOrderState {
   movable: (key: string) => boolean;
   sort: <T>(nodes: T[], key: (node: T) => string) => T[];
   sortTree: <T extends { children: T[] }>(nodes: T[], key: (node: T) => string) => T[];
-  onMove: NonNullable<TreePropTypes["onMove"]>;
+  onMove: (event: Parameters<NonNullable<TreePropTypes["onMove"]>>[0], selectSource: (source: HTMLElement) => void) => void;
+  onDragEnd: (event: Parameters<NonNullable<TreePropTypes["onDragEnd"]>>[0], selectSource: (source: HTMLElement) => void) => void;
   onMoveOver: NonNullable<TreePropTypes["onMoveOver"]>;
 }
 export const CatalogOrderContext = createContext<CatalogOrderState | null>(null);

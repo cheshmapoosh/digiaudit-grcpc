@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BusyIndicator,
-  Link,
+  Text,
   MessageStrip,
   ObjectStatus,
   Table,
@@ -41,10 +41,9 @@ interface Props {
     endpoint: string;
   };
   errorText: string;
-  relatedHref?: (id: string) => string;
 }
 
-export function CoverageInverseTable({ title, empty, load, columns, errorText, relatedHref }: Props) {
+export function CoverageInverseTable({ title, empty, load, columns, errorText }: Props) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<CoverageInverseRow[]>([]);
   const [busy, setBusy] = useState(true);
@@ -101,16 +100,10 @@ export function CoverageInverseTable({ title, empty, load, columns, errorText, r
           {rows.map((row) => (
             <TableRow key={row.id}>
               <TableCell>
-                <Link href={`/processes/${row.subprocessId}`}>
-                  {`${row.subprocessCode} - ${row.subprocessTitle}`}
-                </Link>
+                <Text>{`${row.subprocessCode} - ${row.subprocessTitle}`}</Text>
               </TableCell>
               <TableCell>
-                {relatedHref ? (
-                  <Link href={relatedHref(row.relatedId)}>
-                    {`${row.relatedCode} - ${row.relatedTitle}`}
-                  </Link>
-                ) : `${row.relatedCode} - ${row.relatedTitle}`}
+                <Text>{`${row.relatedCode} - ${row.relatedTitle}`}</Text>
               </TableCell>
               <TableCell>
                 <ObjectStatus state={row.status === "ACTIVE" ? "Positive" : "None"}>

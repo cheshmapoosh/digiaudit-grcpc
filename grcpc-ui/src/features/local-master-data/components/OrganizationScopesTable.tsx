@@ -1,15 +1,13 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FlexBox, Link, MessageStrip, Option, Select, Text, TextArea } from "@ui5/webcomponents-react";
-import { DocumentManager } from "@/features/document";
+import { FlexBox, MessageStrip, Option, Select, Text, TextArea } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
 import type { PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { LOCAL_DOCUMENT_TARGETS, type LocalOption, type LocalStatus } from "../domain/local.model";
+import type { LocalOption, LocalStatus } from "../domain/local.model";
 import { LOCAL_SECTION_BY_KEY } from "../domain/local.sections";
 import type { LocalRelationMetadata, OrganizationLocalDraft } from "../domain/organizationLocal.model";
 import {
@@ -54,14 +52,11 @@ export default function OrganizationScopesTable({ section, contexts, rows, draft
     onSelect, onRetry, selectionBlocked = false, onStateChange, deepLinkRowId, onInvalidDeepLink,
     initialStatus = "ALL", onFilterChange }: Props) {
     const { t } = useTranslation();
-    const navigate = useNavigate();
     const title = t(LOCAL_SECTION_BY_KEY[section].labelKey);
     const [filter, setFilter] = useState<CatalogRelationFilter>(initialStatus);
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
-    const [documentId, setDocumentId] = useState<string | null>(null);
-    const [documentDirty, setDocumentDirty] = useState(false);
     const [owners, setOwners] = useState<LocalOption[]>([]);
     const [settings, setSettings] = useState<ControlSettings | null>(null);
     const [metadataLoading, setMetadataLoading] = useState(false);
@@ -129,9 +124,8 @@ export default function OrganizationScopesTable({ section, contexts, rows, draft
         || row.draft.status !== "DELETED" && Boolean(row.draft.metadata.validFrom && row.draft.metadata.validTo
             && row.draft.metadata.validFrom > row.draft.metadata.validTo));
     const dateDirty = allRows.some(row => hasDateDraft(row, state => state.dirty));
-    const dirty = documentDirty || dateDirty;
-    const ready = !documentDirty && !invalid && (!relevant.length || !loading && !error && !metadataBlocked);
-    useEffect(() => { onStateChange({ pending: documentDirty, ready, dirty }); }, [dirty, documentDirty, onStateChange, ready]);
+    const ready = !invalid && (!relevant.length || !loading && !error && !metadataBlocked);
+    useEffect(() => { onStateChange({ pending: false, ready, dirty: dateDirty }); }, [dateDirty, onStateChange, ready]);
     useEffect(() => () => onStateChange({ pending: false, ready: true, dirty: false }), [onStateChange]);
     useEffect(() => {
         if (!deepLinkRowId || loading || error) return;
@@ -194,12 +188,7 @@ export default function OrganizationScopesTable({ section, contexts, rows, draft
             row.context?.name ?? row.original?.subprocessLabel,
         ].filter(Boolean).join(" — ") || t("catalogRelation.unavailable")}</Text> },
         { key: "code", header: t("catalogRelation.code"), cell: row => row.draft.code },
-        { key: "name", header: t("catalogRelation.name"), cell: row => {
-            const id = encodeURIComponent(row.draft.identityId);
-            const href = section === "control-scopes" ? `/controls/${id}` : section === "control-objective-scopes"
-                ? `/control-objectives/${id}` : `/regulations?requirementId=${id}`;
-            return <Link href={href} onClick={event => { event.preventDefault(); navigate(href); }}>{row.draft.name}</Link>;
-        } },
+        { key: "name", header: t("catalogRelation.name"), cell: row => <Text>{row.draft.name}</Text> },
         { key: "status", header: t("common.status"), cell: row => <CatalogRelationStatus status={row.draft.status}
             draft={!row.pending ? null : row.draft.operation === "CREATE_OR_RESTORE" ? "new" : row.draft.operation === "DELETE" ? "delete"
                 : row.draft.operation === "UPDATE" ? "edit" : row.draft.status === "ACTIVE" ? "active" : "inactive"} /> },
@@ -225,14 +214,10 @@ export default function OrganizationScopesTable({ section, contexts, rows, draft
                 maxlength={1000} accessibleName={t("catalogRelation.note")} onInput={event => update(row, { localContextNote: event.target.value || null })} />
             : <Text>{row.draft.metadata.localContextNote ?? "—"}</Text> });
     }
-    columns.push({ key: "documents", header: t("local.documents"), cell: row => row.original && row.original.status !== "DELETED"
-        ? <Link onClick={() => { if (!documentDirty) setDocumentId(row.original!.id); }}>{t("local.documents")}</Link> : "—" });
-    const documentRow = allRows.find(row => row.original?.id === documentId && row.original.status !== "DELETED");
-    const documentEditable = editable && Boolean(documentRow && contextStatus(documentRow) !== "DELETED");
     return <FlexBox direction="Column" className="organizationLocalDraftTable">
         <CatalogRelationToolbar title={title} search={search} onSearch={setSearch}
             filter={filter} onFilter={next => { setFilter(next); onFilterChange?.(next); }} editable={editable} busy={busy || loading}
-            canSelect={!error && !selectionBlocked && !documentDirty && !metadataBlocked && contexts.some(context => context.status === "ACTIVE")}
+            canSelect={!error && !selectionBlocked && !metadataBlocked && contexts.some(context => context.status === "ACTIVE")}
             canActivate={affected("ACTIVE").length > 0} canInactivate={affected("INACTIVE").length > 0} canDelete={affected("DELETED").length > 0}
             onSelect={() => { if (!metadataBlocked) onSelect(); }} onActivate={() => batch("ACTIVE")} onInactivate={() => batch("INACTIVE")} onDelete={() => batch("DELETED")} />
         {metadataError && needsControlMetadata ? <MessageStrip design="Negative" hideCloseButton>{t("catalogRelation.loadError")}
@@ -242,8 +227,5 @@ export default function OrganizationScopesTable({ section, contexts, rows, draft
         {invalid ? <MessageStrip design="Negative" hideCloseButton>{t("catalogRelation.invalid")}</MessageStrip> : null}
         <CatalogRelationTable rows={displayed} rowKey={row => row.draft.key} columns={columns} selectedKeys={selected}
             onSelectionChange={setSelected} selectable={editable} loading={loading} busy={busy} accessibleName={title} />
-        {documentRow?.original ? <DocumentManager targetType={LOCAL_DOCUMENT_TARGETS[section]} targetId={documentRow.original.id}
-            title={t("local.documents")} readOnly={!documentEditable} showActions={documentEditable} busy={busy}
-            persistenceMode="STANDALONE" onDirtyChange={setDocumentDirty} /> : null}
     </FlexBox>;
 }

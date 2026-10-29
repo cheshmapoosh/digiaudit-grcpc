@@ -36,3 +36,15 @@ ui5-dialog:is(.catalogObjectDialog, .objectiveDialog, .globalControlDialog) {
 }
 /* Native Dialog slots keep catalog chrome outside content scrolling. */
 [data-catalog-dialog-content] { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
+
+/* Compact tab content uses the actual dialog budget rather than fixed blank heights. */
+[data-catalog-dialog-content] :is(.controlObjectBody, .controlObjectiveObjectBody, .accountGroupObjectBody,
+    .riskObjectBody, .regulationObjectBody, .policyObjectBody) { min-height: 0; padding: var(--sapContent_Space_Small); }
+[data-catalog-dialog-content] :is(.controlTabPanel, .controlObjectiveTabPanel, .accountGroupTabPanel,
+    .riskTabPanel, .regulationTabPanel, .policyTabPanel) { min-height: 0; }
+[data-catalog-dialog-content] :is(.objectiveForm, .globalControlForm, .objectiveOrganizationTab,
+    .globalControlRelationTab, .objectiveDocumentTab, .globalControlDocumentTab) {
+    padding: var(--sapContent_Space_Small);
+    max-height: none;
+    overflow: visible;
+}

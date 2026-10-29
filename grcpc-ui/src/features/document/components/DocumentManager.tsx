@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { useBasicDataOptions } from "@/features/basic-data";
 import {
     useCallback,
@@ -1294,7 +1295,7 @@ export default function DocumentManager({
                                 </div>
 
                                 {showMetadata ? (
-                                    <div className="modalThreeColumnGrid">
+                                    <CatalogFormGrid className="modalThreeColumnGrid">
                                         {!item.existingDocument ? (
                                             <>
                                                 <Input
@@ -1364,7 +1365,7 @@ export default function DocumentManager({
                                             onDraftStateChange={(state) => updateUploadItem(item.id, { validToDraftValid: state.valid })}
                                         /></div>
                                         {invalidValidityRange ? <MessageStrip design="Negative" hideCloseButton>{t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })}</MessageStrip> : null}
-                                    </div>
+                                    </CatalogFormGrid>
                                 ) : null}
 
                                 <ObjectStatus state={item.failureState ? "Negative" : "None"}>
@@ -1466,20 +1467,8 @@ export default function DocumentManager({
                         <TableHeaderCell minWidth="12rem">
                             {t("document.fields.fileName", { defaultValue: "File Name" })}
                         </TableHeaderCell>
-                        <TableHeaderCell width="6rem">
-                            {t("document.fields.version", { defaultValue: "Version" })}
-                        </TableHeaderCell>
-                        <TableHeaderCell width="10rem">
-                            {t("document.fields.mimeType", { defaultValue: "File Type" })}
-                        </TableHeaderCell>
-                        <TableHeaderCell width="8rem">
-                            {t("document.fields.size", { defaultValue: "Size" })}
-                        </TableHeaderCell>
                         <TableHeaderCell width="10rem">
                             {t("document.fields.status", { defaultValue: "Status" })}
-                        </TableHeaderCell>
-                        <TableHeaderCell width="10rem">
-                            {t("document.fields.uploadedAt", { defaultValue: "Uploaded At" })}
                         </TableHeaderCell>
                         {targetId || showActions ? (
                             <TableHeaderCell width="10rem">
@@ -1500,14 +1489,14 @@ export default function DocumentManager({
                             {documentTypes.items.map((type) => <Option key={type.id} value={type.id} selected={(typeDrafts[row.documentId] ?? row.documentTypeId) === type.id}>{type.name}</Option>)}
                         </Select>}</TableCell>
                         <TableCell>{renderDocumentTitleControl(row)}</TableCell>
-                        <TableCell>{row.fileName}</TableCell>
-                        <TableCell>{row.documentVersionNumber}</TableCell>
-                        <TableCell>{displayText(row.mimeType)}</TableCell>
-                        <TableCell>{formatFileSize(row.fileSize)}</TableCell>
-                        <TableCell>{versionStatusText(row, t)}</TableCell>
                         <TableCell>
-                            {row.uploadedAt ? formatPersianDate(row.uploadedAt) : NONE_TEXT}
+                            <Text title={[
+                                t("document.fields.mimeType"), displayText(row.mimeType),
+                                t("document.fields.uploadedAt"), row.uploadedAt ? formatPersianDate(row.uploadedAt) : NONE_TEXT,
+                            ].join(" — ")}>{row.fileName}</Text>
+                            <Text>{t("document.fields.version")}: {row.documentVersionNumber} — {formatFileSize(row.fileSize)}</Text>
                         </TableCell>
+                        <TableCell>{versionStatusText(row, t)}</TableCell>
                         {targetId || showActions ? (
                             <TableCell>{renderRowActions(row)}</TableCell>
                         ) : null}

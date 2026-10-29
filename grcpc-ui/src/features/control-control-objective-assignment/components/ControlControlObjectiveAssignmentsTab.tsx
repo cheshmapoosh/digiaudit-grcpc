@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip, ObjectStatus } from "@ui5/webcomponents-react";
+import { MessageStrip, ObjectStatus } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -111,7 +111,7 @@ export default function ControlControlObjectiveAssignmentsTab({ controlId, readO
   });
   const columns: CatalogRelationColumn<AssignmentDraftRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.controlObjectiveCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={"/control-objectives/" + row.controlObjectiveId} wrappingType="Normal">{row.controlObjectiveTitle}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.controlObjectiveTitle },
     { key: "endpointStatus", header: t("controlControlObjectiveAssignment.fields.endpointStatus"), cell: row => <ObjectStatus state={row.controlObjectiveStatus === "ACTIVE" ? "Positive" : "None"}>{t(`controlControlObjectiveAssignment.status.${row.controlObjectiveStatus}`)}</ObjectStatus> },
     { key: "endpointValidity", header: t("controlControlObjectiveAssignment.fields.endpointValidity"), cell: row => formatPersianDate(row.controlObjectiveValidFrom) + " – " + formatPersianDate(row.controlObjectiveValidTo) },
     ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: AssignmentDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_DELETE"} disabled={busy || loading}

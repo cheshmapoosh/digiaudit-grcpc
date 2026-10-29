@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip } from "@ui5/webcomponents-react";
+import { MessageStrip } from "@ui5/webcomponents-react";
 import { useAuthState } from "@/features/auth/state/auth.state";
 import { canAccessMasterData, type MasterDataArea } from "@/features/master-data/security/masterDataAccess";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
@@ -9,7 +9,6 @@ import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/com
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { LocalBaseRow, LocalRows, LocalSectionKey } from "../domain/local.model";
-import { LOCAL_SECTION_BY_KEY } from "../domain/local.sections";
 import { localApi } from "../infra/local.api.repo";
 interface Props<K extends LocalSectionKey> {
     parentId: string;
@@ -29,7 +28,7 @@ function projection(row: LocalBaseRow): string {
 }
 
 
-export default function LocalReverseList<K extends LocalSectionKey>({ parentId, path, section, titleKey, titleFa, areas }: Props<K>) {
+export default function LocalReverseList<K extends LocalSectionKey>({ parentId, path, titleKey, titleFa, areas }: Props<K>) {
   const { t } = useTranslation(); const me = useAuthState(state => state.me);
   const allowed = canAccessMasterData(me, "REFERENCE") && areas.every(area => canAccessMasterData(me, area));
   const [rows, setRows] = useState<LocalRows[K][]>([]); const [loading, setLoading] = useState(true);
@@ -54,19 +53,10 @@ export default function LocalReverseList<K extends LocalSectionKey>({ parentId, 
     });
     return () => { current = false; };
   }, [allowed, parentId, path, reload]);
-  const href = (row: LocalBaseRow) => {
-    const fields = row as unknown as Record<string, unknown>;
-    const params = new URLSearchParams({ tab: LOCAL_SECTION_BY_KEY[section].tab, localSection: section, localRowId: row.id });
-    if (typeof fields.organizationSubprocessScopeId === "string") params.set("contextId", fields.organizationSubprocessScopeId);
-    if (section === "contexts") params.set("contextId", row.id);
-    if (section === "control-policies" && typeof fields.localControlScopeId === "string") params.set("policyTargetId", fields.localControlScopeId);
-    if (section === "requirement-policies" && typeof fields.localRequirementScopeId === "string") params.set("policyTargetId", fields.localRequirementScopeId);
-    return `/organizations/${row.organizationId}?${params.toString()}`;
-  };
   const visible = rows.filter(row => row.status !== "DELETED" && (filter === "ALL" || row.status === filter) && `${row.organizationCode} ${row.organizationLabel} ${projection(row)}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const columns: CatalogRelationColumn<LocalRows[K]>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.organizationCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={href(row)}>{row.organizationLabel}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.organizationLabel },
     { key: "projection", header: t(titleKey, { defaultValue: titleFa }), cell: row => projection(row) || "—" },
     { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={row.status} /> },
     { key: "validFrom", header: t("catalogRelation.validFrom"), cell: row => formatPersianDate(row.validFrom) },

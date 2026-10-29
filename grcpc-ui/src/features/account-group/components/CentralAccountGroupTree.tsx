@@ -135,8 +135,8 @@ export default function CentralAccountGroupTree({
     return result;
   }, [autoExpandedIds, manualCollapsedIds, manualExpandedIds, normalizedSearchText]);
 
-  const handleItemClick = useCallback((event: TreeEvent) => {
-    const id = event.detail?.item?.dataset?.nodeId;
+  const selectItem = useCallback((item: HTMLElement | undefined) => {
+    const id = item?.dataset.nodeId;
     if (!id || id === selectedId) return;
     const node = findNode(tree, id);
     if (node) onSelect?.(node);
@@ -160,9 +160,10 @@ export default function CentralAccountGroupTree({
   }
 
   return (
-    <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
+    <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
+      onDragEnd={(event) => displayOrder?.onDragEnd(event, selectItem)}
       accessibleName={t("accountGroup.list.title")}
-      onItemClick={handleItemClick}
+      onItemClick={(event) => selectItem(event.detail.item)}
       onItemToggle={handleItemToggle}
       style={{ minHeight: "100%" }}
     >

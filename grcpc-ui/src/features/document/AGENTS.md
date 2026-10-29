@@ -21,6 +21,7 @@ Document is the shared Master Data V2 UI for:
 - `MASTERDATA_REVISION` is backend-only and must not be selectable or rendered as a normal browser target.
 - Do not expose storage keys, bucket names, endpoints, permanent URLs, Revision Content, or object metadata in UI models.
 - All editable Master Data business dates use the shared UI5 Persian DatePicker while retaining Gregorian ISO `yyyy-MM-dd` API values.
+- The 2026-10-29 compact-tab correction caps the ordinary Document table at five columns: Document Type, Title, File, Status, Actions. File name/version/size share one cell; MIME type and upload date remain in its tooltip. Preserve downloads, row actions, metadata drafts, temporary upload and parent-save finalization. Upload metadata uses the shared adaptive CatalogFormGrid.
 - Hide free-text Document Category until an approved controlled vocabulary exists; keep the nullable Backend-compatible response field unchanged.
 - The 2026-10-28 profile-owned Basic Data correction adds a distinct controlled `documentTypeId`/`documentTypeName`. New attachments require an active type from the selected profile. Existing unclassified Documents remain readable; metadata type drafts join title drafts in the existing parent aggregate or standalone metadata Save. Temporary upload remains file-only and target-independent.
 - Document dirty state includes selected/uploading/staged/finalizing files, retryable failed finalization with a temporary upload, and unsaved metadata drafts.

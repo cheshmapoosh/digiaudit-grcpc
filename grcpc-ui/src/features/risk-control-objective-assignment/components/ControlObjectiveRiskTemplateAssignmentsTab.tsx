@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip, ObjectStatus } from "@ui5/webcomponents-react";
+import { MessageStrip, ObjectStatus } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -115,7 +115,7 @@ export default function ControlObjectiveRiskTemplateAssignmentsTab({ controlObje
   });
   const columns: CatalogRelationColumn<AssignmentDraftRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.riskTemplateCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={"/risks?riskTemplateId=" + row.riskTemplateId} wrappingType="Normal">{row.riskTemplateTitle}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.riskTemplateTitle },
     { key: "endpointStatus", header: t("riskControlObjectiveAssignment.fields.endpointStatus"), cell: row => <ObjectStatus state={row.riskTemplateStatus === "ACTIVE" ? "Positive" : "None"}>{t(`riskControlObjectiveAssignment.status.${row.riskTemplateStatus}`)}</ObjectStatus> },
     { key: "endpointValidity", header: t("riskControlObjectiveAssignment.fields.endpointValidity"), cell: row => formatPersianDate(row.riskTemplateValidFrom) + " – " + formatPersianDate(row.riskTemplateValidTo) },
     ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: AssignmentDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_DELETE"} disabled={busy || loading}

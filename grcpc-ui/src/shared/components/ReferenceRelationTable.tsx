@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip, ObjectStatus } from "@ui5/webcomponents-react";
+import { MessageStrip, ObjectStatus } from "@ui5/webcomponents-react";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import { CatalogRelationTable, type CatalogRelationColumn } from "./CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "./CatalogRelationToolbar";
 
-interface Row { id: string; code: string; title: string; href: string; endpointStatus: "ACTIVE" | "INACTIVE" | "DELETED"; endpointValidFrom: string | null; endpointValidTo: string | null; status: "ACTIVE" | "INACTIVE" | "DELETED"; validFrom: string | null; validTo: string | null; }
+interface Row { id: string; code: string; title: string; endpointStatus: "ACTIVE" | "INACTIVE" | "DELETED"; endpointValidFrom: string | null; endpointValidTo: string | null; status: "ACTIVE" | "INACTIVE" | "DELETED"; validFrom: string | null; validTo: string | null; }
 /** Read-only renderer. Typed adapters own reads; catalog aggregates own every mutation. */
 export function ReferenceRelationTable({ load, titleKey }: { load: (signal: AbortSignal) => Promise<Row[]>; titleKey: string }) {
   const { t } = useTranslation();
@@ -22,7 +22,7 @@ export function ReferenceRelationTable({ load, titleKey }: { load: (signal: Abor
     && `${row.code} ${row.title}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const columns: CatalogRelationColumn<Row>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.code },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={row.href}>{row.title}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.title },
     { key: "endpointStatus", header: t("centralAssignment.fields.endpointStatus"), cell: row => <ObjectStatus state={row.endpointStatus === "ACTIVE" ? "Positive" : "None"}>{t(`centralAssignment.status.${row.endpointStatus}`)}</ObjectStatus> },
     { key: "endpointValidity", header: t("centralAssignment.fields.endpointValidity"), cell: row => `${formatPersianDate(row.endpointValidFrom)} – ${formatPersianDate(row.endpointValidTo)}` },
     { key: "status", header: t("catalogRelation.status"), cell: row => <ObjectStatus state={row.status === "ACTIVE" ? "Positive" : "None"}>{t(`centralAssignment.status.${row.status}`)}</ObjectStatus> },

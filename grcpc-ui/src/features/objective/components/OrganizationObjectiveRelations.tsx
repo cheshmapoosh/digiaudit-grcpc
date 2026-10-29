@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Input, Link, MessageStrip, ObjectStatus, Text, TextArea } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { CatalogRelationTable } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
 import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
 import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
 import type { ObjectiveOrganizationLink, OrganizationObjective, OrganizationObjectiveChange } from "../domain/objective.model";
 import { objectiveApi } from "../infra/objective.api.repo";
-import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import ObjectiveSelectionDialog from "./ObjectiveSelectionDialog";
 
 type Canonical = { id: string; targetId: string; code: string; targetName: string; name: string;
@@ -34,8 +32,6 @@ function sameMetadata(a: ReturnType<typeof metadata>, b: ReturnType<typeof metad
 export function OrganizationObjectiveRelations({ side, ownerId, ownerName = "", manage, busy = false,
   resetKey, changes, onChangesChange, onDirtyChange, onReadinessChange, canonicalRows, onRowsChange }: OrganizationObjectiveRelationsProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const targetAccess = useMasterDataAccess(side === "organization" ? "REFERENCE" : "ORGANIZATION");
   const [baseline, setBaseline] = useState<Canonical[]>([]);
   const [baselineOwner, setBaselineOwner] = useState<string | null>(ownerId);
   const [nodes, setNodes] = useState<HierarchySelectionNode[]>([]);
@@ -198,16 +194,14 @@ export function OrganizationObjectiveRelations({ side, ownerId, ownerName = "", 
       onSelectionChange={setSelected} selectable={manage} busy={busy} loading={loading} emptyText={t("catalogRelation.empty")}
       columns={[
         { key: "code", header: t("catalogRelation.code"), cell: row => <Text>{row.code}</Text> },
-        { key: "target", header: t("catalogRelation.name"), cell: row => targetAccess.view
-          ? <Link onClick={() => navigate(side === "organization" ? `/objectives?objectiveId=${row.targetId}` : `/organizations/${row.targetId}`)}>{row.targetName}</Link>
-          : <Text>{row.targetName}</Text> },
+        { key: "name", header: t("catalogRelation.name"), cell: row => <Text>{row.targetName}</Text> },
         { key: "status", header: t("catalogRelation.status"), cell: row => <ObjectStatus state={row.draft ? "Information" : row.status === "ACTIVE" ? "Positive" : "None"}>
           {t(row.draft ? row.draft.operation === "DELETE" ? "catalogRelation.draftDelete"
             : row.draft.operation === "CREATE_OR_RESTORE" || row.draft.operation === "RESTORE" ? "catalogRelation.draft"
             : row.draft.operation === "UPDATE" && row.status === effectiveBaseline.find(item => item.targetId === row.targetId)?.status ? "catalogRelation.draftEdit"
               : row.status === "ACTIVE" ? "catalogRelation.draftActive" : "catalogRelation.draftInactive"
             : row.status === "ACTIVE" ? "catalogRelation.active" : "catalogRelation.inactive")}</ObjectStatus> },
-        { key: "name", header: t("objective.organizations.assignment"), cell: row => editable && row.draft?.operation !== "DELETE"
+        { key: "assignmentName", header: t("objective.organizations.assignment"), cell: row => editable && row.draft?.operation !== "DELETE"
           ? <Input value={row.name} accessibleName={t("objective.name")} onInput={event => edit(row, { name: event.target.value })} /> : row.name },
         { key: "owner", header: t("objective.owner"), cell: row => editable && row.draft?.operation !== "DELETE"
           ? <Input value={row.owner ?? ""} accessibleName={t("objective.owner")} onInput={event => edit(row, { owner: event.target.value || null })} /> : row.owner ?? "—" },

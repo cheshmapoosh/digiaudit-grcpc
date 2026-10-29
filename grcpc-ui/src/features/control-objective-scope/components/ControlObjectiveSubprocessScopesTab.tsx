@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip } from "@ui5/webcomponents-react";
+import { MessageStrip } from "@ui5/webcomponents-react";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
@@ -25,7 +25,7 @@ export default function ControlObjectiveSubprocessScopesTab({ controlObjectiveId
   const visible = rows.filter(row => row.status !== "DELETED" && (filter === "ALL" || row.status === filter) && `${row.subprocessCode} ${row.subprocessTitle}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const columns: CatalogRelationColumn<CentralSubprocessControlObjectiveScope>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.subprocessCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={"/processes/" + row.subprocessId}>{row.subprocessTitle}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.subprocessTitle },
     { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={row.status} /> },
     { key: "validFrom", header: t("catalogRelation.validFrom"), cell: row => formatPersianDate(row.validFrom) },
     { key: "validTo", header: t("catalogRelation.validTo"), cell: row => formatPersianDate(row.validTo) },

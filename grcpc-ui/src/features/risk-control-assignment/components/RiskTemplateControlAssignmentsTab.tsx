@@ -6,7 +6,7 @@ import { useRiskControlAssignmentPermissions } from "../security/riskControlAssi
 export default function RiskTemplateControlAssignmentsTab({ riskTemplateId }: { riskTemplateId: string }) {
   const permissions = useRiskControlAssignmentPermissions();
   const load = useCallback(async (signal: AbortSignal) => (await riskControlAssignmentApi.forRiskTemplate(riskTemplateId, signal)).map(row => ({
-    id: row.assignmentId, code: row.controlCode, title: row.controlTitle, href: `/controls/${row.controlId}?tab=risks`,
+    id: row.assignmentId, code: row.controlCode, title: row.controlTitle,
     endpointStatus: row.controlStatus, endpointValidFrom: row.controlValidFrom, endpointValidTo: row.controlValidTo,
     status: row.status, validFrom: row.validFrom, validTo: row.validTo,
   })), [riskTemplateId]);

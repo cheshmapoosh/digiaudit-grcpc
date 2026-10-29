@@ -25,6 +25,10 @@ children and never participate in reordering.
   A failed Save retains the displayed order and reloads the current server order;
   a stale group produces a localized refresh/retry message. Selection, checkboxes
   and expanded branches retain their stable keys.
+- The 2026-10-29 owner correction selects the dragged source on both success and
+  failure, after canonical refresh, through the tree's normal controlled selection
+  path. No-op/rejected drop commands also select the source without a write;
+  checkbox selections and expanded branches retain their existing state.
 - Successful or failed commands refresh the canonical catalog rows before the
   next operation. Pages caching a selected detail also refresh its version so a
   subsequent Edit/Delete does not use the version from before reordering.

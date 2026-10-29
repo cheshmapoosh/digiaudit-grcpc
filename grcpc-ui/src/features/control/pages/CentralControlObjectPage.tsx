@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -320,7 +321,7 @@ export default function CentralControlObjectPage({
 
       <div className="controlObjectBody">
         <div className={activeTab === "general" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>
-          <div className="controlFormGrid">
+          <CatalogFormGrid className="controlFormGrid">
             <Field label={t("control.fields.code")} required>{readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(e) => change("code", e.target.value)} />}</Field>
             <Field label={t("control.fields.name")} required>{readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", e.target.value)} />}</Field>
 
@@ -383,8 +384,8 @@ export default function CentralControlObjectPage({
               <Field label={t("control.fields.validFrom")}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validFrom")} invalidValueMessage={t("control.validation.invalidDate")} onChange={(next) => change("validFrom", next)} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validFrom: next }))} />}</Field>
               <Field label={t("control.fields.validTo")}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("control.fields.validTo")} invalidValueMessage={t("control.validation.invalidDate")} onChange={(next) => change("validTo", next)} onDraftStateChange={(next) => setDateDrafts((current) => ({ ...current, validTo: next }))} />}</Field>
             </div>
-            <Field label={t("control.fields.description")} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", e.target.value)} />}</Field>
-          </div>
+            <Field label={t("control.fields.description")} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={3} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", e.target.value)} />}</Field>
+          </CatalogFormGrid>
         </div>
 
         <div className={activeTab === "subprocesses" ? "controlTabPanel" : "controlTabPanel controlTabPanelHidden"}>

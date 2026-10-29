@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FlexBox, Link, MessageStrip, Option, Select, Text, TextArea } from "@ui5/webcomponents-react";
+import { FlexBox, MessageStrip, Option, Select, Text, TextArea } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
@@ -9,8 +8,7 @@ import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus
 import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
 import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
 import type { PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { DocumentManager } from "@/features/document";
-import { LOCAL_DOCUMENT_TARGETS, type LocalBaseRow, type LocalOption, type LocalRows, type LocalStatus } from "../domain/local.model";
+import type { LocalBaseRow, LocalOption, LocalRows, LocalStatus } from "../domain/local.model";
 import type { ContextRef, ControlScopeRef, RequirementScopeRef, LocalRelationMetadata, OrganizationLocalDraft, OrganizationLocalSection } from "../domain/organizationLocal.model";
 import { LOCAL_SECTION_BY_KEY } from "../domain/local.sections";
 import { localApi } from "../infra/local.api.repo";
@@ -40,7 +38,7 @@ const string = (row: LocalBaseRow, key: string): string | null => typeof value(r
 
 /** Reads and local staging only. The Organization aggregate is the sole relationship writer. */
 export default function OrganizationLocalDraftTable({ organizationId, section, owner, editable, busy, resetKey, drafts, onChange, canonicalRows, onStateChange, deepLinkRowId, onInvalidDeepLink, initialStatus = "ALL", onFilterChange }: Props) {
-    const { t } = useTranslation(); const navigate = useNavigate(); const spec = LOCAL_SECTION_BY_KEY[section];
+    const { t } = useTranslation(); const spec = LOCAL_SECTION_BY_KEY[section];
     const identity = spec.identityFields[0].name; const policy = Boolean(spec.policy);
     const stateKey = `${section}:${owner.key}`;
     const [rows, setRows] = useState<LocalRows[OrganizationLocalSection][]>(() => canonicalRows ?? []);
@@ -54,7 +52,6 @@ export default function OrganizationLocalDraftTable({ organizationId, section, o
     const [centralScopes, setCentralScopes] = useState<{ id: string; definitionId: string; validFrom: string | null; validTo: string | null }[]>([]);
     const [source, setSource] = useState<"LOCAL_ADDED" | "INHERITED_FROM_CENTRAL">("LOCAL_ADDED");
     const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
-    const [documentId, setDocumentId] = useState<string | null>(null); const [documentDirty, setDocumentDirty] = useState(false);
     const [owners, setOwners] = useState<LocalOption[]>([]);
     const [metadataReload, setMetadataReload] = useState(0);
     const [metadataLoading, setMetadataLoading] = useState(false);
@@ -100,7 +97,7 @@ export default function OrganizationLocalDraftTable({ organizationId, section, o
     const checked = displayed.filter(row => selected.has(row.draft.key));
     const affected = (target: LocalStatus) => checked.filter(row => row.draft.status !== target && (target === "DELETED" || owner.available !== false && row.original && row.original.status !== "DELETED"));
     const invalid = owner.available === false && relevant.some(item => item.operation !== "DELETE") || Object.values(dateDrafts).some(draft => !draft.valid) || relevant.some(item => Boolean(item.metadata.validFrom && item.metadata.validTo && item.metadata.validFrom > item.metadata.validTo));
-    useEffect(() => { onStateChange(stateKey, { pending: pickerOpen || documentDirty, ready: !pickerOpen && !invalid && !documentDirty && (!relevant.length || (!loading && !error && !metadataLoading && !metadataError)), dirty: documentDirty || Object.values(dateDrafts).some(draft => draft.dirty) }); }, [stateKey, pickerOpen, invalid, documentDirty, relevant.length, loading, error, metadataLoading, metadataError, dateDrafts, onStateChange]);
+    useEffect(() => { onStateChange(stateKey, { pending: pickerOpen, ready: !pickerOpen && !invalid && (!relevant.length || (!loading && !error && !metadataLoading && !metadataError)), dirty: Object.values(dateDrafts).some(draft => draft.dirty) }); }, [stateKey, pickerOpen, invalid, relevant.length, loading, error, metadataLoading, metadataError, dateDrafts, onStateChange]);
     useEffect(() => () => onStateChange(stateKey, { pending: false, ready: true, dirty: false }), [onStateChange, stateKey]);
     useEffect(() => {
         if (loading || error || !deepLinkRowId) return;
@@ -183,12 +180,7 @@ export default function OrganizationLocalDraftTable({ organizationId, section, o
     </Select> : <Text>{choices.find(choice => choice.id === row.draft.metadata[field])?.label ?? (field === "actualOwnerId" && row.original ? string(row.original, "actualOwnerLabel") : null) ?? (row.draft.metadata[field] ? t("catalogRelation.unavailable") : "—")}</Text>;
     const columns: CatalogRelationColumn<Row>[] = [
         { key: "code", header: t("catalogRelation.code"), cell: row => row.draft.code },
-        { key: "name", header: t("catalogRelation.name"), cell: row => {
-            const id = encodeURIComponent(row.draft.identityId);
-            const href = section === "control-scopes" ? "/controls/" + id : section === "risk-scopes" ? "/risks?riskTemplateId=" + id
-                : section === "control-objective-scopes" ? "/control-objectives/" + id : section === "requirement-scopes" ? "/regulations?requirementId=" + id : "/policies?policyId=" + id;
-            return <Link href={href} onClick={event => { event.preventDefault(); navigate(href); }}>{row.draft.name}</Link>;
-        } },
+        { key: "name", header: t("catalogRelation.name"), cell: row => <Text>{row.draft.name}</Text> },
         { key: "status", header: t("common.status"), cell: row => <CatalogRelationStatus status={row.draft.status} draft={!row.pending ? null : row.draft.operation === "CREATE_OR_RESTORE" ? "new" : row.draft.operation === "DELETE" ? "delete" : row.draft.operation === "UPDATE" ? "edit" : row.draft.status === "ACTIVE" ? "active" : "inactive"} /> },
         ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: Row) => <CatalogRelationDate value={row.draft.metadata[field]} label={t(`catalogRelation.${field}`)} editable={editable && row.draft.status !== "DELETED"} disabled={busy}
             onChange={next => update(row, { [field]: next })} onDraftStateChange={state => setDateDrafts(previous => { const key = `${row.draft.key}:${field}`; const old = previous[key]; return old?.draftValue === state.draftValue && old.valid === state.valid && old.dirty === state.dirty ? previous : { ...previous, [key]: state }; })} /> })),
@@ -204,8 +196,6 @@ export default function OrganizationLocalDraftTable({ organizationId, section, o
         }
         columns.push({ key: "note", header: t("catalogRelation.note"), cell: row => editable && row.draft.status !== "DELETED" ? <TextArea value={row.draft.metadata.localContextNote ?? ""} disabled={busy} maxlength={1000} onInput={event => update(row, { localContextNote: event.target.value || null })} /> : row.draft.metadata.localContextNote ?? "—" });
     }
-    columns.push({ key: "documents", header: t("local.documents"), cell: row => row.original && row.original.status !== "DELETED" ? <Link onClick={() => { if (!documentDirty) setDocumentId(row.original!.id); }}>{t("local.documents")}</Link> : "—" });
-    const documentRow = canonical.find(row => row.id === documentId && row.status !== "DELETED");
     return <FlexBox direction="Column" className="organizationLocalDraftTable">
         <CatalogRelationToolbar title={t(spec.labelKey)} search={search} onSearch={setSearch} filter={filter} onFilter={next => { setFilter(next); onFilterChange?.(next); }} editable={editable} busy={busy || loading}
             canSelect={!error && !metadataLoading && !metadataError && owner.available !== false && owner.eligible !== false} canActivate={affected("ACTIVE").length > 0} canInactivate={affected("INACTIVE").length > 0} canDelete={affected("DELETED").length > 0}
@@ -215,7 +205,6 @@ export default function OrganizationLocalDraftTable({ organizationId, section, o
         {error ? <MessageStrip design="Negative" hideCloseButton>{error}<CatalogActionButton disabled={busy} onClick={() => setReload(current => current + 1)}>{t("catalogRelation.retry")}</CatalogActionButton></MessageStrip> : null}
         {invalid ? <MessageStrip design="Negative" hideCloseButton>{t("catalogRelation.invalid")}</MessageStrip> : null}
         <CatalogRelationTable rows={displayed} rowKey={row => row.draft.key} columns={columns} selectable={editable} selectedKeys={selected} onSelectionChange={setSelected} accessibleName={t(spec.labelKey)} loading={loading} busy={busy} />
-        {documentRow ? <DocumentManager targetType={LOCAL_DOCUMENT_TARGETS[section]} targetId={documentRow.id} title={t("local.documents")} readOnly={!editable || owner.available === false} showActions={editable && owner.available !== false} persistenceMode="STANDALONE" onDirtyChange={setDocumentDirty} /> : null}
         {pickerOpen ? <HierarchyMultiSelectionDialog open title={t(spec.labelKey)} searchAccessibleName={t("catalogRelation.search")} nodes={nodes} selectedIds={EMPTY_SELECTION} busy={busy} loading={pickerLoading} error={pickerError}
             confirmText={t("common.select")} cancelText={t("common.cancel")} onConfirm={stage} onClose={() => setPickerOpen(false)} /> : null}
     </FlexBox>;

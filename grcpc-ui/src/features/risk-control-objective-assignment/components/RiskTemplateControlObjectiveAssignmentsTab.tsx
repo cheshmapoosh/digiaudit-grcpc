@@ -6,7 +6,7 @@ import { useRiskControlObjectiveAssignmentPermissions } from "../security/riskCo
 export default function RiskTemplateControlObjectiveAssignmentsTab({ riskTemplateId }: { riskTemplateId: string }) {
   const permissions = useRiskControlObjectiveAssignmentPermissions();
   const load = useCallback(async (signal: AbortSignal) => (await riskControlObjectiveAssignmentApi.forRiskTemplate(riskTemplateId, signal)).map(row => ({
-    id: row.assignmentId, code: row.controlObjectiveCode, title: row.controlObjectiveTitle, href: `/control-objectives/${row.controlObjectiveId}?tab=risks`,
+    id: row.assignmentId, code: row.controlObjectiveCode, title: row.controlObjectiveTitle,
     endpointStatus: row.controlObjectiveStatus, endpointValidFrom: row.controlObjectiveValidFrom, endpointValidTo: row.controlObjectiveValidTo,
     status: row.status, validFrom: row.validFrom, validTo: row.validTo,
   })), [riskTemplateId]);

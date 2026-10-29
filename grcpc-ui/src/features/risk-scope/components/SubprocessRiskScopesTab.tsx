@@ -1,7 +1,7 @@
 import type { CentralRiskCategorySummary, CentralRiskTemplateSummary } from "@/features/risk/domain/centralRisk.model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip, Tag } from "@ui5/webcomponents-react";
+import { MessageStrip, Tag } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -115,7 +115,7 @@ export default function SubprocessRiskScopesTab({ subprocessId, readOnly, busy =
   });
   const columns: CatalogRelationColumn<RiskScopeDraftRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.riskTemplateCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={"/risks?riskTemplateId=" + row.riskTemplateId} wrappingType="Normal">{row.riskTemplateTitle}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.riskTemplateTitle },
     { key: "riskType", header: t("riskScope.fields.riskType"), cell: row => <Tag design="Set1">{t(`risk.riskType.${row.riskType}`)}</Tag> },
     ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: RiskScopeDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_PENDING_DELETE"} disabled={busy || loading}
       onChange={value => updateDate(row.key, field, value)} onDraftStateChange={draft => reportDate(row.key + ":" + field, draft)} /> })),

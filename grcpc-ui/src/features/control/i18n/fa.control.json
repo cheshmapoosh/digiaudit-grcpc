@@ -118,7 +118,7 @@
     "status": { "ACTIVE": "فعال", "INACTIVE": "غیرفعال", "DELETED": "حذف‌شده" },
     "actions": {
       "view": "مشاهده",
-      "submit": "ثبت",
+      "submit": "ذخیره",
       "selectAll": "انتخاب همه",
       "clearSelection": "پاک‌کردن انتخاب‌ها"
     },

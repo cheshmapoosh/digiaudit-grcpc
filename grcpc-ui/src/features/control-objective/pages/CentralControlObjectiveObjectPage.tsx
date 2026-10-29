@@ -1,10 +1,10 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { ControlObjectiveRiskTemplateAssignmentsTab, EMPTY_RISK_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE, useRiskControlObjectiveAssignmentPermissions, type RiskControlObjectiveAssignmentDraftState } from "@/features/risk-control-objective-assignment";
 import { ControlObjectiveControlAssignmentsTab, useControlControlObjectiveAssignmentPermissions } from "@/features/control-control-objective-assignment";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { LocalReverseList } from "@/features/local-master-data";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { Text, ObjectStatus, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
@@ -73,7 +73,6 @@ interface Props {
   onEdit: () => void;
   onActiveTabChange: (tab: CentralControlObjectiveTabKey) => void;
   onDirtyChange: (dirty: boolean) => void;
-  allowAccountGroupNavigation?: boolean;
 }
 
 const EMPTY_DATE_DRAFT: PersianDateDraftState = {
@@ -133,7 +132,6 @@ export default function CentralControlObjectiveObjectPage({
   onEdit,
   onActiveTabChange,
   onDirtyChange,
-  allowAccountGroupNavigation = true,
 }: Props) {
   const { t } = useTranslation();
   const classificationPermissions = useControlObjectiveAccountGroupPermissions();
@@ -290,7 +288,7 @@ export default function CentralControlObjectiveObjectPage({
 
       <div className="controlObjectiveObjectBody">
         <div className={activeTab === "general" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
-          <div className="controlObjectiveFormGrid modalTwoColumnGrid">
+          <CatalogFormGrid className="controlObjectiveFormGrid modalTwoColumnGrid">
             <Field label={t("controlObjective.fields.code")} required>
               {readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(event) => change("code", readValue(event))} />}
             </Field>
@@ -334,9 +332,9 @@ export default function CentralControlObjectiveObjectPage({
               />}
             </Field></div>
             <Field label={t("controlObjective.fields.description")} fullWidth>
-              {readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={5} value={form.description} readonly={readOnly} disabled={busy} onInput={(event) => change("description", readValue(event))} />}
+              {readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={3} value={form.description} readonly={readOnly} disabled={busy} onInput={(event) => change("description", readValue(event))} />}
             </Field>
-          </div>
+          </CatalogFormGrid>
         </div>
 
         <div className={activeTab === "subprocesses" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
@@ -358,7 +356,6 @@ export default function CentralControlObjectiveObjectPage({
               readOnly={readOnly}
               busy={busy}
               adoptedCanonical={adoptedClassifications ?? value?.relations?.accountGroupClassifications}
-              allowAccountGroupNavigation={allowAccountGroupNavigation}
               onDraftStateChange={setClassifications}
             />
           ) : null}
@@ -379,13 +376,6 @@ export default function CentralControlObjectiveObjectPage({
         </div>
       </div>
 
-      {value?.id && mode === "view" ? <LocalReverseList
-        parentId={value.id}
-        path={`central/control-objectives/${value.id}/control-objective-scopes`}
-        section="control-objective-scopes"
-        titleKey="local.reverse.objectiveScopes" titleFa="انتساب‌های محلی این هدف کنترل"
-        areas={["PROCESS", "CONTROL"]} /> : null}
-
       <DialogFooter>
         {mode === "view" ? (
           <>
@@ -399,7 +389,7 @@ export default function CentralControlObjectiveObjectPage({
         ) : (
           <>
             <Button design="Emphasized" disabled={saveDisabled} onClick={() => void submit()}>
-              {t("controlObjective.actions.submit", { defaultValue: "ثبت" })}
+              {t("common.save")}
             </Button>
             <Button design="Transparent" disabled={busy} onClick={onCancel}>
               {t("common.cancel", { defaultValue: "انصراف" })}

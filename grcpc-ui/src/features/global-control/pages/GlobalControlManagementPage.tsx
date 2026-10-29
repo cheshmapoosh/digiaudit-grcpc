@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { CatalogTreeOrder, CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
 import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
@@ -6,11 +7,10 @@ import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter, DialogFooterBar } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { createElement, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
-  Bar, BusyIndicator, Dialog, Input, Label, Link, MessageStrip, Option, Select, Tab,
+  Bar, BusyIndicator, Dialog, Input, Label, MessageStrip, Option, Select, Tab,
   Text, TextArea, Title, Tree,
 } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
@@ -126,7 +126,6 @@ function GroupTreeItem({ node, selected, expanded }: {
 
 export default function GlobalControlManagementPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { manage } = useMasterDataAccess("CONTROL");
   const groups = useGlobalControlState((state) => state.groups);
   const controls = useGlobalControlState((state) => state.controls);
@@ -329,9 +328,9 @@ export default function GlobalControlManagementPage() {
     } catch (cause) { setError(message(cause)); }
     finally { setBusy(false); }
   };
-  const onTreeSelect = (event: TreeEvent) => {
-    const id = event.detail?.item?.dataset?.nodeId;
-    const kind = event.detail?.item?.dataset?.nodeKind;
+  const selectTreeItem = (item: HTMLElement | undefined) => {
+    const id = item?.dataset.nodeId;
+    const kind = item?.dataset.nodeKind;
     if (id && (kind === "group" || kind === "control")) choose({ kind, id });
   };
   const onTreeToggle = (event: TreeEvent) => {
@@ -377,14 +376,15 @@ export default function GlobalControlManagementPage() {
       <Label>{t("globalControl.tree.name")}</Label>
       <Label>{t("globalControl.tree.kind")}</Label>
     </div>
-    <CatalogTreeOrder catalog="GLOBAL_CONTROL" refreshKey={JSON.stringify([groups, controls])} filtered={Boolean(needle)}>{(order) => needle ? <Tree onItemClick={onTreeSelect}>
+    <CatalogTreeOrder catalog="GLOBAL_CONTROL" refreshKey={JSON.stringify([groups, controls])} filtered={Boolean(needle)}>{(order) => needle ? <Tree onItemClick={(event) => selectTreeItem(event.detail.item)}>
       {filtered.map(({ item, kind }) => <TreeItemCustom key={kind + item.id}
         data-node-kind={kind} data-node-id={item.id}
         selected={selected?.kind === kind && selected.id === item.id}
         content={<CatalogSelectableRow itemKey={kind + ":" + item.id}><div className="globalControlTreeRow"><span>{item.name}</span>
           <span className="globalControlTreeType">{t(kind === "group" ? "globalControl.group.menu" : "globalControl.control.menu")}</span></div></CatalogSelectableRow>} />)}
     </Tree>
-      : <Tree inert={order.busy} onMove={order.onMove} onMoveOver={order.onMoveOver} onItemClick={onTreeSelect} onItemToggle={onTreeToggle}>
+      : <Tree inert={order.busy} onMove={(event) => order.onMove(event, selectTreeItem)} onMoveOver={order.onMoveOver}
+        onDragEnd={(event) => order.onDragEnd(event, selectTreeItem)} onItemClick={(event) => selectTreeItem(event.detail.item)} onItemToggle={onTreeToggle}>
         {order.sort(tree, (node) => orderKey("CONTROL_GROUP", node.id)).map((node) => <GroupTreeItem key={node.id} node={node}
           selected={selected} expanded={expanded} />)}
       </Tree>}</CatalogTreeOrder>
@@ -415,7 +415,7 @@ export default function GlobalControlManagementPage() {
     </DetailTabContainer>
     {activeTab === "general" || selectedGroup ?
       <div className="globalControlForm">
-      <div className={selectedGroup ? "masterDataFormGrid modalTwoColumnGrid" : "masterDataFormGrid"}>
+      <CatalogFormGrid className={selectedGroup ? "masterDataFormGrid modalTwoColumnGrid" : "masterDataFormGrid"}>
         <MasterDataFormField label={t("globalControl.code")}><Text className="objectPageValue">{(details.code) || "—"}</Text></MasterDataFormField>
         <MasterDataFormField label={t("globalControl.name")}><Text className="objectPageValue">{(details.name) || "—"}</Text></MasterDataFormField>
         {selectedControl ? <>
@@ -432,7 +432,7 @@ export default function GlobalControlManagementPage() {
           </MasterDataFormField>
         </div>
         <MasterDataFormField label={t("globalControl.description")} wide><Text className="objectPageValue">{(details.description || "") || "—"}</Text></MasterDataFormField>
-      </div>
+      </CatalogFormGrid>
       </div> : null}
     {selectedControl && activeTab === "regulations" ? regulationPanel : null}
     {viewOpen && selectedControl && activeTab === "documents" ? <DocumentManager
@@ -482,7 +482,6 @@ export default function GlobalControlManagementPage() {
       onDeleted={(keys) => {
         if (selected && keys.has(selected.kind + ":" + selected.id)) { setSelected(null); setViewOpen(false); }
       }}><section className="globalControlPage">
-    <Link onClick={() => navigate("/master-data")}>{t("masterData.title")}</Link>
     {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}</MessageStrip> : null}
     {createElement("ui5-flexible-column-layout", {
       layout: details ? "TwoColumnsStartExpanded" : "OneColumn",
@@ -513,7 +512,7 @@ export default function GlobalControlManagementPage() {
       </DetailTabContainer>
       <div className={editorTab === "general" || groupEditor
         ? "globalControlForm" : "globalControlForm globalControlHidden"}>
-        <div className={groupEditor ? "masterDataFormGrid modalTwoColumnGrid" : "masterDataFormGrid"}>
+        <CatalogFormGrid className={groupEditor ? "masterDataFormGrid modalTwoColumnGrid" : "masterDataFormGrid"}>
         <MasterDataFormField label={t("globalControl.code")} required><Input value={form.code} readonly={editor === "groupEdit" || editor === "controlEdit"}
           disabled={busy} onInput={(event) => groupEditor
             ? setGroupForm((old) => ({ ...old, code: event.target.value }))
@@ -560,7 +559,7 @@ export default function GlobalControlManagementPage() {
           onInput={(event) => groupEditor
             ? setGroupForm((old) => ({ ...old, description: event.target.value }))
             : setControlForm((old) => ({ ...old, description: event.target.value }))} /></MasterDataFormField>
-        </div>
+        </CatalogFormGrid>
       </div>
       {!groupEditor ? <div className={editorTab === "regulations" ? "globalControlRelationTab" : "globalControlRelationTab globalControlHidden"}>{regulationPanel}</div> : null}
       {!groupEditor && editor ? <div className={editorTab === "documents"

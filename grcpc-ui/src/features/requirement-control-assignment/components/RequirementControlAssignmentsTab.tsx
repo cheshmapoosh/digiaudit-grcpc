@@ -6,7 +6,7 @@ import { useRequirementControlAssignmentPermissions } from "../security/requirem
 export default function RequirementControlAssignmentsTab({ requirementId }: { requirementId: string }) {
   const permissions = useRequirementControlAssignmentPermissions();
   const load = useCallback(async (signal: AbortSignal) => (await requirementControlAssignmentApi.forRequirement(requirementId, signal)).map(row => ({
-    id: row.assignmentId, code: row.controlCode, title: row.controlTitle, href: `/controls/${row.controlId}?tab=requirements`,
+    id: row.assignmentId, code: row.controlCode, title: row.controlTitle,
     endpointStatus: row.controlStatus, endpointValidFrom: row.controlValidFrom, endpointValidTo: row.controlValidTo,
     status: row.status, validFrom: row.validFrom, validTo: row.validTo,
   })), [requirementId]);

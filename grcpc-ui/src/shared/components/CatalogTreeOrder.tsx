@@ -22,6 +22,7 @@ export function CatalogTreeOrder({ catalog, refreshKey, filtered = false, childr
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const inFlight = useRef(false);
+  const handledDrop = useRef(false);
   const generation = useRef(0);
   const url = `/api/master-data/display-order/${catalog}`;
   useEffect(() => {
@@ -48,18 +49,30 @@ export function CatalogTreeOrder({ catalog, refreshKey, filtered = false, childr
   const state: CatalogOrderState = {
     busy: saving || Boolean(selection?.busy),
     movable: (key) => enabled && byKey.has(key), sort, sortTree,
+    onDragEnd: (event, selectSource) => {
+      const handled = handledDrop.current;
+      handledDrop.current = false;
+      if (handled || inFlight.current || !enabled) return;
+      // UI5 emits no Move for a rejected target or a cancelled drag.
+      const sourceItem = event.target instanceof HTMLElement
+        ? event.target.closest<HTMLElement>("[data-order-key]") : null;
+      if (sourceItem && byKey.has(sourceItem.dataset.orderKey ?? "")) selectSource(sourceItem);
+    },
     onMoveOver: (event) => {
       const { source, destination } = event.detail;
       if (resolve(source.element, destination.element, destination.placement)) event.preventDefault();
     },
-    onMove: (event) => {
+    onMove: (event, selectSource) => {
       const { source, destination } = event.detail;
+      const sourceItem = source.element;
+      if (!enabled || inFlight.current || !byKey.has(sourceItem.dataset.orderKey ?? "")) return;
+      handledDrop.current = true;
       const pair = resolve(source.element, destination.element, destination.placement);
-      if (!pair || !selection) return;
+      if (!pair || !selection) { selectSource(sourceItem); return; }
       const siblings = rows.filter((row) => row.parentId === pair.from.parentId && row.parentType === pair.from.parentType);
       const next = siblings.filter((row) => row !== pair.from);
       next.splice(next.indexOf(pair.to) + (destination.placement === "After" ? 1 : 0), 0, pair.from);
-      if (next.every((row, index) => row === siblings[index])) return;
+      if (next.every((row, index) => row === siblings[index])) { selectSource(sourceItem); return; }
       inFlight.current = true;
       setSaving(true); selection.onBusyChange(true); setError(null);
       const request = ++generation.current;
@@ -81,6 +94,8 @@ export function CatalogTreeOrder({ catalog, refreshKey, filtered = false, childr
           // Refresh canonical entity versions before any subsequent edit/delete.
           try { await selection.reloadOrder(); } catch { setError(t("common.catalogOrder.loadError")); setReadyKey(null); }
           inFlight.current = false; setSaving(false); selection.onBusyChange(false);
+          // Use the normal selection path after either outcome, with fresh detail versions.
+          selectSource(sourceItem);
         }
       })();
     },

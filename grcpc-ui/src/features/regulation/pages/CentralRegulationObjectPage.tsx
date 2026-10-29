@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { RequirementControlAssignmentsTab, useRequirementControlAssignmentPermissions } from "@/features/requirement-control-assignment";
@@ -363,7 +364,7 @@ export default function CentralRegulationObjectPage({
                 : "regulationTabPanel regulationTabPanelHidden"
             }
           >
-            <div className={nodeType === "GROUP" ? "regulationFormGrid modalTwoColumnGrid" : "regulationFormGrid"}>
+            <CatalogFormGrid className={nodeType === "GROUP" ? "regulationFormGrid modalTwoColumnGrid" : "regulationFormGrid"}>
               <Field label={t("regulation.fields.code")} required>
                 {readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input
                   value={form.code}
@@ -429,14 +430,14 @@ export default function CentralRegulationObjectPage({
               </Field></div>
               <Field label={t("regulation.fields.description")} fullWidth>
                 {readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea
-                  rows={6}
+                  rows={3}
                   value={form.description}
                   readonly={readOnly}
                   disabled={busy}
                   onInput={(event) => change("description", readValue(event))}
                 />}
               </Field>
-            </div>
+            </CatalogFormGrid>
           </div>
 
           {nodeType === "REGULATION" && value?.id && mode !== "create" ? (

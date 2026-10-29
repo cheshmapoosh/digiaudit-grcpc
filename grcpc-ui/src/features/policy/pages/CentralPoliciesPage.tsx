@@ -562,7 +562,7 @@ export default function CentralPoliciesPage() {
       <Dialog open={modalOpen} accessibleName={dialogTitle} className="policyObjectDialog catalogObjectDialog" onClose={handleDialogClose}>
         <ModalDialogHeader title={dialogTitle} onClose={closeObject} />
         <div data-catalog-dialog-content className="policyDialogContent" dir={appDir}>
-          {modalMode === "create" || modalValue ? (
+          {modalOpen && (modalMode === "create" || modalValue ? (
             <CentralPolicyObjectPage
               key={`${modalMode === "create" ? "create" : modalValue?.id}:${modalType}:${modalMode}`}
               mode={modalMode}
@@ -588,7 +588,7 @@ export default function CentralPoliciesPage() {
             <MessageStrip design="Information" hideCloseButton>
               {t("policy.errors.notFound", { defaultValue: "آیتم موردنظر یافت نشد." })}
             </MessageStrip>
-          )}
+          ))}
         </div>
       </Dialog>
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip } from "@ui5/webcomponents-react";
+import { MessageStrip } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -15,7 +15,7 @@ import { controlObjectiveAccountGroupErrorMessage } from "../utils/controlObject
 
 
 const EMPTY_SELECTION = new Set<string>();
-interface Props { controlObjectiveId: string | null; readOnly: boolean; busy?: boolean; onDraftStateChange?: (state: ControlObjectiveClassificationDraftState) => void; adoptedCanonical?: ControlObjectiveAccountGroupClassification[] | null; allowAccountGroupNavigation?: boolean; }
+interface Props { controlObjectiveId: string | null; readOnly: boolean; busy?: boolean; onDraftStateChange?: (state: ControlObjectiveClassificationDraftState) => void; adoptedCanonical?: ControlObjectiveAccountGroupClassification[] | null; }
 function flatten(nodes: ControlObjectiveAccountGroupOption[]): ControlObjectiveAccountGroupOption[] { return nodes.flatMap(node => [node, ...flatten(node.children)]); }
 function persisted(
   row: ControlObjectiveAccountGroupClassification,
@@ -50,7 +50,7 @@ function changes(rows: ControlObjectiveClassificationDraftRow[]): ControlObjecti
       : [{ operation: row.status === "ACTIVE" ? "ACTIVATE" : "INACTIVATE", accountGroupId: row.accountGroupId, classificationId: row.classificationId, version: row.version }];
   });
 }
-export default function ControlObjectiveAccountGroupsTab({ controlObjectiveId, readOnly, busy = false, onDraftStateChange, adoptedCanonical, allowAccountGroupNavigation = true }: Props) {
+export default function ControlObjectiveAccountGroupsTab({ controlObjectiveId, readOnly, busy = false, onDraftStateChange, adoptedCanonical }: Props) {
   const { t } = useTranslation(); const permissions = useControlObjectiveAccountGroupPermissions();
   const [rows, setRows] = useState<ControlObjectiveClassificationDraftRow[]>(() => adoptedCanonical?.map(persisted) ?? []);
   const [options, setOptions] = useState<ControlObjectiveAccountGroupOption[]>([]);
@@ -129,7 +129,7 @@ export default function ControlObjectiveAccountGroupsTab({ controlObjectiveId, r
   });
   const columns: CatalogRelationColumn<ControlObjectiveClassificationDraftRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.accountGroupCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => allowAccountGroupNavigation ? <Link href={"/account-groups"} wrappingType="Normal">{row.accountGroupTitle}</Link> : row.accountGroupTitle },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.accountGroupTitle },
 
     ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: ControlObjectiveClassificationDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_DELETE"} disabled={busy || loading}
       onChange={value => updateDate(row.key, field, value)} onDraftStateChange={draft => reportDate(row.key + ":" + field, draft)} /> })),

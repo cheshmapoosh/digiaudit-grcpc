@@ -310,7 +310,12 @@ export default function ProcessTree({
                 </span>
             </div>
 
-            <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
+            <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, (item) => {
+                if (item.dataset.processNodeId) onSelect?.(item.dataset.processNodeId);
+            })} onMoveOver={displayOrder?.onMoveOver}
+                onDragEnd={(event) => displayOrder?.onDragEnd(event, (item) => {
+                    if (item.dataset.processNodeId) onSelect?.(item.dataset.processNodeId);
+                })}
                 accessibleName={t("process.list.title", {
                     defaultValue: "ساختار فرآیند",
                 })}

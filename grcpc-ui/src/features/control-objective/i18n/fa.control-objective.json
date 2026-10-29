@@ -46,7 +46,7 @@
     },
     "actions": {
       "view": "مشاهده",
-      "submit": "ثبت"
+      "submit": "ذخیره"
     },
     "validation": {
       "codeRequired": "شناسه هدف کنترلی الزامی است.",

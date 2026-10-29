@@ -185,6 +185,23 @@ component, or - there is a documented limitation.
   area collapsed. Keep the existing panels outside the tab strip so drafts stay
   mounted, without an empty band between tabs and tables. Table, List and Tree
   empty states must use application translations, including Persian.
+- Governance tab rows display catalog names, codes and contributing references
+  as plain text. Do not make them links, bind row navigation or open nested
+  catalog dialogs. Select dialogs remain explicit relationship actions; main
+  catalog View actions remain the entry points for viewing another item.
+- Governance relationship tables show at most five data columns, ordered Code,
+  Name, Status, Valid From, Valid To; omit dates when the relation has none.
+  Supplementary fields render in a native inline Form for exactly one selected
+  row, preserving their typed editors and parent Save. Selection in read-only
+  tables only reveals details. Never hide date drafts behind this detail form.
+- Governance General Information uses CatalogFormGrid. Count the rows required
+  by a two-column layout, including wide fields and paired dates; more than
+  three rows selects three columns at desktop widths, otherwise two. Responsive
+  layouts fall back to two and one. This rule also applies to group forms.
+  Native TextArea rows start at three; field content and validation are retained.
+  Document tables group file/version/size metadata and use no more than five
+  columns. Avoid fixed minimum tab heights and nested scrolling around the
+  shared measured table viewport.
 - The governance hub uses a simple Title without a hero avatar or repeated
   introductory copy or a Back button. Card descriptions belong in native Text in the Card body:
   CardHeader in UI5 2.18 limits subtitle lines and has no public wrapping option.
@@ -205,6 +222,11 @@ component, or - there is a documented limitation.
 - Catalog breadcrumbs follow Home / Governance and Control / Catalog, including
   nested catalog URLs. Parent items navigate through the SPA router; the final
   item is the current page. Do not derive this hierarchy from flat URL segments.
+- Do not repeat a Master Data link below the breadcrumbs on catalog pages.
+  Parent actions use the short labels Select/Delete and the same
+  CatalogActionButton as Global Control: Emphasized for selection, Negative
+  for clearing, with the shared action width and native Compact styling.
+  Clearing only changes an optional parent draft and still joins main Save.
 - Login and setup share `PublicAuthLayout`, using native `Card` and `Grid`.
   Setup uses the compact variant and retains its four native form groups.
 - Login inputs explicitly request the enclosing HTML form's submission on Enter:

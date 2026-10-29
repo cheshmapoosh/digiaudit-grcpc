@@ -6,7 +6,7 @@ import { useControlControlObjectiveAssignmentPermissions } from "../security/con
 export default function ControlObjectiveControlAssignmentsTab({ controlObjectiveId }: { controlObjectiveId: string }) {
   const permissions = useControlControlObjectiveAssignmentPermissions();
   const load = useCallback(async (signal: AbortSignal) => (await controlControlObjectiveAssignmentApi.forControlObjective(controlObjectiveId, signal)).map(row => ({
-    id: row.assignmentId, code: row.controlCode, title: row.controlTitle, href: `/controls/${row.controlId}?tab=controlObjectives`,
+    id: row.assignmentId, code: row.controlCode, title: row.controlTitle,
     endpointStatus: row.controlStatus, endpointValidFrom: row.controlValidFrom, endpointValidTo: row.controlValidTo,
     status: row.status, validFrom: row.validFrom, validTo: row.validTo,
   })), [controlObjectiveId]);

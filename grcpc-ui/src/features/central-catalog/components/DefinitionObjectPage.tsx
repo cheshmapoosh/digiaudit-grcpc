@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { useEffect, useMemo, useState } from "react";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import { Text, Button, Input, Label, MessageStrip, TextArea, Title } from "@ui5/webcomponents-react";
@@ -187,7 +188,7 @@ export function DefinitionObjectPage<T extends DefinitionDetailFields>({
           })}
         </MessageStrip>
       ) : null}
-      <div className="catalogFormGrid modalTwoColumnGrid">
+      <CatalogFormGrid className="catalogFormGrid modalTwoColumnGrid">
         <Label>
           {t("common.code", { defaultValue: "کد" })}
           {readOnly ? <Text className="objectPageValue">{(draft.code) || "—"}</Text> : <Input
@@ -245,14 +246,14 @@ export function DefinitionObjectPage<T extends DefinitionDetailFields>({
         <Label className="catalogWideField">
           {t("common.description", { defaultValue: "شرح" })}
           {readOnly ? <Text className="objectPageValue">{(draft.description) || "—"}</Text> : <TextArea
-            rows={5}
+            rows={3}
             value={draft.description}
             readonly={readOnly}
             disabled={busy}
             onInput={(event) => change("description", readValue(event))}
           />}
         </Label>
-      </div>
+      </CatalogFormGrid>
       {children}
       <DocumentManager
         targetType={options.documentTarget}

@@ -1,2 +1,5 @@
 .catalogRelationToolbar { width: 100%; gap: .5rem; min-width: 0; max-width: 100%; box-sizing: border-box; }
 .catalogRelationToolbar > ui5-title { margin-inline-end: auto; }
+.catalogRelationContent { width: 100%; min-width: 0; gap: var(--sapContent_Space_Small); }
+.catalogRelationContent > ui5-form { width: 100%; min-width: 0; }
+.catalogRelationContent ui5-form-item > :is(ui5-input, ui5-select, ui5-textarea) { width: 100%; min-width: 0; }

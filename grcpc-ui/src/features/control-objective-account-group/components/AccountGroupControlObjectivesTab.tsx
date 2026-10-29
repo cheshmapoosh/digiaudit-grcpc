@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip } from "@ui5/webcomponents-react";
+import { MessageStrip } from "@ui5/webcomponents-react";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { ControlObjectiveAccountGroupClassification } from "../domain/controlObjectiveAccountGroup.model";
 import { controlObjectiveAccountGroupApi } from "../infra/controlObjectiveAccountGroup.api";
-import { useControlObjectiveAccountGroupPermissions, useControlObjectiveClassificationDestinationPermissions } from "../security/controlObjectiveAccountGroupPermissions";
+import { useControlObjectiveAccountGroupPermissions } from "../security/controlObjectiveAccountGroupPermissions";
 import { controlObjectiveAccountGroupErrorMessage } from "../utils/controlObjectiveAccountGroupError";
 
-export default function AccountGroupControlObjectivesTab({ accountGroupId, allowControlObjectiveNavigation = true }: { accountGroupId: string; allowControlObjectiveNavigation?: boolean; }) {
-  const { t } = useTranslation(); const permissions = useControlObjectiveAccountGroupPermissions(); const destinations = useControlObjectiveClassificationDestinationPermissions();
+export default function AccountGroupControlObjectivesTab({ accountGroupId }: { accountGroupId: string; }) {
+  const { t } = useTranslation(); const permissions = useControlObjectiveAccountGroupPermissions();
   const [rows, setRows] = useState<ControlObjectiveAccountGroupClassification[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState(""); const [filter, setFilter] = useState<CatalogRelationFilter>("ALL");
   useEffect(() => { const controller = new AbortController(); let current = true;
@@ -25,7 +25,7 @@ export default function AccountGroupControlObjectivesTab({ accountGroupId, allow
   const visible = rows.filter(row => row.status !== "DELETED" && (filter === "ALL" || row.status === filter) && `${row.controlObjectiveCode} ${row.controlObjectiveTitle}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const columns: CatalogRelationColumn<ControlObjectiveAccountGroupClassification>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.controlObjectiveCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => allowControlObjectiveNavigation && destinations.controlObjectiveView ? <Link href={"/control-objectives/" + row.controlObjectiveId}>{row.controlObjectiveTitle}</Link> : row.controlObjectiveTitle },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.controlObjectiveTitle },
     { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={row.status} /> },
     { key: "validFrom", header: t("catalogRelation.validFrom"), cell: row => formatPersianDate(row.validFrom) },
     { key: "validTo", header: t("catalogRelation.validTo"), cell: row => formatPersianDate(row.validTo) },

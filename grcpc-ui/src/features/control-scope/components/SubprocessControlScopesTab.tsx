@@ -2,7 +2,7 @@ import { centralControlApi } from "@/features/control/infra/centralControl.api.r
 import type { CentralControlGroupSummary, CentralControlSummary } from "@/features/control/domain/centralControl.model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip, Option, Select } from "@ui5/webcomponents-react";
+import { MessageStrip, Option, Select } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -118,7 +118,7 @@ export default function SubprocessControlScopesTab({ subprocessId, readOnly, bus
   });
   const columns: CatalogRelationColumn<ControlScopeDraftRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.controlCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={"/controls/" + row.controlId} wrappingType="Normal">{row.controlTitle}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.controlTitle },
     ...([ ["recommendedFrequencyCode", "recommendedFrequencyCodes", "frequency", "control.operationFrequency"], ["recommendedExecutionMethodCode", "recommendedExecutionMethodCodes", "executionMethod", "control.automationType"], ["recommendedTestMethodCode", "recommendedTestMethodCodes", "testMethod", "control.testingTechnique"] ] as const).map(([field, optionField, label, translation]) => ({ key: field, header: t(`controlScope.fields.${label}`), cell: (row: ControlScopeDraftRow) => !readOnly && permissions.update && row.editState !== "DRAFT_PENDING_DELETE" ? <Select value={row[field] ?? ""} disabled={busy || loading} onChange={event => updateConfiguration(row.key, field, event.target.value)}><Option value="">{t("controlScope.options.none")}</Option>{scopeOptions[optionField].map(code => <Option key={code} value={code}>{t(`${translation}.${code}`)}</Option>)}</Select> : row[field] ? t(`${translation}.${row[field]}`) : "—" })),
     ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: ControlScopeDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_PENDING_DELETE"} disabled={busy || loading}
       onChange={value => updateDate(row.key, field, value)} onDraftStateChange={draft => reportDate(row.key + ":" + field, draft)} /> })),

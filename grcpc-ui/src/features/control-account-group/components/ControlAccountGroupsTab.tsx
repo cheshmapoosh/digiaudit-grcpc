@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip } from "@ui5/webcomponents-react";
+import { MessageStrip } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -110,7 +110,7 @@ export default function ControlAccountGroupsTab({ controlId, readOnly, busy = fa
   });
   const columns: CatalogRelationColumn<ClassificationDraftRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.accountGroupCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={"/account-groups"} wrappingType="Normal">{row.accountGroupTitle}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.accountGroupTitle },
 
     ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: ClassificationDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_DELETE"} disabled={busy || loading}
       onChange={value => updateDate(row.key, field, value)} onDraftStateChange={draft => reportDate(row.key + ":" + field, draft)} /> })),

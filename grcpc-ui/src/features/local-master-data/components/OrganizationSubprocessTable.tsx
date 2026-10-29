@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { FlexBox, Link, MessageStrip, Text } from "@ui5/webcomponents-react";
 import { CatalogRelationTable } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
-import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import type { ProcessNode } from "@/features/process";
 import type { LocalContextDraft, LocalContextRow, LocalStatus } from "../domain/local.model";
 import { localApi } from "../infra/local.api.repo";
@@ -28,8 +26,6 @@ interface Props {
 export default function OrganizationSubprocessTable({ organizationId, editable, busy, canonicalRows, resetKey,
     changes, onChange, onPendingChange, onReadyChange }: Props) {
     const { t } = useTranslation();
-    const navigate = useNavigate();
-    const processAccess = useMasterDataAccess("PROCESS");
     const [loaded, setLoaded] = useState<LocalContextRow[]>([]);
     const [loadedFor, setLoadedFor] = useState<string | null>(organizationId);
     const previousOwner = useRef(organizationId);
@@ -137,8 +133,7 @@ export default function OrganizationSubprocessTable({ organizationId, editable, 
             selectedKeys={selected} onSelectionChange={setSelected} selectable={editable} loading={loading} busy={busy}
             emptyText={t("local.subprocessTable.empty")} columns={[
                 { key: "code", header: t("catalogRelation.code"), cell: item => <Text>{item.code}</Text> },
-                { key: "name", header: t("catalogRelation.name"), cell: item => processAccess.view
-                    ? <Link onClick={() => navigate(`/processes/${item.subprocessId}`)}>{item.name}</Link> : <Text>{item.name}</Text> },
+                { key: "name", header: t("catalogRelation.name"), cell: item => <Text>{item.name}</Text> },
                 { key: "status", header: t("catalogRelation.status"), cell: item => <CatalogRelationStatus status={target(item.change, item.original)}
                     draft={item.change?.operation === "DELETE" ? "delete" : item.change?.operation === "ACTIVATE" ? "active"
                         : item.change?.operation === "INACTIVATE" ? "inactive" : item.change ? "new" : null} /> },

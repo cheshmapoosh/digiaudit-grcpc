@@ -78,7 +78,7 @@
       "title": "خلاصه اطلاعات"
     },
     "actions": {
-      "submit": "ثبت"
+      "submit": "ذخیره"
     },
     "validation": {
       "codeRequired": "شناسه الزامی است.",

@@ -1,7 +1,7 @@
 import type { CentralRegulationGroupSummary, CentralRegulationSummary, CentralRegulationRequirementSummary } from "@/features/regulation/domain/centralRegulation.model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, MessageStrip } from "@ui5/webcomponents-react";
+import { MessageStrip } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -117,7 +117,7 @@ export default function SubprocessRequirementScopesTab({ subprocessId, readOnly,
   });
   const columns: CatalogRelationColumn<RequirementScopeDraftRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.requirementCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => <Link href={"/regulations?requirementId=" + row.requirementId} wrappingType="Normal">{row.requirementTitle}</Link> },
+    { key: "name", header: t("catalogRelation.name"), cell: row => row.requirementTitle },
     ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: RequirementScopeDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_PENDING_DELETE"} disabled={busy || loading}
       onChange={value => updateDate(row.key, field, value)} onDraftStateChange={draft => reportDate(row.key + ":" + field, draft)} /> })),
     { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={row.status} draft={row.editState === "FINAL" ? null : row.editState === "DRAFT_PENDING_DELETE" ? "delete" : !row.original || row.original.status === "DELETED" ? "new" : row.status !== row.original.status ? row.status === "ACTIVE" ? "active" : "inactive" : "edit"} /> },

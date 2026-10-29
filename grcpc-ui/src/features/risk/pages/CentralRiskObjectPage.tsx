@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { RiskTemplateControlAssignmentsTab, useRiskControlAssignmentPermissions } from "@/features/risk-control-assignment";
@@ -384,7 +385,7 @@ export default function CentralRiskObjectPage({
 
         <div className="riskObjectBody">
           <div className={activeTab === "general" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
-            <div className={kind === "category" ? "riskFormGrid modalTwoColumnGrid" : "riskFormGrid"}>
+            <CatalogFormGrid className={kind === "category" ? "riskFormGrid modalTwoColumnGrid" : "riskFormGrid"}>
               <Field label={t("risk.fields.code")} required>
                 {readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input
                   value={form.code}
@@ -436,14 +437,14 @@ export default function CentralRiskObjectPage({
 
               <Field label={t("risk.fields.description")} fullWidth>
                 {readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea
-                  rows={5}
+                  rows={3}
                   value={form.description}
                   readonly={readOnly}
                   disabled={busy}
                   onInput={(event) => change("description", readValue(event))}
                 />}
               </Field>
-            </div>
+            </CatalogFormGrid>
           </div>
 
           <div className={activeTab === "controlCenter" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>

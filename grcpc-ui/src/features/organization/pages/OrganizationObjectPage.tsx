@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import OrganizationOwnersTab from "../components/OrganizationOwnersTab";
 import type { OrganizationOwnerChange } from "../domain/organization.model";
 import { useBasicDataOptions } from "@/features/basic-data";
@@ -253,7 +254,7 @@ export default function OrganizationObjectPage({
 
         <div style={BODY_STYLE}>
             <div style={{ display: activeTab === "general" ? "block" : "none" }}>
-                <div className="modalThreeColumnGrid">
+                <CatalogFormGrid className="modalThreeColumnGrid">
                     <FormField label={t("organization.fields.code", { defaultValue: "Code" })} required>{readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} onInput={(e) => change("code", readValue(e))} />}</FormField>
                     <FormField label={t("organization.fields.name", { defaultValue: "Name" })} required>{readOnly ? <Text className="objectPageValue">{(form.name) || "—"}</Text> : <Input value={form.name} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("name", readValue(e))} />}</FormField>
                     <FormField label={t("organization.fields.organizationType", { defaultValue: "Organization type" })} required>{readOnly ? <Text className="objectPageValue">{(typeLabel) || "—"}</Text> : <Select value={form.organizationTypeId} disabled={busy || organizationTypes.loading || Boolean(organizationTypes.error)} accessibleName={t("organization.fields.organizationType")} onChange={(event) => change("organizationTypeId", event.detail.selectedOption.value ?? "")}>
@@ -264,8 +265,8 @@ export default function OrganizationObjectPage({
                     <FormField label={t("organization.fields.location", { defaultValue: "Location" })}>{readOnly ? <Text className="objectPageValue">{(form.location) || "—"}</Text> : <Input value={form.location} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("location", readValue(e))} />}</FormField>
                     <div className="modalDateRange"><FormField label={t("organization.fields.validFrom", { defaultValue: "Valid from" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("organization.fields.validFrom", { defaultValue: "Valid from" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validFrom", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validFrom.valid === state.valid && current.validFrom.draftValue === state.draftValue && current.validFrom.dirty === state.dirty ? current : { ...current, validFrom: state })} />}</FormField>
                     <FormField label={t("organization.fields.validTo", { defaultValue: "Valid to" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("organization.fields.validTo", { defaultValue: "Valid to" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validTo", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validTo.valid === state.valid && current.validTo.draftValue === state.draftValue && current.validTo.dirty === state.dirty ? current : { ...current, validTo: state })} />}</FormField></div>
-                    <FormField label={t("organization.fields.description", { defaultValue: "Description" })} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea value={form.description} readonly={readOnly} disabled={busy} rows={4} accessibleName={t("organization.fields.description", { defaultValue: "Description" })} onInput={(e) => change("description", readValue(e))} />}</FormField>
-                </div>
+                    <FormField label={t("organization.fields.description", { defaultValue: "Description" })} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea value={form.description} readonly={readOnly} disabled={busy} rows={3} accessibleName={t("organization.fields.description", { defaultValue: "Description" })} onInput={(e) => change("description", readValue(e))} />}</FormField>
+                </CatalogFormGrid>
             </div>
             <div style={{ display: activeTab === "owners" ? "block" : "none" }}>
                 <OrganizationOwnersTab organizationId={value?.id ?? null} onReadyChange={setOwnerReady} rows={value?.ownerAssignments ?? []} changes={ownerChanges} onChange={setOwnerChanges} onPendingChange={setOwnerSelectionDirty} editable={!readOnly && canAssignOwner} busy={busy} />

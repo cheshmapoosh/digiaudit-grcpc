@@ -1,3 +1,4 @@
+import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { CatalogTreeOrder, CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
 import { orderKey } from "@/shared/components/catalogOrder.context";
@@ -6,11 +7,10 @@ import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter, DialogFooterBar } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
 import { createElement, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
-  Bar, BusyIndicator, Dialog, FlexBox, Input, Label, Link, MessageStrip, Option, Select, Tab,
+  Bar, BusyIndicator, Dialog, FlexBox, Input, Label, MessageStrip, Option, Select, Tab,
   Text, TextArea, Title, Tree,
 } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
@@ -109,7 +109,6 @@ function errorText(error: unknown): string {
 
 export default function ObjectiveManagementPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { manage } = useMasterDataAccess("REFERENCE");
   const items = useObjectiveState((state) => state.items);
   const loading = useObjectiveState((state) => state.loading);
@@ -302,8 +301,8 @@ export default function ObjectiveManagementPage() {
     finally { setBusy(false); }
   };
 
-  const onTreeSelect = (event: TreeEvent) => {
-    const id = event.detail?.item?.dataset?.objectiveId;
+  const selectTreeItem = (item: HTMLElement | undefined) => {
+    const id = item?.dataset.objectiveId;
     if (id && id !== selectedId) { setOrganizationsLoading(true); setOrganizations([]); setSelectedId(id); }
   };
   const onTreeToggle = (event: TreeEvent) => {
@@ -346,7 +345,8 @@ export default function ObjectiveManagementPage() {
         {loading || busy ? <BusyIndicator active delay={0} /> : null}
         {!loading && !visibleItems.length ? <MessageStrip design="Information" hideCloseButton>
           {t("common.noData")}
-        </MessageStrip> : <CatalogTreeOrder catalog="OBJECTIVE" refreshKey={JSON.stringify(items)} filtered={Boolean(search.trim())}>{(order) => <Tree inert={order.busy} onMove={order.onMove} onMoveOver={order.onMoveOver} onItemClick={onTreeSelect} onItemToggle={onTreeToggle}>
+        </MessageStrip> : <CatalogTreeOrder catalog="OBJECTIVE" refreshKey={JSON.stringify(items)} filtered={Boolean(search.trim())}>{(order) => <Tree inert={order.busy} onMove={(event) => order.onMove(event, selectTreeItem)} onMoveOver={order.onMoveOver}
+            onDragEnd={(event) => order.onDragEnd(event, selectTreeItem)} onItemClick={(event) => selectTreeItem(event.detail.item)} onItemToggle={onTreeToggle}>
             {order.sortTree(tree, (node) => orderKey("OBJECTIVE", node.id)).map((node) => <ObjectiveTreeItem key={node.id} node={node}
               selectedId={selectedId} expandedIds={visibleExpandedIds} />)}
           </Tree>}</CatalogTreeOrder>}
@@ -387,7 +387,6 @@ export default function ObjectiveManagementPage() {
       onDeleted={(keys) => {
         if (selectedId && keys.has(selectedId)) setSelectedId(null);
       }}><section className="objectivePage">
-    <Link onClick={() => navigate("/master-data")}>{t("masterData.title")}</Link>
     {error ? <MessageStrip design="Negative" onClose={() => setError(null)}>{error}</MessageStrip> : null}
     {createElement("ui5-flexible-column-layout", {
       layout: selected ? "TwoColumnsStartExpanded" : "OneColumn",
@@ -412,7 +411,7 @@ export default function ObjectiveManagementPage() {
       </DetailTabContainer>
       <div className={activeTab === "general" ? "objectiveForm" : "objectiveForm objectiveTabHidden"}>
         {structureError ? <MessageStrip design="Information" hideCloseButton>{t(structureError)}</MessageStrip> : null}
-        <div className="masterDataFormGrid modalTwoColumnGrid">
+        <CatalogFormGrid className="masterDataFormGrid modalTwoColumnGrid">
           <MasterDataFormField label={t("objective.code")} required>{readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy}
             onInput={(event) => setForm((old) => ({ ...old, code: event.target.value }))} />}</MasterDataFormField>
           <MasterDataFormField label={t("objective.name")} required>{readOnly ? <Text className="objectPageValue">{(form.name) || "—"}</Text> : <Input value={form.name} readonly={readOnly} disabled={busy}
@@ -435,7 +434,7 @@ export default function ObjectiveManagementPage() {
           </> : null}
           <MasterDataFormField label={t("objective.description")} wide>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea value={form.description} readonly={readOnly} disabled={busy} rows={3}
             onInput={(event) => setForm((old) => ({ ...old, description: event.target.value }))} />}</MasterDataFormField>
-        </div>
+        </CatalogFormGrid>
       </div>
       {!isStrategy && mode ? <div className={activeTab === "organizations" ? "objectiveOrganizationTab" : "objectiveOrganizationTab objectiveTabHidden"}>
         <OrganizationObjectiveRelations side="objective" ownerId={mode === "create" ? null : selectedId}

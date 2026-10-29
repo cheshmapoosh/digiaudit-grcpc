@@ -230,7 +230,12 @@ export default function OrganizationTree({
     }
 
     return (
-        <Tree inert={displayOrder?.busy} onMove={displayOrder?.onMove} onMoveOver={displayOrder?.onMoveOver}
+            <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, (item) => {
+                if (item.dataset.id) onSelect?.(item.dataset.id);
+            })} onMoveOver={displayOrder?.onMoveOver}
+            onDragEnd={(event) => displayOrder?.onDragEnd(event, (item) => {
+                if (item.dataset.id) onSelect?.(item.dataset.id);
+            })}
             accessibleName={t("organization.list.title", {
                 defaultValue: "ساختار سازمانی",
             })}

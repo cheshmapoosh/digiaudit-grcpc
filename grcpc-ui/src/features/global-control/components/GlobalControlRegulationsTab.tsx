@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, MessageStrip, ObjectStatus, Text } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { CatalogRelationTable } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
 import { HierarchyMultiSelectionDialog } from "@/shared/components/HierarchyMultiSelectionDialog";
 import type { GlobalControlRegulation, GlobalControlRegulationChange, RegulationSelectionOptions } from "../domain/global-control.model";
 import { globalControlApi } from "../infra/global-control.api.repo";
-import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 
 type Row = { regulationId: string; code: string; name: string; status: "ACTIVE" | "INACTIVE" | "DELETED";
   regulationStatus: "ACTIVE" | "INACTIVE" | "DELETED"; draft?: GlobalControlRegulationChange };
@@ -19,8 +17,7 @@ export function GlobalControlRegulationsTab({ ownerId, rows: baseline, changes, 
   onDirtyChange: (dirty: boolean) => void; onReadinessChange: (ready: boolean) => void;
   onRowsChange: (rows: GlobalControlRegulation[]) => void;
 }) {
-  const { t } = useTranslation(); const navigate = useNavigate();
-  const targetAccess = useMasterDataAccess("GOVERNANCE");
+  const { t } = useTranslation();
   const [options, setOptions] = useState<RegulationSelectionOptions>({ groups: [], regulations: [] });
   const [deleted, setDeleted] = useState<GlobalControlRegulation[]>([]);
   const [deletedOwner, setDeletedOwner] = useState<string | null>(ownerId);
@@ -96,8 +93,7 @@ export function GlobalControlRegulationsTab({ ownerId, rows: baseline, changes, 
       selectedKeys={selected} onSelectionChange={setSelected} selectable={manage} loading={loading} busy={busy}
       emptyText={t("catalogRelation.empty")} columns={[
         { key: "code", header: t("catalogRelation.code"), cell: row => <Text>{row.code}</Text> },
-        { key: "name", header: t("catalogRelation.name"), cell: row => targetAccess.view
-          ? <Link onClick={() => navigate(`/regulations?regulationId=${row.regulationId}`)}>{row.name}</Link> : <Text>{row.name}</Text> },
+        { key: "name", header: t("catalogRelation.name"), cell: row => <Text>{row.name}</Text> },
         { key: "status", header: t("catalogRelation.status"), cell: row => <ObjectStatus state={row.draft ? "Information" : row.status === "ACTIVE" ? "Positive" : "None"}>
           {t(row.draft ? row.draft.operation === "DELETE" ? "catalogRelation.draftDelete"
             : row.draft.operation === "CREATE_OR_RESTORE" || row.draft.operation === "RESTORE" ? "catalogRelation.draft"
