@@ -29,8 +29,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - type: bind
         source: ./data/minio
@@ -82,7 +82,7 @@ services:
 
       GRCPC_MINIO_ENABLED: "true"
       GRCPC_MINIO_ENDPOINT: http://minio:9000
-      GRCPC_MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+      GRCPC_MINIO_PUBLIC_ENDPOINT: http://localhost:${MINIO_API_PORT:-9000}
       GRCPC_MINIO_ACCESS_KEY: minioadmin
       GRCPC_MINIO_SECRET_KEY: minioadmin
       GRCPC_MINIO_BUCKET: grc-documents

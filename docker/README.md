@@ -27,11 +27,13 @@ This topology runs Oracle, MinIO, and the built application in Docker. The test
 machine only needs Docker:
 
 ```powershell
-docker compose --env-file docker/env/test.env.example -f compose.test.yml up --build
+.\grcpc-app.test.bat
 ```
 
-The application image is built by Docker using the multi-stage Dockerfile at
-`docker/app/Dockerfile`.
+Place the built boot jar next to the runner as `grcpc-app.jar`. Compose mounts
+that jar into a Java 21 runtime image; it does not build the application.
+See [Portable Test Runner](README.test.md) for startup options and Windows
+port-conflict troubleshooting.
 
 ## Production with External Oracle
 
