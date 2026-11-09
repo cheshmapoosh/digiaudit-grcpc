@@ -1,8 +1,10 @@
 import { Text } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
+import { useAppVersion } from "@/shared/hooks/useAppVersion";
 
 export function AppFooter() {
     const { t } = useTranslation();
+    const version = useAppVersion();
 
     const currentYear = new Date().getFullYear();
 
@@ -18,7 +20,7 @@ export function AppFooter() {
                     year: currentYear,
                     company: t("app.companyName"),
                     product: t("app.productName"),
-                    version: __APP_VERSION__,
+                    version,
                 })}
             </Text>
         </footer>

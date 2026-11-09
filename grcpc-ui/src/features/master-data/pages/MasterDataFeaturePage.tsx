@@ -2,7 +2,7 @@ import { currentProfile, useProfileState } from "@/features/dataset-profile/stat
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Card, CardHeader, FlexBox, Grid, Icon, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
+import { BusyIndicator, Card, CardHeader, FlexBox, Grid, Icon, MessageStrip, Text, Title } from "@ui5/webcomponents-react";
 import { useAuthState } from "@/features/auth/state/auth.state";
 import { areaForPath, canAccessMasterData } from "../security/masterDataAccess";
 import { masterDataCatalogCountsApi, type CatalogCounts } from "../infra/masterDataCatalogCounts.api.repo";
@@ -73,9 +73,10 @@ export default function MasterDataFeaturePage() {
                     }>
                         <FlexBox alignItems="Center" className="masterDataCardContent">
                             <Icon name={item.icon} design="Neutral" mode="Decorative" />
-                            <Text>{item.count === undefined ? "—" : t("masterData.itemCount", {
-                                count: item.count, number: numberFormat.format(item.count),
-                            })}</Text>
+                            {counts === undefined ? <BusyIndicator active delay={0} size="S" /> :
+                                <Text>{item.count === undefined ? "—" : t("masterData.itemCount", {
+                                    count: item.count, number: numberFormat.format(item.count),
+                                })}</Text>}
                         </FlexBox>
                     </Card>
                 ))}

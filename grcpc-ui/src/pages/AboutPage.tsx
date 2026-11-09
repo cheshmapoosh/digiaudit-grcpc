@@ -1,5 +1,6 @@
 import { Card, CardHeader, FlexBox, Grid, Icon, Label, Text, Title } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
+import { useAppVersion } from "@/shared/hooks/useAppVersion";
 import "./about.css";
 
 const SECTIONS = [
@@ -13,6 +14,7 @@ const SECTIONS = [
 
 export default function AboutPage() {
   const { t } = useTranslation();
+  const version = useAppVersion();
 
   return (
     <FlexBox as="section" direction="Column" className="aboutPage" aria-labelledby="about-page-title">
@@ -27,7 +29,7 @@ export default function AboutPage() {
             <Text>{t("about.introduction")}</Text>
             <FlexBox alignItems="Center" className="aboutVersion">
               <Label showColon>{t("about.version")}</Label>
-              <Text dir="ltr">{__APP_VERSION__}</Text>
+              <Text dir="ltr">{version}</Text>
             </FlexBox>
           </FlexBox>
           <img className="aboutHeroImage" src="/images/digi-audit-login-hero-wide.png"
