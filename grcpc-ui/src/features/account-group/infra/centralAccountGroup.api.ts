@@ -1,5 +1,6 @@
 import { httpClient } from "@/shared/infra/http.client";
 import type {
+  AccountGroupRiskAssignment,
   CentralAccountGroupDetail,
   CentralAccountGroupMutationResponse,
   CentralAccountGroupRevisionResponse,
@@ -16,6 +17,8 @@ export const centralAccountGroupApi = {
     ),
   detail: (id: string) =>
     httpClient.get<CentralAccountGroupDetail>(`${BASE}/${id}`),
+  riskAssignments: (id: string, signal: AbortSignal) =>
+    httpClient.get<AccountGroupRiskAssignment[]>(`${BASE}/${id}/risk-assignments`, { signal }),
   create: (body: CreateCentralAccountGroupCommand) =>
     httpClient.post<CentralAccountGroupMutationResponse>(BASE, body),
   update: (id: string, body: UpdateCentralAccountGroupCommand) =>

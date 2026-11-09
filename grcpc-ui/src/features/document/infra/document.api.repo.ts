@@ -97,7 +97,7 @@ function uploadWithProgress<T>(
 ): Promise<T> {
     return new Promise((resolve, reject) => {
         const profileId = selectedProfileId();
-        if (!profileId) { reject(new HttpError(i18n.t("profile.required"), 403, "PROFILE_REQUIRED")); return; }
+        if (!profileId) { reject(new HttpError(i18n.t("common.dataAccessRequired"), 403, "PROFILE_REQUIRED")); return; }
         const xhr = new XMLHttpRequest();
 
         xhr.open("POST", buildUrl(url));

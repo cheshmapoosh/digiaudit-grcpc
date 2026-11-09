@@ -14,11 +14,13 @@ export interface HierarchySelectionNode {
   selectable: boolean;
 }
 
-type TreeNode = HierarchySelectionNode & { children: TreeNode[] };
+type TreeNode = HierarchySelectionNode & { children: TreeNode[]; selectableDescendantIds: string[] };
 type ToggleEvent = { detail?: { item?: HTMLElement & { dataset?: { nodeId?: string } } }; preventDefault?: () => void };
 
 function buildTree(items: HierarchySelectionNode[]): TreeNode[] {
-  const nodes = new Map(items.map((item) => [item.id, { ...item, children: [] as TreeNode[] }]));
+  const nodes = new Map<string, TreeNode>(items.map((item) => [item.id, {
+    ...item, children: [], selectableDescendantIds: [],
+  }]));
   const roots: TreeNode[] = [];
   nodes.forEach((node) => {
     const parent = node.parentId ? nodes.get(node.parentId) : null;
@@ -28,7 +30,12 @@ function buildTree(items: HierarchySelectionNode[]): TreeNode[] {
   const sort = (siblings: TreeNode[]) => {
     siblings.sort((a, b) => Number(a.selectable) - Number(b.selectable)
       || a.code.localeCompare(b.code) || a.name.localeCompare(b.name));
-    siblings.forEach((node) => sort(node.children));
+    siblings.forEach((node) => {
+      sort(node.children);
+      node.selectableDescendantIds = node.children.flatMap((child) => child.selectable
+        ? [child.id, ...child.selectableDescendantIds]
+        : child.selectableDescendantIds);
+    });
   };
   sort(roots);
   return roots;
@@ -49,13 +56,22 @@ function ChoiceItem({ node, selected, collapsed, search, busy, onToggle }: {
   collapsed: Set<string>;
   search: string;
   busy: boolean;
-  onToggle: (id: string, checked: boolean) => void;
+  onToggle: (ids: readonly string[], checked: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const label = `${node.code} · ${node.name}`;
+  const groupIds = node.selectableDescendantIds;
+  const selectedCount = groupIds.filter((id) => selected.has(id)).length;
+  const groupCheckbox = !node.selectable && node.children.length > 0 ? <CheckBox
+    accessibleName={t("catalogRelation.selectGroup", { name: label })}
+    checked={selectedCount > 0}
+    indeterminate={selectedCount > 0 && selectedCount < groupIds.length}
+    disabled={busy || groupIds.length === 0}
+    onChange={(event) => onToggle(groupIds, event.target.checked)} /> : null;
   return <TreeItemCustom data-node-id={node.id} expanded={Boolean(search) || !collapsed.has(node.id)}
     content={<div className={node.selectable ? "hierarchyChoiceRow" : "hierarchyChoiceRow hierarchyChoiceGroup"}>
       {node.selectable ? <CheckBox accessibleName={label} checked={selected.has(node.id)} disabled={busy}
-        onChange={(event) => onToggle(node.id, event.target.checked)} /> : null}
+        onChange={(event) => onToggle([node.id], event.target.checked)} /> : groupCheckbox}
       <Text>{label}</Text>
     </div>}>
     {node.children.map((child) => <ChoiceItem key={child.id} node={child} selected={selected}
@@ -65,7 +81,7 @@ function ChoiceItem({ node, selected, collapsed, search, busy, onToggle }: {
 
 export function HierarchyMultiSelectionDialog({ open, title, searchAccessibleName, nodes,
   selectedIds, busy, confirmText, cancelText, onConfirm, onClose, loading = false,
-  error, description, confirmDisabled = false, onSelectionChange }: {
+  error, confirmDisabled = false, onSelectionChange }: {
   open: boolean;
   title: string;
   searchAccessibleName: string;
@@ -78,7 +94,6 @@ export function HierarchyMultiSelectionDialog({ open, title, searchAccessibleNam
   onClose: () => void;
   loading?: boolean;
   error?: string | null;
-  description?: string;
   confirmDisabled?: boolean;
   onSelectionChange?: (ids: Set<string>) => void;
 }) {
@@ -102,9 +117,11 @@ export function HierarchyMultiSelectionDialog({ open, title, searchAccessibleNam
   const tree = useMemo(() => buildTree(nodes), [nodes]);
   const query = search.trim().toLocaleLowerCase();
   const visible = useMemo(() => filterTree(tree, query), [tree, query]);
-  const toggle = (id: string, checked: boolean) => {
+  const toggle = (ids: readonly string[], checked: boolean) => {
     const next = new Set(selectedRef.current);
-    if (checked) next.add(id); else next.delete(id);
+    for (const id of ids) {
+      if (checked) next.add(id); else next.delete(id);
+    }
     selectedRef.current = next;
     setSelected(next);
     onSelectionChange?.(next);
@@ -125,7 +142,6 @@ export function HierarchyMultiSelectionDialog({ open, title, searchAccessibleNam
     onBeforeClose={(event) => { if (busy) event.preventDefault(); }}>
     <ModalDialogHeader title={title} onClose={close} actions={<HeaderSearch value={search} onChange={(value) => setSearch(value)} disabled={busy || loading} accessibleName={searchAccessibleName} />} />
     <div className="hierarchyMultiSelectionBody" data-catalog-dialog-content>
-      {description ? <Text>{description}</Text> : null}
       {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
       {loading ? <BusyIndicator active delay={0} /> : null}
       <div className="hierarchyMultiSelectionTree">

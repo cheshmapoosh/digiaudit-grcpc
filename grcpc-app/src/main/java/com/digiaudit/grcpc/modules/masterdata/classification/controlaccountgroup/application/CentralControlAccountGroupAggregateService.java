@@ -6,6 +6,7 @@ import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
 import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.api.dto.CentralAccountGroupDtos.ControlLifecycleChange;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.repository.CentralAccountGroupRepository;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.CentralControlEntity;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.*;
@@ -88,6 +89,33 @@ public class CentralControlAccountGroupAggregateService {
         .stream().collect(Collectors.toMap(CentralAccountGroupEntity::getId, Function.identity()));
     return rows.stream().map(row -> mapper.response(row, control, requireGroup(groups, row.getAccountGroupId())))
         .sorted(Comparator.comparing(CentralControlAccountGroupResponse::accountGroupCode).thenComparing(CentralControlAccountGroupResponse::classificationId)).toList();
+  }
+
+  public RevisionContentResult changeFromAccountGroup(RevisionExecutionContext context,
+      CentralControlEntity control, CentralAccountGroupEntity group, ControlLifecycleChange change) {
+    requireScopeAccess();
+    guard.requireHierarchyGuard(context, MasterDataHierarchyKey.ACCOUNT_GROUP);
+    guard.requireHierarchyGuard(context, MasterDataHierarchyKey.CONTROL);
+    CentralControlAccountGroupEntity existing = classifications
+        .lockByBusinessKeys(control.getId(), List.of(group.getId())).stream().findFirst().orElse(null);
+    var endpoint = new ControlEndpoint(control.getId(), control.getStatus());
+    PreparedMutation mutation;
+    if (change == null) {
+      if (existing != null && existing.getStatus() != DELETED) {
+        throw duplicate(control.getId(), group.getId());
+      }
+      mutation = createOrRestore(endpoint, group, existing,
+          existing == null ? null : existing.getValidFrom(), existing == null ? null : existing.getValidTo());
+    } else {
+      var request = new CentralControlAccountGroupChangeRequest(
+          CentralControlAccountGroupChangeOperation.valueOf(change.operation().name()),
+          group.getId(), change.classificationId(), change.version(), null, null, null);
+      validateShape(request, existing);
+      mutation = prepare(endpoint, group, existing, request);
+    }
+    apply(mutation, users.getCurrentPrincipal().getUserId(), Instant.now(clock));
+    classifications.saveAndFlush(mutation.entity());
+    return revisionContent(mutation);
   }
 
   private PreparedMutation prepare(ControlEndpoint control, CentralAccountGroupEntity group,

@@ -6,9 +6,8 @@ import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
-import type { PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import type { LocalRiskRow, LocalStatus } from "../domain/local.model";
-import type { LocalRelationMetadata, OrganizationLocalDraft } from "../domain/organizationLocal.model";
+import type { OrganizationLocalDraft } from "../domain/organizationLocal.model";
 import { normalizeOrganizationRiskDraft, organizationRiskDraftFromRow, type OrganizationRiskContext, type OrganizationRisksTableState } from "../domain/organizationRisks.model";
 
 interface Props {
@@ -46,7 +45,6 @@ export default function OrganizationRisksTable({ contexts, rows, drafts, onChang
     const [filter, setFilter] = useState<CatalogRelationFilter>(initialStatus);
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<Set<string>>(new Set());
-    const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
     const relevant = drafts.filter(draft => draft.section === "risk-scopes");
     const contextFor = (draft: OrganizationLocalDraft) => contexts.find(context => context.key === draft.ownerKey
         || Boolean(draft.contextRef?.contextId && draft.contextRef.contextId === context.id)
@@ -61,13 +59,8 @@ export default function OrganizationRisksTable({ contexts, rows, drafts, onChang
         allRows.push({ draft, context: contextFor(draft), pending: true });
     }
     const contextStatus = (row: Row) => row.context?.status ?? row.original?.contextStatus ?? "DELETED";
-    const hasDateDraft = (row: Row, predicate: (state: PersianDateDraftState) => boolean) =>
-        (["validFrom", "validTo"] as const).some(field => {
-            const state = dateDrafts[`${row.draft.key}:${field}`];
-            return state && predicate(state);
-        });
     const query = search.trim().toLocaleLowerCase();
-    const displayed = allRows.filter(row => row.pending || hasDateDraft(row, state => state.dirty || !state.valid)
+    const displayed = allRows.filter(row => row.pending
         || row.original?.status !== "DELETED" && (filter === "ALL" || row.draft.status === filter)
         && (!query || `${row.draft.code} ${row.draft.name} ${row.context?.code ?? row.original?.subprocessCode ?? ""} ${row.context?.name ?? row.original?.subprocessLabel ?? ""}`.toLocaleLowerCase().includes(query)));
     const checked = displayed.filter(row => selected.has(row.draft.key));
@@ -83,15 +76,13 @@ export default function OrganizationRisksTable({ contexts, rows, drafts, onChang
             || Boolean(centralReferenceValidFrom && (!row.draft.metadata.validFrom || row.draft.metadata.validFrom < centralReferenceValidFrom))
             || Boolean(centralReferenceValidTo && (!row.draft.metadata.validTo || row.draft.metadata.validTo > centralReferenceValidTo));
     };
-    const invalid = allRows.some(row => hasDateDraft(row, state => !state.valid)
-        || invalidReference(row)
+    const invalid = allRows.some(row => invalidReference(row)
         || row.pending && row.draft.operation !== "DELETE" && (contextStatus(row) === "DELETED"
             || requiresActiveContext(row) && contextStatus(row) !== "ACTIVE")
         || row.draft.status !== "DELETED" && Boolean(row.draft.metadata.validFrom && row.draft.metadata.validTo
             && row.draft.metadata.validFrom > row.draft.metadata.validTo));
-    const dateDirty = allRows.some(row => hasDateDraft(row, state => state.dirty));
     const ready = !invalid && (!relevant.length || !loading && !error);
-    useEffect(() => { onStateChange({ pending: false, ready, dirty: dateDirty }); }, [dateDirty, onStateChange, ready]);
+    useEffect(() => { onStateChange({ pending: false, ready, dirty: false }); }, [onStateChange, ready]);
     useEffect(() => () => onStateChange({ pending: false, ready: true, dirty: false }), [onStateChange]);
     useEffect(() => {
         if (!deepLinkRowId || loading || error) return;
@@ -102,11 +93,6 @@ export default function OrganizationRisksTable({ contexts, rows, drafts, onChang
         queueMicrotask(() => setSelected(previous => previous.has(key) ? previous : new Set([...previous, key])));
     }, [contexts, deepLinkRowId, error, loading, onInvalidDeepLink, rows]);
 
-    const update = (row: Row, patch: Pick<Partial<LocalRelationMetadata>, "validFrom" | "validTo">) => {
-        if (!editable || busy || loading || row.draft.status === "DELETED" || contextStatus(row) === "DELETED") return;
-        const next = normalizeOrganizationRiskDraft({ ...row.draft, metadata: { ...row.draft.metadata, ...patch } }, row.original);
-        onChange(previous => [...previous.filter(draft => draft.key !== row.draft.key), ...(next ? [next] : [])]);
-    };
     const batch = (status: LocalStatus) => {
         if (!editable || busy || loading) return;
         const targets = affected(status);
@@ -116,16 +102,6 @@ export default function OrganizationRisksTable({ contexts, rows, drafts, onChang
             return next ? [next] : [];
         });
         onChange(previous => [...previous.filter(draft => !keys.has(draft.key)), ...changes]);
-        if (status === "DELETED") setDateDrafts(previous => Object.fromEntries(Object.entries(previous)
-            .filter(([key]) => !targets.some(row => key.startsWith(row.draft.key + ":")))));
-    };
-    const reportDate = (row: Row, field: "validFrom" | "validTo", state: PersianDateDraftState) => {
-        setDateDrafts(previous => {
-            const key = `${row.draft.key}:${field}`;
-            const old = previous[key];
-            return old?.draftValue === state.draftValue && old.valid === state.valid && old.dirty === state.dirty
-                ? previous : { ...previous, [key]: state };
-        });
     };
     const columns: CatalogRelationColumn<Row>[] = [
         { key: "subprocess", header: t("local.fields.subprocess"), cell: row => <Text>{[
@@ -139,11 +115,7 @@ export default function OrganizationRisksTable({ contexts, rows, drafts, onChang
                 : row.draft.operation === "UPDATE" ? "edit" : row.draft.status === "ACTIVE" ? "active" : "inactive"} /> },
         { key: "source", header: t("catalogRelation.source"), cell: row => <Text>{t(row.draft.sourceType === "INHERITED_FROM_CENTRAL" ? "local.source.inherited" : "local.source.added")}</Text> },
         ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`),
-            cell: (row: Row) => <CatalogRelationDate key={`${row.draft.key}:${field}`}
-                value={row.draft.metadata[field]} label={t(`catalogRelation.${field}`)}
-                editable={editable && row.draft.status !== "DELETED"}
-                disabled={busy || loading || contextStatus(row) === "DELETED"} onChange={next => update(row, { [field]: next })}
-                onDraftStateChange={state => reportDate(row, field, state)} /> })),
+            cell: (row: Row) => <CatalogRelationDate value={row.draft.metadata[field]} /> })),
     ];
     return <FlexBox direction="Column" className="organizationLocalDraftTable">
         <CatalogRelationToolbar title={t("local.riskTable.title")} search={search} onSearch={setSearch}

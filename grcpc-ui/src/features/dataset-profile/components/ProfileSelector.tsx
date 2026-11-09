@@ -13,6 +13,7 @@ export default function ProfileSelector({ slot }: { slot?: string }) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const multiProfileEnabled = useAuthState((state) => state.me?.multiProfileEnabled !== false);
   const { profiles, loaded, loading, userId, error, load } = useProfileState();
   const [open, setOpen] = useState(false);
   const openerId = useId();
@@ -41,9 +42,11 @@ export default function ProfileSelector({ slot }: { slot?: string }) {
 
   function showChoices() { setOpen((value) => !value); }
 
+  if (!multiProfileEnabled) return null;
+
   return <FlexBox slot={slot} className="profileSelector" alignItems="Center" data-hide-order="100">
-    {selected ? <List className="profileSelectorBox" accessibleName={t("profile.select")} onItemClick={showChoices}>
-      <ListItemCustom id={openerId} type="Active" tooltip={selected.name}
+    {selected ? <List className="profileSelectorBox" separators="None" accessibleName={t("profile.select")} onItemClick={showChoices}>
+      <ListItemCustom id={openerId} className="profileSelectorTrigger" type="Active" tooltip={selected.name}
         accessibleName={t("profile.selectCurrent", { name: selected.name })} aria-haspopup="dialog" aria-expanded={open}>
         <FlexBox alignItems="Center" className="profileSelectorIdentity">
           <ProfileAvatar profile={selected} />

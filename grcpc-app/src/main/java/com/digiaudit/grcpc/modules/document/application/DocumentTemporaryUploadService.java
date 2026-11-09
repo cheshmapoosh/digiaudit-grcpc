@@ -22,6 +22,7 @@ public class DocumentTemporaryUploadService {
     private final DocumentValidation validation;
     private final DocumentObjectKeyService objectKeyService;
     private final InternalDocumentTempUploadJpaRepository tempUploadRepository;
+    private final DocumentTemporaryUploadWriter tempUploadWriter;
     private final DocumentStoragePort storagePort;
     private final DocumentResponseMapper responseMapper;
     private final com.digiaudit.grcpc.modules.document.config.MinioProperties properties;
@@ -32,6 +33,7 @@ public class DocumentTemporaryUploadService {
             DocumentValidation validation,
             DocumentObjectKeyService objectKeyService,
             InternalDocumentTempUploadJpaRepository tempUploadRepository,
+            DocumentTemporaryUploadWriter tempUploadWriter,
             DocumentStoragePort storagePort,
             DocumentResponseMapper responseMapper,
             com.digiaudit.grcpc.modules.document.config.MinioProperties properties,
@@ -41,6 +43,7 @@ public class DocumentTemporaryUploadService {
         this.validation = Objects.requireNonNull(validation, "validation is required");
         this.objectKeyService = Objects.requireNonNull(objectKeyService, "objectKeyService is required");
         this.tempUploadRepository = Objects.requireNonNull(tempUploadRepository, "tempUploadRepository is required");
+        this.tempUploadWriter = Objects.requireNonNull(tempUploadWriter, "tempUploadWriter is required");
         this.storagePort = Objects.requireNonNull(storagePort, "storagePort is required");
         this.responseMapper = Objects.requireNonNull(responseMapper, "responseMapper is required");
         this.properties = Objects.requireNonNull(properties, "properties is required");
@@ -118,7 +121,7 @@ public class DocumentTemporaryUploadService {
             String temporaryObjectKey
     ) {
         try {
-            return tempUploadRepository.saveAndFlush(tempUpload);
+            return tempUploadWriter.saveVerifiedUpload(tempUpload);
         } catch (RuntimeException ex) {
             removeTemporaryObjectAfterFailure(tempUpload.getId(), temporaryObjectKey);
             throw ex;

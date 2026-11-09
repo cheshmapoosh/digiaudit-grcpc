@@ -68,15 +68,17 @@ export default function ProcessesListReport({
         >
             <Bar
                 startContent={
-                    <Title level="H4">
-                        {t("process.list.title", { defaultValue: "ساختار فرآیند" })}
-                    </Title>
+                    <>
+                        <Title level="H4">
+                            {t("process.list.title", { defaultValue: "ساختار فرآیند" })}
+                        </Title>
+                        <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("process.list.search", {
+                            defaultValue: "جستجو بر اساس نام، کد یا توضیحات",
+                        })} />
+                    </>
                 }
                 endContent={
                     <>
-                        <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("process.list.search", {
-                    defaultValue: "جستجو بر اساس نام، کد یا توضیحات",
-                })} />
                         {manage ? <ProcessCreateMenu
                             disabled={busy}
                             nodeTypes={enabledCreateOptions}

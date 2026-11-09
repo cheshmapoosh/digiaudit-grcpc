@@ -16,10 +16,8 @@ export function ModalDialogHeader({ title, onClose, actions }: ModalDialogHeader
     return (
         <FlexBox slot="header" direction="Column" className="modalDialogHeader">
             <Bar
-                startContent={<Title level="H6">{title}</Title>}
+                startContent={<><Title level="H6">{title}</Title>{actions}</>}
                 endContent={
-                    <>
-                    {actions}
                     <Button
                         design="Transparent"
                         icon="decline"
@@ -27,7 +25,6 @@ export function ModalDialogHeader({ title, onClose, actions }: ModalDialogHeader
                         accessibleName={closeText}
                         onClick={(event) => onClose(event)}
                     />
-                    </>
                 }
             />
             <FlexBox direction="Column" data-catalog-parent-header="" />

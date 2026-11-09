@@ -18,9 +18,10 @@ const CATEGORIES = "/api/master-data/central/risk-categories";
 const TEMPLATES = "/api/master-data/central/risk-templates";
 
 export const centralRiskApi = {
-  listCategories: (deleted = false) =>
+  listCategories: (deleted = false, signal?: AbortSignal) =>
     httpClient.get<CentralRiskCategorySummary[]>(
       `${CATEGORIES}${deleted ? "/deleted" : ""}`,
+      { signal },
     ),
   category: (id: string) =>
     httpClient.get<CentralRiskCategoryDetail>(`${CATEGORIES}/${id}`),
@@ -39,13 +40,13 @@ export const centralRiskApi = {
       version,
     }),
 
-  listTemplates: (categoryId?: string, deleted = false) => {
+  listTemplates: (categoryId?: string, deleted = false, signal?: AbortSignal) => {
     const suffix = deleted
       ? "/deleted"
       : categoryId
         ? `?categoryId=${encodeURIComponent(categoryId)}`
         : "";
-    return httpClient.get<CentralRiskTemplateSummary[]>(`${TEMPLATES}${suffix}`);
+    return httpClient.get<CentralRiskTemplateSummary[]>(`${TEMPLATES}${suffix}`, { signal });
   },
   template: (id: string) =>
     httpClient.get<CentralRiskTemplateDetail>(`${TEMPLATES}/${id}`),

@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { FlexBox, MessageStrip, Option, Select, Text, TextArea } from "@ui5/webcomponents-react";
+import { FlexBox, MessageStrip, Option, Select, Text } from "@ui5/webcomponents-react";
 import { CatalogActionButton } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
 import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
 import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
-import type { PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import type { LocalBaseRow, LocalOption, LocalRows, LocalStatus } from "../domain/local.model";
 import type { ContextRef, ControlScopeRef, RequirementScopeRef, LocalRelationMetadata, OrganizationLocalDraft, OrganizationLocalSection } from "../domain/organizationLocal.model";
 import { LOCAL_SECTION_BY_KEY } from "../domain/local.sections";
@@ -51,12 +50,6 @@ export default function OrganizationLocalDraftTable({ organizationId, section, o
     const [hierarchy, setHierarchy] = useState<HierarchySelectionNode[]>([]);
     const [centralScopes, setCentralScopes] = useState<{ id: string; definitionId: string; validFrom: string | null; validTo: string | null }[]>([]);
     const [source, setSource] = useState<"LOCAL_ADDED" | "INHERITED_FROM_CENTRAL">("LOCAL_ADDED");
-    const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
-    const [owners, setOwners] = useState<LocalOption[]>([]);
-    const [metadataReload, setMetadataReload] = useState(0);
-    const [metadataLoading, setMetadataLoading] = useState(false);
-    const [metadataError, setMetadataError] = useState(false);
-    const [settings, setSettings] = useState<{ frequencyCodes: string[]; executionMethodCodes: string[]; testMethodCodes: string[] } | null>(null);
     const ownerRequestKey = JSON.stringify({ organizationId, id: owner.id, section, resetKey, reload });
     useEffect(() => {
         let current = true;
@@ -92,12 +85,12 @@ export default function OrganizationLocalDraftTable({ organizationId, section, o
     const allRows: Row[] = canonical.map(original => ({ original, draft: relevant.find(item => item.rowId === original.id) ?? fromRow(original), pending: relevant.some(item => item.rowId === original.id) }));
     for (const draft of relevant) if (!allRows.some(row => row.draft.key === draft.key)) allRows.push({ draft, pending: true });
     const query = search.trim().toLocaleLowerCase();
-    const displayed = allRows.filter(row => row.pending || Object.entries(dateDrafts).some(([key, draft]) => key.startsWith(row.draft.key + ":") && draft.dirty)
+    const displayed = allRows.filter(row => row.pending
         || (row.original?.status !== "DELETED" && (filter === "ALL" || row.draft.status === filter) && (!query || `${row.draft.code} ${row.draft.name}`.toLocaleLowerCase().includes(query))));
     const checked = displayed.filter(row => selected.has(row.draft.key));
     const affected = (target: LocalStatus) => checked.filter(row => row.draft.status !== target && (target === "DELETED" || owner.available !== false && row.original && row.original.status !== "DELETED"));
-    const invalid = owner.available === false && relevant.some(item => item.operation !== "DELETE") || Object.values(dateDrafts).some(draft => !draft.valid) || relevant.some(item => Boolean(item.metadata.validFrom && item.metadata.validTo && item.metadata.validFrom > item.metadata.validTo));
-    useEffect(() => { onStateChange(stateKey, { pending: pickerOpen, ready: !pickerOpen && !invalid && (!relevant.length || (!loading && !error && !metadataLoading && !metadataError)), dirty: Object.values(dateDrafts).some(draft => draft.dirty) }); }, [stateKey, pickerOpen, invalid, relevant.length, loading, error, metadataLoading, metadataError, dateDrafts, onStateChange]);
+    const invalid = owner.available === false && relevant.some(item => item.operation !== "DELETE") || relevant.some(item => Boolean(item.metadata.validFrom && item.metadata.validTo && item.metadata.validFrom > item.metadata.validTo));
+    useEffect(() => { onStateChange(stateKey, { pending: pickerOpen, ready: !pickerOpen && !invalid && (!relevant.length || (!loading && !error)), dirty: false }); }, [stateKey, pickerOpen, invalid, relevant.length, loading, error, onStateChange]);
     useEffect(() => () => onStateChange(stateKey, { pending: false, ready: true, dirty: false }), [onStateChange, stateKey]);
     useEffect(() => {
         if (loading || error || !deepLinkRowId) return;
@@ -106,22 +99,12 @@ export default function OrganizationLocalDraftTable({ organizationId, section, o
         const key = stateKey + ":" + string(linked, identity);
         queueMicrotask(() => setSelected(previous => previous.has(key) ? previous : new Set([...previous, key])));
     }, [canonical, deepLinkRowId, error, identity, loading, onInvalidDeepLink, organizationId, stateKey]);
-    useEffect(() => {
-        if (!editable || section !== "control-scopes") return;
-        let current = true;
-        void Promise.resolve().then(() => { if (current) { setMetadataLoading(true); setMetadataError(false); } return Promise.all([localApi.allOptions("options/control-owners"), localApi.controlSettings()]); }).then(([nextOwners, nextSettings]) => { if (current) { setOwners(nextOwners); setSettings(nextSettings); } }).catch(() => { if (current) setMetadataError(true); }).finally(() => { if (current) setMetadataLoading(false); });
-        return () => { current = false; };
-    }, [editable, section, t, metadataReload]);
     const normalize = (next: OrganizationLocalDraft, original?: LocalRows[OrganizationLocalSection]): OrganizationLocalDraft | null => {
         if (!original || original.status === "DELETED") return { ...next, operation: "CREATE_OR_RESTORE", status: "ACTIVE" };
         const originalDraft = fromRow(original);
         const changed = JSON.stringify(next.metadata) !== JSON.stringify(originalDraft.metadata);
         if (next.status === original.status && !changed) return null;
         return { ...next, operation: next.status === "DELETED" ? "DELETE" : changed ? "UPDATE" : next.status === "ACTIVE" ? "ACTIVATE" : "INACTIVATE" };
-    };
-    const update = (row: Row, patch: Partial<LocalRelationMetadata>) => {
-        const next = normalize({ ...row.draft, metadata: { ...row.draft.metadata, ...patch } }, row.original);
-        onChange(previous => [...previous.filter(item => item.key !== row.draft.key), ...(next ? [next] : [])]);
     };
     const batch = (status: LocalStatus) => {
         const targets = affected(status); const keys = new Set(targets.map(row => row.draft.key));
@@ -130,7 +113,6 @@ export default function OrganizationLocalDraftTable({ organizationId, section, o
             const draft = normalize({ ...row.draft, status }, row.original); return draft ? [draft] : [];
         });
         onChange(previous => [...previous.filter(item => !keys.has(item.key)), ...next]);
-        if (status === "DELETED") setDateDrafts(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !targets.some(row => key.startsWith(row.draft.key + ":")))));
     };
     const openPicker = async () => {
         if (!editable || busy || owner.eligible === false || owner.available === false) return;
@@ -175,33 +157,40 @@ export default function OrganizationLocalDraftTable({ organizationId, section, o
         }
         onChange(previous => [...previous.filter(item => item.section !== section || item.ownerKey !== owner.key || !ids.has(item.identityId)), ...staged]); setPickerOpen(false);
     };
-    const selectMetadata = (row: Row, field: "scopeAction" | "propagationMode" | "actualOwnerId" | "frequencyCode" | "executionMethodCode" | "testMethodCode", choices: { id: string; label: string }[]) => editable && owner.available !== false && row.draft.status !== "DELETED" ? <Select value={row.draft.metadata[field] ?? ""} disabled={busy || metadataLoading || metadataError} accessibleName={t(`local.fields.${field === "actualOwnerId" ? "actualOwner" : field}`)} onChange={event => update(row, { [field]: event.target.value || null })}>
-        {field !== "scopeAction" && field !== "propagationMode" ? <Option value="">{t("catalogRelation.all")}</Option> : null}{choices.map(choice => <Option key={choice.id} value={choice.id}>{choice.label}</Option>)}
-    </Select> : <Text>{choices.find(choice => choice.id === row.draft.metadata[field])?.label ?? (field === "actualOwnerId" && row.original ? string(row.original, "actualOwnerLabel") : null) ?? (row.draft.metadata[field] ? t("catalogRelation.unavailable") : "—")}</Text>;
     const columns: CatalogRelationColumn<Row>[] = [
         { key: "code", header: t("catalogRelation.code"), cell: row => row.draft.code },
         { key: "name", header: t("catalogRelation.name"), cell: row => <Text>{row.draft.name}</Text> },
         { key: "status", header: t("common.status"), cell: row => <CatalogRelationStatus status={row.draft.status} draft={!row.pending ? null : row.draft.operation === "CREATE_OR_RESTORE" ? "new" : row.draft.operation === "DELETE" ? "delete" : row.draft.operation === "UPDATE" ? "edit" : row.draft.status === "ACTIVE" ? "active" : "inactive"} /> },
-        ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: Row) => <CatalogRelationDate value={row.draft.metadata[field]} label={t(`catalogRelation.${field}`)} editable={editable && row.draft.status !== "DELETED"} disabled={busy}
-            onChange={next => update(row, { [field]: next })} onDraftStateChange={state => setDateDrafts(previous => { const key = `${row.draft.key}:${field}`; const old = previous[key]; return old?.draftValue === state.draftValue && old.valid === state.valid && old.dirty === state.dirty ? previous : { ...previous, [key]: state }; })} /> })),
+        ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: Row) => <CatalogRelationDate value={row.draft.metadata[field]} /> })),
     ];
     if (!policy) columns.push({ key: "source", header: t("catalogRelation.source"), cell: row => <Text>{t(row.draft.sourceType === "INHERITED_FROM_CENTRAL" ? "local.source.inherited" : "local.source.added")}</Text> });
-    if (policy) columns.push({ key: "scopeAction", header: t("local.fields.scopeAction"), cell: row => selectMetadata(row, "scopeAction", ["INCLUDE", "EXCLUDE"].map(id => ({ id, label: t(id === "INCLUDE" ? "local.action.include" : "local.action.exclude") }))) });
-    if (section === "organization-policies") columns.push({ key: "propagationMode", header: t("local.fields.propagationMode"), cell: row => selectMetadata(row, "propagationMode", [{ id: "DIRECT_ONLY", label: t("local.propagation.direct") }, { id: "INCLUDE_DESCENDANTS", label: t("local.propagation.descendants") }]) });
+    if (policy) columns.push({ key: "scopeAction", header: t("local.fields.scopeAction"), cell: row =>
+        row.draft.metadata.scopeAction ? t(row.draft.metadata.scopeAction === "INCLUDE" ? "local.action.include" : "local.action.exclude") : "—" });
+    if (section === "organization-policies") columns.push({ key: "propagationMode", header: t("local.fields.propagationMode"), cell: row =>
+        row.draft.metadata.propagationMode ? t(row.draft.metadata.propagationMode === "DIRECT_ONLY" ? "local.propagation.direct" : "local.propagation.descendants") : "—" });
     if (section === "control-scopes") {
-        columns.push({ key: "actualOwnerId", header: t("local.fields.actualOwner"), cell: row => selectMetadata(row, "actualOwnerId", owners.filter(option => option.displayLabel).map(option => ({ id: option.id, label: option.displayLabel! }))) });
-        for (const field of ["frequencyCode", "executionMethodCode", "testMethodCode"] as const) {
-            const codes = settings?.[field === "frequencyCode" ? "frequencyCodes" : field === "executionMethodCode" ? "executionMethodCodes" : "testMethodCodes"] ?? [];
-            columns.push({ key: field, header: t(`local.fields.${field}`), cell: row => selectMetadata(row, field, codes.map(id => ({ id, label: t(`control.${field === "frequencyCode" ? "operationFrequency" : field === "executionMethodCode" ? "automationType" : "testingTechnique"}.${id}`) }))) });
+        columns.push({ key: "actualOwnerId", header: t("local.fields.actualOwner"), cell: row => {
+            if (!row.draft.metadata.actualOwnerId) return "—";
+            const label = row.original ? string(row.original, "actualOwnerLabel") : null;
+            return label || t("catalogRelation.unavailable");
+        } });
+        for (const [field, translation] of [
+            ["frequencyCode", "operationFrequency"],
+            ["executionMethodCode", "automationType"],
+            ["testMethodCode", "testingTechnique"],
+        ] as const) {
+            columns.push({ key: field, header: t(`local.fields.${field}`), cell: row => {
+                const code = row.draft.metadata[field];
+                return code ? t(`control.${translation}.${code}`, { defaultValue: t("catalogRelation.unavailable") }) : "—";
+            } });
         }
-        columns.push({ key: "note", header: t("catalogRelation.note"), cell: row => editable && row.draft.status !== "DELETED" ? <TextArea value={row.draft.metadata.localContextNote ?? ""} disabled={busy} maxlength={1000} onInput={event => update(row, { localContextNote: event.target.value || null })} /> : row.draft.metadata.localContextNote ?? "—" });
+        columns.push({ key: "note", header: t("catalogRelation.note"), cell: row => row.draft.metadata.localContextNote ?? "—" });
     }
     return <FlexBox direction="Column" className="organizationLocalDraftTable">
         <CatalogRelationToolbar title={t(spec.labelKey)} search={search} onSearch={setSearch} filter={filter} onFilter={next => { setFilter(next); onFilterChange?.(next); }} editable={editable} busy={busy || loading}
-            canSelect={!error && !metadataLoading && !metadataError && owner.available !== false && owner.eligible !== false} canActivate={affected("ACTIVE").length > 0} canInactivate={affected("INACTIVE").length > 0} canDelete={affected("DELETED").length > 0}
+            canSelect={!error && owner.available !== false && owner.eligible !== false} canActivate={affected("ACTIVE").length > 0} canInactivate={affected("INACTIVE").length > 0} canDelete={affected("DELETED").length > 0}
             onSelect={() => void openPicker()} onActivate={() => batch("ACTIVE")} onInactivate={() => batch("INACTIVE")} onDelete={() => batch("DELETED")} />
         {!policy && editable && owner.available !== false ? <Select value={source} disabled={busy || pickerOpen} accessibleName={t("catalogRelation.source")} onChange={event => setSource(event.target.value as typeof source)}><Option value="LOCAL_ADDED">{t("local.source.added")}</Option><Option value="INHERITED_FROM_CENTRAL">{t("local.source.inherited")}</Option></Select> : null}
-        {metadataError ? <MessageStrip design="Negative" hideCloseButton>{t("catalogRelation.loadError")}<CatalogActionButton disabled={busy} onClick={() => setMetadataReload(value => value + 1)}>{t("catalogRelation.retry")}</CatalogActionButton></MessageStrip> : null}
         {error ? <MessageStrip design="Negative" hideCloseButton>{error}<CatalogActionButton disabled={busy} onClick={() => setReload(current => current + 1)}>{t("catalogRelation.retry")}</CatalogActionButton></MessageStrip> : null}
         {invalid ? <MessageStrip design="Negative" hideCloseButton>{t("catalogRelation.invalid")}</MessageStrip> : null}
         <CatalogRelationTable rows={displayed} rowKey={row => row.draft.key} columns={columns} selectable={editable} selectedKeys={selected} onSelectionChange={setSelected} accessibleName={t(spec.labelKey)} loading={loading} busy={busy} />

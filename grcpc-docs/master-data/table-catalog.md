@@ -2,7 +2,7 @@
 
 ## Catalog authority and count rule
 
-This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md), plus the approved Objective and Global Control library extensions. It has 55 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables: 58 physical Master Data tables, including the four typed Central Assignments and the [Organization owner Assignment](accepted-corrections/2026-10-28-organization-owner-assignments.md). Administrative dataset/User Management and the two Basic Data type dictionaries are outside this Master Data count.
+This catalog includes the approved Policy simplification correction and its [migration runbook](policy-simplification-migration.md), plus the approved Objective and Global Control library extensions. It has 56 active business tables, one retained unmapped historical table (`central_policy_version`), and two technical tables for a total of 59 physical Master Data tables. This includes five typed Central reference Assignments and the [Organization owner Assignment](accepted-corrections/2026-10-28-organization-owner-assignments.md). Administrative dataset/User Management and the two Basic Data type dictionaries are outside this Master Data count.
 
 Authoritative source files: `GRC_Master_Data_Logical_Model_Final_FA.docx` and `GRC_Master_Data_Physical_Design_Reference_FA.docx`; business meaning is cross-checked against `GRC_Master_Data_Reference_Conceptual_Model_FA.docx`.
 
@@ -1085,7 +1085,8 @@ This library is separate from `central_control`, `central_control_group`, and `c
 | Global Control library extension business tables | 3 |
 | Central reference Assignment business tables | 4 |
 | Organization owner Assignment business table | 1 |
-| **Current physical Master Data tables** | **58** |
+| Account Group–Risk Template Assignment business table | 1 |
+| **Current physical Master Data tables** | **59** |
 
 The contiguous original numbered business list starts at `01` and ends at `45` exactly once; `T1` and `T2` are outside it. The Policy simplification correction retains one historical table, and the Objective extension adds two typed business tables, the Global Control library adds three, and the accepted Central reference Assignment correction adds four.
 
@@ -1116,3 +1117,12 @@ See the [accepted correction](accepted-corrections/2026-10-27-central-reference-
 | `central_requirement_control_assignment` | ID + L+V; `central_regulation_requirement`, `central_control` | exact Requirement + Control; same dependency rule |
 
 V1189 creates these four tables without changing existing migrations. Unique pairs remain occupied in DELETED state; lifecycle restore reuses the same UUID. All FK paths are indexed, validity ranges checked, and deleted metadata constrained. No Scope/Context/Organization FK, generic target, technical table or Guard row is introduced. Assignment is CENTRAL and has no new Document Link target code. Existing Coverage remains physically and operationally intact.
+
+### Account Group–Risk Template Assignment (2026-11-09)
+
+`V1203` adds `central_account_group_risk_assignment` with ID, L+V, immutable
+`profile_id`, `account_group_id` and `risk_template_id`. The two composite FKs
+require both definitions to belong to the stored profile. The unique key on
+`(profile_id, account_group_id, risk_template_id)` reserves pairs through soft
+deletion. An index on `(profile_id, risk_template_id)` supports the Risk Template
+dependency check. The CENTRAL Revision Content code is `CENTRAL_ACCOUNT_GROUP_RISK_ASG`.

@@ -42,6 +42,7 @@ app:
     enabled: ${GRCPC_MINIO_ENABLED:true}
     endpoint: ${GRCPC_MINIO_ENDPOINT:http://localhost:9000}
     public-endpoint: ${GRCPC_MINIO_PUBLIC_ENDPOINT:http://localhost:9000}
+    presign-region: ${GRCPC_MINIO_PRESIGN_REGION:}
     access-key: ${GRCPC_MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${GRCPC_MINIO_SECRET_KEY:minioadmin}
     bucket: ${GRCPC_MINIO_BUCKET:grc-documents}

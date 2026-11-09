@@ -174,6 +174,16 @@ public class CentralControlEntity extends CentralDefinitionEntity {
         now);
   }
 
+  public void accountGroupClassificationsChanged(UUID actorId, Instant now) {
+    requireNotDeleted();
+    touch(actorId, now);
+  }
+
+  public void riskAssignmentsChanged(UUID actorId, Instant now) {
+    requireNotDeleted();
+    touch(actorId, now);
+  }
+
   public void update(
       String title,
       String description,

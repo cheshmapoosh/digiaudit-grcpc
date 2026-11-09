@@ -1,12 +1,10 @@
 import { setTheme } from "@ui5/webcomponents-base/dist/config/Theme.js";
 import { setLanguage } from "@ui5/webcomponents-base/dist/config/Language.js";
 
-export type UiTheme = "sap_horizon" | "sap_horizon_dark";
 export type UiLang = "fa" | "en";
 export type UiDir = "rtl" | "ltr";
 
 export type UiSettings = {
-    theme: UiTheme;
     lang: UiLang;
     dir: UiDir;
 };
@@ -14,9 +12,9 @@ export type UiSettings = {
 const UI_SETTINGS_STORAGE_KEY = "grcpc.ui.settings";
 const UI5_FA_LOCALE = "fa-IR-u-ca-persian-nu-arabext";
 const UI_FONT_FAMILY = '"Vazirmatn", system-ui, -apple-system, "Segoe UI", Arial, sans-serif';
+const UI_HEADING_FONT_FAMILY = `"Vazirmatn Heading", ${UI_FONT_FAMILY}`;
 const UI_FONT_TOKENS = [
     "--sapFontFamily",
-    "--sapFontHeaderFamily",
     "--sapFontLightFamily",
     "--sapFontBoldFamily",
     "--sapFontSemiboldFamily",
@@ -24,22 +22,16 @@ const UI_FONT_TOKENS = [
     "--sapFontBlackFamily",
     "--sapButton_FontFamily",
     "--sapButton_Emphasized_FontFamily",
-    "--sapObjectHeader_Title_FontFamily",
     "--sapShell_FontFamily",
-    "--sapShell_FontHeaderFamily",
 ] as const;
+const UI_HEADING_FONT_TOKENS = ["--sapFontHeaderFamily", "--sapObjectHeader_Title_FontFamily", "--sapShell_FontHeaderFamily"] as const;
 
 export const defaultSettings: UiSettings = {
-    theme: "sap_horizon",
     lang: "fa",
     dir: "rtl",
 };
 
 let currentSettings: UiSettings = defaultSettings;
-
-function isUiTheme(value: unknown): value is UiTheme {
-    return value === "sap_horizon" || value === "sap_horizon_dark";
-}
 
 function isUiLang(value: unknown): value is UiLang {
     return value === "fa" || value === "en";
@@ -61,8 +53,6 @@ function normalizeSettings(value: unknown): UiSettings {
     const partial = value as Partial<Record<keyof UiSettings, unknown>>;
 
     return {
-        // Previously saved Quartz settings fall back to standard Horizon.
-        theme: isUiTheme(partial.theme) ? partial.theme : defaultSettings.theme,
         lang: isUiLang(partial.lang) ? partial.lang : defaultSettings.lang,
         dir: isUiDir(partial.dir) ? partial.dir : defaultSettings.dir,
     };
@@ -111,11 +101,14 @@ export function applySettings(settings: UiSettings) {
     currentSettings = normalizedSettings;
 
     // UI5 runtime configs
-    void setTheme(normalizedSettings.theme);
+    void setTheme("sap_fiori_3");
     void setLanguage(normalizedSettings.lang === "fa" ? UI5_FA_LOCALE : "en");
     // Typography is the sole authorized customization of the standard theme.
     for (const token of UI_FONT_TOKENS) {
         document.documentElement.style.setProperty(token, UI_FONT_FAMILY);
+    }
+    for (const token of UI_HEADING_FONT_TOKENS) {
+        document.documentElement.style.setProperty(token, UI_HEADING_FONT_FAMILY);
     }
 
     // Document level direction + lang

@@ -1,4 +1,4 @@
-import { Children, Fragment, cloneElement, isValidElement, type HTMLAttributes, type ReactNode } from "react";
+import { Children, Fragment, cloneElement, isValidElement, useCallback, type HTMLAttributes, type ReactNode } from "react";
 import "./catalog-form-grid.css";
 
 interface FieldProps {
@@ -21,7 +21,7 @@ function fields(children: ReactNode, prefix = ""): ReactNode[] {
 }
 
 /** Layout only: keep existing fields, values and validation owned by their forms. */
-export function CatalogFormGrid({ children, className = "", ...props }: HTMLAttributes<HTMLDivElement>) {
+export function CatalogFormGrid({ children, className = "", sizeDialog = true, ...props }: HTMLAttributes<HTMLDivElement> & { sizeDialog?: boolean }) {
     const items = fields(children);
     let slots = 0;
     for (const child of items) {
@@ -32,6 +32,12 @@ export function CatalogFormGrid({ children, className = "", ...props }: HTMLAttr
         else slots += 1;
     }
     const columns = Math.ceil(slots / 2) > 3 ? 3 : 2;
+    const bindDialogWidth = useCallback((grid: HTMLDivElement | null) => {
+        const dialog = sizeDialog ? grid?.closest("ui5-dialog") : null;
+        if (!dialog) return;
+        dialog.setAttribute("data-form-columns", String(columns));
+        return () => dialog.removeAttribute("data-form-columns");
+    }, [columns, sizeDialog]);
     const classes = className.replace(/\bmodal(?:Two|Three)ColumnGrid\b/g, "").trim();
-    return <div {...props} className={`catalogAdaptiveFormGrid ${classes}`} data-columns={columns}>{items}</div>;
+    return <div {...props} ref={bindDialogWidth} className={`catalogAdaptiveFormGrid ${classes}`} data-columns={columns}>{items}</div>;
 }

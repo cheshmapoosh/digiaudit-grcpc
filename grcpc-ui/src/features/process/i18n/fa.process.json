@@ -70,13 +70,13 @@
       "createModalTitle": "ایجاد"
     },
     "create": {
-      "title": "ایجاد آیتم فرآیندی"
+      "title": "ایجاد {{type}}"
     },
     "edit": {
-      "title": "ویرایش آیتم فرآیندی"
+      "title": "ویرایش {{type}}"
     },
     "view": {
-      "title": "نمایش آیتم فرآیندی"
+      "title": "نمایش {{type}}"
     },
     "move": {
       "action": "انتقال",

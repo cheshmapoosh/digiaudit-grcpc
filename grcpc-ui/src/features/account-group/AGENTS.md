@@ -13,10 +13,9 @@ Account groups are hierarchical Master Data V2 definitions backed by `CentralAcc
 - Keep tree expansion and selection stable when creating, editing, deleting, moving, or viewing nodes.
 - General Information contains code, title, parent, status, importance, reasonable assurance, validity dates, and description.
 - `Documents` is active through `CENTRAL_ACCOUNT_GROUP` with Parent-Save behavior.
-- `Risks` remains visible and disabled: there is no approved direct Risk–Account Group relationship, and Coverage must not be projected as one.
-- Prompt 7.5 adds a read-only `Controls` inverse tab for the exact Account Group node. Account Group Save never owns Control classification mutations.
-- Prompt 7.6 adds a separate read-only `Control Objectives` inverse tab for the exact Account Group node. Account Group Save never owns Control Objective classification mutations.
-- Do not restore legacy assertions, objectives, account ranges, or risk relationship persistence in this feature.
+- `Risks` lists direct, profile-owned Risk Template Assignments for the exact Account Group. View requires REFERENCE and RISK read access. REFERENCE managers with RISK read access stage changes using the shared searchable picker and lifecycle toolbar. The main Account Group Save owns these drafts.
+- `Controls` and `Control Objectives` list exact-node classifications. Authorized users stage additions in Create/Edit and stage activation, inactivation and removal of existing links in Edit. The main Account Group Save owns both draft collections. Share the searchable multi-selection dialog and use group checkboxes for the Control hierarchy.
+- Do not restore legacy assertions, objectives, account ranges, or legacy risk relationship persistence in this feature.
 - Parent changes reject self-parent and descendants and join the existing aggregate Update through typed `parentChange`. The modal sends General Information, parent, status, sortOrder and Documents in one request; it does not chain Update, Move and lifecycle writes.
 - Lifecycle editing is limited to ACTIVE / INACTIVE; DELETED is command-only.
 - Put feature labels/messages in `i18n/fa.account-group.json` and `i18n/en.account-group.json`.

@@ -36,8 +36,8 @@ export default function MasterDataDashboardPage() {
   const monthFormatter = new Intl.DateTimeFormat(isFa ? "fa-IR-u-ca-gregory" : "en-US-u-ca-gregory", {
     year: "numeric", month: "short", timeZone: "UTC",
   });
-  const dateTimeFormatter = new Intl.DateTimeFormat(isFa ? "fa-IR-u-ca-persian" : "en-US", {
-    year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+  const dateFormatter = new Intl.DateTimeFormat(isFa ? "fa-IR-u-ca-persian" : "en-US", {
+    year: "numeric", month: "short", day: "numeric",
   });
 
   useEffect(() => {
@@ -162,7 +162,7 @@ export default function MasterDataDashboardPage() {
                   <div className="masterDataDashboardChange">
                     <Text>{t(`dashboard.masterData.type.${change.type}`)}</Text>
                     <strong>{change.title}</strong>
-                    <Text>{t("dashboard.masterData.updatedAt")}: {dateTimeFormatter.format(new Date(change.updatedAt))}</Text>
+                    <Text>{t("dashboard.masterData.updatedAt")}: {dateFormatter.format(new Date(change.updatedAt))}</Text>
                   </div>
                 </ListItemCustom>)}
               </List>}

@@ -7,7 +7,6 @@ import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/com
 import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
 import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
-import type { PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { ProcessApiRepo } from "@/features/process/infra/process.api.repo";
 import { OrganizationApiRepo } from "@/features/organization/infra/organization.api.repo";
 import { centralPolicyApi } from "../infra/centralPolicy.api";
@@ -157,7 +156,6 @@ export default function PolicyRelationTab({ kind, policyId, policyValidFrom, pol
   const [search, setSearch] = useState(""); const [filter, setFilter] = useState<CatalogRelationFilter>("ALL");
   const [pickerOpen, setPickerOpen] = useState(false); const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pickerSelection, setPickerSelection] = useState<Set<string>>(EMPTY_SELECTION);
-  const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
   const generation = useRef(0);
   const [reload, setReload] = useState(0);
   useEffect(() => {
@@ -193,15 +191,14 @@ export default function PolicyRelationTab({ kind, policyId, policyValidFrom, pol
     }
     return result;
   }, [rows, drafts, options]);
-  const pendingDates = Object.values(dateDrafts).some(draft => draft.dirty);
-  const invalid = Object.values(dateDrafts).some(draft => !draft.valid) || effective.some(row => {
+  const invalid = effective.some(row => {
     if (row.draft?.operation === "DELETE") return false;
     const dates = displayDates(row, row.draft); return Boolean(dates.from && dates.to && dates.from > dates.to);
   });
-  useEffect(() => onInvalid(canView && (loading || error || pickerOpen || pendingDates || invalid)), [canView, loading, error, pickerOpen, pendingDates, invalid, onInvalid]);
-  const pending = !readOnly && (pickerOpen || pendingDates);
+  useEffect(() => onInvalid(canView && (loading || error || pickerOpen || invalid)), [canView, loading, error, pickerOpen, invalid, onInvalid]);
+  const pending = !readOnly && pickerOpen;
   useEffect(() => onPendingChange(pending), [pending, onPendingChange]);
-  const visible = effective.filter(row => dateDrafts[row.endpointId + ":validFrom"]?.dirty || dateDrafts[row.endpointId + ":validTo"]?.dirty || row.draft || row.status !== "DELETED" && (filter === "ALL" || row.status === filter) && `${row.code} ${row.title} ${row.context}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  const visible = effective.filter(row => row.draft || row.status !== "DELETED" && (filter === "ALL" || row.status === filter) && `${row.code} ${row.title} ${row.context}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const nodes = useMemo(() => {
     const occupied = new Set(effective.filter(row => displayStatus(row, row.draft) !== "DELETED").map(row => row.endpointId));
     return policySelectionHierarchy(ancestors, options, occupied, {
@@ -248,7 +245,6 @@ export default function PolicyRelationTab({ kind, policyId, policyValidFrom, pol
     if (readOnly || !canManage || busy || loading || error) return;
     const next = { ...drafts };
     const affectedRows = affected(status);
-    if (status === "DELETED") setDateDrafts(current => Object.fromEntries(Object.entries(current).filter(([key]) => !affectedRows.some(row => key === row.endpointId + ":validFrom" || key === row.endpointId + ":validTo"))));
     for (const row of affectedRows) {
       const dates = displayDates(row, row.draft);
       if (status === "DELETED") {
@@ -258,20 +254,12 @@ export default function PolicyRelationTab({ kind, policyId, policyValidFrom, pol
     }
     change(next);
   };
-  const updateDate = (row: Row & { draft: PolicyRelationDraft | null }, field: "validFrom" | "validTo", value: string | null) => {
-    const next = { ...drafts }; const dates = displayDates(row, row.draft);
-    stage(next, row, displayStatus(row, row.draft) === "INACTIVE" ? "INACTIVE" : "ACTIVE", field === "validFrom" ? value : dates.from, field === "validTo" ? value : dates.to); change(next);
-  };
-  const reportDate = (key: string, draft: PersianDateDraftState) => setDateDrafts(current => {
-    const previous = current[key]; return previous?.dirty === draft.dirty && previous.valid === draft.valid && previous.draftValue === draft.draftValue ? current : { ...current, [key]: draft };
-  });
   type DisplayRow = typeof effective[number];
   const columns: CatalogRelationColumn<DisplayRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.code },
     { key: "name", header: t("catalogRelation.name"), cell: row => row.title },
     { key: "context", header: t("policy.relations.context"), cell: row => row.context || "—" },
-    ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: DisplayRow) => <CatalogRelationDate value={displayDates(row, row.draft)[field === "validFrom" ? "from" : "to"]} label={t(`catalogRelation.${field}`)} editable={!readOnly && canManage && row.draft?.operation !== "DELETE"} disabled={busy || loading}
-      onChange={value => updateDate(row, field, value)} onDraftStateChange={draft => reportDate(row.endpointId + ":" + field, draft)} /> })),
+    ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: DisplayRow) => <CatalogRelationDate value={displayDates(row, row.draft)[field === "validFrom" ? "from" : "to"]} /> })),
     { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={displayStatus(row, row.draft)} draft={!row.draft ? null : row.draft.operation === "DELETE" ? "delete" : row.draft.operation === "CREATE_OR_RESTORE" ? "new" : row.draft.operation === "ACTIVATE" ? "active" : row.draft.operation === "INACTIVATE" ? "inactive" : "edit"} /> },
   ];
   if (!canView) return <MessageStrip design="Information">{t("policy.relations.noAccess")}</MessageStrip>;
@@ -283,7 +271,7 @@ export default function PolicyRelationTab({ kind, policyId, policyValidFrom, pol
     <CatalogRelationTable rows={visible} columns={columns} rowKey={row => row.endpointId} accessibleName={t("policy.relations.reference")} selectable={!readOnly && canManage} selectedKeys={selected} onSelectionChange={setSelected} loading={loading} busy={busy} emptyText={t("catalogRelation.empty")} />
     {pickerOpen ? <HierarchyMultiSelectionDialog key={`policy-selection:${kind}`} open
       title={t(`policy.relations.selection.${kind}.title`)} searchAccessibleName={t(`policy.relations.selection.${kind}.search`)}
-      description={t(`policy.relations.selection.${kind}.hint`)} nodes={nodes} selectedIds={EMPTY_SELECTION}
+      nodes={nodes} selectedIds={EMPTY_SELECTION}
       busy={busy} loading={loading} error={error ? t("policy.relations.loadError") : null} confirmDisabled={!validSelection}
       onSelectionChange={setPickerSelection} confirmText={t("catalogRelation.select")} cancelText={t("common.cancel")}
       onConfirm={confirmSelection} onClose={() => setPickerOpen(false)} /> : null}

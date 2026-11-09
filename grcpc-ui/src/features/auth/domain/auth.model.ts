@@ -17,6 +17,7 @@ export type AuthMeResponse = {
     rootUser: boolean;
     passwordChangeRequired: boolean;
     authorities: string[];
+    multiProfileEnabled?: boolean;
 };
 
 export type LoginRequest = {

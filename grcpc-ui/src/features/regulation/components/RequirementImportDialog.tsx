@@ -114,7 +114,6 @@ export default function RequirementImportDialog({ regulationId, regulationTitle,
       <ModalDialogHeader title={t("regulation.import.title")} onClose={close} />
       <FlexBox data-catalog-dialog-content direction="Column" className="regulationImportContent" dir={i18n.dir()}>
         <Title level="H5">{t("regulation.import.target", { title: regulationTitle })}</Title>
-        <Text>{t("regulation.import.help")}</Text>
         <FlexBox wrap="Wrap" alignItems="Center" className="regulationImportActions">
           <Button icon="download" disabled={busy} onClick={() => void downloadTemplate()}>{t("regulation.import.template")}</Button>
           <FileUploader hideInput accept=".xlsx" disabled={busy} accessibleName={t("regulation.import.chooseFile")}
@@ -132,13 +131,13 @@ export default function RequirementImportDialog({ regulationId, regulationTitle,
           {preview.valid ? <Text>{t("regulation.import.confirmHelp")}</Text> : null}
           <CatalogTableViewport accessibleName={t("regulation.import.preview")}>
             {preview.valid ? <Table overflowMode="Scroll" noDataText={t("common.noData")} accessibleName={t("regulation.import.preview")} headerRow={<TableHeaderRow>
-              {["rowNumber", "title", "description", "code", "sortOrder", "validFrom", "validTo", "operation"].map(field =>
+              {["rowNumber", "title", "description", "code", "validFrom", "validTo", "operation"].map(field =>
                 <TableHeaderCell key={field}>{t(`regulation.import.fields.${field}`)}</TableHeaderCell>)}
             </TableHeaderRow>}>
               {preview.rows.slice(offset, offset + PAGE_SIZE).map(row => <TableRow key={row.rowNumber}>
                 <TableCell>{number(row.rowNumber)}</TableCell><TableCell><Text>{row.title}</Text></TableCell>
                 <TableCell><Text>{row.description || "—"}</Text></TableCell><TableCell><Text>{row.code}</Text></TableCell>
-                <TableCell>{number(row.sortOrder)}</TableCell><TableCell>{formatPersianDate(row.validFrom)}</TableCell>
+                <TableCell>{formatPersianDate(row.validFrom)}</TableCell>
                 <TableCell>{formatPersianDate(row.validTo)}</TableCell><TableCell>{t("regulation.requirements.draftActive")}</TableCell>
               </TableRow>)}
             </Table> : <Table overflowMode="Scroll" noDataText={t("common.noData")} accessibleName={t("regulation.import.validationErrors")} headerRow={<TableHeaderRow>

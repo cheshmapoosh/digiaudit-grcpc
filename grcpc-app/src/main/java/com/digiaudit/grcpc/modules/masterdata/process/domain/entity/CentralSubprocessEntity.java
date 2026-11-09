@@ -157,7 +157,7 @@ public class CentralSubprocessEntity implements com.digiaudit.grcpc.common.persi
         touch(actorId, now);
     }
 
-    public void controlScopesChanged(UUID actorId, Instant now) {
+    public void scopesChanged(UUID actorId, Instant now) {
         requireNotDeleted();
         touch(actorId, now);
     }

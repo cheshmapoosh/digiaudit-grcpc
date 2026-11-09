@@ -7,6 +7,8 @@ import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchReques
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
 import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
+import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.api.dto.CentralAccountGroupDtos.ControlLifecycleChange;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.api.dto.CreateCentralControlRequest;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.api.dto.UpdateCentralControlRequest;
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.CentralControlEntity;
@@ -15,18 +17,24 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.repository.
 import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.repository.CentralControlRepository;
 import com.digiaudit.grcpc.modules.masterdata.process.application.ProcessService;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.CentralControlAccountGroupResponse;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.AccountGroupControlSelection;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.CentralControlAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.application.CentralControlAccountGroupAggregateService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.CatalogCommandSupport;
 import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
+import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionContentResult;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionEntityType;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationType;
+import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
 import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrol.application.CentralRiskControlAssignmentAggregateService;
 import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrol.api.dto.CentralRiskControlAssignmentChangeRequest;
+import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrol.api.dto.CentralRiskControlAssignmentChangeOperation;
+import com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.dto.UpdateCentralRiskTemplateRequest.AssignmentOperation;
+import com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.dto.UpdateCentralRiskTemplateRequest.ControlChange;
 import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrol.api.dto.CentralRiskControlAssignmentResponse;
 import com.digiaudit.grcpc.modules.masterdata.assignment.controlcontrolobjective.application.CentralControlControlObjectiveAssignmentAggregateService;
 import com.digiaudit.grcpc.modules.masterdata.assignment.controlcontrolobjective.api.dto.CentralControlControlObjectiveAssignmentChangeRequest;
@@ -43,12 +51,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.HashMap;
+import java.util.TreeSet;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CentralControlCommandService {
@@ -65,6 +78,8 @@ public class CentralControlCommandService {
   private final Clock clock;
   private final CentralControlMapper mapper;
   private final CentralControlAccountGroupAggregateService accountGroupClassifications;
+  private final MasterDataAuthorizationService authorization;
+  private final RevisionMutationGuard mutationGuard;
   private final ProcessService processes;
 
   public CentralControlCommandService(
@@ -76,6 +91,8 @@ public class CentralControlCommandService {
       CatalogCommandSupport support,
       MasterDataStructuralDependencyChecker dependencyChecker,
       CentralControlAccountGroupAggregateService accountGroupClassifications,
+      MasterDataAuthorizationService authorization,
+      RevisionMutationGuard mutationGuard,
       CentralRiskControlAssignmentAggregateService riskAssignments,
       CentralControlControlObjectiveAssignmentAggregateService controlObjectiveAssignments,
       CentralRequirementControlAssignmentAggregateService requirementAssignments,
@@ -89,12 +106,121 @@ public class CentralControlCommandService {
     this.support = support;
     this.dependencyChecker = dependencyChecker;
     this.accountGroupClassifications = accountGroupClassifications;
+    this.authorization = authorization;
+    this.mutationGuard = mutationGuard;
     this.riskAssignments = riskAssignments;
     this.controlObjectiveAssignments = controlObjectiveAssignments;
     this.requirementAssignments = requirementAssignments;
     this.processes = processes;
     this.clock = clock;
     this.mapper = mapper;
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public List<AccountGroupControlChange> lockAccountGroupChanges(RevisionExecutionContext context,
+      List<AccountGroupControlSelection> selections, List<ControlLifecycleChange> changes) {
+    if ((selections == null || selections.isEmpty()) && (changes == null || changes.isEmpty())) return List.of();
+    mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.ACCOUNT_GROUP);
+    mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.CONTROL);
+    authorization.requireManageWithReference("CONTROL", "REFERENCE");
+    Map<UUID, Long> versions = new HashMap<>();
+    for (AccountGroupControlSelection selection : selections == null ? List.<AccountGroupControlSelection>of() : selections) {
+      long version = support.requireVersion(selection.version());
+      if (versions.putIfAbsent(selection.controlId(), version) != null) {
+        throw duplicateAccountGroupChange();
+      }
+    }
+    Map<UUID, ControlLifecycleChange> lifecycle = new HashMap<>();
+    for (ControlLifecycleChange change : changes == null ? List.<ControlLifecycleChange>of() : changes) {
+      if (versions.containsKey(change.controlId()) || lifecycle.putIfAbsent(change.controlId(), change) != null) {
+        throw duplicateAccountGroupChange();
+      }
+    }
+    var ids = new TreeSet<>(versions.keySet());
+    ids.addAll(lifecycle.keySet());
+    List<AccountGroupControlChange> locked = new ArrayList<>();
+    for (UUID id : ids) {
+      CentralControlEntity control = repository.lockById(id).orElseThrow(() ->
+          new NotFoundException("CONTROL_ACCOUNT_GROUP_ENDPOINT_NOT_FOUND",
+              "error.masterdata.controlAccountGroup.endpointNotFound", "Control not found", id));
+      if (versions.containsKey(id)) support.assertVersion(control, versions.get(id));
+      locked.add(new AccountGroupControlChange(control, lifecycle.get(id)));
+    }
+    return locked;
+  }
+
+  private UnprocessableEntityException duplicateAccountGroupChange() {
+    return new UnprocessableEntityException("CONTROL_ACCOUNT_GROUP_CHANGE_INVALID",
+        "error.masterdata.controlAccountGroup.invalidChange", "Duplicate Control in Account Group changes");
+  }
+
+  public record AccountGroupControlChange(CentralControlEntity control, ControlLifecycleChange lifecycle) {}
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public List<RevisionContentResult> applyAccountGroupChanges(RevisionExecutionContext context,
+      CentralAccountGroupEntity group, List<AccountGroupControlChange> changes) {
+    List<RevisionContentResult> contents = new ArrayList<>();
+    for (AccountGroupControlChange change : changes) {
+      CentralControlEntity control = change.control();
+      long version = control.getVersion();
+      JsonNode before = snapshot(control);
+      RevisionContentResult classification =
+          accountGroupClassifications.changeFromAccountGroup(context, control, group, change.lifecycle());
+      control.accountGroupClassificationsChanged(actorProvider.currentActorId(), Instant.now(clock));
+      CentralControlEntity saved = repository.saveAndFlush(control);
+      contents.addAll(completed(context, saved, RevisionOperationType.UPDATE, version, before).contentResults());
+      contents.add(classification);
+    }
+    return contents;
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public List<RiskTemplateControlChange> lockRiskTemplateChanges(
+      RevisionExecutionContext context, List<ControlChange> changes) {
+    if (changes == null || changes.isEmpty()) return List.of();
+    mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.CONTROL);
+    mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.RISK);
+    authorization.requireManageWithReference("CONTROL", "RISK");
+    var ordered = new TreeMap<UUID, ControlChange>();
+    for (var change : changes) {
+      if (ordered.putIfAbsent(change.controlId(), change) != null) {
+        throw new UnprocessableEntityException("ASSIGNMENT_CHANGE_INVALID",
+            "error.masterdata.centralAssignment.invalidChange", "Duplicate Control in Risk Template changes");
+      }
+    }
+    List<RiskTemplateControlChange> locked = new ArrayList<>();
+    for (var change : ordered.values()) {
+      var target = lock(change.controlId());
+      target.requireNotDeleted();
+      if (change.operation() == AssignmentOperation.CREATE_OR_RESTORE) {
+        support.assertVersion(target, support.requireVersion(change.controlVersion()));
+      }
+      locked.add(new RiskTemplateControlChange(target, change));
+    }
+    return locked;
+  }
+
+  public record RiskTemplateControlChange(CentralControlEntity target, ControlChange change) {}
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public List<RevisionContentResult> applyRiskTemplateChanges(
+      RevisionExecutionContext context, UUID riskTemplateId, List<RiskTemplateControlChange> changes) {
+    List<RevisionContentResult> contents = new ArrayList<>();
+    for (var locked : changes) {
+      var target = locked.target();
+      var change = locked.change();
+      var operation = CentralRiskControlAssignmentChangeOperation.valueOf(change.operation().name());
+      var prepared = riskAssignments.prepareFromRiskTemplate(context, target,
+          new CentralRiskControlAssignmentChangeRequest(operation, riskTemplateId,
+              change.assignmentId(), change.version(), null, null, null));
+      long version = target.getVersion();
+      JsonNode before = snapshot(target);
+      target.riskAssignmentsChanged(actorProvider.currentActorId(), Instant.now(clock));
+      var saved = repository.saveAndFlush(target);
+      contents.addAll(completed(context, saved, RevisionOperationType.UPDATE, version, before).contentResults());
+      contents.addAll(riskAssignments.applyChanges(prepared, saved));
+    }
+    return contents;
   }
 
   public CentralControlAggregateMutationResponse create(CreateCentralControlRequest request) {

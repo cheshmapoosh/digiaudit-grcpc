@@ -8,3 +8,8 @@
 /data/
 # Local stage credentials
 /stage.env
+/prod.env
+/dev.env
+/test.env
+/tls/
+/secrets/

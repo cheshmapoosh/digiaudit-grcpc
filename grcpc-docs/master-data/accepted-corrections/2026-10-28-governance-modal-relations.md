@@ -131,6 +131,39 @@ modal's Regulation, existing GOVERNANCE permission/status and draft protection,
 and existing preview/template/command. Success refreshes the same Regulation
 on the same tab. No Import is moved to the Requirement modal or create menu.
 
+## Control Objective creation
+
+The later owner correction permits all three relationship tabs during Control
+Objective Create. Risk and Account Group selections retain their existing typed
+draft fields and owner Save. The Subprocess tab stages optional
+`initialSubprocesses: [{subprocessId, version}]` in the same Create request.
+Selected active Subprocesses may be removed from the draft before Save.
+Existing definitions retain their read-only Subprocess projection.
+
+Client permissions react to both identity and selected-profile data. Root has
+the existing read access in any valid selected profile. Writes still require
+an active profile. Initial Subprocess attachment requires CONTROL and PROCESS
+manage. Risk and Account Group rules retain their separate reference permissions.
+Selection options load when their picker opens, and errors stay with that picker.
+Pending pickers and all staged selections participate in the main dirty/readiness
+guard.
+
+With initial Subprocesses, Control Objective Create acquires the lexical CONTROL
+and PROCESS Guard union, adding ACCOUNT_GROUP and RISK for their requested
+changes. After the Guards, selected Subprocesses are locked in ID order and their
+versions validated. Central endpoint locking retains Risk Template then Control
+Objective order. The ProcessService helpers use MANDATORY propagation, ordinary
+Scope active-endpoint/occupied-pair/validity rules, and the inclusive intersection
+of endpoint validity dates. A deleted pair retains its ID when restored.
+
+The definition, Documents, Risk Assignments, Account Group classifications,
+Subprocess versions and Scopes commit or roll back together through the existing
+revision coordinator. One CENTRAL Revision contains the Control Objective
+content, existing relationship contents, then the affected Subprocess UPDATE
+and Scope contents. Create returns canonical Subprocess Scopes for immediate
+display. The existing profile filters and server-owned profile IDs apply.
+This correction requires the matching backend and UI and has no schema migration.
+
 ## Migration and delivery limits
 
 V1202 is a forward migration that changes only the two lifecycle constraint

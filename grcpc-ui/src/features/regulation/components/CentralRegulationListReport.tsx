@@ -59,10 +59,12 @@ export default function CentralRegulationListReport({
   return (
     <div className="regulationListReport">
       <Bar
-        startContent={<Title level="H4">{t("regulation.list.title")}</Title>}
+        startContent={<>
+            <Title level="H4">{t("regulation.list.title")}</Title>
+            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("regulation.list.search")} />
+        </>}
         endContent={
           <>
-            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("regulation.list.search")} />
             <RegulationCreateMenu
               disabled={busy || !canCreate}
               nodeTypes={allowedCreateTypes}

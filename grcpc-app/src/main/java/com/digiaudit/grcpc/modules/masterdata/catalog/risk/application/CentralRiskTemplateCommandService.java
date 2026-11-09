@@ -6,6 +6,12 @@ import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchReques
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
 import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
+import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrol.api.dto.CentralRiskControlAssignmentResponse;
+import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrol.application.CentralRiskControlAssignmentQueryService;
+import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrolobjective.api.dto.CentralRiskControlObjectiveAssignmentResponse;
+import com.digiaudit.grcpc.modules.masterdata.assignment.riskcontrolobjective.application.CentralRiskControlObjectiveAssignmentQueryService;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.application.CentralControlCommandService;
+import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.application.CentralControlObjectiveCommandService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.dto.CreateCentralRiskTemplateRequest;
 import com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.dto.MoveCentralRiskTemplateRequest;
 import com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.dto.UpdateCentralRiskTemplateRequest;
@@ -24,6 +30,7 @@ import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionOpera
 import com.digiaudit.grcpc.modules.masterdata.revision.application.RevisionRequest;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionEntityType;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationType;
+import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
@@ -35,6 +42,7 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.risk.api.dto.CentralRiskTe
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +53,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 @Service
 public class CentralRiskTemplateCommandService {
@@ -59,6 +68,11 @@ public class CentralRiskTemplateCommandService {
   private final MasterDataStructuralDependencyChecker dependencyChecker;
   private final Clock clock;
   private final CentralRiskMapper mapper;
+  private final MasterDataAuthorizationService authorization;
+  private final CentralControlCommandService controls;
+  private final CentralControlObjectiveCommandService controlObjectives;
+  private final CentralRiskControlAssignmentQueryService controlAssignments;
+  private final CentralRiskControlObjectiveAssignmentQueryService controlObjectiveAssignments;
 
   public CentralRiskTemplateCommandService(
       CentralRiskTemplateRepository repository,
@@ -70,7 +84,12 @@ public class CentralRiskTemplateCommandService {
       CatalogCommandSupport support,
       CatalogHierarchySupport hierarchySupport,
       MasterDataStructuralDependencyChecker dependencyChecker,
-      @Qualifier("masterDataRevisionClock") Clock clock, CentralRiskMapper mapper) {
+      @Qualifier("masterDataRevisionClock") Clock clock, CentralRiskMapper mapper,
+      MasterDataAuthorizationService authorization,
+      CentralControlCommandService controls,
+      CentralControlObjectiveCommandService controlObjectives,
+      CentralRiskControlAssignmentQueryService controlAssignments,
+      CentralRiskControlObjectiveAssignmentQueryService controlObjectiveAssignments) {
     this.repository = repository;
     this.categoryRepository = categoryRepository;
     this.revisions = revisions;
@@ -82,6 +101,11 @@ public class CentralRiskTemplateCommandService {
     this.dependencyChecker = dependencyChecker;
     this.clock = clock;
     this.mapper = mapper;
+    this.authorization = authorization;
+    this.controls = controls;
+    this.controlObjectives = controlObjectives;
+    this.controlAssignments = controlAssignments;
+    this.controlObjectiveAssignments = controlObjectiveAssignments;
   }
 
   public CentralRiskTemplateAggregateResponse create(CreateCentralRiskTemplateRequest request) {
@@ -170,7 +194,7 @@ public class CentralRiskTemplateCommandService {
                 return completed(context, saved, operationType, expectedVersion, before);
               });
       return new CentralRiskTemplateAggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
-          result.primaryResult().version(), finalized.get(), canonical.get());
+          result.primaryResult().version(), finalized.get(), canonical.get(), null, null);
     } catch (DataIntegrityViolationException exception) {
       throw support.translateBusinessKeyViolation(exception, "UK_CENTRAL_RISK_TEMPLATE_CODE", code);
     }
@@ -184,6 +208,8 @@ public class CentralRiskTemplateCommandService {
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<CentralRiskTemplateResponse> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
+    AtomicReference<List<CentralRiskControlAssignmentResponse>> savedControls = new AtomicReference<>();
+    AtomicReference<List<CentralRiskControlObjectiveAssignmentResponse>> savedObjectives = new AtomicReference<>();
     RevisionExecutionResult result =
         revisions.executeStructural(
             java.util.List.of(MasterDataHierarchyKey.CONTROL, MasterDataHierarchyKey.RISK),
@@ -191,10 +217,15 @@ public class CentralRiskTemplateCommandService {
                 "Update risk template " + id, "Risk Template definition update", null),
             context -> {
               requireGuard(context);
+              boolean hasAssignments = !CollectionUtils.isEmpty(request.controlAssignments())
+                  || !CollectionUtils.isEmpty(request.controlObjectiveAssignments());
+              if (hasAssignments) authorization.requireManageWithReference("RISK", "CONTROL");
               var prepared = documents.prepareAggregate(request.documents());
+              var controlChanges = controls.lockRiskTemplateChanges(context, request.controlAssignments());
               CentralRiskTemplateEntity entity = lock(id);
               support.assertVersion(entity, expectedVersion);
               if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
+              var objectiveChanges = controlObjectives.lockRiskTemplateChanges(context, request.controlObjectiveAssignments());
               UUID parentId = request.parentChange() == null ? entity.getRiskCategoryId() : request.parentChange().riskCategoryId();
               int sortOrder = request.sortOrder() == null ? entity.getSortOrder() : support.normalizeSortOrder(request.sortOrder());
               MasterDataLifecycleStatus status = request.status() == null ? entity.getStatus() : request.status();
@@ -206,7 +237,7 @@ public class CentralRiskTemplateCommandService {
               if (Objects.equals(entity.getRiskCategoryId(), parentId)
                   && entity.getSortOrder() == sortOrder
                   && entity.getStatus() == status
-                  && same(entity, title, description, request) && empty(request.documents()))
+                  && same(entity, title, description, request) && empty(request.documents()) && !hasAssignments)
                 throw noChange();
               JsonNode before = snapshot(entity);
               entity.update(
@@ -225,17 +256,22 @@ public class CentralRiskTemplateCommandService {
               }
               CentralRiskTemplateEntity saved = repository.saveAndFlush(entity);
               canonical.set(mapper.toResponse(saved));
+              var primary = completed(context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
+              var contents = new ArrayList<>(primary.contentResults());
+              contents.addAll(controls.applyRiskTemplateChanges(context, id, controlChanges));
+              contents.addAll(controlObjectives.applyRiskTemplateChanges(context, id, objectiveChanges));
+              if (!controlChanges.isEmpty()) savedControls.set(controlAssignments.forRiskTemplate(id));
+              if (!objectiveChanges.isEmpty()) savedObjectives.set(controlObjectiveAssignments.forRiskTemplate(id));
               finalized.set(
                   documents.finalizePreparedAggregate(
                       prepared,
                       DocumentLinkTargetType.CENTRAL_RISK_TEMPLATE,
                       id,
                       "MD_RISK_MANAGE"));
-              return completed(
-                  context, saved, RevisionOperationType.UPDATE, expectedVersion, before);
+              return RevisionOperationResult.completed(context, primary.primaryResult(), contents);
             });
     return new CentralRiskTemplateAggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
-          result.primaryResult().version(), finalized.get(), canonical.get());
+          result.primaryResult().version(), finalized.get(), canonical.get(), savedControls.get(), savedObjectives.get());
   }
 
   public MasterDataRevisionMutationResponse move(UUID id, MoveCentralRiskTemplateRequest request) {
@@ -303,7 +339,7 @@ public class CentralRiskTemplateCommandService {
                 throw new com.digiaudit.grcpc.common.exception.ConflictException(
                     "DEPENDENCY_EXISTS",
                     "error.masterdata.v2.dependencyExists",
-                    "Risk Template has approved scope dependencies",
+                    "Risk Template has approved scope or assignment dependencies",
                     id);
               }
               if (operationType == RevisionOperationType.ACTIVATE

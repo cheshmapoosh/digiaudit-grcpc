@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { Bar, Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type {
   CentralRiskCategoryDetail,
   CentralRiskNodeKind,
@@ -53,13 +53,11 @@ export default function CentralRiskSummaryPanel({
     ],
     [t("risk.fields.validFrom"), formatPersianDate(value.validFrom)],
     [t("risk.fields.validTo"), formatPersianDate(value.validTo)],
-    [t("risk.fields.createdAt"), formatPersianDateTime(value.createdAt)],
-    [t("risk.fields.updatedAt"), formatPersianDateTime(value.updatedAt)],
   ];
 
   return (
     <div className="riskSummaryPanel">
-      <Bar startContent={<Title level="H4">{value.title}</Title>} />
+      <Bar startContent={<Title level="H4">{t("common.details")}</Title>} />
       <div className="riskSummaryGrid">
         {rows.map(([label, displayValue]) => (
           <div className="riskSummaryRow" key={label}>

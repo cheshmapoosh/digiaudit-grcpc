@@ -1,6 +1,7 @@
 import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
 import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
 import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
+import { CatalogTreeHeader, CatalogTreeRow } from "@/shared/components/CatalogTreeColumns";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageStrip, Tree } from "@ui5/webcomponents-react";
@@ -110,7 +111,6 @@ function ProcessTreeItem({
                          }: ProcessTreeItemProps) {
     const { t } = useTranslation();
     const isSelected = node.id === selectedId;
-    const displayName = `${node.title}`;
 
     return (
         <TreeItemCustom orderId={node.id} orderType={node.nodeType === "PROCESS" ? "CENTRAL_PROCESS" : node.nodeType === "SUBPROCESS" ? "CENTRAL_SUBPROCESS" : undefined}
@@ -119,36 +119,7 @@ function ProcessTreeItem({
             expanded={expandedIds.has(node.id)}
             selected={isSelected}
             content={<CatalogSelectableRow itemKey={node.id}>
-                <div
-                    data-process-node-id={node.id}
-                    title={displayName}
-                    style={{ display: "grid", gridTemplateColumns: "minmax(16rem, 1fr) 9rem", alignItems: "center", minWidth: 0, width: "100%", columnGap: "1rem" }}
-                >
-                    <span
-                        style={{
-                            display: "block",
-                            minWidth: 0,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                        }}
-                    >
-                        {displayName}
-                    </span>
-
-                    <span
-                        style={{
-                            display: "block",
-                            minWidth: 0,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            textAlign: "center",
-                        }}
-                    >
-                        {resolveNodeTypeLabel(node.nodeType, t)}
-                    </span>
-                </div>
+                <CatalogTreeRow title={node.title} type={resolveNodeTypeLabel(node.nodeType, t)} />
             </CatalogSelectableRow>}
         >
             {node.children.map((child) => (
@@ -297,44 +268,27 @@ export default function ProcessTree({
     }
 
     return (
-        <div
-            style={{ minWidth: "34rem" }}
-        >
-            <div
-                role="row"
-                style={{ display: "grid", gridTemplateColumns: "minmax(16rem, 1fr) 9rem", columnGap: "1rem", padding: "0.35rem 0.75rem", boxSizing: "border-box" }}
-            >
-                <span>{t("process.fields.name", { defaultValue: "نام" })}</span>
-                <span style={{ textAlign: "center" }}>
-                    {t("process.fields.type", { defaultValue: "نوع" })}
-                </span>
-            </div>
-
-            <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, (item) => {
+        <Tree header={<CatalogTreeHeader withType />} inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, (item) => {
+            if (item.dataset.processNodeId) onSelect?.(item.dataset.processNodeId);
+        })} onMoveOver={displayOrder?.onMoveOver}
+            onDragEnd={(event) => displayOrder?.onDragEnd(event, (item) => {
                 if (item.dataset.processNodeId) onSelect?.(item.dataset.processNodeId);
-            })} onMoveOver={displayOrder?.onMoveOver}
-                onDragEnd={(event) => displayOrder?.onDragEnd(event, (item) => {
-                    if (item.dataset.processNodeId) onSelect?.(item.dataset.processNodeId);
-                })}
-                accessibleName={t("process.list.title", {
-                    defaultValue: "ساختار فرآیند",
-                })}
-                onItemClick={handleItemClick}
-                onItemToggle={handleItemToggle}
-                style={{
-                    minHeight: "100%",
-                    width: "100%",
-                }}
-            >
-                {filteredTree.map((node) => (
-                    <ProcessTreeItem
-                        key={node.id}
-                        node={node}
-                        selectedId={selectedId}
-                        expandedIds={expandedIds}
-                    />
-                ))}
-            </Tree>
-        </div>
+            })}
+            accessibleName={t("process.list.title", {
+                defaultValue: "ساختار فرآیند",
+            })}
+            onItemClick={handleItemClick}
+            onItemToggle={handleItemToggle}
+            style={{ minHeight: "100%", width: "100%" }}
+        >
+            {filteredTree.map((node) => (
+                <ProcessTreeItem
+                    key={node.id}
+                    node={node}
+                    selectedId={selectedId}
+                    expandedIds={expandedIds}
+                />
+            ))}
+        </Tree>
     );
 }

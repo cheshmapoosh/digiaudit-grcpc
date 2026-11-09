@@ -8,7 +8,6 @@ import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/com
 import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
 import { HierarchyMultiSelectionDialog, type HierarchySelectionNode } from "@/shared/components/HierarchyMultiSelectionDialog";
-import type { PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 
 import type { CentralSubprocessRequirementScope, RequirementScopeChange, RequirementScopeDraftRow, RequirementScopeDraftState } from "../domain/requirementScope.model";
 import { requirementScopeApi } from "../infra/requirementScope.api.repo";
@@ -46,7 +45,6 @@ export default function SubprocessRequirementScopesTab({ subprocessId, readOnly,
   const [search, setSearch] = useState(""); const [filter, setFilter] = useState<CatalogRelationFilter>("ALL");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
   const generation = useRef(0);
   const load = useCallback(async (signal?: AbortSignal) => {
     const current = ++generation.current;
@@ -66,11 +64,9 @@ export default function SubprocessRequirementScopesTab({ subprocessId, readOnly,
   useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, [load]);
 
   const pending = useMemo(() => changes(rows), [rows]);
-  const pendingDates = Object.values(dateDrafts).some(draft => draft.dirty);
-  const invalid = Object.values(dateDrafts).some(draft => !draft.valid) || rows.some(row => row.editState !== "FINAL" && row.editState !== "DRAFT_PENDING_DELETE" && Boolean(row.validFrom && row.validTo && row.validFrom > row.validTo));
-  useEffect(() => onDraftStateChange?.({ changes: pending, dirty: pending.length > 0 || pickerOpen || pendingDates, ready: (loaded || !permissions.view) && !pickerOpen && !pendingDates && !invalid, invalid: Boolean(error) || invalid }), [pending, pickerOpen, pendingDates, invalid, loaded, error, permissions.view, onDraftStateChange]);
-  const hasPendingDate = (key: string) => Boolean(dateDrafts[key + ":validFrom"]?.dirty || dateDrafts[key + ":validTo"]?.dirty);
-  const visible = rows.filter(row => (hasPendingDate(row.key) || row.editState !== "FINAL" || row.status !== "DELETED" && (filter === "ALL" || row.status === filter)) && (hasPendingDate(row.key) || row.editState !== "FINAL" || (row.requirementCode + " " + row.requirementTitle).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())));
+  const invalid = rows.some(row => row.editState !== "FINAL" && row.editState !== "DRAFT_PENDING_DELETE" && Boolean(row.validFrom && row.validTo && row.validFrom > row.validTo));
+  useEffect(() => onDraftStateChange?.({ changes: pending, dirty: pending.length > 0 || pickerOpen, ready: (loaded || !permissions.view) && !pickerOpen && !invalid, invalid: Boolean(error) || invalid }), [pending, pickerOpen, invalid, loaded, error, permissions.view, onDraftStateChange]);
+  const visible = rows.filter(row => (row.editState !== "FINAL" || row.status !== "DELETED" && (filter === "ALL" || row.status === filter)) && (row.editState !== "FINAL" || (row.requirementCode + " " + row.requirementTitle).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())));
   const allOptions = useMemo(() => options, [options]);
   const nodes = useMemo(() => {
     const occupied = new Set(rows.filter(row => row.status !== "DELETED" && row.editState !== "DRAFT_PENDING_DELETE").map(row => row.requirementId));
@@ -103,23 +99,16 @@ export default function SubprocessRequirementScopesTab({ subprocessId, readOnly,
     : Boolean(row.original && row.original.status !== "DELETED" && permissions.lifecycle && row.editState !== "DRAFT_PENDING_DELETE" && row.status !== status)));
   const batch = (status: "ACTIVE" | "INACTIVE" | "DELETED") => {
     const keys = new Set(affected(status).map(row => row.key));
-    if (status === "DELETED") setDateDrafts(current => Object.fromEntries(Object.entries(current).filter(([key]) => ![...keys].some(rowKey => key === rowKey + ":validFrom" || key === rowKey + ":validTo"))));
     setRows(current => current.flatMap((row): RequirementScopeDraftRow[] => {
       if (!keys.has(row.key)) return [row];
       if (status === "DELETED") return !row.original ? [] : row.original.status === "DELETED" ? [persisted(row.original)] : [{ ...row, editState: "DRAFT_PENDING_DELETE" }];
       return [normalize({ ...row, status })];
     }));
   };
-  const updateDate = (key: string, field: "validFrom" | "validTo", value: string | null) => setRows(current => current.map(row => row.key === key ? normalize({ ...row, [field]: value }) : row));
-  const reportDate = (key: string, draft: PersianDateDraftState) => setDateDrafts(current => {
-    const previous = current[key]; if (previous?.dirty === draft.dirty && previous.valid === draft.valid && previous.draftValue === draft.draftValue) return current;
-    return { ...current, [key]: draft };
-  });
   const columns: CatalogRelationColumn<RequirementScopeDraftRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.requirementCode },
     { key: "name", header: t("catalogRelation.name"), cell: row => row.requirementTitle },
-    ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: RequirementScopeDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_PENDING_DELETE"} disabled={busy || loading}
-      onChange={value => updateDate(row.key, field, value)} onDraftStateChange={draft => reportDate(row.key + ":" + field, draft)} /> })),
+    ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: RequirementScopeDraftRow) => <CatalogRelationDate value={row[field]} /> })),
     { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={row.status} draft={row.editState === "FINAL" ? null : row.editState === "DRAFT_PENDING_DELETE" ? "delete" : !row.original || row.original.status === "DELETED" ? "new" : row.status !== row.original.status ? row.status === "ACTIVE" ? "active" : "inactive" : "edit"} /> },
   ];
   if (!permissions.view) return <MessageStrip design="Information">{t("requirementScope.errors.forbidden")}</MessageStrip>;

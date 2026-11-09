@@ -56,8 +56,8 @@ export function CatalogRelationTable<Row>({ rows, columns, rowKey, accessibleNam
       </TableRow>)}
     </Table>
     </CatalogTableViewport>
-    {details.length ? detailRow ? <Form key={rowKey(detailRow)} headerText={t("catalogRelation.details")} headerLevel="H5"
-      accessibleName={t("catalogRelation.details")} accessibleMode={selectable ? "Edit" : "Display"}
+    {details.length && detailRow ? <Form key={rowKey(detailRow)} headerText={t("catalogRelation.details")} headerLevel="H5"
+      accessibleName={t("catalogRelation.details")} accessibleMode="Display"
       itemSpacing="Normal" labelSpan="S12 M12 L12 XL12" layout={`S1 M2 L${detailColumns} XL${detailColumns}`}>
       {details.map(column => {
         const value = column.cell(detailRow);
@@ -65,6 +65,6 @@ export function CatalogRelationTable<Row>({ rows, columns, rowKey, accessibleNam
           {typeof value === "string" || typeof value === "number" ? <Text>{value}</Text> : value}
         </FormItem>;
       })}
-    </Form> : <Text>{t("catalogRelation.detailsHint")}</Text> : null}
+    </Form> : null}
   </FlexBox>;
 }

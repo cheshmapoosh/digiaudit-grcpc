@@ -155,7 +155,7 @@ export default function OrganizationScopesTab({ section, organizationId, context
             initialStatus={initialStatus} onFilterChange={onFilterChange} />
         {pickerOpen ? <HierarchyMultiSelectionDialog open title={pickerTitle} searchAccessibleName={t("local.scopePicker.search")}
             nodes={nodes} selectedIds={EMPTY_SELECTION} busy={busy} loading={pickerLoading} error={pickerError}
-            description={t("local.scopePicker.hint")} confirmDisabled={!choices.length}
+            confirmDisabled={!choices.length}
             confirmText={t("common.select")} cancelText={t("common.cancel")} onConfirm={stage} onClose={closePicker} /> : null}
     </FlexBox>;
 }

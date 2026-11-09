@@ -16,7 +16,7 @@
     overflow: hidden;
     padding: 1.25rem 1.75rem;
     box-sizing: border-box;
-    border-radius: .65rem;
+    border-radius: var(--sapTile_BorderCornerRadius);
     box-shadow: 0 8px 24px rgba(5, 27, 75, .14);
     background: #061b52 url('/images/digi-audit-dashboard-wave.svg') center / cover no-repeat;
     color: #fff;

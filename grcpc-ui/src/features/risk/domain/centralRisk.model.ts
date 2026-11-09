@@ -1,4 +1,6 @@
 import type { DocumentAggregateRequest } from "@/features/document";
+import type { RiskControlAssignment } from "@/features/risk-control-assignment";
+import type { RiskControlObjectiveAssignment } from "@/features/risk-control-objective-assignment";
 
 export type CentralRiskStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type CentralRiskEditableStatus = Exclude<CentralRiskStatus, "DELETED">;
@@ -40,6 +42,8 @@ export interface CentralRiskTemplateSummary {
 }
 
 export interface CentralRiskTemplateDetail extends CentralRiskTemplateSummary {
+  controlAssignments?: RiskControlAssignment[];
+  controlObjectiveAssignments?: RiskControlObjectiveAssignment[];
   description: string | null;
   validFrom: string | null;
   validTo: string | null;
@@ -98,6 +102,22 @@ export interface CreateCentralRiskTemplateCommand {
   documents: DocumentAggregateRequest;
 }
 
+type AssignmentLifecycleChange = {
+  operation: "ACTIVATE" | "INACTIVATE" | "DELETE";
+  assignmentId: string;
+  version: number;
+};
+
+type ControlAssignmentChange = { controlId: string } & (
+  | { operation: "CREATE_OR_RESTORE"; controlVersion: number }
+  | AssignmentLifecycleChange
+);
+
+type ControlObjectiveAssignmentChange = { controlObjectiveId: string } & (
+  | { operation: "CREATE_OR_RESTORE"; controlObjectiveVersion: number }
+  | AssignmentLifecycleChange
+);
+
 export interface UpdateCentralRiskTemplateCommand {
   parentChange?: { riskCategoryId: string };
   sortOrder?: number;
@@ -109,6 +129,8 @@ export interface UpdateCentralRiskTemplateCommand {
   validFrom: string | null;
   validTo: string | null;
   documents: DocumentAggregateRequest;
+  controlAssignments?: ControlAssignmentChange[];
+  controlObjectiveAssignments?: ControlObjectiveAssignmentChange[];
 }
 
 export interface EditCentralRiskTemplateCommand extends UpdateCentralRiskTemplateCommand {
@@ -129,6 +151,8 @@ export interface CentralRiskMutationResponse {
   revisionId: string;
   version: number;
   finalizedDocuments: unknown[];
+  controlAssignments?: RiskControlAssignment[];
+  controlObjectiveAssignments?: RiskControlObjectiveAssignment[];
 }
 
 export interface CentralRiskRevisionResponse {

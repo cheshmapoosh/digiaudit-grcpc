@@ -7,9 +7,6 @@
 .objectiveSummaryDetails { display: grid; grid-template-columns: 9rem minmax(0, 1fr); align-content: start; gap: .75rem; padding: 1rem; overflow: auto; }
 .objectiveToolbar, .objectiveActions { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .objectiveDetails { display: grid; gap: .5rem; }
-.objectiveTreeLabel { gap: var(--sapContent_Space_Tiny); width: 100%; min-width: 0; box-sizing: border-box; }
-.objectiveTreeTitle { min-width: 0; }
-.objectiveTreeType { flex: none; white-space: nowrap; }
 .objectiveDialogContent { display: grid; gap: .75rem; padding: 1rem; box-sizing: border-box; }
 .objectiveForm { padding: 1rem; max-height: 60vh; overflow: auto; }
 .objectiveDocumentTab { padding: 1rem; max-height: 75vh; overflow: auto; }

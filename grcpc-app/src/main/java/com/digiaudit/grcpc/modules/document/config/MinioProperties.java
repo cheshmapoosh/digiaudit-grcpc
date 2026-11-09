@@ -14,6 +14,7 @@ public record MinioProperties(
         boolean enabled,
         String endpoint,
         String publicEndpoint,
+        String presignRegion,
         String accessKey,
         String secretKey,
         String bucket,

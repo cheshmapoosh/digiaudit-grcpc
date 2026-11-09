@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useAuthState } from "@/features/auth";
 import { Button, FlexBox, MessageStrip } from "@ui5/webcomponents-react";
 import { ManagementDetailDialog } from "@/shared/components/ManagementDetailDialog";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
@@ -17,6 +18,7 @@ type LifecycleCommand = "activate" | "inactivate" | "delete" | "restore";
 export default function ProfilesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const multiProfileEnabled = useAuthState((state) => state.me?.multiProfileEnabled !== false);
   const { profileId } = useParams<{ profileId: string }>();
   const [items, setItems] = useState<DatasetProfile[]>([]);
   const [editor, setEditor] = useState<DatasetProfile | null | undefined>(undefined);
@@ -68,9 +70,9 @@ export default function ProfilesPage() {
   return <>
     <FlexBox direction="Column" className="managementListPage">
       <ProfilesListReport items={items} selectedId={activeId ?? undefined} searchText={searchText} loading={loading} busy={busy} error={error}
-        onSearch={setSearchText} onCreate={() => setEditor(null)} onSelect={setSelectedId}
-        actions={<><Button disabled={busy || loading || !selected} onClick={() => selected && void perform(selected.status === "ACTIVE" ? "inactivate" : "activate")}>{t(selected?.status === "INACTIVE" ? "profile.activate" : "profile.inactivate")}</Button>
-          <Button design="Negative" disabled={busy || loading || !selected} onClick={() => setDeleteOpen(true)}>{t("common.delete")}</Button></>}
+        onSearch={setSearchText} onCreate={multiProfileEnabled ? () => setEditor(null) : undefined} onSelect={setSelectedId}
+        actions={multiProfileEnabled ? <><Button disabled={busy || loading || !selected} onClick={() => selected && void perform(selected.status === "ACTIVE" ? "inactivate" : "activate")}>{t(selected?.status === "INACTIVE" ? "profile.activate" : "profile.inactivate")}</Button>
+          <Button design="Negative" disabled={busy || loading || !selected} onClick={() => setDeleteOpen(true)}>{t("common.delete")}</Button></> : undefined}
         onShow={(id) => navigate(`/profiles/${id}`)} />
     </FlexBox>
     {profileId && editor === undefined && (selected || !loading) ? <ManagementDetailDialog title={t("profile.detailTitle")} busy={busy || loading}

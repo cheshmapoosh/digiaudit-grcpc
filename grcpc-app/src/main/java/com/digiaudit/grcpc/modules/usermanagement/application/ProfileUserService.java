@@ -4,6 +4,7 @@ import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
 import com.digiaudit.grcpc.common.security.ProfileContext;
+import com.digiaudit.grcpc.modules.datasetprofile.application.DatasetEditionPolicy;
 import com.digiaudit.grcpc.modules.datasetprofile.application.ProfileAccessService;
 import com.digiaudit.grcpc.modules.usermanagement.domain.entity.*;
 import com.digiaudit.grcpc.modules.usermanagement.domain.enums.ScopeType;
@@ -79,6 +80,7 @@ public class ProfileUserService {
         var retained = accessIds(user.getId());
         if (!user.isProfileAdmin() && !ids.isEmpty()) ProfileAccessService.deny();
         for (UUID id : ids) {
+            if (!DatasetEditionPolicy.allows(id)) ProfileAccessService.deny();
             // Root may retain/grant access to an inactive dataset; only data mutation requires ACTIVE.
             if (!retained.contains(id)) access.validate(id, current.getCurrentPrincipal().getUserId(), true, false, true);
         }
@@ -98,6 +100,7 @@ public class ProfileUserService {
         if (user.isRootUser()) { if (!roleIds.isEmpty()) ProfileAccessService.deny(); return; }
         if (user.isProfileAdmin() && profileId == null && roleIds.isEmpty()) return;
         if (profileId == null || (!user.isProfileAdmin() && !profileId.equals(user.getProfileId()))) ProfileAccessService.deny();
+        if (!DatasetEditionPolicy.allows(profileId)) ProfileAccessService.deny();
         if (user.isProfileAdmin() && !access.isAdmin(user.getId(), profileId)) ProfileAccessService.deny();
         var selected = new HashSet<>(roleIds);
         if (selected.contains(null) || selected.size() != roleIds.size()) throw new ConflictException("Invalid or duplicate role selection");

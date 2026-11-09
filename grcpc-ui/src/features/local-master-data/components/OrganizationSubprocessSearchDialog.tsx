@@ -46,7 +46,7 @@ export default function OrganizationSubprocessSearchDialog({ excludedIds, busy, 
     return <HierarchyMultiSelectionDialog open title={t("local.subprocessSearch.title")}
         searchAccessibleName={t("local.subprocessSearch.search")} nodes={nodes}
         selectedIds={EMPTY_SELECTION} busy={busy} loading={loading} error={error}
-        description={t("local.subprocessSearch.draftHint")} confirmDisabled={!validSelection}
+        confirmDisabled={!validSelection}
         confirmText={t("common.select")} cancelText={t("common.cancel")}
         onSelectionChange={setSelection} onConfirm={(ids) => {
             if (!busy && !loading && ids.size && [...ids].every((id) => eligible.has(id))) {

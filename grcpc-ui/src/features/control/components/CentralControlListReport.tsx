@@ -56,10 +56,12 @@ export default function CentralControlListReport({
   return (
     <div className="controlListReport">
       <Bar
-        startContent={<Title level="H4">{t("control.list.title")}</Title>}
+        startContent={<>
+            <Title level="H4">{t("control.list.title")}</Title>
+            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("control.list.search")} />
+        </>}
         endContent={
           <>
-            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("control.list.search")} />
             <ControlCreateMenu
               disabled={busy || !canCreate}
               nodeTypes={allowedCreateTypes}

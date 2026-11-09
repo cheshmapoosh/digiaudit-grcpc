@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Dialog, FlexBox, Form, FormItem, Input, Label, MessageStrip, Text } from "@ui5/webcomponents-react";
+import { Button, Dialog, FlexBox, Form, FormItem, Input, Label, MessageStrip } from "@ui5/webcomponents-react";
 import { useDialogOpenAfterRender } from "@/shared/hooks/useDialogOpenAfterRender";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
@@ -46,7 +46,6 @@ export default function BasicDataFormDialog({ kind, row, onClose, onSaved }: {
       <FlexBox direction="Column" className="managementDialogContent">
         {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
         <Form accessibleName={t(`basicData.${kind}.formTitle`)} accessibleMode="Edit" layout="S1 M2 L2 XL2" labelSpan="S12 M12 L12 XL12" itemSpacing="Normal">
-          <FormItem labelContent={<Label>{t("basicData.profile")}</Label>}><Text>{row?.profileName ?? profile?.name ?? "—"}</Text></FormItem>
           <FormItem labelContent={<Label for={`${id}-name`} required>{t("basicData.name")}</Label>}>
             <Input id={`${id}-name`} value={form.name} maxlength={255} disabled={busy} onInput={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
           </FormItem>

@@ -27,26 +27,6 @@
   box-sizing: border-box;
 }
 
-.controlTreeItemContent {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.controlTreeTitle {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.controlTreeType {
-  flex: none;
-}
-
 .controlSummaryPanel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;

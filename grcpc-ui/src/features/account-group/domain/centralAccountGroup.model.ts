@@ -1,8 +1,39 @@
 import type { DocumentAggregateRequest } from "@/features/document";
+import type { AccountGroupControlSelection, ControlAccountGroupClassification } from "@/features/control-account-group";
+import type { AccountGroupControlObjectiveSelection, ControlObjectiveAccountGroupClassification } from "@/features/control-objective-account-group";
 
 export type CentralAccountGroupStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type CentralAccountGroupEditableStatus = Exclude<CentralAccountGroupStatus, "DELETED">;
 export type CentralAccountGroupImportance = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type AccountGroupClassificationOperation = "ACTIVATE" | "INACTIVATE" | "DELETE";
+
+interface ClassificationLifecycleChange {
+  classificationId: string;
+  version: number;
+  operation: AccountGroupClassificationOperation;
+}
+
+interface AccountGroupRiskSelection {
+  riskTemplateId: string;
+  version: number;
+}
+
+interface AccountGroupRiskLifecycleChange extends AccountGroupRiskSelection {
+  assignmentId: string;
+  operation: AccountGroupClassificationOperation;
+}
+
+export interface AccountGroupRiskAssignment {
+  assignmentId: string;
+  riskTemplateId: string;
+  riskTemplateCode: string;
+  riskTemplateTitle: string;
+  riskTemplateStatus: CentralAccountGroupStatus;
+  status: CentralAccountGroupStatus;
+  validFrom: string | null;
+  validTo: string | null;
+  version: number;
+}
 
 export const CENTRAL_ACCOUNT_GROUP_IMPORTANCE: CentralAccountGroupImportance[] = [
   "LOW",
@@ -26,6 +57,9 @@ export interface CentralAccountGroupSummary {
 }
 
 export interface CentralAccountGroupDetail extends CentralAccountGroupSummary {
+  controlClassifications?: ControlAccountGroupClassification[];
+  controlObjectiveClassifications?: ControlObjectiveAccountGroupClassification[];
+  riskAssignments?: AccountGroupRiskAssignment[];
   description?: string | null;
   createdAt: string;
   createdBy?: string | null;
@@ -36,6 +70,9 @@ export interface CentralAccountGroupDetail extends CentralAccountGroupSummary {
 }
 
 export interface CreateCentralAccountGroupCommand {
+  riskTemplatesToAdd?: AccountGroupRiskSelection[];
+  controlsToAdd?: AccountGroupControlSelection[];
+  controlObjectivesToAdd?: AccountGroupControlObjectiveSelection[];
   code: string;
   title: string;
   parentAccountGroupId: string | null;
@@ -49,6 +86,12 @@ export interface CreateCentralAccountGroupCommand {
 }
 
 export interface UpdateCentralAccountGroupCommand {
+  riskTemplatesToAdd?: AccountGroupRiskSelection[];
+  riskAssignmentLifecycleChanges?: AccountGroupRiskLifecycleChange[];
+  controlsToAdd?: AccountGroupControlSelection[];
+  controlObjectivesToAdd?: AccountGroupControlObjectiveSelection[];
+  controlLifecycleChanges?: (ClassificationLifecycleChange & { controlId: string })[];
+  controlObjectiveLifecycleChanges?: (ClassificationLifecycleChange & { controlObjectiveId: string })[];
   parentChange?: { parentAccountGroupId: string | null };
   sortOrder?: number;
   status?: "ACTIVE" | "INACTIVE";
@@ -75,6 +118,9 @@ export interface MoveCentralAccountGroupCommand {
 }
 
 export interface CentralAccountGroupMutationResponse {
+  riskAssignments?: AccountGroupRiskAssignment[];
+  controlClassifications?: ControlAccountGroupClassification[];
+  controlObjectiveClassifications?: ControlObjectiveAccountGroupClassification[];
   entity: CentralAccountGroupDetail;
   entityId: string;
   revisionId: string;

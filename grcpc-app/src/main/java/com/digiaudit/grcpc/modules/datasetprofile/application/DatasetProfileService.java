@@ -31,6 +31,7 @@ public class DatasetProfileService {
         var actor = currentUser.getCurrentPrincipal();
         var account = currentUser.getCurrentUser();
         return profiles.findAll().stream()
+                .filter(p -> DatasetEditionPolicy.allows(p.getId()))
                 .filter(p -> management || (!"DELETED".equals(p.getStatus()) && (actor.isRootUser()
                         || p.getId().equals(account.getProfileId()) || access.isAdmin(actor.getUserId(), p.getId()))))
                 .sorted(Comparator.comparing(DatasetProfileEntity::getCreatedAt).thenComparing(DatasetProfileEntity::getId))
@@ -39,6 +40,8 @@ public class DatasetProfileService {
     @Transactional
     public View save(UUID id, Save request, HttpServletRequest http) {
         currentUser.assertCurrentUserIsRoot();
+        if (id == null) DatasetEditionPolicy.requireMultiProfile();
+        else if (!DatasetEditionPolicy.allows(id)) ProfileAccessService.deny();
         var entity = id == null ? DatasetProfileEntity.builder().id(UUID.randomUUID()).status("ACTIVE").build() : find(id);
         if (id != null) { checkVersion(entity, request.version()); if ("DELETED".equals(entity.getStatus())) throw new ConflictException("Restore the profile before editing"); }
         entity.setName(request.name().trim()); entity.setDescription(request.description());
@@ -51,6 +54,7 @@ public class DatasetProfileService {
     @Transactional
     public View lifecycle(UUID id, String command, Long version, HttpServletRequest http) {
         currentUser.assertCurrentUserIsRoot();
+        DatasetEditionPolicy.requireMultiProfile();
         var entity = find(id); checkVersion(entity, version);
         switch (command) {
             case "activate" -> { require(entity, "INACTIVE"); entity.setStatus("ACTIVE"); }

@@ -22,7 +22,7 @@ All unrelated Conceptual, Logical, Physical, Document, Revision, Greenfield, Leg
 | Technical tables | 2 |
 | Total Master Data V2 physical tables at this decision | 47 |
 
-The later Policy simplification, Objective extension, and Global Control library extension bring the physical count to 53; the accepted 2026-10-27 four-Assignment correction brings it to 57. The 2026-10-28 typed Organization owner Assignment brings the current count to 58. The technical table count remains two. The `OBJECTIVE` Guard row is seeded by `V1186`, and `GLOBAL_CONTROL` by `V1187`.
+The later Policy simplification, Objective extension, and Global Control library extension bring the physical count to 53; the accepted 2026-10-27 four-Assignment correction brings it to 57. The 2026-10-28 Organization owner Assignment and 2026-11-09 Account Group–Risk Template Assignment bring the current count to 59. The technical table count remains two. The `OBJECTIVE` Guard row is seeded by `V1186`, and `GLOBAL_CONTROL` by `V1187`.
 
 Approved technical tables:
 
@@ -234,3 +234,8 @@ A hierarchy slice is not accepted without evidence that:
 ## Central reference Assignment correction (2026-10-27)
 
 The four typed direct Assignments add no Guard key. Their commands use the existing sorted union of CONTROL, RISK and REGULATION as applicable, retaining ACCOUNT_GROUP for concurrent classification drafts. Control Objective remains non-hierarchical with a targeted row lock. Endpoint lifecycle/dependency paths and the global endpoint-row order are listed in the [accepted correction](accepted-corrections/2026-10-27-central-reference-assignments.md). No database or real concurrency verification was run for this delivery by explicit project-owner request.
+
+The Account Group–Risk Template Assignment also uses the existing keys. Account
+Group Create/Update adds `RISK` to the sorted `ACCOUNT_GROUP` Guard union when
+assignment drafts are present, retaining `CONTROL` for Control classification
+drafts. Each endpoint's Delete checks links under its existing hierarchy Guard.

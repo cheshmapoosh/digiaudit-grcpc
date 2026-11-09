@@ -17,7 +17,7 @@ type Props = {
   busy: boolean;
   error: string | null;
   onSearch: (value: string) => void;
-  onCreate: () => void;
+  onCreate?: () => void;
   actions?: ReactNode;
   onSelect: (id: string | null) => void;
   onShow: (id: string) => void;
@@ -33,9 +33,11 @@ export default function ProfilesListReport({
     && (!query || `${profile.name} ${profile.description ?? ""}`.toLocaleLowerCase().includes(query)));
 
   return <FlexBox direction="Column" className="profileManagementContent">
-    <Bar startContent={<Title level="H4">{t("profile.listTitle")}</Title>} endContent={<>
-      <HeaderSearch value={searchText} onChange={onSearch} />
-      <Button design="Emphasized" disabled={busy || loading} onClick={onCreate}>{t("common.create")}</Button>
+    <Bar startContent={<>
+        <HeaderSearch value={searchText} onChange={onSearch} />
+        <Title level="H4">{t("profile.listTitle")}</Title>
+    </>} endContent={<>
+      {onCreate ? <Button design="Emphasized" disabled={busy || loading} onClick={onCreate}>{t("common.create")}</Button> : null}
       <Button design="Emphasized" disabled={busy || loading || !selectedId} onClick={() => selectedId && onShow(selectedId)}>{t("management.view")}</Button>
       {actions}
     </>} />

@@ -5,7 +5,10 @@
     "nodeType": { "group": "Control Group", "control": "Control" },
     "group": { "createTitle": "Create Control Group", "viewTitle": "View Control Group", "editTitle": "Edit Control Group", "valueHelpTitle": "Select Control Group", "noParent": "No group", "search": "Search control groups" },
     "object": { "title": "Control", "notFound": "The selected control was not found." },
-    "create": { "title": "Create Control" },
+    "create": {
+      "title": "Create Control",
+      "subprocessGroupContext": "Creating directly from a subprocess requires exactly one control group. Create the control in the Controls catalog, then add it from the subprocess's Controls tab."
+    },
     "view": { "title": "View Control" },
     "edit": { "title": "Edit Control" },
     "delete": { "title": "Delete", "confirm": "Are you sure you want to delete “{{title}}”?" },

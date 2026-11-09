@@ -1,22 +1,17 @@
-import { canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
-import { useMemo } from "react";
-import { useAuthState } from "@/features/auth/state/auth.state";
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import type { ControlObjectiveScopePermissions } from "../domain/controlObjectiveScope.model";
 
 export function useControlObjectiveScopePermissions(): ControlObjectiveScopePermissions {
-  const me = useAuthState((state) => state.me);
-  return useMemo(() => {
-
-
-    const has = (suffix: string) => canAccessMasterData(me, "PROCESS", suffix !== "VIEW") && canAccessMasterData(me, "CONTROL");
-    return {
-      view: has("VIEW"),
-      create: has("CREATE"),
-      update: has("UPDATE"),
-      lifecycle: has("LIFECYCLE"),
-      delete: has("DELETE"),
-      restore: has("RESTORE"),
-      controlObjectiveView: canAccessMasterData(me, "CONTROL"),
-    };
-  }, [me]);
+  const process = useMasterDataAccess("PROCESS");
+  const control = useMasterDataAccess("CONTROL");
+  const manage = process.manage && control.view;
+  return {
+    view: process.view && control.view,
+    create: manage,
+    update: manage,
+    lifecycle: manage,
+    delete: manage,
+    restore: manage,
+    controlObjectiveView: control.view,
+  };
 }

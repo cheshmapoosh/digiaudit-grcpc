@@ -2,9 +2,9 @@ import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
-import { ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
+import { Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { CentralRegulationAnyDetail } from "../domain/centralRegulation.model";
 import type { CentralRegulationTreeNode } from "../utils/centralRegulation.tree";
 
@@ -21,7 +21,7 @@ interface Props {
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="regulationSummaryRow">
-      <strong>{label}</strong>
+      <Label showColon>{label}</Label>
       <div>{value}</div>
     </div>
   );
@@ -47,7 +47,7 @@ export default function CentralRegulationSummaryPanel({
 
   return (
     <div className="regulationSummaryPanel">
-      <Title level="H4">{t("regulation.summary.title")}</Title>
+      <Title level="H4">{t("common.details")}</Title>
       <div className="regulationSummaryGrid">
         <Row label={t("regulation.fields.code")} value={<Text>{value.code}</Text>} />
         <Row label={t("regulation.fields.name")} value={<Text>{value.title}</Text>} />
@@ -74,14 +74,6 @@ export default function CentralRegulationSummaryPanel({
         <Row
           label={t("regulation.fields.validTo")}
           value={<Text>{formatPersianDate(value.validTo)}</Text>}
-        />
-        <Row
-          label={t("regulation.fields.createdAt")}
-          value={<Text>{formatPersianDateTime(value.createdAt)}</Text>}
-        />
-        <Row
-          label={t("regulation.fields.updatedAt")}
-          value={<Text>{formatPersianDateTime(value.updatedAt)}</Text>}
         />
       </div>
       <DialogFooterBar>

@@ -27,6 +27,7 @@ public class ProfileAccessService {
                 Long.class, ProfileContext.raw(profileId), userId.toString()) > 0;
     }
     public void validate(UUID profileId, UUID userId, boolean root, boolean write, boolean lock) {
+        if (!DatasetEditionPolicy.allows(profileId)) deny();
         var states = jdbc.query("select status from dataset_profile where id = ?" + (lock ? " for update" : ""),
                 (rs, n) -> rs.getString(1), ProfileContext.raw(profileId));
         if (states.isEmpty() || "DELETED".equals(states.getFirst())) deny();

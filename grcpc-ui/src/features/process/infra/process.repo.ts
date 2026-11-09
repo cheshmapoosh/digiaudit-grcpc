@@ -9,7 +9,7 @@ import type {
 } from "../domain/process.model";
 
 export interface ProcessRepo {
-    list(): Promise<ProcessNode[]>;
+    list(signal?: AbortSignal): Promise<ProcessNode[]>;
     getById(id: string, nodeType?: ProcessNodeType): Promise<ProcessNode | null>;
     create(payload: ProcessNodeCreate): Promise<MasterDataAggregateMutationResponse>;
     update(

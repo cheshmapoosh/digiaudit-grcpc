@@ -1,6 +1,7 @@
 import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
 import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
 import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
+import { CatalogTreeHeader, CatalogTreeRow } from "@/shared/components/CatalogTreeColumns";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageStrip, Tree } from "@ui5/webcomponents-react";
@@ -74,8 +75,10 @@ function OrganizationTreeItem({
     selectedId,
     expandedIds,
 }: OrganizationTreeItemProps) {
+    const { t } = useTranslation();
     const isSelected = node.id === selectedId;
     const label = node.displayLabel || node.code;
+    const type = node.organizationTypeName ?? t(`organization.types.${node.organizationType}`, { defaultValue: node.organizationType });
 
     return (
         <TreeItemCustom orderId={node.id} orderType={"ORGANIZATION"}
@@ -84,12 +87,7 @@ function OrganizationTreeItem({
             expanded={expandedIds.has(node.id)}
             selected={isSelected}
             content={<CatalogSelectableRow itemKey={node.id}>
-                <span
-                    title={label}
-                    style={{ display: "block", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                >
-                    {label}
-                </span>
+                <CatalogTreeRow title={label} type={type} />
             </CatalogSelectableRow>}
         >
             {node.children.map((child) => (
@@ -230,7 +228,7 @@ export default function OrganizationTree({
     }
 
     return (
-            <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, (item) => {
+            <Tree header={<CatalogTreeHeader withType />} inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, (item) => {
                 if (item.dataset.id) onSelect?.(item.dataset.id);
             })} onMoveOver={displayOrder?.onMoveOver}
             onDragEnd={(event) => displayOrder?.onDragEnd(event, (item) => {

@@ -1,38 +1,32 @@
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { MessageStrip } from "@ui5/webcomponents-react";
-import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
-import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
-import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
-import { formatPersianDate } from "@/shared/utils/date.utils";
+import CatalogRelationDraftTab, {
+  type CatalogRelationDraftRow,
+  type CatalogRelationDraftTabProps,
+} from "@/shared/components/CatalogRelationDraftTab";
+import { centralControlObjectiveApi } from "@/features/control-objective/infra/centralControlObjective.api";
 import type { ControlObjectiveAccountGroupClassification } from "../domain/controlObjectiveAccountGroup.model";
 import { controlObjectiveAccountGroupApi } from "../infra/controlObjectiveAccountGroup.api";
-import { useControlObjectiveAccountGroupPermissions } from "../security/controlObjectiveAccountGroupPermissions";
 import { controlObjectiveAccountGroupErrorMessage } from "../utils/controlObjectiveAccountGroupError";
 
-export default function AccountGroupControlObjectivesTab({ accountGroupId }: { accountGroupId: string; }) {
-  const { t } = useTranslation(); const permissions = useControlObjectiveAccountGroupPermissions();
-  const [rows, setRows] = useState<ControlObjectiveAccountGroupClassification[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState(""); const [filter, setFilter] = useState<CatalogRelationFilter>("ALL");
-  useEffect(() => { const controller = new AbortController(); let current = true;
-    if (!permissions.view) return () => controller.abort();
-    void controlObjectiveAccountGroupApi.forAccountGroup(accountGroupId, controller.signal)
-      .then(next => { if (current) { setRows(next); setError(null); } })
-      .catch(cause => { if (current && !(cause instanceof Error && cause.name === "AbortError")) setError(controlObjectiveAccountGroupErrorMessage(cause, t)); })
-      .finally(() => { if (current) setLoading(false); });
-    return () => { current = false; controller.abort(); };
-  }, [accountGroupId, permissions.view, t]);
-  const visible = rows.filter(row => row.status !== "DELETED" && (filter === "ALL" || row.status === filter) && `${row.controlObjectiveCode} ${row.controlObjectiveTitle}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
-  const columns: CatalogRelationColumn<ControlObjectiveAccountGroupClassification>[] = [
-    { key: "code", header: t("catalogRelation.code"), cell: row => row.controlObjectiveCode },
-    { key: "name", header: t("catalogRelation.name"), cell: row => row.controlObjectiveTitle },
-    { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={row.status} /> },
-    { key: "validFrom", header: t("catalogRelation.validFrom"), cell: row => formatPersianDate(row.validFrom) },
-    { key: "validTo", header: t("catalogRelation.validTo"), cell: row => formatPersianDate(row.validTo) },
-  ];
-  if (!permissions.view) return <MessageStrip design="Information">{t("controlObjectiveAccountGroup.errors.forbidden")}</MessageStrip>;
-  return <section><CatalogRelationToolbar title={t("controlObjectiveAccountGroup.inverse.title")} search={search} onSearch={setSearch} filter={filter} onFilter={setFilter} />
-    {error ? <MessageStrip design="Negative">{error}</MessageStrip> : null}
-    <CatalogRelationTable rows={visible} columns={columns} rowKey={row => row.classificationId} accessibleName={t("controlObjectiveAccountGroup.inverse.title")} loading={loading} emptyText={t("catalogRelation.empty")} />
-  </section>;
+function toRow(row: ControlObjectiveAccountGroupClassification): CatalogRelationDraftRow {
+  return {
+    id: row.controlObjectiveId, code: row.controlObjectiveCode, title: row.controlObjectiveTitle,
+    status: row.status, validFrom: row.validFrom, validTo: row.validTo,
+    relationId: row.classificationId, version: row.version,
+  };
+}
+
+const source: CatalogRelationDraftTabProps["source"] = {
+  titleKey: "controlObjectiveAccountGroup.inverse.title",
+  pickerTitleKey: "controlObjectiveAccountGroup.inverse.selectObjectives",
+  inactiveKey: "controlObjectiveAccountGroup.errors.endpointInactive",
+  errorMessage: controlObjectiveAccountGroupErrorMessage,
+  loadRows: async (id, signal) => (await controlObjectiveAccountGroupApi.forAccountGroup(id, signal)).map(toRow),
+  loadOptions: async signal => ({ options: await centralControlObjectiveApi.list(signal), groups: [] }),
+};
+
+export default function AccountGroupControlObjectivesTab({ canonicalRows, ...props }:
+  Omit<CatalogRelationDraftTabProps, "source" | "canonicalRows"> & {
+    canonicalRows?: ControlObjectiveAccountGroupClassification[];
+  }) {
+  return <CatalogRelationDraftTab {...props} source={source} canonicalRows={canonicalRows?.map(toRow)} />;
 }

@@ -12,7 +12,7 @@ Account groups are hierarchical master data nodes that can include assertions, l
 - Store structured lists through the existing value/converter pattern; do not replace them with untyped JSON strings.
 - Keep API base path `/api/account-groups` aligned with the UI repository.
 - Keep delete behavior safe: validate children and dependent references before removal.
-- Prompt 7.5 and Prompt 7.6 add independent typed Control and Control Objective classifications to one exact Account Group node. Account Group is inverse-read-only for both relations and never owns their mutations. Parent and leaf nodes are eligible; selection never propagates through the hierarchy.
+- Control and Control Objective classifications refer to one exact Account Group node. Parent and leaf nodes are eligible. Account Group Create/Update adds existing items through `controlsToAdd` and `controlObjectivesToAdd`. Update also accepts versioned lifecycle changes for both link types. Take the `ACCOUNT_GROUP` Guard and add `CONTROL` for Control classification changes. Lock Controls before Control Objectives, then lock the Account Group. Persist both classification types with the same CENTRAL Revision.
 
 ## Verification
 - Run `./mvnw -Dskip.ui=true test` from `grcpc-app`.

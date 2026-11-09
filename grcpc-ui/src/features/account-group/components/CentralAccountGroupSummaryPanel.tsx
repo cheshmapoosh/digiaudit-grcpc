@@ -2,9 +2,9 @@ import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
-import { ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
+import { Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { CentralAccountGroupDetail } from "../domain/centralAccountGroup.model";
 
 interface Props {
@@ -19,7 +19,7 @@ interface Props {
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="accountGroupSummaryRow">
-      <strong>{label}</strong>
+      <Label showColon>{label}</Label>
       <div>{value}</div>
     </div>
   );
@@ -36,7 +36,7 @@ export default function CentralAccountGroupSummaryPanel({
   const { t } = useTranslation();
   return (
     <div className="accountGroupSummaryPanel">
-      <Title level="H4">{value.title}</Title>
+      <Title level="H4">{t("common.details")}</Title>
       <div className="accountGroupSummaryGrid">
         <Row label={t("accountGroup.fields.code")} value={<Text>{value.code}</Text>} />
         <Row label={t("accountGroup.fields.name")} value={<Text>{value.title}</Text>} />
@@ -54,14 +54,6 @@ export default function CentralAccountGroupSummaryPanel({
         <Row
           label={t("accountGroup.fields.validTo")}
           value={<Text>{formatPersianDate(value.validTo)}</Text>}
-        />
-        <Row
-          label={t("accountGroup.fields.createdAt")}
-          value={<Text>{formatPersianDateTime(value.createdAt)}</Text>}
-        />
-        <Row
-          label={t("accountGroup.fields.updatedAt")}
-          value={<Text>{formatPersianDateTime(value.updatedAt)}</Text>}
         />
       </div>
       <DialogFooterBar>

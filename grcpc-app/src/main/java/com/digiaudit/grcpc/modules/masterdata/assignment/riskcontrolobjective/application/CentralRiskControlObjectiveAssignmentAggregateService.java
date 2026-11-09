@@ -59,6 +59,17 @@ public class CentralRiskControlObjectiveAssignmentAggregateService {
 
   public PreparedChanges prepare(RevisionExecutionContext context, CentralControlObjectiveEntity controlObjective,
       MasterDataLifecycleStatus finalControlObjectiveStatus, List<CentralRiskControlObjectiveAssignmentChangeRequest> requestedChanges) {
+    return prepare(context, controlObjective, finalControlObjectiveStatus, requestedChanges, false);
+  }
+
+  public PreparedChanges prepareFromRiskTemplate(RevisionExecutionContext context, CentralControlObjectiveEntity controlObjective,
+      CentralRiskControlObjectiveAssignmentChangeRequest change) {
+    return prepare(context, controlObjective, controlObjective.getStatus(), List.of(change), true);
+  }
+
+  private PreparedChanges prepare(RevisionExecutionContext context, CentralControlObjectiveEntity controlObjective,
+      MasterDataLifecycleStatus finalControlObjectiveStatus, List<CentralRiskControlObjectiveAssignmentChangeRequest> requestedChanges,
+      boolean preserveExistingValidity) {
     List<CentralRiskControlObjectiveAssignmentChangeRequest> changes = requestedChanges == null ? List.of() : new ArrayList<>(requestedChanges);
     if (changes.isEmpty()) return new PreparedChanges(controlObjective.getId(), List.of(), context);
     requireAssignmentAccess();
@@ -74,19 +85,28 @@ public class CentralRiskControlObjectiveAssignmentAggregateService {
     for (CentralRiskControlObjectiveAssignmentChangeRequest change : changes.stream().sorted(Comparator.comparing(CentralRiskControlObjectiveAssignmentChangeRequest::riskTemplateId)).toList()) {
       CentralRiskControlObjectiveAssignmentEntity existing = rowsByDestination.get(change.riskTemplateId());
       validateShape(change, existing);
+      if (preserveExistingValidity && existing != null
+          && change.operation() == CentralRiskControlObjectiveAssignmentChangeOperation.CREATE_OR_RESTORE) {
+        change = new CentralRiskControlObjectiveAssignmentChangeRequest(change.operation(), change.riskTemplateId(),
+            null, null, existing.getValidFrom(), existing.getValidTo(), null);
+      }
       mutations.add(prepare(endpoint, destinationsById.get(change.riskTemplateId()), existing, change));
     }
     return new PreparedChanges(controlObjective.getId(), mutations.stream().filter(Objects::nonNull).toList(), context);
   }
 
   public ApplyResult apply(PreparedChanges prepared, CentralControlObjectiveEntity controlObjective) {
+    List<RevisionContentResult> contents = applyChanges(prepared, controlObjective);
+    List<CentralRiskControlObjectiveAssignmentResponse> canonical = canView() ? canonicalRows(controlObjective) : List.of();
+    return new ApplyResult(contents, canonical);
+  }
+
+  public List<RevisionContentResult> applyChanges(PreparedChanges prepared, CentralControlObjectiveEntity controlObjective) {
     if (!prepared.controlObjectiveId.equals(controlObjective.getId())) throw new IllegalStateException("Prepared assignments belong to another Control");
     UUID actor = users.getCurrentPrincipal().getUserId(); Instant now = Instant.now(clock);
     for (PreparedMutation mutation : prepared.mutations) apply(mutation, actor, now);
     if (!prepared.mutations.isEmpty()) assignments.saveAllAndFlush(prepared.mutations.stream().map(PreparedMutation::entity).toList());
-    List<RevisionContentResult> contents = prepared.mutations.stream().map(mutation -> revisionContent(mutation, prepared.context)).toList();
-    List<CentralRiskControlObjectiveAssignmentResponse> canonical = canView() ? canonicalRows(controlObjective) : List.of();
-    return new ApplyResult(contents, canonical);
+    return prepared.mutations.stream().map(mutation -> revisionContent(mutation, prepared.context)).toList();
   }
 
   public List<CentralRiskControlObjectiveAssignmentResponse> canonicalRows(CentralControlObjectiveEntity controlObjective) {

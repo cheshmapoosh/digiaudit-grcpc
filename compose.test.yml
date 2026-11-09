@@ -2,15 +2,15 @@ name: grcpc-test
 
 services:
   oracle:
-    image: gvenzl/oracle-free:23-slim
+    image: ${ORACLE_IMAGE:-gvenzl/oracle-free:23-slim}
     container_name: grcpc-test-oracle
     restart: unless-stopped
     environment:
-      ORACLE_PASSWORD: oracle
-      APP_USER: GRCPC
-      APP_USER_PASSWORD: grcpc
+      ORACLE_PASSWORD: ${ORACLE_SYS_PASSWORD:-oracle}
+      APP_USER: ${DB_USERNAME:-GRCPC}
+      APP_USER_PASSWORD: ${DB_PASSWORD:-grcpc}
     ports:
-      - "1521:1521"
+      - "${ORACLE_PORT:-1521}:1521"
     volumes:
       - oracle-data:/opt/oracle/oradata
     healthcheck:
@@ -21,13 +21,13 @@ services:
       start_period: 90s
 
   minio:
-    image: minio/minio:latest
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-09-07T16-13-09Z}
     container_name: grcpc-test-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
       - "${MINIO_API_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
@@ -36,56 +36,50 @@ services:
         source: ./data/minio
         target: /data
 
-  minio-init:
-    image: minio/mc:latest
-    container_name: grcpc-test-minio-init
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 minioadmin minioadmin; do
-        echo 'Waiting for MinIO...';
-        sleep 2;
-      done;
-      mc mb -p local/grc-documents || true;
-      exit 0;
-      "
-    restart: "no"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:9000/minio/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   app:
-    image: eclipse-temurin:21-jre-noble
+    image: ${JAVA_IMAGE:-eclipse-temurin:21-jre-noble}
     container_name: grcpc-test-app
     restart: unless-stopped
     working_dir: /opt/grcpc
     depends_on:
       oracle:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
     volumes:
       - type: bind
         source: ./grcpc-app.jar
         target: /opt/grcpc/grcpc-app.jar
         read_only: true
+        bind:
+          create_host_path: false
       - type: bind
         source: ./data/app/logs
         target: /opt/grcpc/logs
     environment:
       SERVER_PORT: 8080
 
-      DB_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
-      DB_USERNAME: GRCPC
-      DB_PASSWORD: grcpc
+      DB_URL: ${DB_URL:-jdbc:oracle:thin:@//oracle:1521/FREEPDB1}
+      DB_USERNAME: ${DB_USERNAME:-GRCPC}
+      DB_PASSWORD: ${DB_PASSWORD:-grcpc}
       DB_DRIVER_CLASS_NAME: oracle.jdbc.OracleDriver
-      DB_SCHEMA: GRCPC
+      DB_SCHEMA: ${DB_SCHEMA:-${DB_USERNAME:-GRCPC}}
       FLYWAY_ENABLED: "true"
 
       GRCPC_MINIO_ENABLED: "true"
       GRCPC_MINIO_ENDPOINT: http://minio:9000
-      GRCPC_MINIO_PUBLIC_ENDPOINT: http://localhost:${MINIO_API_PORT:-9000}
-      GRCPC_MINIO_ACCESS_KEY: minioadmin
-      GRCPC_MINIO_SECRET_KEY: minioadmin
-      GRCPC_MINIO_BUCKET: grc-documents
+      GRCPC_MINIO_PUBLIC_ENDPOINT: ${GRCPC_MINIO_PUBLIC_ENDPOINT:-http://${PUBLIC_HOST:-localhost}:${MINIO_API_PORT:-9000}}
+      GRCPC_MINIO_PRESIGN_REGION: ${GRCPC_MINIO_PRESIGN_REGION:-us-east-1}
+      GRCPC_MINIO_ACCESS_KEY: ${GRCPC_MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-minioadmin}}
+      GRCPC_MINIO_SECRET_KEY: ${GRCPC_MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-minioadmin}}
+      GRCPC_MINIO_BUCKET: ${GRCPC_MINIO_BUCKET:-grc-documents}
       GRCPC_MINIO_PRESIGNED_URL_EXPIRY_MINUTES: "15"
       GRCPC_MINIO_DEFAULT_MAX_UPLOAD_SIZE_MB: "25"
       GRCPC_MINIO_TEMP_TTL_MINUTES: "120"

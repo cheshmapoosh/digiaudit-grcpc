@@ -1,5 +1,20 @@
 .masterDataPage { width: 100%; min-width: 0; max-width: 100rem; margin: 0 auto; }
-.masterDataTiles { grid-auto-rows: 1fr; align-items: stretch; }
 .masterDataTiles > * { min-width: 0; }
-.masterDataTileCard { height: 100%; min-width: 0; cursor: pointer; }
-.masterDataCardContent { padding: var(--sapContent_Space_Small); min-width: 0; pointer-events: none; }
+.masterDataTileCard { position: relative; aspect-ratio: 1; max-inline-size: 20rem; min-width: 0; cursor: pointer; }
+.masterDataTileCard:is(:hover, :focus-within)::part(root),
+.masterDataTileCard:is(:hover, :focus-within) > ui5-card-header::part(root) {
+    background-color: var(--sapList_SelectionBackgroundColor);
+}
+.masterDataTileCard:is(:hover, :focus-within) .masterDataCardContent > ui5-icon {
+    color: var(--sapContent_IconColor);
+}
+.masterDataTileCard:active::part(root),
+.masterDataTileCard:active > ui5-card-header::part(root) {
+    background-color: var(--sapList_Active_Background);
+}
+.masterDataTileCard:active > ui5-card-header::part(title),
+.masterDataTileCard:active .masterDataCardContent > :is(ui5-icon, ui5-text) {
+    color: var(--sapList_Active_TextColor);
+}
+.masterDataTileCard::part(content) { position: absolute; inset-inline: 0; inset-block-end: 0; }
+.masterDataCardContent { gap: var(--sapContent_Space_Tiny); padding: var(--sapContent_Space_Small); min-width: 0; pointer-events: none; }

@@ -6,6 +6,7 @@ import type {
 } from "@/features/central-catalog/components/catalogPresentation.model";
 
 export type CentralPolicyNodeType = "GROUP" | "POLICY";
+export type PolicyParentCandidate = Pick<DefinitionDetailFields, "id" | "code" | "title" | "status">;
 export type CentralPolicyType =
   | "POLICY"
   | "PROCEDURE"

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { Bar, Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { CentralControlObjectiveDetail } from "../domain/centralControlObjective.model";
 
 interface Props {
@@ -37,15 +37,13 @@ export default function CentralControlObjectiveSummaryPanel({
       ],
       [t("controlObjective.fields.validFrom"), formatPersianDate(value.validFrom)],
       [t("controlObjective.fields.validTo"), formatPersianDate(value.validTo)],
-      [t("controlObjective.fields.createdAt"), formatPersianDateTime(value.createdAt)],
-      [t("controlObjective.fields.updatedAt"), formatPersianDateTime(value.updatedAt)],
     ],
     [t, value],
   );
 
   return (
     <div className="controlObjectiveSummaryPanel">
-      <Bar startContent={<Title level="H4">{value.title}</Title>} />
+      <Bar startContent={<Title level="H4">{t("common.details")}</Title>} />
       <div className="controlObjectiveSummaryGrid">
         {rows.map(([label, displayValue]) => (
           <div className="controlObjectiveSummaryRow" key={label}>

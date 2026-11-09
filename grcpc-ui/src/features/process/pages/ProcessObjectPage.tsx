@@ -16,10 +16,10 @@ import { SubprocessAccountGroupsTab, useControlAccountGroupPermissions } from "@
 import { useControlObjectiveAccountGroupPermissions } from "@/features/control-objective-account-group";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
-import { formatPersianDate, toEnglishDigits } from "@/shared/utils/date.utils";
-import ProcessParentValueHelpDialog from "../components/ProcessParentValueHelpDialog";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { ProcessNode, ProcessNodeCreate, ProcessNodeType, ProcessNodeUpdate } from "../domain/process.model";
 import { buildTree, collectDescendantIds } from "../utils/process.tree";
+import "./process-object-page.css";
 
 export type ProcessObjectMode = "create" | "edit" | "view";
 export type ProcessTabKey = "general" | "controls" | "requirements" | "controlObjectives" | "accountGroups" | "riskTemplates" | "documents";
@@ -30,7 +30,6 @@ interface ProcessFormState {
     status: "ACTIVE" | "INACTIVE";
     nodeType: ProcessNodeType;
     parentId: string | null;
-    sortOrder: string;
     description: string;
     validFrom: string;
     validTo: string;
@@ -67,20 +66,14 @@ function toFormState(value: ProcessNode | null, parent: ProcessNode | null | und
         status: !creating && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
         nodeType: value?.nodeType ?? requestedNodeType ?? "PROCESS",
         parentId: value?.parentId ?? parent?.id ?? null,
-        sortOrder: String(value?.sortOrder ?? 0),
         description: value?.description ?? "",
         validFrom: value?.validFrom ?? "",
         validTo: value?.validTo ?? "",
     };
 }
 
-function parseSortOrder(value: string): number | null {
-    const parsed = Number(toEnglishDigits(value).trim() || "0");
-    return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
-}
-
 function normalized(form: ProcessFormState, mode: ProcessObjectMode) {
-    const common = { title: form.title.trim(), sortOrder: parseSortOrder(form.sortOrder) ?? 0, description: form.description.trim(), validFrom: form.validFrom.trim(), validTo: form.validTo.trim() };
+    const common = { title: form.title.trim(), description: form.description.trim(), validFrom: form.validFrom.trim(), validTo: form.validTo.trim() };
     return mode === "create" ? { ...common, nodeType: form.nodeType, code: form.code.trim().toUpperCase(), parentId: form.parentId } : { ...common, status: form.status, parentId: form.parentId };
 }
 
@@ -89,8 +82,8 @@ function optional(value: string): string | null { return value.trim() || null; }
 function nodeTypeLabel(type: ProcessNodeType, t: ReturnType<typeof useTranslation>["t"]) { return type === "PROCESS" ? t("process.nodeType.process", { defaultValue: "Process" }) : t("process.nodeType.subProcess", { defaultValue: "Subprocess" }); }
 function documentTarget(type: ProcessNodeType): DocumentLinkTargetType { return type === "PROCESS" ? "CENTRAL_PROCESS" : "CENTRAL_SUBPROCESS"; }
 
-function FormField({ label, required, fullWidth, children }: { label: string; required?: boolean; fullWidth?: boolean; children: ReactNode }) {
-    return <div style={{ ...FIELD_STYLE, ...(fullWidth ? { gridColumn: "1 / -1" } : undefined) }}><Label showColon required={required}>{label}</Label>{children}</div>;
+function FormField({ label, required, fullWidth, className, children }: { label: string; required?: boolean; fullWidth?: boolean; className?: string; children: ReactNode }) {
+    return <div className={className} style={{ ...FIELD_STYLE, ...(fullWidth ? { gridColumn: "1 / -1" } : undefined) }}><Label showColon required={required}>{label}</Label>{children}</div>;
 }
 
 export default function ProcessObjectPage({ mode, allItems, value, parent, requestedNodeType, activeTab: controlledTab, busy = false, error, documentAggregateError, onErrorClose, onSubmit, onCancel, onEdit, onActiveTabChange, onDirtyChange, onDocumentDirtyChange }: ProcessObjectPageProps) {
@@ -107,7 +100,6 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(initial, mode)));
     const [validationError, setValidationError] = useState<string | null>(null);
     const [internalTab, setInternalTab] = useState<ProcessTabKey>("general");
-    const [parentDialogOpen, setParentDialogOpen] = useState(false);
     const [documentDraft, setDocumentDraft] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
     const [controlScopeDraft, setControlScopeDraft] = useState<ControlScopeDraftState>(EMPTY_CONTROL_SCOPE_DRAFT_STATE);
     const [riskScopeDraft, setRiskScopeDraft] = useState<RiskScopeDraftState>(EMPTY_RISK_SCOPE_DRAFT_STATE);
@@ -121,7 +113,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const scopeRef = useRef(scope);
     const generalInformationDirty = JSON.stringify(normalized(form, mode)) !== baseline;
     const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
-    const dirty = generalInformationDirty || invalidDateDraft || documentDraft.dirty || controlScopeDraft.dirty || riskScopeDraft.dirty || controlObjectiveScopeDraft.dirty || requirementScopeDraft.dirty || parentDialogOpen;
+    const dirty = generalInformationDirty || invalidDateDraft || documentDraft.dirty || controlScopeDraft.dirty || riskScopeDraft.dirty || controlObjectiveScopeDraft.dirty || requirementScopeDraft.dirty;
     const activeTab = controlledTab ?? internalTab;
     const readOnly = mode === "view";
 
@@ -152,7 +144,6 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     const validate = () => {
         if (mode === "create" && !form.code.trim()) return setValidationError(t("process.validation.codeRequired", { defaultValue: "Code is required" })), false;
         if (!form.title.trim()) return setValidationError(t("process.validation.titleRequired", { defaultValue: "Title is required" })), false;
-        if (parseSortOrder(form.sortOrder) === null) return setValidationError(t("process.validation.sortOrderInvalid", { defaultValue: "Sort order must be a non-negative integer" })), false;
         if (form.nodeType === "SUBPROCESS" && !form.parentId) return setValidationError(t("process.validation.processRequired", { defaultValue: "Owning process is required" })), false;
         if (invalidDateDraft) return setValidationError(t("process.validation.invalidDate", { defaultValue: "Invalid date" })), false;
         if (form.parentId && !processParents.some((item) => item.id === form.parentId)) return setValidationError(t("process.errors.invalidHierarchyMove", { defaultValue: "Invalid parent" })), false;
@@ -167,7 +158,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
 
     const submit = async () => {
         if (readOnly || !validate()) return;
-        const common = { title: form.title.trim(), sortOrder: parseSortOrder(form.sortOrder) ?? 0, description: optional(form.description), validFrom: optional(form.validFrom), validTo: optional(form.validTo), documents: toDocumentAggregateRequest(documentDraft), controlScopeChanges: form.nodeType === "SUBPROCESS" ? controlScopeDraft.changes : [], riskScopeChanges: form.nodeType === "SUBPROCESS" ? riskScopeDraft.changes : [], controlObjectiveScopeChanges: form.nodeType === "SUBPROCESS" ? controlObjectiveScopeDraft.changes : [], requirementScopeChanges: form.nodeType === "SUBPROCESS" ? requirementScopeDraft.changes : [] };
+        const common = { title: form.title.trim(), sortOrder: mode === "create" ? 0 : value?.sortOrder ?? 0, description: optional(form.description), validFrom: optional(form.validFrom), validTo: optional(form.validTo), documents: toDocumentAggregateRequest(documentDraft), controlScopeChanges: form.nodeType === "SUBPROCESS" ? controlScopeDraft.changes : [], riskScopeChanges: form.nodeType === "SUBPROCESS" ? riskScopeDraft.changes : [], controlObjectiveScopeChanges: form.nodeType === "SUBPROCESS" ? controlObjectiveScopeDraft.changes : [], requirementScopeChanges: form.nodeType === "SUBPROCESS" ? requirementScopeDraft.changes : [] };
         const payload = mode === "create"
             ? { ...common, nodeType: form.nodeType, code: form.code.trim(), parentId: form.parentId } satisfies ProcessNodeCreate
             : { ...common, version: value?.version ?? 0, status: form.status, parentId: form.parentId } satisfies ProcessNodeUpdate;
@@ -175,7 +166,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
     };
 
 
-    const saveDisabled = busy || parentDialogOpen || invalidDateDraft || documentDraft.uploading || documentDraft.invalid || !documentDraft.ready
+    const saveDisabled = busy || invalidDateDraft || documentDraft.uploading || documentDraft.invalid || !documentDraft.ready
         || (form.nodeType === "SUBPROCESS" && [controlScopeDraft, riskScopeDraft, controlObjectiveScopeDraft, requirementScopeDraft].some(draft => !draft.ready || draft.invalid))
         || (!generalInformationDirty && !documentDraft.dirty && !controlScopeDraft.dirty && !riskScopeDraft.dirty && !controlObjectiveScopeDraft.dirty && !requirementScopeDraft.dirty);
 
@@ -184,9 +175,7 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
             <div style={ROOT_STYLE}>
                 <CatalogParentHeader objectTitle={form.title || nodeTypeLabel(form.nodeType, t)} label={t(form.nodeType === "PROCESS" ? "process.fields.parentProcess" : "process.fields.owningProcess")}
                     parentId={form.parentId} required={form.nodeType === "SUBPROCESS"}
-                    busy={busy} onClearParent={!readOnly && manage && form.nodeType === "PROCESS" ? () => change("parentId", null) : undefined}
-                    parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: nodeTypeLabel(selectedParent.nodeType, t), status: selectedParent.status } : null}
-                    selection={!readOnly && manage ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+                    parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: nodeTypeLabel(selectedParent.nodeType, t), status: selectedParent.status } : null} />
 
                 <DetailTabContainer onTabSelect={(event) => { const key = event.detail.tab.getAttribute("data-tab-key") as ProcessTabKey | null; if (key) { if (!controlledTab) setInternalTab(key); onActiveTabChange?.(key); } }}>
                     <Tab text={t("process.tabs.general", { defaultValue: "General Information" })} selected={activeTab === "general"} data-tab-key="general" />
@@ -205,12 +194,10 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                 {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
                 {validationError ? <MessageStrip design="Negative" onClose={() => setValidationError(null)}>{validationError}</MessageStrip> : null}
                 <div style={BODY_STYLE}>
-                    <div style={{ display: activeTab === "general" ? "block" : "none" }}><CatalogFormGrid className="modalThreeColumnGrid">
+                    <div style={{ display: activeTab === "general" ? "block" : "none" }}><CatalogFormGrid className="processFormGrid">
                         <FormField label={t("process.fields.code", { defaultValue: "Code" })} required>{readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} onInput={(e) => change("code", readValue(e))} />}</FormField>
-                        <FormField label={t("process.fields.name", { defaultValue: "Title" })} required>{readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", readValue(e))} />}</FormField>
-                        <FormField label={t("process.fields.nodeType", { defaultValue: "Node type" })}>{readOnly ? <Text className="objectPageValue">{(nodeTypeLabel(form.nodeType, t)) || "—"}</Text> : <Input value={nodeTypeLabel(form.nodeType, t)} readonly />}</FormField>
+                        <FormField className="processFormName" label={t("process.fields.name", { defaultValue: "Title" })} required>{readOnly ? <Text className="objectPageValue">{(form.title) || "—"}</Text> : <Input value={form.title} readonly={readOnly} disabled={busy} maxlength={255} onInput={(e) => change("title", readValue(e))} />}</FormField>
                         <FormField label={t("process.fields.status", { defaultValue: "Status" })}>{mode === "create" ? <ObjectStatus state="Positive">{t("common.active")}</ObjectStatus> : readOnly ? <ObjectStatus state={form.status === "ACTIVE" ? "Positive" : "None"}>{t(form.status === "ACTIVE" ? "common.active" : "common.inactive")}</ObjectStatus> : <Select value={form.status} disabled={mode !== "edit" || busy} accessibleName={t("process.fields.status", { defaultValue: "Status" })} onChange={(e) => change("status", readValue(e) as "ACTIVE" | "INACTIVE")}><Option value="ACTIVE">{t("common.active", { defaultValue: "Active" })}</Option><Option value="INACTIVE">{t("common.inactive", { defaultValue: "Inactive" })}</Option></Select>}</FormField>
-                        <FormField label={t("process.fields.sortOrder", { defaultValue: "Sort order" })}>{readOnly ? <Text className="objectPageValue">{(form.sortOrder) || "—"}</Text> : <Input value={form.sortOrder} readonly={readOnly} disabled={busy} onInput={(e) => change("sortOrder", readValue(e))} />}</FormField>
                         <div className="modalDateRange"><FormField label={t("process.fields.validFrom", { defaultValue: "Valid from" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validFrom)) || "—"}</Text> : <PersianDatePicker value={form.validFrom} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validFrom", { defaultValue: "Valid from" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validFrom", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validFrom.valid === state.valid && current.validFrom.draftValue === state.draftValue && current.validFrom.dirty === state.dirty ? current : { ...current, validFrom: state })} />}</FormField>
                         <FormField label={t("process.fields.validTo", { defaultValue: "Valid to" })}>{readOnly ? <Text className="objectPageValue">{(formatPersianDate(form.validTo)) || "—"}</Text> : <PersianDatePicker value={form.validTo} readonly={readOnly} disabled={busy} accessibleName={t("process.fields.validTo", { defaultValue: "Valid to" })} invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })} onChange={(next) => change("validTo", next)} onDraftStateChange={(state) => setDateDrafts((current) => current.validTo.valid === state.valid && current.validTo.draftValue === state.draftValue && current.validTo.dirty === state.dirty ? current : { ...current, validTo: state })} />}</FormField></div>
                         <FormField label={t("process.fields.description", { defaultValue: "Description" })} fullWidth>{readOnly ? <Text className="objectPageValue">{(form.description) || "—"}</Text> : <TextArea rows={3} value={form.description} readonly={readOnly} disabled={busy} onInput={(e) => change("description", readValue(e))} />}</FormField>
@@ -238,15 +225,6 @@ export default function ProcessObjectPage({ mode, allItems, value, parent, reque
                 </> : <Button design="Emphasized" disabled={saveDisabled} onClick={() => void submit()}>{t("common.save", { defaultValue: "Save" })}</Button>}<Button design="Transparent" disabled={busy} onClick={onCancel}>{mode === "view" ? t("common.close", { defaultValue: "Close" }) : t("common.cancel", { defaultValue: "Cancel" })}</Button></DialogFooter>
             </div>
 
-            <ProcessParentValueHelpDialog
-                open={parentDialogOpen}
-                items={processParents}
-                selectedParentId={form.parentId}
-                allowNoParent={form.nodeType === "PROCESS"}
-                busy={busy}
-                onClose={() => setParentDialogOpen(false)}
-                onSelect={(parentId) => change("parentId", parentId)}
-            />
         </>
     );
 }

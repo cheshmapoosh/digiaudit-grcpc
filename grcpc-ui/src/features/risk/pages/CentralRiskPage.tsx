@@ -314,9 +314,14 @@ export default function CentralRiskPage() {
         })).entity;
       } else {
         const edit = payload as EditCentralRiskTemplateCommand;
-        detail = (await centralRiskApi.updateTemplate(modalValue!.id, {
+        const result = await centralRiskApi.updateTemplate(modalValue!.id, {
           ...edit, version: modalValue!.version, parentChange: { riskCategoryId: edit.riskCategoryId },
-        })).entity;
+        });
+        detail = {
+          ...result.entity as CentralRiskTemplateDetail,
+          controlAssignments: result.controlAssignments,
+          controlObjectiveAssignments: result.controlObjectiveAssignments,
+        };
       }
       setDirty(false);
       void loadLists();

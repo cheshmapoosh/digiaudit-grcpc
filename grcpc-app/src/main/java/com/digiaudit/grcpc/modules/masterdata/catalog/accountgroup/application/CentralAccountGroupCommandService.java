@@ -7,6 +7,9 @@ import com.digiaudit.grcpc.modules.document.api.dto.DocumentAggregateBatchReques
 import com.digiaudit.grcpc.modules.document.api.dto.DocumentCommandResponse;
 import com.digiaudit.grcpc.modules.document.application.DocumentCommandService;
 import com.digiaudit.grcpc.modules.document.domain.DocumentLinkTargetType;
+import com.digiaudit.grcpc.modules.masterdata.assignment.accountgrouprisk.api.dto.AccountGroupRiskAssignmentDtos;
+import com.digiaudit.grcpc.modules.masterdata.assignment.accountgrouprisk.application.CentralAccountGroupRiskAssignmentService;
+import com.digiaudit.grcpc.modules.masterdata.assignment.accountgrouprisk.application.CentralAccountGroupRiskAssignmentService.LockedChange;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.api.dto.CentralAccountGroupDtos;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.repository.CentralAccountGroupRepository;
@@ -15,7 +18,15 @@ import com.digiaudit.grcpc.modules.masterdata.catalog.shared.application.Catalog
 import com.digiaudit.grcpc.modules.masterdata.revision.application.*;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionEntityType;
 import com.digiaudit.grcpc.modules.masterdata.revision.domain.RevisionOperationType;
-import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.application.CentralControlCommandService;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.application.CentralControlCommandService.AccountGroupControlChange;
+import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.application.CentralControlObjectiveCommandService;
+import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.application.CentralControlObjectiveCommandService.AccountGroupControlObjectiveChange;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.AccountGroupControlSelection;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.api.dto.CentralControlAccountGroupResponse;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlaccountgroup.application.CentralControlAccountGroupQueryService;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveaccountgroup.api.dto.CentralControlObjectiveAccountGroupResponse;
+import com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveaccountgroup.application.CentralControlObjectiveAccountGroupQueryService;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.application.MasterDataStructuralDependencyChecker;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataHierarchyKey;
@@ -44,6 +55,11 @@ public class CentralAccountGroupCommandService {
   private final MasterDataStructuralDependencyChecker dependencyChecker;
   private final Clock clock;
   private final CentralAccountGroupMapper mapper;
+  private final CentralControlCommandService controlCommands;
+  private final CentralControlAccountGroupQueryService controlClassifications;
+  private final CentralControlObjectiveCommandService controlObjectiveCommands;
+  private final CentralControlObjectiveAccountGroupQueryService controlObjectiveClassifications;
+  private final CentralAccountGroupRiskAssignmentService riskAssignments;
 
   public CentralAccountGroupCommandService(
       CentralAccountGroupRepository repository,
@@ -54,6 +70,11 @@ public class CentralAccountGroupCommandService {
       CatalogCommandSupport support,
       CatalogHierarchySupport hierarchySupport,
       MasterDataStructuralDependencyChecker dependencyChecker,
+      CentralControlCommandService controlCommands,
+      CentralControlAccountGroupQueryService controlClassifications,
+      CentralControlObjectiveCommandService controlObjectiveCommands,
+      CentralControlObjectiveAccountGroupQueryService controlObjectiveClassifications,
+      CentralAccountGroupRiskAssignmentService riskAssignments,
       @Qualifier("masterDataRevisionClock") Clock clock, CentralAccountGroupMapper mapper) {
     this.repository = repository;
     this.revisions = revisions;
@@ -65,6 +86,11 @@ public class CentralAccountGroupCommandService {
     this.dependencyChecker = dependencyChecker;
     this.clock = clock;
     this.mapper = mapper;
+    this.controlCommands = controlCommands;
+    this.controlClassifications = controlClassifications;
+    this.controlObjectiveCommands = controlObjectiveCommands;
+    this.controlObjectiveClassifications = controlObjectiveClassifications;
+    this.riskAssignments = riskAssignments;
   }
 
   public CentralAccountGroupDtos.AggregateResponse create(CentralAccountGroupDtos.Create request) {
@@ -76,15 +102,21 @@ public class CentralAccountGroupCommandService {
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<CentralAccountGroupDtos.Detail> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
+    AtomicReference<List<CentralControlAccountGroupResponse>> canonicalControls = new AtomicReference<>();
+    AtomicReference<List<CentralControlObjectiveAccountGroupResponse>> canonicalObjectives = new AtomicReference<>();
+    AtomicReference<List<AccountGroupRiskAssignmentDtos.Response>> canonicalRisks = new AtomicReference<>();
     try {
       RevisionExecutionResult result =
           revisions.executeStructural(
-              MasterDataHierarchyKey.ACCOUNT_GROUP,
+              guardsForSave(request.controlsToAdd(), null, request.riskTemplatesToAdd(), null),
               RevisionRequest.central(
                   "Create account group " + code, "Account Group structural create", null),
               context -> {
                 requireGuard(context);
                 var prepared = documents.prepareAggregate(request.documents());
+                var selectedControls = controlCommands.lockAccountGroupChanges(context, request.controlsToAdd(), null);
+                var selectedRisks = riskAssignments.lockEndpoints(context, request.riskTemplatesToAdd(), null);
+                var selectedObjectives = controlObjectiveCommands.lockAccountGroupChanges(context, request.controlObjectivesToAdd(), null);
                 var hierarchy = hierarchy();
                 CentralAccountGroupEntity entity = repository.findByCode(code).orElse(null);
                 UUID id = entity == null ? UUID.randomUUID() : entity.getId();
@@ -155,17 +187,20 @@ public class CentralAccountGroupCommandService {
                   }
                 }
                 var saved = repository.saveAndFlush(entity);
-              canonical.set(mapper.detail(saved));
+                canonical.set(mapper.detail(saved));
+                var completed = withSelections(context, saved, completed(context, saved, operation, expected, before),
+                    selectedControls, selectedObjectives, selectedRisks, canonicalControls, canonicalObjectives, canonicalRisks);
                 finalized.set(
                     documents.finalizePreparedAggregate(
                         prepared,
                         DocumentLinkTargetType.CENTRAL_ACCOUNT_GROUP,
                         saved.getId(),
                         "MD_REFERENCE_MANAGE"));
-                return completed(context, saved, operation, expected, before);
+                return completed;
               });
       return new CentralAccountGroupDtos.AggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
-          result.primaryResult().version(), finalized.get(), canonical.get());
+          result.primaryResult().version(), finalized.get(), canonical.get(), canonicalControls.get(),
+          canonicalObjectives.get(), canonicalRisks.get());
     } catch (DataIntegrityViolationException e) {
       throw support.translateBusinessKeyViolation(e, "UK_CENTRAL_ACCOUNT_GROUP_CODE", code);
     }
@@ -180,14 +215,24 @@ public class CentralAccountGroupCommandService {
     support.validateValidity(request.validFrom(), request.validTo());
     AtomicReference<CentralAccountGroupDtos.Detail> canonical = new AtomicReference<>();
     AtomicReference<List<DocumentCommandResponse>> finalized = new AtomicReference<>(List.of());
+    AtomicReference<List<CentralControlAccountGroupResponse>> canonicalControls = new AtomicReference<>();
+    AtomicReference<List<CentralControlObjectiveAccountGroupResponse>> canonicalObjectives = new AtomicReference<>();
+    AtomicReference<List<AccountGroupRiskAssignmentDtos.Response>> canonicalRisks = new AtomicReference<>();
     RevisionExecutionResult result =
         revisions.executeStructural(
-            MasterDataHierarchyKey.ACCOUNT_GROUP,
+            guardsForSave(request.controlsToAdd(), request.controlLifecycleChanges(),
+                request.riskTemplatesToAdd(), request.riskAssignmentLifecycleChanges()),
             RevisionRequest.central(
                 "Update account group " + id, "Account Group definition update", null),
             context -> {
               requireGuard(context);
               var prepared = documents.prepareAggregate(request.documents());
+              var selectedControls = controlCommands.lockAccountGroupChanges(
+                  context, request.controlsToAdd(), request.controlLifecycleChanges());
+              var selectedRisks = riskAssignments.lockEndpoints(
+                  context, request.riskTemplatesToAdd(), request.riskAssignmentLifecycleChanges());
+              var selectedObjectives = controlObjectiveCommands.lockAccountGroupChanges(
+                  context, request.controlObjectivesToAdd(), request.controlObjectiveLifecycleChanges());
               var entity = lock(id);
               support.assertVersion(entity, expected);
               if (entity.getStatus() == MasterDataLifecycleStatus.DELETED) throw notFound(id);
@@ -209,7 +254,10 @@ public class CentralAccountGroupCommandService {
                   && entity.isReasonableAssurance() == reasonableAssurance
                   && Objects.equals(entity.getValidFrom(), request.validFrom())
                   && Objects.equals(entity.getValidTo(), request.validTo())
-                  && empty(request.documents())) throw noChange();
+                  && empty(request.documents())
+                  && selectedControls.isEmpty()
+                  && selectedObjectives.isEmpty()
+                  && selectedRisks.isEmpty()) throw noChange();
               JsonNode before = snapshot(entity);
               entity.update(
                   title,
@@ -228,16 +276,20 @@ public class CentralAccountGroupCommandService {
               }
               var saved = repository.saveAndFlush(entity);
               canonical.set(mapper.detail(saved));
+              var completed = withSelections(context, saved,
+                  completed(context, saved, RevisionOperationType.UPDATE, expected, before),
+                  selectedControls, selectedObjectives, selectedRisks, canonicalControls, canonicalObjectives, canonicalRisks);
               finalized.set(
                   documents.finalizePreparedAggregate(
                       prepared,
                       DocumentLinkTargetType.CENTRAL_ACCOUNT_GROUP,
                       id,
                       "MD_REFERENCE_MANAGE"));
-              return completed(context, saved, RevisionOperationType.UPDATE, expected, before);
+              return completed;
             });
     return new CentralAccountGroupDtos.AggregateResponse(result.primaryResult().entityId(), result.primaryResult().revisionId(),
-          result.primaryResult().version(), finalized.get(), canonical.get());
+        result.primaryResult().version(), finalized.get(), canonical.get(), canonicalControls.get(),
+        canonicalObjectives.get(), canonicalRisks.get());
   }
 
   public MasterDataRevisionMutationResponse move(UUID id, CentralAccountGroupDtos.Move request) {
@@ -324,7 +376,7 @@ public class CentralAccountGroupCommandService {
                 throw new ConflictException(
                     "DEPENDENCY_EXISTS",
                     "error.masterdata.v2.dependencyExists",
-                    "Account Group has approved classification dependencies",
+                    "Account Group has approved classification or assignment dependencies",
                     id);
               if (operation == RevisionOperationType.ACTIVATE
                   || operation == RevisionOperationType.RESTORE) {
@@ -350,6 +402,44 @@ public class CentralAccountGroupCommandService {
                   context, repository.saveAndFlush(entity), operation, expected, before);
             });
     return MasterDataRevisionMutationResponse.from(result.primaryResult());
+  }
+
+  private List<MasterDataHierarchyKey> guardsForSave(List<AccountGroupControlSelection> selections,
+      List<CentralAccountGroupDtos.ControlLifecycleChange> changes,
+      List<AccountGroupRiskAssignmentDtos.Selection> riskSelections,
+      List<AccountGroupRiskAssignmentDtos.LifecycleChange> riskChanges) {
+    var keys = EnumSet.of(MasterDataHierarchyKey.ACCOUNT_GROUP);
+    if (hasChanges(selections) || hasChanges(changes)) keys.add(MasterDataHierarchyKey.CONTROL);
+    if (hasChanges(riskSelections) || hasChanges(riskChanges)) keys.add(MasterDataHierarchyKey.RISK);
+    return List.copyOf(keys);
+  }
+
+  private static boolean hasChanges(List<?> changes) {
+    return changes != null && !changes.isEmpty();
+  }
+
+  private RevisionOperationResult withSelections(RevisionExecutionContext context,
+      CentralAccountGroupEntity group, RevisionOperationResult primary,
+      List<AccountGroupControlChange> controls, List<AccountGroupControlObjectiveChange> objectives,
+      List<LockedChange> risks,
+      AtomicReference<List<CentralControlAccountGroupResponse>> canonicalControls,
+      AtomicReference<List<CentralControlObjectiveAccountGroupResponse>> canonicalObjectives,
+      AtomicReference<List<AccountGroupRiskAssignmentDtos.Response>> canonicalRisks) {
+    if (controls.isEmpty() && objectives.isEmpty() && risks.isEmpty()) return primary;
+    var contents = new ArrayList<>(primary.contentResults());
+    if (!controls.isEmpty()) {
+      contents.addAll(controlCommands.applyAccountGroupChanges(context, group, controls));
+      canonicalControls.set(controlClassifications.forAccountGroup(group.getId()));
+    }
+    if (!objectives.isEmpty()) {
+      contents.addAll(controlObjectiveCommands.applyAccountGroupChanges(context, group, objectives));
+      canonicalObjectives.set(controlObjectiveClassifications.forAccountGroup(group.getId()));
+    }
+    if (!risks.isEmpty()) {
+      contents.addAll(riskAssignments.apply(context, group, risks));
+      canonicalRisks.set(riskAssignments.forAccountGroup(group.getId()));
+    }
+    return RevisionOperationResult.completed(context, primary.primaryResult(), contents);
   }
 
   private Map<UUID, CentralAccountGroupEntity> hierarchy() {

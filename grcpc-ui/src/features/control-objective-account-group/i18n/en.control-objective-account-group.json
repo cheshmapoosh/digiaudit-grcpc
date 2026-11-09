@@ -48,6 +48,7 @@
     },
     "inverse": {
       "title": "Classified Control Objectives",
+      "selectObjectives": "Select Control Objectives",
       "empty": "No Control Objective is classified to this exact Account Group."
     },
     "errors": {

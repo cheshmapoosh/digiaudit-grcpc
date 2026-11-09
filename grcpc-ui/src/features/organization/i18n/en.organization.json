@@ -123,7 +123,7 @@
     },
     "owner": {
       "none": "No owner",
-      "loadError": "Could not load eligible users in this profile."
+      "loadError": "Could not load eligible users."
     }
   }
 }

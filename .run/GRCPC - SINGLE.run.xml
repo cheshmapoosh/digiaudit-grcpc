@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="GRCPC - SINGLE" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="grcpc-app" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.digiaudit.grcpc.GrcpcApiApplication" />
+    <classpathModifications>
+      <entry path="$PROJECT_DIR$/grcpc-app/src/main/edition/single" />
+    </classpathModifications>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

@@ -34,6 +34,12 @@ The runner copies the selected jar to `grcpc-app.jar` next to the BAT file and
 starts `compose.test.yml`. It does not load `docker/env/test.env.example` or
 `docker/env/test-jar.env.example`.
 
+To start Compose directly with the example settings, use
+`docker compose --env-file docker/env/test.env.example -f compose.test.yml up -d`
+with the JAR already in place. Set `PUBLIC_HOST` to the test server's IP
+address or hostname if the product manager connects from another machine. This
+sets the address used by the browser for signed downloads.
+
 ## Useful commands
 
 ```powershell

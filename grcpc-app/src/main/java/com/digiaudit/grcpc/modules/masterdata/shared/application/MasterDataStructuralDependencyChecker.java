@@ -51,12 +51,14 @@ public class MasterDataStructuralDependencyChecker {
               + " = ?");
   private static final List<String> CENTRAL_RISK_TEMPLATE_DEPENDENCY_QUERIES =
       List.of(
+          "select count(*) from central_account_group_risk_assignment where profile_id = ? and risk_template_id = ? and status <> 'DELETED'",
           "select count(*) from central_risk_control_assignment where profile_id = ? and risk_template_id = ? and status <> 'DELETED'",
           "select count(*) from central_risk_control_objective_assignment where profile_id = ? and risk_template_id = ? and status <> 'DELETED'",
           "select count(*) from central_subprocess_risk_scope where profile_id = ? and risk_template_id = ?",
           "select count(*) from local_subprocess_risk_scope where profile_id = ? and risk_template_id = ?");
   private static final List<String> CENTRAL_ACCOUNT_GROUP_DEPENDENCY_QUERIES =
       List.of(
+          "select count(*) from central_account_group_risk_assignment where profile_id = ? and account_group_id = ? and status <> 'DELETED'",
           "select count(*) from central_control_account_group where profile_id = ? and account_group_id = ?",
           "select count(*) from central_control_objective_account_group where profile_id = ? and account_group_id ="
               + " ?");

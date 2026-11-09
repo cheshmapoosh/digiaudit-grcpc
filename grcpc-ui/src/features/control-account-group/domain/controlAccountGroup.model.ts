@@ -2,6 +2,8 @@ export type ClassificationStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type ClassificationEditableStatus = Exclude<ClassificationStatus, "DELETED">;
 export type ClassificationEditState = "FINAL" | "DRAFT_NEW" | "DRAFT_EDITED" | "DRAFT_DELETE";
 
+export interface AccountGroupControlSelection { controlId: string; version: number; }
+
 export interface ControlAccountGroupClassification {
   classificationId: string;
   controlId: string; controlCode: string; controlTitle: string;

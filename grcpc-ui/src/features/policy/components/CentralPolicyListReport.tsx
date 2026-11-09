@@ -56,10 +56,12 @@ export default function CentralPolicyListReport({
   return (
     <div className="policyListReport">
       <Bar
-        startContent={<Title level="H4">{t("policy.list.title", { defaultValue: "ساختار سیاست" })}</Title>}
+        startContent={<>
+            <Title level="H4">{t("policy.list.title", { defaultValue: "ساختار سیاست" })}</Title>
+            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("policy.list.search", { defaultValue: "جستجو در ساختار سیاست..." })} />
+        </>}
         endContent={
           <>
-            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("policy.list.search", { defaultValue: "جستجو در ساختار سیاست..." })} />
             <PolicyCreateMenu
               disabled={busy || !canCreate}
               nodeTypes={allowedCreateTypes}

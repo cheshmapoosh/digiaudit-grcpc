@@ -52,7 +52,6 @@
       "title": "Import requirements from Excel",
       "action": "Import from Excel",
       "target": "Target law: {{title}}",
-      "help": "Download the template and fill in the «الزامات» sheet. Only the requirement title is required; blank codes are generated automatically. Optional dates accept Persian text such as 1405/08/06 or Gregorian text such as 2026-10-28. Each file supports up to 500 requirements and 2 MB.",
       "template": "Download Excel template",
       "chooseFile": "Choose Excel file",
       "validate": "Validate and preview",
@@ -147,8 +146,8 @@
       "versionConflict": "The record has changed. Refresh and try again.",
       "invalidParent": "The selected parent is not valid for this record.",
       "dependencies": "This record has non-deleted children or active dependencies and cannot be deleted.",
-      "profileBusy": "Profile administration is busy. Save again shortly.",
-      "profileReadOnly": "Write access to this profile has changed. Your draft is retained.",
+      "profileBusy": "Another request is being processed. Try saving again shortly.",
+      "profileReadOnly": "These changes cannot be saved right now. Your draft is retained.",
       "hierarchyBusy": "The catalog structure is busy. Save again shortly."
     }
   }

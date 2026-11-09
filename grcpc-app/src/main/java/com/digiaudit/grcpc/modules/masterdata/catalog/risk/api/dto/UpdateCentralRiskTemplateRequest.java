@@ -7,7 +7,9 @@ import java.util.UUID;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.time.LocalDate;
+import java.util.List;
 
 public record UpdateCentralRiskTemplateRequest(
     @NotNull Long version,
@@ -19,6 +21,18 @@ public record UpdateCentralRiskTemplateRequest(
     @Valid DocumentAggregateBatchRequest documents,
     @Valid ParentChange parentChange,
     MasterDataLifecycleStatus status,
-    Integer sortOrder) {
+    Integer sortOrder,
+    List<@NotNull @Valid ControlChange> controlAssignments,
+    List<@NotNull @Valid ControlObjectiveChange> controlObjectiveAssignments) {
   public record ParentChange(@NotNull UUID riskCategoryId) {}
+
+  public enum AssignmentOperation { CREATE_OR_RESTORE, ACTIVATE, INACTIVATE, DELETE }
+
+  public record ControlChange(
+      @NotNull UUID controlId, @NotNull AssignmentOperation operation,
+      @PositiveOrZero Long controlVersion, UUID assignmentId, @PositiveOrZero Long version) {}
+
+  public record ControlObjectiveChange(
+      @NotNull UUID controlObjectiveId, @NotNull AssignmentOperation operation,
+      @PositiveOrZero Long controlObjectiveVersion, UUID assignmentId, @PositiveOrZero Long version) {}
 }

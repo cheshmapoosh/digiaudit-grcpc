@@ -10,18 +10,23 @@ import { controlObjectiveScopeApi } from "../infra/controlObjectiveScope.api.rep
 import { useControlObjectiveScopePermissions } from "../security/controlObjectiveScopePermissions";
 import { controlObjectiveScopeErrorMessage } from "../utils/controlObjectiveScopeError";
 
-export default function ControlObjectiveSubprocessScopesTab({ controlObjectiveId }: { controlObjectiveId: string; }) {
+export default function ControlObjectiveSubprocessScopesTab({ controlObjectiveId, canonicalRows }: {
+  controlObjectiveId: string;
+  canonicalRows?: CentralSubprocessControlObjectiveScope[];
+}) {
   const { t } = useTranslation(); const permissions = useControlObjectiveScopePermissions();
-  const [rows, setRows] = useState<CentralSubprocessControlObjectiveScope[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
+  const [rows, setRows] = useState<CentralSubprocessControlObjectiveScope[]>(canonicalRows ?? []);
+  const [loading, setLoading] = useState(!canonicalRows); const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState(""); const [filter, setFilter] = useState<CatalogRelationFilter>("ALL");
   useEffect(() => { const controller = new AbortController(); let current = true;
     if (!permissions.view) return () => controller.abort();
-    void controlObjectiveScopeApi.listForControlObjective(controlObjectiveId, "ALL", "", controller.signal)
+    void (canonicalRows ? Promise.resolve(canonicalRows)
+      : controlObjectiveScopeApi.listForControlObjective(controlObjectiveId, "ALL", "", controller.signal))
       .then(next => { if (current) { setRows(next); setError(null); } })
       .catch(cause => { if (current && !(cause instanceof Error && cause.name === "AbortError")) setError(controlObjectiveScopeErrorMessage(cause, t)); })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; controller.abort(); };
-  }, [controlObjectiveId, permissions.view, t]);
+  }, [controlObjectiveId, canonicalRows, permissions.view, t]);
   const visible = rows.filter(row => row.status !== "DELETED" && (filter === "ALL" || row.status === filter) && `${row.subprocessCode} ${row.subprocessTitle}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const columns: CatalogRelationColumn<CentralSubprocessControlObjectiveScope>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.subprocessCode },

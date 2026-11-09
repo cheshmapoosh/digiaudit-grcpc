@@ -1,6 +1,7 @@
 import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
 import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
 import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
+import { CatalogTreeHeader, CatalogTreeRow } from "@/shared/components/CatalogTreeColumns";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageStrip, Tree } from "@ui5/webcomponents-react";
@@ -23,6 +24,7 @@ interface Props {
   expansionAnchorKey?: string | null;
   searchText?: string;
   busy?: boolean;
+  showColumnHeaders?: boolean;
   onSelect?: (node: CentralRiskTreeNode) => void;
 }
 
@@ -79,14 +81,7 @@ function RiskTreeItem({ node, selectedKey, expandedKeys }: ItemProps) {
       expanded={expandedKeys.has(node.key)}
       selected={selected}
       content={<CatalogSelectableRow itemKey={node.key}>
-        <div className="riskTreeItemContent" title={`${node.code} — ${node.title}`}>
-          <span className={selected ? "riskTreeItemTitle riskTreeItemTitleSelected" : "riskTreeItemTitle"}>
-            {node.title}
-          </span>
-          <span className="riskTreeItemType">
-            {t(`risk.nodeType.${node.kind}`)}
-          </span>
-        </div>
+        <CatalogTreeRow title={node.title} type={t(`risk.nodeType.${node.kind}`)} tooltip={`${node.code} — ${node.title}`} />
       </CatalogSelectableRow>}
     >
       {node.children.map((child) => (
@@ -108,6 +103,7 @@ export default function CentralRiskTree({
   expansionAnchorKey,
   searchText = "",
   busy = false,
+  showColumnHeaders = false,
   onSelect,
 }: Props) {
   const { t } = useTranslation();
@@ -196,7 +192,8 @@ export default function CentralRiskTree({
   }
 
   return (
-    <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
+    <Tree header={showColumnHeaders ? <CatalogTreeHeader withType /> : undefined}
+      inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
       onDragEnd={(event) => displayOrder?.onDragEnd(event, selectItem)}
       accessibleName={t("risk.list.title")}
       noDataText={t("common.noData")}

@@ -3,6 +3,7 @@ import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { CatalogTreeOrder, CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
 import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
 import { CatalogSelectableRow, CatalogDeleteButton } from "@/shared/components/CatalogSelection";
+import { CatalogTreeHeader, CatalogTreeRow } from "@/shared/components/CatalogTreeColumns";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter, DialogFooterBar } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
@@ -26,7 +27,7 @@ import { GlobalControlRegulationsTab } from "../components/GlobalControlRegulati
 import { MasterDataFormField } from "@/shared/components/MasterDataObjectHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import GlobalControlCreateMenu from "../components/GlobalControlCreateMenu";
 import type {
   ControlGroup, ControlGroupCreate, ControlGroupUpdate, GlobalControl,
@@ -113,14 +114,16 @@ function GroupTreeItem({ node, selected, expanded }: {
   return <TreeItemCustom orderType="CONTROL_GROUP" orderId={node.id} data-node-kind="group" data-node-id={node.id}
     selected={selected?.kind === "group" && selected.id === node.id}
     expanded={expanded.has(node.id)}
-    content={<CatalogSelectableRow itemKey={"group:" + node.id}><div className="globalControlTreeRow"><span>{node.name}</span>
-      <span className="globalControlTreeType">{t("globalControl.group.menu")}</span></div></CatalogSelectableRow>}>
+    content={<CatalogSelectableRow itemKey={"group:" + node.id}>
+      <CatalogTreeRow title={node.name} type={t("globalControl.group.menu")} />
+    </CatalogSelectableRow>}>
     {ordered.map((child) => child.kind === "group" ? <GroupTreeItem key={"group:" + child.group.id} node={child.group}
       selected={selected} expanded={expanded} /> : <TreeItemCustom key={"control:" + child.control.id}
       orderType="GLOBAL_CONTROL" orderId={child.control.id} data-node-kind="control" data-node-id={child.control.id}
       selected={selected?.kind === "control" && selected.id === child.control.id}
-      content={<CatalogSelectableRow itemKey={"control:" + child.control.id}><div className="globalControlTreeRow"><span>{child.control.name}</span>
-        <span className="globalControlTreeType">{t("globalControl.control.menu")}</span></div></CatalogSelectableRow>} />)}
+      content={<CatalogSelectableRow itemKey={"control:" + child.control.id}>
+        <CatalogTreeRow title={child.control.name} type={t("globalControl.control.menu")} />
+      </CatalogSelectableRow>} />)}
   </TreeItemCustom>;
 }
 
@@ -160,7 +163,6 @@ export default function GlobalControlManagementPage() {
   const [regulationChanges, setRegulationChanges] = useState<GlobalControlRegulationChange[]>([]);
   const [regulationDirty, setRegulationDirty] = useState(false);
   const [regulationReady, setRegulationReady] = useState(true);
-  const [parentPicker, setParentPicker] = useState(false);
   const [relationsLoading, setRelationsLoading] = useState(false);
 
   const selectedGroup = selected?.kind === "group"
@@ -174,7 +176,7 @@ export default function GlobalControlManagementPage() {
   const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const currentForm = editor?.startsWith("group") ? groupForm : controlForm;
   const dirty = editor !== null && (JSON.stringify(currentForm) !== baseline
-    || invalidDateDraft || parentPicker || (!editor.startsWith("group") && (documents.dirty || regulationDirty)));
+    || invalidDateDraft || (!editor.startsWith("group") && (documents.dirty || regulationDirty)));
   const { blocker } = useUnsavedChangesGuard(dirty);
 
   useEffect(() => { void load().catch((cause: unknown) => setError(message(cause))); }, [load]);
@@ -214,6 +216,7 @@ export default function GlobalControlManagementPage() {
     setError(null);
   };
   const beginControl = (edit: boolean, preserveTab = false) => {
+    if (!edit && selectedGroup?.status !== "ACTIVE") return;
     setViewOpen(false);
     setEditorTab(preserveTab ? activeTab : "general");
     setRegulationChanges([]);
@@ -230,9 +233,7 @@ export default function GlobalControlManagementPage() {
       validFrom: selectedControl.validFrom ?? "", validTo: selectedControl.validTo ?? "",
     } : {
       ...emptyControl,
-      controlGroupId: (selectedGroup?.status === "ACTIVE" ? selectedGroup.id : null)
-        ?? selectedControl?.controlGroupId
-        ?? groups.find((group) => group.status === "ACTIVE")?.id ?? "",
+      controlGroupId: selectedGroup?.id ?? "",
     };
     setControlForm(next);
     setBaseline(JSON.stringify(next));
@@ -250,7 +251,7 @@ export default function GlobalControlManagementPage() {
     !invalidDateDraft && !(form.validFrom && form.validTo && form.validFrom > form.validTo);
 
   const save = async () => {
-    if (!editor || parentPicker || (!editor.startsWith("group") && !regulationReady) || !currentForm.name.trim() || !validDates(currentForm)) {
+    if (!editor || (!editor.startsWith("group") && !regulationReady) || !currentForm.name.trim() || !validDates(currentForm)) {
       setError(t(!validDates(currentForm) ? "globalControl.errors.dates" : "globalControl.errors.required"));
       return;
     }
@@ -349,11 +350,12 @@ export default function GlobalControlManagementPage() {
     ...groups.map((item) => ({ item, kind: "group" as const })),
     ...controls.map((item) => ({ item, kind: "control" as const })),
   ].filter(({ item }) => (item.code + " " + item.name).toLocaleLowerCase("fa").includes(needle)) : [];
-  const groupOptions = groups.filter((group) => group.status === "ACTIVE");
   const startColumn = createElement("div", { slot: "startColumn", className: "globalControlFclColumn" }, <div className="globalControlListReport">
-    <Bar startContent={<Title level="H4">{t("globalControl.title")}</Title>}
-      endContent={<>
+    <Bar startContent={<>
+        <Title level="H4">{t("globalControl.title")}</Title>
         <HeaderSearch value={search} onChange={(value) => setSearch(value)} accessibleName={t("globalControl.search")} />
+    </>}
+      endContent={<>
         <GlobalControlCreateMenu disabled={!manage || busy}
           groupEnabled={!selected || selectedGroup?.status === "ACTIVE"}
           controlEnabled={selectedGroup?.status === "ACTIVE"}
@@ -372,18 +374,15 @@ export default function GlobalControlManagementPage() {
 
     <div className="globalControlTreeFrame">
     {loading || busy ? <BusyIndicator active delay={0} /> : null}
-    <div className="globalControlTreeHeader">
-      <Label>{t("globalControl.tree.name")}</Label>
-      <Label>{t("globalControl.tree.kind")}</Label>
-    </div>
-    <CatalogTreeOrder catalog="GLOBAL_CONTROL" refreshKey={JSON.stringify([groups, controls])} filtered={Boolean(needle)}>{(order) => needle ? <Tree onItemClick={(event) => selectTreeItem(event.detail.item)}>
+    <CatalogTreeOrder catalog="GLOBAL_CONTROL" refreshKey={JSON.stringify([groups, controls])} filtered={Boolean(needle)}>{(order) => needle ? <Tree header={<CatalogTreeHeader withType />} onItemClick={(event) => selectTreeItem(event.detail.item)}>
       {filtered.map(({ item, kind }) => <TreeItemCustom key={kind + item.id}
         data-node-kind={kind} data-node-id={item.id}
         selected={selected?.kind === kind && selected.id === item.id}
-        content={<CatalogSelectableRow itemKey={kind + ":" + item.id}><div className="globalControlTreeRow"><span>{item.name}</span>
-          <span className="globalControlTreeType">{t(kind === "group" ? "globalControl.group.menu" : "globalControl.control.menu")}</span></div></CatalogSelectableRow>} />)}
+        content={<CatalogSelectableRow itemKey={kind + ":" + item.id}>
+          <CatalogTreeRow title={item.name} type={t(kind === "group" ? "globalControl.group.menu" : "globalControl.control.menu")} />
+        </CatalogSelectableRow>} />)}
     </Tree>
-      : <Tree inert={order.busy} onMove={(event) => order.onMove(event, selectTreeItem)} onMoveOver={order.onMoveOver}
+      : <Tree header={<CatalogTreeHeader withType />} inert={order.busy} onMove={(event) => order.onMove(event, selectTreeItem)} onMoveOver={order.onMoveOver}
         onDragEnd={(event) => order.onDragEnd(event, selectTreeItem)} onItemClick={(event) => selectTreeItem(event.detail.item)} onItemToggle={onTreeToggle}>
         {order.sort(tree, (node) => orderKey("CONTROL_GROUP", node.id)).map((node) => <GroupTreeItem key={node.id} node={node}
           selected={selected} expanded={expanded} />)}
@@ -447,7 +446,7 @@ export default function GlobalControlManagementPage() {
 
   const summaryColumn = details ? createElement("div", { slot: "midColumn", className: "globalControlFclColumn" },
     <div className="globalControlSummary">
-      <Bar startContent={<Title level="H4">{details.name}</Title>} />
+      <Bar startContent={<Title level="H4">{t("common.details")}</Title>} />
       <div className="globalControlSummaryDetails">
         <Label showColon>{t("globalControl.code")}</Label><Text>{details.code}</Text>
         <Label showColon>{t("globalControl.name")}</Label><Text>{details.name}</Text>
@@ -455,7 +454,6 @@ export default function GlobalControlManagementPage() {
         {selectedControl ? <><Label showColon>{t("globalControl.tabs.regulations")}</Label>
           <Text>{relationsLoading ? t("common.loading") : related.length
             ? related.map((link) => link.regulationName).join("، ") : "—"}</Text></> : null}
-        <Label showColon>{t("globalControl.createdAt")}</Label><Text>{formatPersianDateTime(details.createdAt)}</Text>
       </div>
       <DialogFooterBar>
         <Button design="Emphasized" disabled={!manage || busy}
@@ -496,9 +494,7 @@ export default function GlobalControlManagementPage() {
       {editor ? <div className="globalControlDialogContent" data-catalog-dialog-content>
       <CatalogParentHeader objectTitle={form.name || editorTitle} label={t(groupEditor ? "globalControl.group.parent" : "globalControl.group.select")}
         parentId={groupEditor ? groupForm.parentId : controlForm.controlGroupId} required={!groupEditor}
-        busy={busy} onClearParent={groupEditor && manage ? () => setGroupForm((old) => ({ ...old, parentId: "" })) : undefined}
-        parent={editorParent ? { code: editorParent.code, title: editorParent.name, type: t("globalControl.group.menu"), status: editorParent.status } : null}
-        selection={<Button design="Emphasized" disabled={busy} onClick={() => setParentPicker(true)}>{t("catalogRelation.select")}</Button>} />
+        parent={editorParent ? { code: editorParent.code, title: editorParent.name, type: t("globalControl.group.menu"), status: editorParent.status } : null} />
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key");
         if (key === "general" || key === "regulations" || key === "documents") setEditorTab(key);
@@ -571,37 +567,12 @@ export default function GlobalControlManagementPage() {
           draftResetKey={draftGeneration} onDraftStateChange={setDocuments} />
       </div> : null}
       <DialogFooter>
-        <Button design="Emphasized" disabled={busy || parentPicker || (!groupEditor && !regulationReady) || !dirty || invalidDateDraft
+        <Button design="Emphasized" disabled={busy || (!groupEditor && !regulationReady) || !dirty || invalidDateDraft
           || (!groupEditor && (!documents.ready || documents.invalid || documents.uploading))}
           onClick={() => void save()}>{t("common.save")}</Button>
         <Button design="Transparent" onClick={closeEditor}>{t("common.cancel")}</Button>
       </DialogFooter>
       </div> : viewDetails}
-    </Dialog>
-    <Dialog open={parentPicker} className="globalControlDialog" accessibleName={t(groupEditor ? "globalControl.group.parent" : "globalControl.group.select")} onClose={() => setParentPicker(false)}>
-      <ModalDialogHeader title={t(groupEditor ? "globalControl.group.parent" : "globalControl.group.select")} onClose={() => setParentPicker(false)} />
-      {groupEditor ? <Select value={groupForm.parentId} disabled={busy}
-            accessibleName={t("globalControl.group.parent")}
-            onChange={(event) => setGroupForm((old) => ({
-              ...old, parentId: event.target.value,
-            }))}>
-            {!groupForm.parentId ? <Option value="">{t("globalControl.group.none")}</Option> : null}
-            {groupOptions.filter((item) => (editor !== "groupEdit" || item.id !== selectedGroup?.id)
-              && !blockedParents.has(item.id)).map((item) =>
-              <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-          </Select> : <Select value={controlForm.controlGroupId} disabled={busy}
-            accessibleName={t("globalControl.group.select")}
-            onChange={(event) => setControlForm((old) => ({
-              ...old, controlGroupId: event.target.value,
-            }))}>
-            {!controlForm.controlGroupId ? <Option value="">{t("globalControl.group.select")}</Option> : null}
-            {groupOptions.map((item) =>
-              <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-          </Select>}
-      <DialogFooter>
-        {groupEditor && groupForm.parentId ? <Button design="Negative" disabled={busy} onClick={() => setGroupForm(old => ({ ...old, parentId: "" }))}>{t("catalog.parentHeader.clear")}</Button> : null}
-        <Button design="Emphasized" disabled={busy || (!groupEditor && !controlForm.controlGroupId)} onClick={() => setParentPicker(false)}>{t("catalogRelation.select")}</Button>
-      </DialogFooter>
     </Dialog>
     <DeleteConfirmDialog open={Boolean(deleteCandidate)}
       title={t(deleteCandidate?.kind === "group"
@@ -621,7 +592,6 @@ export default function GlobalControlManagementPage() {
       }}
       onConfirm={() => {
         setLeaveOpen(false);
-        setParentPicker(false);
         setEditor(null);
         if (blocker.state === "blocked") blocker.proceed();
       }} />

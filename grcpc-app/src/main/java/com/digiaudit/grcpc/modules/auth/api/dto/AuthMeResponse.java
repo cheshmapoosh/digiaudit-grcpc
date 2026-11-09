@@ -11,6 +11,7 @@ public record AuthMeResponse(
         String lastName,
         boolean rootUser,
         boolean passwordChangeRequired,
-        Set<String> authorities
+        Set<String> authorities,
+        boolean multiProfileEnabled
 ) {
 }

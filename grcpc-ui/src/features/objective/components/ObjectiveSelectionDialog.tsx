@@ -15,7 +15,7 @@ export default function ObjectiveSelectionDialog({ open, items, selectableIds, s
       && Boolean(selectableIds?.has(item.id)) })), [items, selectableIds, suppliedNodes]);
   return <HierarchyMultiSelectionDialog open={open} title={t('objective.selection.title')}
     searchAccessibleName={t('objective.selection.search')} nodes={nodes} selectedIds={selectedIds} busy={busy}
-    loading={loading} error={error} description={t('objective.selection.help')}
+    loading={loading} error={error}
     confirmText={t('catalogRelation.select')} cancelText={t('common.cancel')}
     onConfirm={onConfirm} onClose={onClose} />;
 }

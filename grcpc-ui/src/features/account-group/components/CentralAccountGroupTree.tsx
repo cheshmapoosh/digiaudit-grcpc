@@ -1,6 +1,7 @@
 import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
 import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
 import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
+import { CatalogTreeHeader, CatalogTreeRow } from "@/shared/components/CatalogTreeColumns";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageStrip, Tree } from "@ui5/webcomponents-react";
@@ -74,11 +75,7 @@ function AccountGroupTreeItem({
       expanded={expandedIds.has(node.id)}
       selected={selected}
       content={<CatalogSelectableRow itemKey={node.id}>
-        <div className="accountGroupTreeItemContent" title={`${node.code} — ${node.title}`}>
-          <span className={selected ? "accountGroupTreeItemTitle accountGroupTreeItemTitleSelected" : "accountGroupTreeItemTitle"}>
-            {node.title}
-          </span>
-        </div>
+        <CatalogTreeRow title={node.title} tooltip={`${node.code} — ${node.title}`} />
       </CatalogSelectableRow>}
     >
       {node.children.map((child) => (
@@ -160,7 +157,7 @@ export default function CentralAccountGroupTree({
   }
 
   return (
-    <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
+    <Tree header={<CatalogTreeHeader />} inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
       onDragEnd={(event) => displayOrder?.onDragEnd(event, selectItem)}
       accessibleName={t("accountGroup.list.title")}
       onItemClick={(event) => selectItem(event.detail.item)}

@@ -1,6 +1,11 @@
 import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
+import CatalogRelationDraftTab, {
+  type CatalogRelationDraftOption,
+  type CatalogRelationLifecycleDraft,
+} from "@/shared/components/CatalogRelationDraftTab";
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import { RiskTemplateControlAssignmentsTab, useRiskControlAssignmentPermissions } from "@/features/risk-control-assignment";
 import { RiskTemplateControlObjectiveAssignmentsTab, useRiskControlObjectiveAssignmentPermissions } from "@/features/risk-control-objective-assignment";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -20,7 +25,6 @@ import {
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate } from "@/shared/utils/date.utils";
-import RiskCategoryValueHelpDialog from "../components/RiskCategoryValueHelpDialog";
 import type {
   CentralRiskCategoryDetail,
   CentralRiskCategorySummary,
@@ -34,9 +38,10 @@ import type {
   EditCentralRiskTemplateCommand,
 } from "../domain/centralRisk.model";
 import { collectRiskCategoryDescendantIds } from "../utils/centralRisk.tree";
+import { riskTemplateControlsSource, riskTemplateControlObjectivesSource } from "../infra/riskTemplateAssignmentSources";
 
 export type CentralRiskObjectMode = "create" | "view" | "edit";
-export type CentralRiskTabKey = "general" | "risk" | "controlCenter" | "documents";
+export type CentralRiskTabKey = "general" | "controls" | "controlObjectives" | "documents";
 type RiskDetail = CentralRiskCategoryDetail | CentralRiskTemplateDetail;
 type RiskCommand =
   | CreateCentralRiskCategoryCommand
@@ -172,19 +177,40 @@ export default function CentralRiskObjectPage({
   const { t } = useTranslation();
   const controlAssignmentPermissions = useRiskControlAssignmentPermissions();
   const objectiveAssignmentPermissions = useRiskControlObjectiveAssignmentPermissions();
+  const riskAccess = useMasterDataAccess("RISK");
+  const template = templateValue(kind, value);
+  const templateId = mode !== "create" ? template?.id : undefined;
+  const canViewControls = Boolean(templateId) && controlAssignmentPermissions.view;
+  const canViewControlObjectives = Boolean(templateId) && objectiveAssignmentPermissions.view;
+  const canEditControls = mode === "edit" && canViewControls && riskAccess.manage && controlAssignmentPermissions.update;
+  const canEditControlObjectives = mode === "edit" && canViewControlObjectives && riskAccess.manage && objectiveAssignmentPermissions.update;
+  const selectedTab = (activeTab === "controls" && !canViewControls)
+    || (activeTab === "controlObjectives" && !canViewControlObjectives) ? "general" : activeTab;
   const [form, setForm] = useState<FormState>(() => toForm(kind, value, initialParentCategoryId, mode === "create"));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(kind, value, initialParentCategoryId, mode === "create"))));
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [parentDialogOpen, setParentDialogOpen] = useState(false);
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
+  const [controlDrafts, setControlDrafts] = useState<CatalogRelationDraftOption[]>([]);
+  const [objectiveDrafts, setObjectiveDrafts] = useState<CatalogRelationDraftOption[]>([]);
+  const [controlLifecycle, setControlLifecycle] = useState<CatalogRelationLifecycleDraft[]>([]);
+  const [objectiveLifecycle, setObjectiveLifecycle] = useState<CatalogRelationLifecycleDraft[]>([]);
+  const [assignmentPicker, setAssignmentPicker] = useState<"controls" | "controlObjectives" | null>(null);
   const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
   const scope = `${kind}:${mode === "create" ? "CREATE" : value?.id ?? "EMPTY"}`;
   const scopeRef = useRef(scope);
   const readOnly = mode === "view";
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const generalDirty = JSON.stringify(normalized(form)) !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
-  const dirty = generalDirty || documents.dirty || documents.uploading || parentDialogOpen;
-  const canChangeParent = !readOnly && (mode === "create" || permissions.move);
+  const controlsDirty = controlDrafts.length > 0 || controlLifecycle.length > 0;
+  const objectivesDirty = objectiveDrafts.length > 0 || objectiveLifecycle.length > 0;
+  const assignmentsDirty = controlsDirty || objectivesDirty;
+  const assignmentsBlocked = (controlsDirty && !canEditControls) || (objectivesDirty && !canEditControlObjectives);
+  const inactiveAssignmentTarget = form.status !== "ACTIVE" && (
+    controlDrafts.length > 0 || objectiveDrafts.length > 0
+    || controlLifecycle.some(change => change.operation === "ACTIVATE")
+    || objectiveLifecycle.some(change => change.operation === "ACTIVATE")
+  );
+  const dirty = generalDirty || documents.dirty || documents.uploading || assignmentsDirty || Boolean(assignmentPicker);
   const canChangeStatus = mode === "edit" && permissions.lifecycle;
 
   useEffect(() => {
@@ -263,7 +289,7 @@ export default function CentralRiskObjectPage({
   };
 
   const submit = async () => {
-    if (readOnly || !validate()) return;
+    if (readOnly || assignmentPicker || assignmentsBlocked || inactiveAssignmentTarget || !validate()) return;
     const common = {
       title: form.title.trim(),
       description: form.description.trim() || null,
@@ -305,6 +331,22 @@ export default function CentralRiskObjectPage({
             riskType,
             sortOrder: (value as CentralRiskTemplateDetail | null)?.sortOrder ?? 0,
             status: form.status,
+            controlAssignments: [
+              ...controlDrafts.map(({ id, version }) => ({
+                controlId: id, operation: "CREATE_OR_RESTORE" as const, controlVersion: version,
+              })),
+              ...controlLifecycle.map(({ targetId, relationId, ...change }) => ({
+                controlId: targetId, assignmentId: relationId, ...change,
+              })),
+            ],
+            controlObjectiveAssignments: [
+              ...objectiveDrafts.map(({ id, version }) => ({
+                controlObjectiveId: id, operation: "CREATE_OR_RESTORE" as const, controlObjectiveVersion: version,
+              })),
+              ...objectiveLifecycle.map(({ targetId, relationId, ...change }) => ({
+                controlObjectiveId: targetId, assignmentId: relationId, ...change,
+              })),
+            ],
           };
     }
 
@@ -315,12 +357,15 @@ export default function CentralRiskObjectPage({
   };
 
   const saveDisabled =
-    busy || parentDialogOpen ||
+    busy ||
+    Boolean(assignmentPicker) ||
+    assignmentsBlocked ||
+    inactiveAssignmentTarget ||
     invalidDate ||
     documents.uploading ||
     documents.invalid ||
     !documents.ready ||
-    (!generalDirty && !documents.dirty);
+    (!generalDirty && !documents.dirty && !assignmentsDirty);
 
   const documentTarget = kind === "category" ? "CENTRAL_RISK_CATEGORY" : "CENTRAL_RISK_TEMPLATE";
 
@@ -356,27 +401,30 @@ export default function CentralRiskObjectPage({
       <div className="riskObjectPage">
         <CatalogParentHeader objectTitle={form.title || t(`risk.object.${kind}`)} label={t(kind === "category" ? "risk.fields.parentCategory" : "risk.fields.riskCategory")}
           parentId={form.parentCategoryId} required={kind === "template"}
-          busy={busy} onClearParent={canChangeParent && kind === "category" ? () => change("parentCategoryId", null) : undefined}
-          parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t("risk.nodeType.category"), status: selectedParent.status } : null}
-          selection={canChangeParent ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+          parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t("risk.nodeType.category"), status: selectedParent.status } : null} />
 
         <DetailTabContainer
           onTabSelect={(event) => {
-            const key = event.detail.tab.getAttribute("data-tab-key") as CentralRiskTabKey | null;
+            const key = event.detail.tab.getAttribute("data-tab-key");
             if (key === "general" || key === "documents"
-              || (key === "controlCenter" && kind === "template" && mode !== "create"
-                && controlAssignmentPermissions.view && objectiveAssignmentPermissions.view)) {
+              || (key === "controls" && canViewControls)
+              || (key === "controlObjectives" && canViewControlObjectives)) {
               onActiveTabChange(key);
             }
           }}
         >
-          <Tab text={t("risk.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
-          {kind === "template" ? <Tab text={t("risk.tabs.risk")} disabled data-tab-key="risk" /> : null}
-          {kind === "template" ? <Tab text={t("risk.tabs.controlCenter")} selected={activeTab === "controlCenter"} disabled={mode === "create" || !controlAssignmentPermissions.view || !objectiveAssignmentPermissions.view} data-tab-key="controlCenter" /> : null}
-          <Tab text={t("risk.tabs.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
+          <Tab text={t("risk.tabs.general")} selected={selectedTab === "general"} data-tab-key="general" />
+          {kind === "template" ? (
+            <Tab text={t("risk.tabs.controls")} selected={selectedTab === "controls"} disabled={!canViewControls} data-tab-key="controls" />
+          ) : null}
+          {kind === "template" ? (
+            <Tab text={t("risk.tabs.controlObjectives")} selected={selectedTab === "controlObjectives"} disabled={!canViewControlObjectives} data-tab-key="controlObjectives" />
+          ) : null}
+          <Tab text={t("risk.tabs.documents")} selected={selectedTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
 
         {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
+        {assignmentsBlocked ? <MessageStrip design="Negative" hideCloseButton>{t("common.dataAccessRequired")}</MessageStrip> : null}
         {validationError ? (
           <MessageStrip design="Negative" onClose={() => setValidationError(null)}>
             {validationError}
@@ -384,7 +432,7 @@ export default function CentralRiskObjectPage({
         ) : null}
 
         <div className="riskObjectBody">
-          <div className={activeTab === "general" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
+          <div className={selectedTab === "general" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
             <CatalogFormGrid className={kind === "category" ? "riskFormGrid modalTwoColumnGrid" : "riskFormGrid"}>
               <Field label={t("risk.fields.code")} required>
                 {readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input
@@ -447,16 +495,30 @@ export default function CentralRiskObjectPage({
             </CatalogFormGrid>
           </div>
 
-          <div className={activeTab === "controlCenter" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
-            {kind === "template" && value?.id && controlAssignmentPermissions.view && objectiveAssignmentPermissions.view ? (
-              <>
-                <RiskTemplateControlAssignmentsTab riskTemplateId={value.id} />
-                <RiskTemplateControlObjectiveAssignmentsTab riskTemplateId={value.id} />
-              </>
-            ) : null}
-          </div>
+          {templateId && canViewControls ? (
+            <div className={selectedTab === "controls" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
+              {canEditControls ? <CatalogRelationDraftTab source={riskTemplateControlsSource} ownerId={templateId}
+                busy={busy} editable active={form.status === "ACTIVE"}
+                drafts={controlDrafts} onDraftsChange={setControlDrafts}
+                lifecycleChanges={controlLifecycle} onLifecycleChangesChange={setControlLifecycle}
+                pickerOpen={assignmentPicker === "controls"}
+                onPickerOpenChange={open => setAssignmentPicker(open ? "controls" : null)} />
+                : <RiskTemplateControlAssignmentsTab riskTemplateId={templateId} canonicalRows={readOnly ? template?.controlAssignments : undefined} />}
+            </div>
+          ) : null}
+          {templateId && canViewControlObjectives ? (
+            <div className={selectedTab === "controlObjectives" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
+              {canEditControlObjectives ? <CatalogRelationDraftTab source={riskTemplateControlObjectivesSource} ownerId={templateId}
+                busy={busy} editable active={form.status === "ACTIVE"}
+                drafts={objectiveDrafts} onDraftsChange={setObjectiveDrafts}
+                lifecycleChanges={objectiveLifecycle} onLifecycleChangesChange={setObjectiveLifecycle}
+                pickerOpen={assignmentPicker === "controlObjectives"}
+                onPickerOpenChange={open => setAssignmentPicker(open ? "controlObjectives" : null)} />
+                : <RiskTemplateControlObjectiveAssignmentsTab riskTemplateId={templateId} canonicalRows={readOnly ? template?.controlObjectiveAssignments : undefined} />}
+            </div>
+          ) : null}
 
-          <div className={activeTab === "documents" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
+          <div className={selectedTab === "documents" ? "riskTabPanel" : "riskTabPanel riskTabPanelHidden"}>
             <DocumentManager
               targetType={documentTarget}
               targetId={value?.id ?? null}
@@ -471,12 +533,16 @@ export default function CentralRiskObjectPage({
           </div>
         </div>
 
-        {kind === "template" && value?.id && mode === "view" ? <LocalReverseList
-          parentId={value.id}
-          path={`central/risk-templates/${value.id}/risk-scopes`}
-          section="risk-scopes"
-          titleKey="local.reverse.riskScopes" titleFa="انتساب‌های محلی این الگوی ریسک"
-          areas={["PROCESS", "RISK"]} /> : null}
+        {templateId && readOnly ? (
+          <div hidden={selectedTab === "controls" || selectedTab === "controlObjectives"}>
+            <LocalReverseList
+              parentId={templateId}
+              path={`central/risk-templates/${templateId}/risk-scopes`}
+              section="risk-scopes"
+              titleKey="local.reverse.riskScopes" titleFa="انتساب‌های این الگوی ریسک"
+              areas={["PROCESS", "RISK"]} />
+          </div>
+        ) : null}
 
         <DialogFooter>
           {mode === "view" ? (
@@ -501,16 +567,6 @@ export default function CentralRiskObjectPage({
         </DialogFooter>
       </div>
 
-      <RiskCategoryValueHelpDialog
-        open={parentDialogOpen}
-        categories={categories}
-        currentCategoryId={kind === "category" && mode === "edit" ? value?.id ?? null : null}
-        selectedCategoryId={form.parentCategoryId}
-        requiredParent={kind === "template"}
-        busy={busy}
-        onClose={() => setParentDialogOpen(false)}
-        onSelect={(categoryId) => change("parentCategoryId", categoryId)}
-      />
     </>
   );
 }

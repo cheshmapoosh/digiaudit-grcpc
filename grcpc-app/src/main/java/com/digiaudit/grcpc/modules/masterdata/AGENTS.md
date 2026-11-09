@@ -133,7 +133,7 @@ When an owning V2 slice replaces a quarantined area, implement its approved V2 p
 
 ## Central reference Assignments
 
-- Read `grcpc-docs/master-data/accepted-corrections/2026-10-27-central-reference-assignments.md`. Implement four independent typed families in `assignment`; no generic Assignment framework or target pair is authorized.
+- Read `grcpc-docs/master-data/accepted-corrections/2026-10-27-central-reference-assignments.md` for the original four typed families in `assignment`. The 2026-11-09 approval adds the typed Account Group–Risk Template family defined in `grcpc-docs/master-data/implementation-contract.md`. Keep each family independent.
 - Control and Control Objective aggregate Saves own the typed drafts, canonical response, owner version and one CENTRAL Revision. Assignment-only no-op updates participate in NO_CHANGE detection.
 - Acquire the full lexical Guard union including concurrent classifications; lock affected endpoint rows in Control, Risk Template, Control Objective, Requirement order before validation. Control Objective has no hierarchy Guard of its own.
 - Control/Control Objective/Risk Template/Requirement deletion checks all non-DELETED assignments and never cascades. Keep existing Coverage dependencies.

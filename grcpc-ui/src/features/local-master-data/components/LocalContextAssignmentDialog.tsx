@@ -71,7 +71,7 @@ export default function LocalContextAssignmentDialog({ open, subprocessId, onClo
         }
     };
 
-    return <Dialog open={open} accessibleName={t("local.assign.subprocess", {
+    return <Dialog open={open} data-form-columns="2" accessibleName={t("local.assign.subprocess", {
         defaultValue: "انتساب زیرفرآیند به سازمان",
     })} onClose={onClose}
         footer={<DialogFooterBar>
@@ -88,9 +88,9 @@ export default function LocalContextAssignmentDialog({ open, subprocessId, onClo
                 path="options/organizations" value={organizationId} required disabled={busy}
                 onChange={setOrganizationId} />
             <div style={{ display: "grid", gap: "0.3rem" }}>
-                <Label>{t("local.fields.note", { defaultValue: "یادداشت محلی" })}</Label>
+                <Label>{t("local.fields.note", { defaultValue: "یادداشت" })}</Label>
                 <TextArea value={contextNote} maxlength={1000} rows={3} disabled={busy}
-                    accessibleName={t("local.fields.note", { defaultValue: "یادداشت محلی" })}
+                    accessibleName={t("local.fields.note", { defaultValue: "یادداشت" })}
                     onInput={(event) => setContextNote(event.target.value)} />
             </div>
             <div className="modalDateRange"><div style={{ display: "grid", gap: "0.3rem" }}>

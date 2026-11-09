@@ -70,13 +70,13 @@
       "createModalTitle": "Create"
     },
     "create": {
-      "title": "Create Process Item"
+      "title": "Create {{type}}"
     },
     "edit": {
-      "title": "Edit Process Item"
+      "title": "Edit {{type}}"
     },
     "view": {
-      "title": "View Process Item"
+      "title": "View {{type}}"
     },
     "move": {
       "action": "Move",

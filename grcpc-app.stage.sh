@@ -13,7 +13,7 @@ JAR_SOURCE=""
 
 usage() {
     cat <<'EOF_USAGE'
-GRCPC Stage Environment Runner (Java 21 + MinIO, external Oracle)
+GRCPC Stage Environment Runner (Java 21 + MinIO + Nginx, external Oracle)
 
 Usage:
   ./grcpc-app.stage.sh --init-env          Create stage.env from the example
@@ -89,7 +89,7 @@ parse_args() {
 }
 
 compose() {
-    sudo docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" -p "$PROJECT_NAME" "$@"
+    sudo env APP_JAR_PATH="$APP_JAR" docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" -p "$PROJECT_NAME" "$@"
 }
 
 init_env() {
@@ -109,7 +109,7 @@ init_env() {
     # Do not execute the environment file or overwrite a concurrently created one.
     (umask 077; set -C; cat -- "$template" > "$ENV_FILE")
     echo "Created stage.env with owner-only permissions."
-    echo "Fill Oracle connection settings, MinIO credentials and the public MinIO URL before starting."
+    echo "Fill Oracle settings, MinIO credentials and PUBLIC_HOST before starting."
 }
 
 check_compose() {

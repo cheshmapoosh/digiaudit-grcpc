@@ -396,7 +396,7 @@ export default function LocalSectionPane({
             setBaseline(JSON.stringify(next));
             setCreating(false);
             if (!documentDirty) setEditingId(null);
-            setInfo(t("local.saved", { defaultValue: "تغییرات محلی ذخیره شد." }));
+            setInfo(t("local.saved", { defaultValue: "تغییرات ذخیره شد." }));
             onSelectRow(result.entityId);
             if (spec.key === "contexts") onContextCreated(result.entityId);
             await reloadList();
@@ -453,7 +453,7 @@ export default function LocalSectionPane({
     if (!ownerReady) {
         return <MessageStrip design="Information" hideCloseButton>
             {t("local.selectContextOrTarget", {
-                defaultValue: "ابتدا زمینه یا هدف محلی را انتخاب کنید.",
+                defaultValue: "ابتدا زمینه یا هدف را انتخاب کنید.",
             })}
         </MessageStrip>;
     }
@@ -531,7 +531,7 @@ export default function LocalSectionPane({
                             <Option value="INHERITED_FROM_CENTRAL">
                                 {t("local.source.inherited", { defaultValue: "موروث از مرکزی" })}</Option>
                             <Option value="LOCAL_ADDED">
-                                {t("local.source.added", { defaultValue: "افزودهٔ محلی" })}</Option>
+                                {t("local.source.added", { defaultValue: "افزوده‌شده" })}</Option>
                         </Select>}
                     </div>
                     {draft.sourceType === "INHERITED_FROM_CENTRAL"
@@ -627,10 +627,10 @@ export default function LocalSectionPane({
                         }))} />}
                 </div></div>
                 {spec.noteField ? <div style={{ gridColumn: "1 / -1", display: "grid", gap: "0.3rem" }}>
-                    <Label>{t("local.fields.note", { defaultValue: "یادداشت محلی" })}</Label>
+                    <Label>{t("local.fields.note", { defaultValue: "یادداشت" })}</Label>
                     {readOnly ? <Text className="objectPageValue">{(draft[spec.noteField] ?? "") || "—"}</Text> : <TextArea value={draft[spec.noteField] ?? ""} readonly={readOnly}
                         disabled={busy} maxlength={1000} rows={3}
-                        accessibleName={t("local.fields.note", { defaultValue: "یادداشت محلی" })}
+                        accessibleName={t("local.fields.note", { defaultValue: "یادداشت" })}
                         onInput={(event) => change(spec.noteField!, event.target.value)} />}
                 </div> : null}
             </div>

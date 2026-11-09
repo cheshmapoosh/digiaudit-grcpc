@@ -1,14 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { FlexBox, Form, FormItem, Label, ObjectStatus, MessageStrip, Text } from "@ui5/webcomponents-react";
 import type { UserDetail } from "@/features/usermanagement";
-import { formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export default function UserObjectPage({ value, error }: { value: UserDetail; error?: string | null }) {
   const { t } = useTranslation();
   const fields = [
     ["username", value.username], ["fullName", `${value.firstName} ${value.lastName}`.trim() || "-"],
     ["email", value.email || "-"], ["mobile", value.mobile || "-"],
-    ["createdAt", formatPersianDateTime(value.createdAt)], ["lastLoginAt", formatPersianDateTime(value.lastLoginAt)],
+    ["createdAt", formatPersianDate(value.createdAt)], ["lastLoginAt", formatPersianDate(value.lastLoginAt)],
   ];
   return <FlexBox direction="Column" className="managementListContent">
     {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}

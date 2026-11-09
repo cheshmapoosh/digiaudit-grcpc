@@ -55,14 +55,14 @@ export default function RolesListReport({
         <FlexBox direction="Column" className="managementListContent">
             <Bar
                 startContent={
-                    <Title level="H4">
-                        {t("usermanagement.roles.listTitle", {
-                            defaultValue: "نقش ها",
-                        })}
-                    </Title>
-                }
-                endContent={
-                    <HeaderSearch value={searchText} onChange={onSearchTextChange} />
+                    <>
+                        <HeaderSearch value={searchText} onChange={onSearchTextChange} />
+                        <Title level="H4">
+                            {t("usermanagement.roles.listTitle", {
+                                defaultValue: "نقش ها",
+                            })}
+                        </Title>
+                    </>
                 }
             />
 

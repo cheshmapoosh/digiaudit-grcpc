@@ -50,14 +50,14 @@ export default function UserSecurityDialog({ user, mode, onClose, onSaved }: {
     <FlexBox direction="Column" className="userManagementForm">
       <Text>{`${user.firstName} ${user.lastName} (${user.username})`}</Text>
       {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
-      <MessageStrip design="Information" hideCloseButton>{t(mode === "password" ? "usermanagement.security.temporaryPasswordHint"
-        : user.enabled ? "usermanagement.security.disableHint" : "usermanagement.security.enableHint")}</MessageStrip>
+      {mode !== "password" ? <MessageStrip design="Information" hideCloseButton>
+        {t(user.enabled ? "usermanagement.security.disableHint" : "usermanagement.security.enableHint")}
+      </MessageStrip> : null}
       {requiresPassword ? <>
         <Label for="reset-user-password" required>{t("usermanagement.demo.password")}</Label>
         <Input id="reset-user-password" type="Password" value={password} maxlength={72} disabled={busy} onInput={(event) => setPassword(event.target.value)} />
         <Label for="reset-user-password-confirm" required>{t("auth.password.confirm")}</Label>
         <Input id="reset-user-password-confirm" type="Password" value={confirmation} maxlength={72} disabled={busy} onInput={(event) => setConfirmation(event.target.value)} />
-        <Text>{t("usermanagement.demo.passwordHint")}</Text>
         {confirmation && confirmation !== password ? <MessageStrip design="Negative" hideCloseButton>{t("auth.password.mismatch")}</MessageStrip> : null}
       </> : null}
     </FlexBox>

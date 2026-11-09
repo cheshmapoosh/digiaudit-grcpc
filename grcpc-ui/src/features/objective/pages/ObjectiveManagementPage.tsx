@@ -3,6 +3,7 @@ import { CatalogSelectionProvider } from "@/shared/components/CatalogSelection";
 import { CatalogTreeOrder, CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
 import { orderKey } from "@/shared/components/catalogOrder.context";
 import { CatalogSelectableRow, CatalogDeleteButton } from "@/shared/components/CatalogSelection";
+import { CatalogTreeHeader, CatalogTreeRow } from "@/shared/components/CatalogTreeColumns";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter, DialogFooterBar } from "@/shared/components/DialogFooter";
 import { HeaderSearch } from "@/shared/components/HeaderSearch";
@@ -10,7 +11,7 @@ import { createElement, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import {
-  Bar, BusyIndicator, Dialog, FlexBox, Input, Label, MessageStrip, Option, Select, Tab,
+  Bar, BusyIndicator, Dialog, Input, Label, MessageStrip, Tab,
   Text, TextArea, Title, Tree,
 } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-fiori/dist/FlexibleColumnLayout.js";
@@ -26,10 +27,9 @@ import { OrganizationObjectiveRelations } from "../components/OrganizationObject
 import { MasterDataFormField } from "@/shared/components/MasterDataObjectHeader";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { Objective, ObjectiveCreate, ObjectiveKind, ObjectiveOrganizationLink, ObjectiveUpdate, OrganizationObjectiveChange } from "../domain/objective.model";
 import ObjectiveCreateMenu from "../components/ObjectiveCreateMenu";
-import { objectiveApi } from "../infra/objective.api.repo";
 import { useObjectiveState } from "../state/objective.state";
 import "./objective.css";
 
@@ -93,10 +93,9 @@ function ObjectiveTreeItem({ node, selectedId, expandedIds }: {
   return <TreeItemCustom orderType="OBJECTIVE" orderId={node.id}
     data-objective-id={node.id} selected={node.id === selectedId}
     expanded={expandedIds.has(node.id)}
-    content={<CatalogSelectableRow itemKey={node.id}><FlexBox alignItems="Center" justifyContent="SpaceBetween" className="objectiveTreeLabel" title={node.name}>
-      <Text className="objectiveTreeTitle" maxLines={1}>{node.name}</Text>
-      <Text className="objectiveTreeType" maxLines={1}>{t(`objective.kind.${node.kind}`)}</Text>
-    </FlexBox></CatalogSelectableRow>}
+    content={<CatalogSelectableRow itemKey={node.id}>
+      <CatalogTreeRow title={node.name} type={t(`objective.kind.${node.kind}`)} />
+    </CatalogSelectableRow>}
   >
     {node.children.map((child) => <ObjectiveTreeItem key={child.id} node={child}
       selectedId={selectedId} expandedIds={expandedIds} />)}
@@ -126,8 +125,6 @@ export default function ObjectiveManagementPage() {
   const [organizationChanges, setOrganizationChanges] = useState<OrganizationObjectiveChange[]>([]);
   const [organizationDirty, setOrganizationDirty] = useState(false);
   const [organizationReady, setOrganizationReady] = useState(true);
-  const [strategyPicker, setStrategyPicker] = useState(false);
-  const [organizationsLoading, setOrganizationsLoading] = useState(false);
   const [form, setForm] = useState<Form>(emptyForm);
   const [baseline, setBaseline] = useState("");
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
@@ -142,7 +139,6 @@ export default function ObjectiveManagementPage() {
   });
   const selected = items.find((item) => item.id === selectedId) ?? null;
   const isStrategy = form.kind === "STRATEGY";
-  const displayedKind = mode ? form.kind : selected?.kind;
   const strategies = useMemo(() => items.filter((item) => item.kind === "STRATEGY"), [items]);
   const rootStrategies = useMemo(() => strategies.filter((item) => !item.parentObjectiveId), [strategies]);
   const creationStrategy = selected?.kind === "STRATEGY" && !selected.parentObjectiveId ? selected : null;
@@ -193,19 +189,10 @@ export default function ObjectiveManagementPage() {
         : isStrategy && mode === "edit" && items.some((item) => item.kind === "STRATEGY"
           && item.parentObjectiveId === selectedId) ? "objective.errors.strategyChildren" : null;
   const dirty = (mode === "create" || mode === "edit")
-    && (JSON.stringify(form) !== baseline || documents.dirty || invalidDateDraft || organizationDirty || strategyPicker);
+    && (JSON.stringify(form) !== baseline || documents.dirty || invalidDateDraft || organizationDirty);
   const { blocker } = useUnsavedChangesGuard(dirty);
 
   useEffect(() => { void load().catch((cause: unknown) => setError(errorText(cause))); }, [load]);
-  useEffect(() => {
-    if (displayedKind === "STRATEGY" || !selectedId) return;
-    let current = true;
-    void objectiveApi.organizations(selectedId).then(rows => {
-      if (current) setOrganizations(rows);
-    }).catch((cause: unknown) => { if (current) setError(errorText(cause)); })
-      .finally(() => { if (current) setOrganizationsLoading(false); });
-    return () => { current = false; };
-  }, [selectedId, displayedKind]);
 
   const begin = (nextMode: "create" | "view" | "edit", preserveTab = false,
     kind: ObjectiveKind = "OBJECTIVE") => {
@@ -221,7 +208,6 @@ export default function ObjectiveManagementPage() {
       ? { ...emptyForm, kind, parentObjectiveId: kind === "OBJECTIVE" ? creationStrategy!.id : "" }
       : toForm(selected);
     const next = normalizeStrategyForm(initial);
-    setOrganizationsLoading(next.kind === "OBJECTIVE");
     if (next.kind === "STRATEGY") { setOrganizations([]); setOrganizationChanges([]); }
     setForm(next);
     setBaseline(JSON.stringify(initial));
@@ -242,7 +228,7 @@ export default function ObjectiveManagementPage() {
   };
 
   const save = async () => {
-    if (strategyPicker || (!isStrategy && !organizationReady) || !form.code.trim() || !form.name.trim() || !documents.ready || documents.invalid || documents.uploading) {
+    if ((!isStrategy && !organizationReady) || !form.code.trim() || !form.name.trim() || !documents.ready || documents.invalid || documents.uploading) {
       setError(t("objective.errors.required"));
       return;
     }
@@ -280,7 +266,6 @@ export default function ObjectiveManagementPage() {
         setForm(canonical); setBaseline(JSON.stringify(canonical));
       }
       setDraftGeneration((value) => value + 1);
-      setOrganizationsLoading(false);
       setOrganizationChanges([]);
       setOrganizationDirty(false);
       setMode("view");
@@ -303,7 +288,7 @@ export default function ObjectiveManagementPage() {
 
   const selectTreeItem = (item: HTMLElement | undefined) => {
     const id = item?.dataset.objectiveId;
-    if (id && id !== selectedId) { setOrganizationsLoading(true); setOrganizations([]); setSelectedId(id); }
+    if (id && id !== selectedId) { setOrganizations([]); setSelectedId(id); }
   };
   const onTreeToggle = (event: TreeEvent) => {
     event.preventDefault?.();
@@ -331,9 +316,11 @@ export default function ObjectiveManagementPage() {
 
   const listColumn = createElement("div", { slot: "startColumn", className: "objectiveFclColumn" },
     <div className="objectiveListReport">
-      <Bar startContent={<Title level="H4">{t("objective.title")}</Title>}
-        endContent={<>
+      <Bar startContent={<>
+          <Title level="H4">{t("objective.title")}</Title>
           <HeaderSearch value={search} onChange={(value) => { setSearch(value); setFilterCollapsedIds(new Set()); }} accessibleName={t("objective.search")} />
+      </>}
+        endContent={<>
           <ObjectiveCreateMenu disabled={!manage || busy} canCreateObjective={Boolean(creationStrategy)}
             onCreate={(kind) => begin("create", false, kind)} />
 
@@ -345,7 +332,7 @@ export default function ObjectiveManagementPage() {
         {loading || busy ? <BusyIndicator active delay={0} /> : null}
         {!loading && !visibleItems.length ? <MessageStrip design="Information" hideCloseButton>
           {t("common.noData")}
-        </MessageStrip> : <CatalogTreeOrder catalog="OBJECTIVE" refreshKey={JSON.stringify(items)} filtered={Boolean(search.trim())}>{(order) => <Tree inert={order.busy} onMove={(event) => order.onMove(event, selectTreeItem)} onMoveOver={order.onMoveOver}
+        </MessageStrip> : <CatalogTreeOrder catalog="OBJECTIVE" refreshKey={JSON.stringify(items)} filtered={Boolean(search.trim())}>{(order) => <Tree header={<CatalogTreeHeader withType />} inert={order.busy} onMove={(event) => order.onMove(event, selectTreeItem)} onMoveOver={order.onMoveOver}
             onDragEnd={(event) => order.onDragEnd(event, selectTreeItem)} onItemClick={(event) => selectTreeItem(event.detail.item)} onItemToggle={onTreeToggle}>
             {order.sortTree(tree, (node) => orderKey("OBJECTIVE", node.id)).map((node) => <ObjectiveTreeItem key={node.id} node={node}
               selectedId={selectedId} expandedIds={visibleExpandedIds} />)}
@@ -354,7 +341,7 @@ export default function ObjectiveManagementPage() {
     </div>);
   const summaryColumn = selected ? createElement("div", { slot: "midColumn", className: "objectiveFclColumn" },
     <div className="objectiveSummary">
-      <Bar startContent={<Title level="H4">{selected.name}</Title>} />
+      <Bar startContent={<Title level="H4">{t("common.details")}</Title>} />
       <div className="objectiveSummaryDetails">
         <Label showColon>{t("objective.code")}</Label><Text>{selected.code}</Text>
         <Label showColon>{t("objective.name")}</Label><Text>{selected.name}</Text>
@@ -366,12 +353,6 @@ export default function ObjectiveManagementPage() {
           || t("objective.strategy.missing")}</Text>
         </> : null}
         <Label showColon>{t("objective.description")}</Label><Text>{selected.description || "—"}</Text>
-        {selected.kind === "OBJECTIVE" ? <>
-        <Label showColon>{t("objective.tabs.organizations")}</Label>
-        <Text>{organizationsLoading ? t("common.loading") : organizations.some(link => link.status !== "DELETED")
-          ? organizations.filter(link => link.status !== "DELETED").map((link) => link.organizationName).join("، ") : "—"}</Text>
-        <Label showColon>{t("objective.createdAt")}</Label><Text>{formatPersianDateTime(selected.createdAt)}</Text>
-        </> : null}
       </div>
       <DialogFooterBar>
         <Button design="Emphasized" disabled={!manage || busy} onClick={() => begin("edit")}>{t("common.edit")}</Button>
@@ -398,9 +379,7 @@ export default function ObjectiveManagementPage() {
       <ModalDialogHeader title={dialogTitle} onClose={close} />
       <div className="objectiveDialogContent" data-catalog-dialog-content>
       <CatalogParentHeader objectTitle={form.name || dialogTitle} label={t("objective.strategy.label")} parentId={form.parentObjectiveId} required={!isStrategy}
-        parent={chosenStrategy ? { code: chosenStrategy.code, title: chosenStrategy.name, type: t("objective.kind.STRATEGY"), status: chosenStrategy.status } : null}
-        selection={!isStrategy && !readOnly && manage ? <Button design="Emphasized" disabled={busy}
-          onClick={() => setStrategyPicker(true)}>{t("catalogRelation.select")}</Button> : null} />
+        parent={chosenStrategy ? { code: chosenStrategy.code, title: chosenStrategy.name, type: t("objective.kind.STRATEGY"), status: chosenStrategy.status } : null} />
       <DetailTabContainer onTabSelect={(event) => {
         const key = event.detail.tab.getAttribute("data-tab-key");
         if (key === "general" || key === "organizations" || key === "documents") setActiveTab(key);
@@ -439,7 +418,7 @@ export default function ObjectiveManagementPage() {
       {!isStrategy && mode ? <div className={activeTab === "organizations" ? "objectiveOrganizationTab" : "objectiveOrganizationTab objectiveTabHidden"}>
         <OrganizationObjectiveRelations side="objective" ownerId={mode === "create" ? null : selectedId}
           ownerName={form.name} manage={!readOnly && manage} busy={busy} resetKey={draftGeneration}
-          canonicalRows={organizations} onRowsChange={setOrganizations} changes={organizationChanges}
+          canonicalRows={organizations} changes={organizationChanges}
           onChangesChange={setOrganizationChanges} onDirtyChange={setOrganizationDirty} onReadinessChange={setOrganizationReady} />
       </div> : null}
       <div className={activeTab === "documents" ? "objectiveDocumentTab" : "objectiveDocumentTab objectiveTabHidden"}>
@@ -452,7 +431,7 @@ export default function ObjectiveManagementPage() {
       <DialogFooter>
         {readOnly ? <Button design="Emphasized" disabled={!manage || busy}
           onClick={() => begin("edit", true)}>{t("common.edit")}</Button>
-          : <Button design="Emphasized" disabled={busy || strategyPicker || (!isStrategy && !organizationReady) || !dirty || Boolean(structureError) || invalidDateDraft || !documents.ready || documents.invalid || documents.uploading}
+          : <Button design="Emphasized" disabled={busy || (!isStrategy && !organizationReady) || !dirty || Boolean(structureError) || invalidDateDraft || !documents.ready || documents.invalid || documents.uploading}
             onClick={() => void save()}>{t("common.save")}</Button>}
         <Button design="Transparent" onClick={close}>{t(readOnly ? "common.close" : "common.cancel")}</Button>
       </DialogFooter>
@@ -464,20 +443,10 @@ export default function ObjectiveManagementPage() {
         { name: deleteCandidate?.name ?? "" })}
       confirmText={t("common.delete")} cancelText={t("common.cancel")} loading={busy}
       onClose={() => setDeleteCandidate(null)} onConfirm={() => void confirmDelete()} />
-    <Dialog open={strategyPicker} className="objectiveDialog" accessibleName={t("objective.strategy.label")} onClose={() => setStrategyPicker(false)}>
-      <ModalDialogHeader title={t("objective.strategy.label")} onClose={() => setStrategyPicker(false)} />
-      <Select value={chosenStrategy ? form.parentObjectiveId : ""} disabled={busy} accessibleName={t("objective.strategy.label")}
-        onChange={event => setForm(old => ({ ...old, parentObjectiveId: event.target.value }))}>
-        {!chosenStrategy ? <Option value="">{t("objective.strategy.choose")}</Option> : null}
-        {rootStrategies.filter(item => item.id !== selectedId && !blockedParents.has(item.id)).map(item =>
-          <Option key={item.id} value={item.id}>{item.code} · {item.name}</Option>)}
-      </Select>
-      <DialogFooter><Button design="Emphasized" disabled={busy || !chosenStrategy} onClick={() => setStrategyPicker(false)}>{t("catalogRelation.select")}</Button></DialogFooter>
-    </Dialog>
     <DeleteConfirmDialog open={leaveOpen || blocker.state === "blocked"}
       title={t("common.unsavedChanges.title")} message={t("common.unsavedChanges.message")}
       confirmText={t("common.unsavedChanges.leave")} cancelText={t("common.unsavedChanges.stay")}
       loading={false} onClose={() => { setLeaveOpen(false); if (blocker.state === "blocked") blocker.reset(); }}
-      onConfirm={() => { setLeaveOpen(false); setStrategyPicker(false); setMode(null); if (blocker.state === "blocked") blocker.proceed(); }} />
+      onConfirm={() => { setLeaveOpen(false); setMode(null); if (blocker.state === "blocked") blocker.proceed(); }} />
   </section></CatalogSelectionProvider>;
 }

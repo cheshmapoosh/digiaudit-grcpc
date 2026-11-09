@@ -10,29 +10,53 @@ services:
       MINIO_ROOT_USER_FILE: ${MINIO_ROOT_USER_FILE:-}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
       MINIO_ROOT_PASSWORD_FILE: ${MINIO_ROOT_PASSWORD_FILE:-}
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio_data:${MINIO_DATA_DIR:-/var/lib/minio/data}
+      - "${GRCPC_SECRETS_DIR:-./secrets}:/run/secrets/grcpc:ro"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:9000/minio/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   app:
-    image: ${GRCPC_APP_IMAGE:-grcpc-app:latest}
+    image: ${JAVA_IMAGE:-eclipse-temurin:21-jre-noble}
     restart: unless-stopped
+    working_dir: /opt/grcpc
     depends_on:
       minio:
-        condition: service_started
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ${APP_JAR_PATH:-./grcpc-app.jar}
+        target: /opt/grcpc/grcpc-app.jar
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./docker/app/entrypoint.sh
+        target: /opt/grcpc/entrypoint.sh
+        read_only: true
+        bind:
+          create_host_path: false
+      - ./data/app/logs:/opt/grcpc/logs
+      - "${GRCPC_SECRETS_DIR:-./secrets}:/run/secrets/grcpc:ro"
     environment:
+      APP_JAR: /opt/grcpc/grcpc-app.jar
       SERVER_PORT: 8080
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
       DB_URL: ${DB_URL:?Set DB_URL for external Oracle}
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD:-}
       DB_PASSWORD_FILE: ${DB_PASSWORD_FILE:-}
       DB_DRIVER_CLASS_NAME: ${DB_DRIVER_CLASS_NAME:-oracle.jdbc.OracleDriver}
       DB_SCHEMA: ${DB_SCHEMA:?Set DB_SCHEMA}
+      FLYWAY_ENABLED: ${FLYWAY_ENABLED:-true}
       GRCPC_MINIO_ENABLED: ${GRCPC_MINIO_ENABLED:-${MINIO_ENABLED:-true}}
       GRCPC_MINIO_ENDPOINT: ${GRCPC_MINIO_ENDPOINT:-${MINIO_ENDPOINT:-http://minio:9000}}
-      GRCPC_MINIO_PUBLIC_ENDPOINT: ${GRCPC_MINIO_PUBLIC_ENDPOINT:-${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}}
+      GRCPC_MINIO_PUBLIC_ENDPOINT: ${GRCPC_MINIO_PUBLIC_ENDPOINT:-${MINIO_PUBLIC_ENDPOINT:-${PUBLIC_SCHEME:-http}://${PUBLIC_HOST:-localhost}:${APP_PORT:-8080}}}
+      GRCPC_MINIO_PRESIGN_REGION: ${GRCPC_MINIO_PRESIGN_REGION:-us-east-1}
       GRCPC_MINIO_ACCESS_KEY: ${GRCPC_MINIO_ACCESS_KEY:-}
       GRCPC_MINIO_ACCESS_KEY_FILE: ${GRCPC_MINIO_ACCESS_KEY_FILE:-}
       GRCPC_MINIO_SECRET_KEY: ${GRCPC_MINIO_SECRET_KEY:-}
@@ -57,8 +81,31 @@ services:
       GRCPC_MINIO_TEMP_EXPIRATION_DAYS: ${GRCPC_MINIO_TEMP_EXPIRATION_DAYS:-${MINIO_TEMP_EXPIRATION_DAYS:-2}}
       APP_LOGGING_PATH: ${APP_LOGGING_PATH:-/opt/grcpc/logs}
       JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+    entrypoint: ["sh", "/opt/grcpc/entrypoint.sh"]
+
+  nginx:
+    image: ${NGINX_IMAGE:-nginx:1.28-alpine}
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:-localhost}
+      PUBLIC_SCHEME: ${PUBLIC_SCHEME:-http}
+      GRCPC_MINIO_BUCKET: ${GRCPC_MINIO_BUCKET:-${MINIO_BUCKET:-grc-documents}}
     ports:
       - "${APP_PORT:-8080}:8080"
+    volumes:
+      - type: bind
+        source: ./docker/nginx/start.sh
+        target: /opt/grcpc/start-nginx.sh
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${NGINX_TLS_DIR:-./tls}
+        target: /etc/nginx/tls
+        read_only: true
+    entrypoint: ["sh", "/opt/grcpc/start-nginx.sh"]
 
 volumes:
   minio_data:

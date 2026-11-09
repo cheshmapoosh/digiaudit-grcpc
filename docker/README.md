@@ -3,20 +3,57 @@
 Oracle is the only relational database target for this project. MinIO is used
 for object storage in every environment.
 
-## Development with IntelliJ
+| Environment | Services in Compose | Database |
+| --- | --- | --- |
+| `dev` | Java 21 app, MinIO, Oracle Free | Local container |
+| `test` | Java 21 app, MinIO, Oracle Free | Local container |
+| `stage` | Nginx, Java 21 app, MinIO | External Oracle |
+| `prod` | Nginx, Java 21 app, MinIO | External Oracle |
 
-Start Oracle and MinIO with Docker:
+## Build the deliverable JARs
+
+From the repository root, with Java 21, Node.js and the UI dependencies installed:
+
+```powershell
+Set-Location grcpc-ui
+npm.cmd run build
+Set-Location ../grcpc-app
+.\mvnw.cmd -Pedition-single '-Dskip.ui=true' '-Dmaven.test.skip=true' package
+.\mvnw.cmd -Pedition-multi '-Dskip.ui=true' '-Dmaven.test.skip=true' package
+```
+
+The executable JARs, including the UI, are
+`target/edition-single/grcpc-app-<version>-single.jar` and
+`target/edition-multi/grcpc-app-<version>-multi.jar`. Maven packages the
+single-profile marker inside the SINGLE JAR. The backend reads it from the
+packaged classpath. A build without an explicit edition uses multi-profile
+behavior. Either edition can be run in any environment.
+
+Copy the selected JAR to the deployment directory as `grcpc-app.jar`.
+For `dev`, `stage` and `prod` the direct Compose command can also mount a
+different file via `APP_JAR_PATH`. To upgrade from SINGLE to MULTI, stop the
+application container, replace the JAR and recreate the container using the
+same Oracle schema and MinIO data. The edition switch requires no data
+migration. SINGLE uses the default profile seeded by V1190 and requires it
+to be active. The same Oracle schema can also contain other profiles for MULTI.
+
+## Development
 
 ```powershell
 docker compose --env-file docker/env/dev.env.example -f compose.dev.yml up -d
 ```
 
-Run `grcpc-app` from IntelliJ with the application environment variables shown
-in `docker/env/dev.env.example`.
+For development from IntelliJ, add `oracle minio` to the end of the command
+and use the local endpoints from the comments in `docker/env/dev.env.example`.
+In IntelliJ, keep the default Maven profile and select `GRCPC - SINGLE` from
+the Run menu for single-profile mode. This configuration adds the same
+single-profile marker used by the SINGLE JAR to the local run's classpath.
+Use the regular `GrcpcApiApplication` configuration for multi-profile mode.
+Both configurations compile the Java files directly from `src/main/java`.
 
 Useful endpoints:
 
-- Application from IntelliJ: `http://localhost:8080`
+- Application: `http://localhost:8080`
 - Oracle: `localhost:1521`, service `FREEPDB1`
 - MinIO API: `http://localhost:9000`
 - MinIO Console: `http://localhost:9001`
@@ -35,15 +72,44 @@ that jar into a Java 21 runtime image; it does not build the application.
 See [Portable Test Runner](README.test.md) for startup options and Windows
 port-conflict troubleshooting.
 
-## Production with External Oracle
+## Stage and production with external Oracle
 
-Production runs only `grcpc-app` and MinIO in Docker. Oracle is external:
+Copy the matching env example to `stage.env` or `prod.env` beside the
+Compose file and fill in the external Oracle URL, schema and credentials and
+the MinIO credentials. Preserve the `docker/nginx/start.sh` and
+`docker/app/entrypoint.sh` paths when copying the deployment files.
 
 ```powershell
-docker compose --env-file docker/env/prod.env.example -f compose.prod.yml up -d
+docker compose --env-file stage.env -f compose.stage.yml up -d
+docker compose --env-file prod.env -f compose.prod.yml up -d
 ```
 
-Replace all `change-me` and example host values before running production.
+Use separate deployment directories for test, stage and prod. Use distinct
+published ports if the environments share a host. Stage expects its Java, MinIO and Nginx
+images to have already been loaded on the host. See the [stage runner guide](README.stage.md)
+for its commands and file layout.
+
+Configure the Nginx entry point in the deployment env file:
+
+| Access | `PUBLIC_HOST` | `PUBLIC_SCHEME` | `APP_PORT` |
+| --- | --- | --- | --- |
+| HTTP by IP | `192.0.2.10` (replace with the server IPv4 address) | `http` | `80` |
+| HTTP by domain | `grc.example.com` | `http` | `80` |
+| HTTPS by domain | `grc.example.com` | `https` | `443` |
+
+Create a DNS record pointing the domain to the server for domain access. For
+HTTPS, place the certificate chain in `fullchain.pem` and the matching private
+key in `privkey.pem` under the host directory selected by `NGINX_TLS_DIR`
+(default `./tls`). That directory is mounted read-only. Run Compose again
+after changing the env file. Restart Nginx after renewing the certificate
+files. The selected port serves the selected scheme.
+
+Nginx publishes one port for the app and its signed MinIO downloads. MinIO's
+API and console are internal in stage and prod. Remove a legacy
+`GRCPC_MINIO_PUBLIC_ENDPOINT` or `MINIO_PUBLIC_ENDPOINT` setting when using
+downloads through Nginx. An explicit endpoint is useful for deployments that
+already have a separate storage gateway. If the MinIO deployment uses a
+non-default S3 region, set `GRCPC_MINIO_PRESIGN_REGION` to match it.
 
 ## Flyway
 
@@ -71,18 +137,12 @@ in the Oracle schema.
 
 ## MinIO Paths
 
-The MinIO data path is configurable with `MINIO_DATA_DIR`.
-The default is:
-
-```text
-/var/lib/minio/data
-```
-
-Compose mounts the MinIO volume to that path, for example:
-
-```text
-grcpc_test_minio:/var/lib/minio/data
-```
+Dev persists MinIO objects under `./data/dev/minio` by default. Test and
+stage use `./data/minio` relative to their respective deployment directories.
+Prod keeps the existing named `MINIO_VOLUME` at `MINIO_DATA_DIR`. If you have
+existing dev data in a different host directory, set `DEV_MINIO_DATA_PATH`
+to that directory. If an older dev container stored files in its writable
+layer, export those files into the new bind directory before replacing it.
 
 ## Application MinIO Configuration
 
@@ -127,7 +187,9 @@ explicit GRCPC_MINIO_* value
 
 `GRCPC_MINIO_ACCESS_KEY_FILE` and `GRCPC_MINIO_SECRET_KEY_FILE` are supported for
 application credentials. `MINIO_ROOT_USER_FILE`, `MINIO_ROOT_PASSWORD_FILE`, and
-`DB_PASSWORD_FILE` are also supported by the packaged entrypoints. Legacy
+`DB_PASSWORD_FILE` are also supported by the production entrypoint. Mount the
+host directory via `GRCPC_SECRETS_DIR` and use paths under
+`/run/secrets/grcpc/` for the `_FILE` values. Legacy
 `MINIO_ACCESS_KEY_FILE` and `MINIO_SECRET_KEY_FILE` remain compatibility fallbacks.
 Supplying both a direct variable and its matching `_FILE` variable is rejected. Secret
 file contents and credentials are never written to startup logs. Application credentials

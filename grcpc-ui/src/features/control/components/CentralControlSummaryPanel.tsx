@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { Bar, Label, MessageStrip, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { CentralControlDetail, CentralControlGroupDetail, CentralControlNodeType } from "../domain/centralControl.model";
 
 type Value = CentralControlDetail | CentralControlGroupDetail;
@@ -39,15 +39,13 @@ export default function CentralControlSummaryPanel({ type, value, busy = false, 
       [t("control.fields.status"), <ObjectStatus key="status" state={value.status === "ACTIVE" ? "Positive" : "Negative"}>{t(`control.status.${value.status}`)}</ObjectStatus>],
       [t("control.fields.validFrom"), formatPersianDate(value.validFrom)],
       [t("control.fields.validTo"), formatPersianDate(value.validTo)],
-      [t("control.fields.createdAt"), formatPersianDateTime(value.createdAt)],
-      [t("control.fields.updatedAt"), formatPersianDateTime(value.updatedAt)],
     );
     return common;
   }, [t, type, value]);
 
   return (
     <div className="controlSummaryPanel">
-      <Bar startContent={<Title level="H4">{value?.title ?? t("control.summary.title")}</Title>} />
+      <Bar startContent={<Title level="H4">{t("common.details")}</Title>} />
       {value ? <div className="controlSummaryGrid">{rows.map(([label, displayValue]) => <div className="controlSummaryRow" key={label}><Label showColon>{label}</Label>{typeof displayValue === "string" ? <Text>{displayValue}</Text> : displayValue}</div>)}</div> : <MessageStrip design="Information" hideCloseButton>{t("control.summary.selectPrompt")}</MessageStrip>}
       <DialogFooterBar><Button design="Emphasized" disabled={!value || busy || !canEdit} onClick={onEdit}>{t("common.edit", { defaultValue: "ویرایش" })}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.close", { defaultValue: "بستن" })}</Button></DialogFooterBar>
     </div>

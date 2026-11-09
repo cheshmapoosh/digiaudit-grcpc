@@ -78,7 +78,7 @@ export default function LocalControlAssignmentDialog({ open, controlId, onClose 
         }
     };
 
-    return <Dialog open={open} accessibleName={t("local.assign.control", {
+    return <Dialog open={open} data-form-columns="3" accessibleName={t("local.assign.control", {
         defaultValue: "انتساب کنترل به سازمان",
     })} onClose={onClose}
         footer={<DialogFooterBar>
@@ -110,7 +110,7 @@ export default function LocalControlAssignmentDialog({ open, controlId, onClose 
                     <Option value="INHERITED_FROM_CENTRAL">
                         {t("local.source.inherited", { defaultValue: "موروث از مرکزی" })}</Option>
                     <Option value="LOCAL_ADDED">
-                        {t("local.source.added", { defaultValue: "افزودهٔ محلی" })}</Option>
+                        {t("local.source.added", { defaultValue: "افزوده‌شده" })}</Option>
                 </Select>
             </div>
             {sourceType === "INHERITED_FROM_CENTRAL" ? <LocalOptionPicker
@@ -160,9 +160,9 @@ export default function LocalControlAssignmentDialog({ open, controlId, onClose 
                     })} onChange={setValidTo} onDraftStateChange={setToDraft} />
             </div></div>
             <div className="modalWideField" style={{ display: "grid", gap: "0.3rem" }}>
-                <Label>{t("local.fields.note", { defaultValue: "یادداشت محلی" })}</Label>
+                <Label>{t("local.fields.note", { defaultValue: "یادداشت" })}</Label>
                 <TextArea value={localContextNote} maxlength={1000} rows={3} disabled={busy}
-                    accessibleName={t("local.fields.note", { defaultValue: "یادداشت محلی" })}
+                    accessibleName={t("local.fields.note", { defaultValue: "یادداشت" })}
                     onInput={(event) => setLocalContextNote(event.target.value)} />
             </div>
             {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}

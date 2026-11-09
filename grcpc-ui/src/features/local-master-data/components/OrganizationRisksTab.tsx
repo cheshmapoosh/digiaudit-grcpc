@@ -149,7 +149,7 @@ export default function OrganizationRisksTab({ organizationId, contexts, context
             initialStatus={initialStatus} onFilterChange={onFilterChange} />
         {pickerOpen ? <HierarchyMultiSelectionDialog open title={t("local.riskPicker.title")} searchAccessibleName={t("local.riskPicker.search")}
             nodes={nodes} selectedIds={EMPTY_SELECTION} busy={busy} loading={pickerLoading} error={pickerError}
-            description={t("local.riskPicker.hint")} confirmDisabled={!choices.length}
+            confirmDisabled={!choices.length}
             confirmText={t("common.select")} cancelText={t("common.cancel")} onConfirm={stage} onClose={closePicker} /> : null}
     </FlexBox>;
 }

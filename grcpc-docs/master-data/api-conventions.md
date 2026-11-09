@@ -262,6 +262,32 @@ changes. The response retains the Control aggregate fields and conditionally inc
 canonical `accountGroupClassifications` for callers with classification VIEW authority.
 There is no browser row-mutation chain or standalone classification mutation owner.
 
+Account Group aggregate `POST/PATCH` also accepts optional `controlsToAdd`
+entries with `controlId` and the observed Control `version`. The additions
+require REFERENCE and CONTROL manage permissions and share the Account Group
+transaction. A Save with additions returns the canonical `controlClassifications`
+for that Account Group.
+
+The same Account Group Save accepts optional `controlObjectivesToAdd` entries
+with `controlObjectiveId` and the observed Control Objective `version`.
+The same manage permissions apply. Saves with these additions return
+`controlObjectiveClassifications` for the Account Group.
+
+Account Group aggregate `PATCH` accepts `controlLifecycleChanges` and
+`controlObjectiveLifecycleChanges`. Each entry carries the matching endpoint ID,
+`classificationId`, the classification `version`, and an `operation` of
+`ACTIVATE`, `INACTIVATE`, or `DELETE`. The operation targets the exact link.
+The same Save returns the canonical rows for each changed classification type.
+
+Account Group aggregate `POST/PATCH` accepts optional `riskTemplatesToAdd` entries
+with `riskTemplateId` and the selected template's `version`. `PATCH` also accepts
+`riskAssignmentLifecycleChanges` with `riskTemplateId`, `assignmentId`, the
+assignment `version`, and `ACTIVATE`, `INACTIVATE`, or `DELETE`. Both draft
+collections require REFERENCE manage and RISK read access. The response includes
+canonical `riskAssignments` when that collection changes.
+`GET /api/master-data/central/account-groups/{id}/risk-assignments` returns live
+links and requires read access to both areas. The server resolves the current profile.
+
 ```text
 POST /api/master-data/central/controls/{controlId}/account-groups/{accountGroupId}
 POST /api/master-data/central/control-objectives/{controlObjectiveId}/account-groups/{accountGroupId}

@@ -12,7 +12,7 @@ import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import CentralPolicyListReport from "../components/CentralPolicyListReport";
 import CentralPolicySummaryPanel from "../components/CentralPolicySummaryPanel";
-import type { PolicyParentCandidate } from "../components/PolicyParentValueHelpDialog";
+import type { PolicyParentCandidate } from "../domain/centralPolicy.model";
 import type {
   CentralPolicyAnyDetail,
   CentralPolicyDetail,

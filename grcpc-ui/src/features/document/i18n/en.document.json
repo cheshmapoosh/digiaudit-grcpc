@@ -1,7 +1,6 @@
 {
   "document": {
     "title": "Documents",
-    "editHint": "Select a file to add a document.",
     "actions": {
       "upload": "Select File",
       "saveTitle": "Save",

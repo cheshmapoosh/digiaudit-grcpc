@@ -32,25 +32,6 @@
   overflow: auto;
 }
 
-.policyTreeItemContent {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
-  min-width: 0;
-}
-
-.policyTreeTitle {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.policyTreeType {
-  flex: 0 0 auto;
-}
-
 .policySummaryPanel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;

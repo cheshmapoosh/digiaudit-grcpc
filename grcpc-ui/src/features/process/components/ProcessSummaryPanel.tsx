@@ -3,9 +3,9 @@ import { useMasterDataAccess } from "@/features/master-data/security/masterDataA
 import type { CSSProperties, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
-import { Bar, Label, MessageStrip, ObjectStatus, Title } from "@ui5/webcomponents-react";
+import { Bar, Label, MessageStrip, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { ProcessNode, ProcessNodeType, ProcessStatus } from "../domain/process.model";
 
 export interface ProcessSummaryPanelProps {
@@ -23,14 +23,20 @@ const ROW_STYLE: CSSProperties = { display: "grid", gridTemplateColumns: "minmax
 
 function typeLabel(type: ProcessNodeType, t: ReturnType<typeof useTranslation>["t"]) { return type === "PROCESS" ? t("process.nodeType.process", { defaultValue: "Process" }) : t("process.nodeType.subProcess", { defaultValue: "Subprocess" }); }
 function statusLabel(status: ProcessStatus, t: ReturnType<typeof useTranslation>["t"]) { return status === "ACTIVE" ? t("common.active", { defaultValue: "Active" }) : status === "INACTIVE" ? t("common.inactive", { defaultValue: "Inactive" }) : t("common.deleted", { defaultValue: "Deleted" }); }
-function DetailRow({ label, value }: { label: string; value?: ReactNode }) { return <div style={ROW_STYLE}><Label showColon wrappingType="None">{label}</Label><span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{value || "-"}</span></div>; }
+function DetailRow({ label, value }: { label: string; value?: ReactNode }) {
+    const displayValue = value || "-";
+    return <div style={ROW_STYLE}>
+        <Label showColon wrappingType="None">{label}</Label>
+        {typeof displayValue === "string" ? <Text className="objectPageValue">{displayValue}</Text> : displayValue}
+    </div>;
+}
 
 export default function ProcessSummaryPanel({ value, allItems = [], busy = false, error, onErrorClose, onEdit, onClose }: ProcessSummaryPanelProps) {
     const { t } = useTranslation();
     const { manage } = useMasterDataAccess("PROCESS");
     const parent = value?.parentId ? allItems.find((item) => item.id === value.parentId) : null;
     return <div style={{ display: "grid", gridTemplateRows: "auto 1fr auto", minHeight: "100%", gap: "1rem", minWidth: 0 }}>
-        <Bar startContent={<Title level="H4">{value?.title ?? t("process.object.summaryTitle", { defaultValue: "Process details" })}</Title>} />
+        <Bar startContent={<Title level="H4">{t("common.details")}</Title>} />
         <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
             {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
             {value ? <div style={BODY_STYLE}>
@@ -51,8 +57,6 @@ export default function ProcessSummaryPanel({ value, allItems = [], busy = false
                     <DetailRow label={t("process.fields.validFrom", { defaultValue: "Valid From" })} value={formatPersianDate(value.validFrom)} />
                     <DetailRow label={t("process.fields.validTo", { defaultValue: "Valid To" })} value={formatPersianDate(value.validTo)} />
                     <DetailRow label={t("process.fields.description", { defaultValue: "Description" })} value={value.description} />
-                    <DetailRow label={t("process.fields.createdAt", { defaultValue: "Created at" })} value={formatPersianDateTime(value.createdAt)} />
-                    <DetailRow label={t("process.fields.updatedAt")} value={formatPersianDateTime(value.updatedAt)} />
                 </div>
             </div> : <MessageStrip design="Information" hideCloseButton>{t("process.object.selectPrompt", { defaultValue: "Select an item to view details." })}</MessageStrip>}
         </div>

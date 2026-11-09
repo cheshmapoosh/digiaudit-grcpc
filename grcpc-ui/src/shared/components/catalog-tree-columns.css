@@ -1,0 +1,24 @@
+.catalogTreeColumns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: var(--sapContent_Space_Tiny);
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.catalogTreeColumns[data-with-type] {
+    grid-template-columns: minmax(0, 1fr) clamp(4.5rem, 11vw, 10rem);
+}
+
+.catalogTreeColumns > * { min-width: 0; }
+.catalogTreeColumns > ui5-text { cursor: inherit; }
+.catalogTreeColumnHeader {
+    padding: var(--sapContent_Space_Tiny) var(--sapContent_Space_Small);
+    /* The compact tree toggle and bulk-selection checkbox precede the title. */
+    padding-inline-start: calc(4rem + var(--sapContent_Space_Tiny));
+    background: var(--sapList_HeaderBackground);
+    border-block-end: 1px solid var(--sapList_BorderColor);
+}
+.catalogTreeColumnHeader > ui5-label { font-weight: 700; }

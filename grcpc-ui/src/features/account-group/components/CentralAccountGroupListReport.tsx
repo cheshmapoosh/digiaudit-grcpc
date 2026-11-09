@@ -47,10 +47,12 @@ export default function CentralAccountGroupListReport({
   return (
     <div className="accountGroupListReport">
       <Bar
-        startContent={<Title level="H4">{t("accountGroup.list.title")}</Title>}
+        startContent={<>
+            <Title level="H4">{t("accountGroup.list.title")}</Title>
+            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("accountGroup.list.search")} />
+        </>}
         endContent={
           <>
-            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("accountGroup.list.search")} />
             <Button design="Emphasized" disabled={busy || !canCreate} onClick={onCreate}>
               {t("common.create", { defaultValue: "ایجاد" })}
             </Button>

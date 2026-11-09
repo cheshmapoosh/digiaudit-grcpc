@@ -23,7 +23,6 @@ import {
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate } from "@/shared/utils/date.utils";
-import ParentValueHelpDialog from "../components/ParentValueHelpDialog";
 import {
     type OrganizationEditableStatus,
     type OrganizationNode,
@@ -131,7 +130,6 @@ export default function OrganizationObjectPage({
     const [form, setForm] = useState(() => toFormState(value, mode === "create"));
     const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toFormState(value, mode === "create"), mode)));
     const [validationError, setValidationError] = useState<string | null>(null);
-    const [parentDialogOpen, setParentDialogOpen] = useState(false);
     const [documentDraft, setDocumentDraft] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
     const [dateDrafts, setDateDrafts] = useState<Record<"validFrom" | "validTo", PersianDateDraftState>>({
         validFrom: { draftValue: "", valid: true, dirty: false },
@@ -150,7 +148,7 @@ export default function OrganizationObjectPage({
     const generalInformationDirty = JSON.stringify(normalized(form, mode)) !== baseline || ownerChanges.length > 0;
     const invalidDateDraft = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
     const dirty = generalInformationDirty || ownerSelectionDirty || invalidDateDraft || localObjectiveDirty
-        || subprocessChanges.length > 0 || subprocessSelectionPending || localDrafts.length > 0 || localPending || localAuxiliaryDirty || objectiveChanges.length > 0 || parentDialogOpen;
+        || subprocessChanges.length > 0 || subprocessSelectionPending || localDrafts.length > 0 || localPending || localAuxiliaryDirty || objectiveChanges.length > 0;
 
     const activeTab = controlledTab ?? internalTab;
     const readOnly = mode === "view" || !manage;
@@ -191,7 +189,7 @@ export default function OrganizationObjectPage({
         if (form.parentOrganizationId && (form.parentOrganizationId === value?.id || descendants.has(form.parentOrganizationId) || !allItems.some((item) => item.id === form.parentOrganizationId))) return setValidationError(t("organization.errors.invalidHierarchyMove", { defaultValue: "Invalid parent" })), false;
         if (form.validFrom && form.validTo && form.validFrom > form.validTo) return setValidationError(t("organization.validation.invalidValidityRange", { defaultValue: "Invalid validity range" })), false;
         if (!documentDraft.ready || documentDraft.invalid || documentDraft.uploading) return setValidationError(t("document.errors.finalize", { defaultValue: "Document drafts are not ready" })), false;
-        if (subprocessSelectionPending || (subprocessChanges.length > 0 && !subprocessReady) || !localReady || !objectiveReady || !ownerReady || parentDialogOpen) return false;
+        if (subprocessSelectionPending || (subprocessChanges.length > 0 && !subprocessReady) || !localReady || !objectiveReady || !ownerReady) return false;
         setValidationError(null);
         return true;
     };
@@ -219,7 +217,7 @@ export default function OrganizationObjectPage({
     };
 
     const saveDisabled = busy || organizationTypes.loading || Boolean(organizationTypes.error) || !form.organizationTypeId
-        || !localReady || !objectiveReady || !ownerReady || parentDialogOpen
+        || !localReady || !objectiveReady || !ownerReady
         || ownerSelectionDirty
         || subprocessSelectionPending || (subprocessChanges.length > 0 && !subprocessReady)
         || invalidDateDraft
@@ -230,9 +228,7 @@ export default function OrganizationObjectPage({
 
     return <div style={ROOT_STYLE}>
         <CatalogParentHeader objectTitle={form.name || t("organization.object.modalTitle")} label={t("organization.fields.parent")} parentId={form.parentOrganizationId}
-            busy={busy} onClearParent={!readOnly ? () => change("parentOrganizationId", null) : undefined}
-            parent={selectedParent ? { code: selectedParent.code, title: selectedParent.name, type: selectedParent.organizationTypeName ?? t(`organization.types.${selectedParent.organizationType}`), status: selectedParent.status } : null}
-            selection={!readOnly ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+            parent={selectedParent ? { code: selectedParent.code, title: selectedParent.name, type: selectedParent.organizationTypeName ?? t(`organization.types.${selectedParent.organizationType}`), status: selectedParent.status } : null} />
 
         <DetailTabContainer onTabSelect={(event) => { const key = (event.detail.tab.getAttribute("data-tab-key") as OrganizationTabKey | null); if (key) { if (!controlledTab) setInternalTab(key); onActiveTabChange?.(key); } }}>
             <Tab text={t("organization.tabs.general", { defaultValue: "General Information" })} selected={activeTab === "general"} data-tab-key="general" />
@@ -295,6 +291,5 @@ export default function OrganizationObjectPage({
             <Button design="Transparent" disabled={busy} onClick={onCancel}>{mode === "view" ? t("common.close", { defaultValue: "Close" }) : t("common.cancel", { defaultValue: "Cancel" })}</Button>
         </DialogFooter>
 
-        <ParentValueHelpDialog open={parentDialogOpen} items={allItems} currentId={value?.id ?? null} selectedParentId={form.parentOrganizationId} busy={busy} onClose={() => !busy && setParentDialogOpen(false)} onSelect={(id) => { change("parentOrganizationId", id); setParentDialogOpen(false); }} />
     </div>;
 }

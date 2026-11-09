@@ -2,7 +2,6 @@ import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import {
   Button,
   Dialog,
-  Input,
   Label,
   Option,
   Select,
@@ -37,7 +36,6 @@ function MoveDialogContent({
 }: Props) {
   const { t } = useTranslation();
   const [parentId, setParentId] = useState(currentParentId ?? "");
-  const [sortOrder, setSortOrder] = useState(String(currentSortOrder));
   return (
     <Dialog
       open={open}
@@ -47,7 +45,7 @@ function MoveDialogContent({
           <Button
             design="Emphasized"
             disabled={busy || (requiredParent && !parentId)}
-            onClick={() => onMove(parentId || null, Number(sortOrder || 0))}
+            onClick={() => onMove(parentId || null, currentSortOrder)}
           >
             {t("centralCatalog.move", { defaultValue: "جابجایی" })}
           </Button>
@@ -81,15 +79,6 @@ function MoveDialogContent({
             </Option>
           ))}
         </Select>
-      </Label>
-      <Label>
-        {t("centralCatalog.sortOrder", { defaultValue: "ترتیب نمایش" })}
-        <Input
-          type="Number"
-          value={sortOrder}
-          disabled={busy}
-          onInput={(event) => setSortOrder(event.target.value)}
-        />
       </Label>
     </Dialog>
   );

@@ -31,7 +31,7 @@ component, or - there is a documented limitation.
 - `AppRouterRoot` owns native density on both html and body: login uses UI5's
   default Cozy density; setup and all authenticated pages use Compact. This
   also covers trees, tables, dialog top layers and React portals. PublicAuthLayout
-  only controls the auth page layout; language/theme settings preserve density.
+  only controls the auth page layout; language and direction settings preserve density.
 - Let UI5 determine input and action heights. Do not override them with CSS.
 - Use `Form` / `FormItem` and `itemSpacing="Normal"` for label/field layout
   instead of custom field heights, margins or gaps.
@@ -53,15 +53,15 @@ component, or - there is a documented limitation.
 
 ## Application theme
 
-- Use standard Horizon (`sap_horizon`), with the standard Horizon Dark
-  (`sap_horizon_dark`) option. Previously saved Quartz settings fall back to Horizon.
+- Use standard Quartz Light (`sap_fiori_3`) throughout the application.
 - The authorized exception is the existing Vazirmatn font, loaded from local
   font assets and applied through UI5's public font-family theme tokens.
   Do not replace icon fonts or add shadow-DOM CSS for typography.
-- Keep native UI5 component colors, font sizes and weights, borders, radii, shadows and
-  focus indicators. Do not override theme tokens, shadow parts or component
-  styles through CSS, inline styles or `addCustomCSS`, except for the font-family
-  tokens above, the requested menu icon alignment, and the profile identity colors below.
+- Keep native UI5 component colors, borders, radii, shadows and focus indicators.
+  Use Quartz's small font-size token for tree rows, tables, catalog details
+  panels, and modal body text and controls. Keep bold Vazirmatn for headings.
+  Use the public font-family tokens and component parts. Keep other styles native,
+  with the scoped menu and search icon alignment and profile identity colors below.
 - CSS may arrange page layouts and branding images; it must not reskin UI5 controls.
 - Do not show placeholder text. Keep field labels and accessible search names.
   The shared date picker uses a blank placeholder to suppress UI5's automatic format hint.
@@ -84,21 +84,28 @@ component, or - there is a documented limitation.
 - `MainLayout` uses `NavigationLayout`, with `ShellBar` in its header and
   `SideNavigation` as its direct side content. Let `NavigationLayout` own
   navigation sizing and device behavior; do not add a parallel fixed-width CSS shell.
+- Put the DG logo and the integrated GRC platform title together in the expanded
+  side navigation header.
 - Use ShellBar's native profile Avatar and `profile-click` opener for `UserMenu`.
   Its selected `UserMenuAccount` owns the centered identity header and its built-in
   sign-out action owns the footer. Do not add Profile, Preferences or account
   switching entries. Dataset selection is a separate control in ShellBar's content slot.
 - Put UI settings in `UserMenu`, opening native `UserSettingsDialog` with
   `UserSettingsItem` and `UserSettingsView`. Do not add a separate settings action
-  to ShellBar. Preserve immediate theme/language/direction persistence.
-- Render native Compact `Breadcrumbs` directly in the page content above the
-  routed page/title. Do not add a separate Bar, header strip, background or fixed height.
+  to ShellBar. Persist language and direction changes immediately.
+- Render native Compact `Breadcrumbs` above the routed page/title, with a native
+  Back button at the opposite end of the same row. Back opens the nearest parent
+  page. Sidebar destinations navigate on activation even when the current route
+  already selects their section. Use native unselectable parents so the title
+  and expander both toggle the group. Child items open their routes.
 - Put Roles under User Management at `/access-control/roles`. Profile Management
   is the root-only `Profile` child at `/profiles` under Initial Data Management
   (مدیریت داده‌های اولیه).
   The same group contains Organization Types and Document Types for root and
-  profile admins; both dictionaries belong to the selected profile and show
-  that profile in their list, detail and editor. Do not add a Settings group.
+  profile admins. Both dictionaries belong to the selected profile and show
+  that profile in the list. Detail and editor dialogs show the dictionary item
+  fields. Keep profile fields in forms that create or edit profiles or grant
+  access to them. Do not add a Settings group.
   Legacy `/settings/roles` and `/settings/profiles` URLs redirect to these pages.
 - Users and Profiles use full-width native Tables and separate native Dialogs
   for details. Roles currently has no detail modal. Do not add a side detail pane.
@@ -113,15 +120,21 @@ component, or - there is a documented limitation.
   user's password, including root. Root cannot be disabled.
   The Users/Profile detail footer contains only Edit and Close;
   omit manual Refresh actions and the deleted-profile filter.
-  List search is the first header action, before Create, revealing
-  native Search inside a Popover on demand. HeaderSearch forwards its slot;
-  do not add a standalone search input or ShellBar search/navigation logic.
+  Search openers in the nine main catalog trees and in dialog headers follow
+  the title in reading order. Relationship toolbars group the title, search
+  and status filter at the inline start. Edit actions use a separate group at
+  the inline end so the filter keeps its position in View and Edit. HeaderSearch
+  forwards its slot and opens native Search in a Popover. UI5 Search 2.18
+  uses a scoped RTL adjustment for its internal icon placement.
   Compact editors use native Form/FormItem spacing and retain draft protection.
 - `ProfileSelector` forwards its `slot` to the outer UI5 FlexBox in ShellBar.
-  Put the colored Avatar and profile name in one native active ListItemCustom
-  inside a List. The whole item opens the choices, with one keyboard focus target.
-  Keep its native hover/focus styling; do not add nested buttons or an interactive
-  Avatar inside it. Do not add a separate color marker or field label.
+  In the multi-profile edition, put the colored Avatar and current profile name
+  in one native active ListItemCustom inside a List. The whole item opens the
+  choices, with one keyboard focus target. Omit the selector in single-profile.
+  Keep native hover/focus behavior. The list item has no ShellBar appearance
+  option in UI5 2.18, so use the public ShellBar color tokens for its surface
+  and text and the theme's contrast focus color. Do not add nested buttons, an
+  interactive Avatar, a separate color marker or a field label.
   Decorative content inside active profile/symbol items passes pointer events to
   the native list item, so Text does not replace its pointer cursor with a caret.
   Use Popover/List/ListItemCustom with profile names for selection.
@@ -146,14 +159,13 @@ component, or - there is a documented limitation.
   DialogFooter to portal their locally owned actions into that same native slot.
   Center the actions in Bar's default slot so they remain visible while content
   scrolls. Do not put action footers inside scrollable content or use CSS sticky.
-- Governance detail/editor dialogs, parent pickers and hierarchy selectors use
-  the shared `catalogObjectDialog` host rule in `modal-layout.css`: 90vw,
-  increasing to 96vw below 720px. Keep their content at 100% of that host;
-  feature CSS and inline styles must not define competing viewport widths or
-  minimum content widths. The shared 70dvh height cap and native Dialog slots
-  remain independent of this width rule. Confirmation dialogs keep native sizing.
-- Management detail/editor dialogs share the catalog width (90vw). Users,
-  Profiles and short catalog/group forms use two columns; larger forms use
+- `modal-layout.css` owns the shared dialog widths. Two-column forms use up to
+  72vw capped at 58rem, and three-column catalog forms, parent pickers and
+  hierarchy selectors use 90vw. Both use 96vw on screens up to 720px. Keep content
+  at 100% of the host. The 70dvh Governance height cap and native Dialog slots
+  remain independent of the width. Confirmation dialogs keep native sizing.
+- Management detail/editor dialogs, including Users and Profiles, and short
+  catalog/group forms use two columns. Larger forms use
   three columns on wide screens and two on medium screens. Collapse to one
   column on small screens. Keep validity date pairs in the same row as a group.
   Conditionally mounted management detail/profile editor dialogs start closed;
@@ -170,17 +182,13 @@ component, or - there is a documented limitation.
   General Information uses Organization's shared responsive three-column grid
   and paired validity-date layout; compact group forms keep two columns.
 - Governance catalog dialogs use `CatalogParentHeader` in the native Dialog
-  header, retaining the current item's title and at most four parent fields:
-  code, title, type and lifecycle status. Parent/owner selection belongs in
-  this header and updates the existing form draft and Save command. Root items
-  keep the same layout with the catalog top level and No Parent state;
-  independent catalogs use the same layout with an Independent Catalog state.
-  A required or unresolved parent must never be presented as a root. Keep
-  existing selection permissions, eligibility filters and navigation guards.
-  Show Remove Parent in the header only for an editable optional parent that
-  is currently set. Clearing changes the existing draft; aggregate Save and
-  navigation protection still own persistence. Hide removal for required
-  parents, standalone catalogs and View mode, and disable it while busy.
+  header to show the current item's title and the parent's code, title, type
+  and lifecycle status. The header is read-only. Root items show a dash in each
+  parent field. Independent catalogs show an Independent Catalog state.
+  A required or unresolved parent must never be presented as a root.
+  Create uses the parent or owner resolved from the catalog tree context.
+  Edit retains the stored parent. The form displays parent information only
+  in the header.
 - Governance dialog tabs use `DetailTabContainer` with its unused native content
   area collapsed. Keep the existing panels outside the tab strip so drafts stay
   mounted, without an empty band between tabs and tables. Table, List and Tree
@@ -191,25 +199,28 @@ component, or - there is a documented limitation.
   catalog View actions remain the entry points for viewing another item.
 - Governance relationship tables show at most five data columns, ordered Code,
   Name, Status, Valid From, Valid To; omit dates when the relation has none.
-  Supplementary fields render in a native inline Form for exactly one selected
-  row, preserving their typed editors and parent Save. Selection in read-only
-  tables only reveals details. Never hide date drafts behind this detail form.
+  Row values, including validity dates, are read-only. Supplementary fields
+  render in a native display Form for exactly one selected row. Keep selection
+  and explicit toolbar commands under the owning modal's Save.
+  Omit static instructional text from modal forms and pickers. Keep validation,
+  errors and messages tied to the current state.
 - Governance General Information uses CatalogFormGrid. Count the rows required
   by a two-column layout, including wide fields and paired dates; more than
   three rows selects three columns at desktop widths, otherwise two. Responsive
   layouts fall back to two and one. This rule also applies to group forms.
   Native TextArea rows start at three; field content and validation are retained.
   Document tables group file/version/size metadata and use no more than five
-  columns. Avoid fixed minimum tab heights and nested scrolling around the
+  columns. Title and type are read-only in modal tables. Avoid fixed minimum
+  tab heights and nested scrolling around the
   shared measured table viewport.
 - The governance hub uses a simple Title without a hero avatar or repeated
-  introductory copy or a Back button. Card descriptions belong in native Text in the Card body:
-  CardHeader in UI5 2.18 limits subtitle lines and has no public wrapping option.
-  Do not override its shadow styles or fix card heights to force wrapping.
-  Equalize the launcher rows with grid-auto-rows: 1fr and stretch each Card to
-  its cell height, letting the longest content determine the shared height.
+  introductory copy or a Back button. Give the cards a square aspect ratio and
+  retain the native Quartz radius. Use the CardHeader for the title and put the
+  recorded item count beside a neutral UI5 Icon at the inline start of the body.
   The full Card navigates on click; keep its interactive CardHeader for native
-  keyboard access. Do not add a separate arrow/footer action strip.
+  keyboard access. Use the Quartz light-blue selection color on the whole card,
+  including its header, on hover or keyboard focus. Use the side navigation's
+  active background and text colors while pressing the card. Do not add a separate arrow/footer action strip.
   Decorative Card body content passes pointer events to the Card so native Text
   does not show a text caret or intercept the full-card navigation area.
   Account Groups uses the accounting-document-verification icon.
@@ -223,10 +234,6 @@ component, or - there is a documented limitation.
   nested catalog URLs. Parent items navigate through the SPA router; the final
   item is the current page. Do not derive this hierarchy from flat URL segments.
 - Do not repeat a Master Data link below the breadcrumbs on catalog pages.
-  Parent actions use the short labels Select/Delete and the same
-  CatalogActionButton as Global Control: Emphasized for selection, Negative
-  for clearing, with the shared action width and native Compact styling.
-  Clearing only changes an optional parent draft and still joins main Save.
 - Login and setup share `PublicAuthLayout`, using native `Card` and `Grid`.
   Setup uses the compact variant and retains its four native form groups.
 - Login inputs explicitly request the enclosing HTML form's submission on Enter:
@@ -342,6 +349,9 @@ no catalog display-order provider belongs in this dialog.
 
 ## Main catalog tree ordering
 
+- Use the native Tree header slot for the shared column headings. The title and
+  type columns share their layout with the tree rows. Single-column trees show
+  only the title heading.
 - Use native Tree move-over/move events and TreeItemCustom movable for sibling
   Before/After gestures. Main List Reports mount CatalogTreeOrder; reusable tree
   items have no ordering behavior outside that provider. Never mount it in a

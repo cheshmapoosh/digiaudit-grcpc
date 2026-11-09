@@ -1,5 +1,9 @@
 package com.digiaudit.grcpc.modules.masterdata.process.application;
 
+import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.api.dto.CreateCentralControlObjectiveRequest.InitialSubprocess;
+import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.domain.entity.CentralControlObjectiveEntity;
+import java.util.TreeMap;
+
 import com.digiaudit.grcpc.common.exception.ConflictException;
 import com.digiaudit.grcpc.common.exception.NotFoundException;
 import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
@@ -992,21 +996,65 @@ public class ProcessService {
         long expectedVersion = requireVersion(version);
         assertVersion(subprocess, expectedVersion, "Subprocess");
         requireMutableSubprocess(subprocess);
-        LocalDate from = subprocess.getValidFrom();
-        if (from == null || (control.getValidFrom() != null && control.getValidFrom().isAfter(from))) {
-            from = control.getValidFrom();
-        }
-        LocalDate to = subprocess.getValidTo();
-        if (to == null || (control.getValidTo() != null && control.getValidTo().isBefore(to))) {
-            to = control.getValidTo();
-        }
+        LocalDate from = latestStart(subprocess.getValidFrom(), control.getValidFrom());
+        LocalDate to = earliestEnd(subprocess.getValidTo(), control.getValidTo());
         var prepared = controlScopes.prepareCreatedControl(context, subprocess, control, from, to);
         JsonNode before = subprocessSnapshot(subprocess);
-        subprocess.controlScopesChanged(actorProvider.currentActorId(), Instant.now(clock));
+        subprocess.scopesChanged(actorProvider.currentActorId(), Instant.now(clock));
         CentralSubprocessEntity saved = subprocessRepository.saveAndFlush(subprocess);
         var scopeResult = controlScopes.apply(prepared, saved);
         return combine(context, completedSubprocess(context, saved, RevisionOperationType.UPDATE,
                 expectedVersion, before), scopeResult.revisionContents());
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public List<CentralSubprocessEntity> lockControlObjectiveSubprocesses(
+            RevisionExecutionContext context, List<InitialSubprocess> selections) {
+        if (selections == null || selections.isEmpty()) return List.of();
+        mutationGuard.requireHierarchyGuard(context, MasterDataHierarchyKey.PROCESS);
+        var ordered = new TreeMap<UUID, Long>();
+        for (var selection : selections) {
+            if (ordered.putIfAbsent(selection.subprocessId(), requireVersion(selection.version())) != null) {
+                throw new UnprocessableEntityException("CONTROL_OBJECTIVE_SCOPE_CHANGE_INVALID",
+                        "error.masterdata.controlObjectiveScope.invalidChange", "Duplicate Subprocess in initial scopes");
+            }
+        }
+        List<CentralSubprocessEntity> locked = new ArrayList<>();
+        for (var selection : ordered.entrySet()) {
+            var subprocess = lockSubprocessIncludingDeleted(selection.getKey());
+            assertVersion(subprocess, selection.getValue(), "Subprocess");
+            requireMutableSubprocess(subprocess);
+            locked.add(subprocess);
+        }
+        return locked;
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public List<RevisionContentResult> attachCreatedControlObjective(
+            RevisionExecutionContext context, List<CentralSubprocessEntity> lockedSubprocesses,
+            CentralControlObjectiveEntity objective) {
+        List<RevisionContentResult> contents = new ArrayList<>();
+        for (var subprocess : lockedSubprocesses) {
+            LocalDate from = latestStart(subprocess.getValidFrom(), objective.getValidFrom());
+            LocalDate to = earliestEnd(subprocess.getValidTo(), objective.getValidTo());
+            var prepared = controlObjectiveScopes.prepareCreatedControlObjective(context, subprocess, objective, from, to);
+            long version = subprocess.getVersion();
+            JsonNode before = subprocessSnapshot(subprocess);
+            subprocess.scopesChanged(actorProvider.currentActorId(), Instant.now(clock));
+            var saved = subprocessRepository.saveAndFlush(subprocess);
+            var scopeResult = controlObjectiveScopes.apply(prepared, saved);
+            contents.addAll(completedSubprocess(context, saved, RevisionOperationType.UPDATE, version, before).contentResults());
+            contents.addAll(scopeResult.revisionContents());
+        }
+        return contents;
+    }
+
+    private static LocalDate latestStart(LocalDate left, LocalDate right) {
+        return left == null || (right != null && right.isAfter(left)) ? right : left;
+    }
+
+    private static LocalDate earliestEnd(LocalDate left, LocalDate right) {
+        return left == null || (right != null && right.isBefore(left)) ? right : left;
     }
 
     private RevisionOperationResult completedProcess(

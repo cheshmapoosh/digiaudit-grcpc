@@ -38,9 +38,9 @@ import type {
 } from "../domain/document.model";
 import { getDocumentTargetKey, useDocumentState } from "../state/document.state";
 import { DeleteConfirmDialog } from "@/shared/components/DeleteConfirmDialog";
-import { PersianDatePicker } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import { HttpError } from "@/shared/infra/http.client";
+import "./document-upload.css";
 
 export interface DocumentManagerProps {
     targetType: DocumentLinkTargetType;
@@ -51,8 +51,6 @@ export interface DocumentManagerProps {
     busy?: boolean;
     title?: string;
     saveFirstMessage?: string;
-    viewHint?: string;
-    editHint?: string;
     onPendingUploadsChange?: (hasPendingUploads: boolean) => void;
     onDirtyChange?: (dirty: boolean) => void;
     persistenceMode?: "STANDALONE" | "PARENT_SAVE";
@@ -80,8 +78,6 @@ interface UploadFlowItem {
     id: string;
     file?: File;
     fileName: string;
-    mimeType?: string | null;
-    fileSize: number;
     progress: number;
     state: UploadFlowState;
     failureState?: UploadFailureState;
@@ -91,12 +87,6 @@ interface UploadFlowItem {
     error?: string;
     title: string;
     documentTypeId: string;
-    code: string;
-    description: string;
-    validFrom: string;
-    validTo: string;
-    validFromDraftValid: boolean;
-    validToDraftValid: boolean;
 }
 
 type ActionMessageDesign = "Information" | "Positive" | "Negative";
@@ -106,7 +96,13 @@ interface ActionMessage {
     text: string;
 }
 
-const PANEL_STYLE: CSSProperties = { display: "grid", gap: "0.75rem", minHeight: "15rem", minWidth: 0, padding: "1rem" };
+const PANEL_STYLE: CSSProperties = {
+    display: "grid",
+    alignContent: "start",
+    gap: "var(--sapContent_Space_Tiny)",
+    minWidth: 0,
+    padding: "var(--sapContent_Space_Small)",
+};
 
 const HEADER_STYLE: CSSProperties = {
     display: "flex",
@@ -133,28 +129,20 @@ const TITLE_INPUT_STYLE: CSSProperties = {
     width: "100%",
 };
 
-const UPLOAD_PROGRESS_AREA_STYLE: CSSProperties = {
-    display: "grid",
-    gap: "0.5rem",
-    width: "100%",
-};
-
 const UPLOAD_ITEM_STYLE: CSSProperties = {
     display: "grid",
-    gap: "0.5rem",
+    gap: "var(--sapContent_Space_Tiny)",
     width: "100%",
     minWidth: 0,
 };
 
-const UPLOAD_ITEM_HEADER_STYLE: CSSProperties = {
+const UPLOAD_ITEM_ACTIONS_STYLE: CSSProperties = {
     display: "flex",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     alignItems: "center",
-    gap: "0.75rem",
+    gap: "var(--sapContent_Space_Tiny)",
     flexWrap: "wrap",
 };
-
-const META_TEXT_STYLE: CSSProperties = { overflowWrap: "anywhere" };
 
 const NONE_TEXT = "-";
 const FALLBACK_PROGRESS_INTERVAL_MS = 300;
@@ -245,11 +233,6 @@ function initialTitle(fileName: string): string {
     return withoutExtension || fileName;
 }
 
-function optionalText(value: string): string | null {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-}
-
 function deriveFailureState(error: unknown, expiresAt?: string): UploadFailureState {
     if (isExpired(expiresAt)) {
         return "EXPIRED";
@@ -289,8 +272,6 @@ export default function DocumentManager({
     busy = false,
     title,
     saveFirstMessage,
-    viewHint,
-    editHint,
     onPendingUploadsChange,
     onDirtyChange,
     persistenceMode = "STANDALONE",
@@ -300,6 +281,10 @@ export default function DocumentManager({
 }: DocumentManagerProps) {
     const { t } = useTranslation();
     const documentTypes = useBasicDataOptions("document-types", !readOnly && showActions);
+    const activeDocumentTypes = useMemo(
+        () => documentTypes.items.filter((type) => type.status === "ACTIVE"),
+        [documentTypes.items],
+    );
     const mountedRef = useRef(true);
     const progressFallbackTimersRef =
         useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
@@ -367,12 +352,10 @@ export default function DocumentManager({
             item.state === "SELECTED" || item.state === "UPLOADING" || item.state === "FINALIZING",
         );
         const invalidUpload = uploadItems.some((item) => {
-            const missingTitle = !item.existingDocument && !item.title.trim();
-            const invalidRange = Boolean(item.validFrom && item.validTo && item.validFrom > item.validTo);
-            return missingTitle || (!item.existingDocument && !item.documentTypeId)
-                || invalidRange
-                || !item.validFromDraftValid
-                || !item.validToDraftValid
+            const invalidNewDocument = !item.existingDocument && (
+                !item.title.trim() || !activeDocumentTypes.some((type) => type.id === item.documentTypeId)
+            );
+            return invalidNewDocument
                 || !item.tempUploadId
                 || item.state !== "UPLOADED"
                 || Boolean(item.failureState)
@@ -394,12 +377,8 @@ export default function DocumentManager({
             .map((item) => ({
                 rowId: item.id,
                 tempUploadId: item.tempUploadId as string,
-                code: optionalText(item.code),
                 title: item.title.trim(),
                 documentTypeId: item.documentTypeId,
-                description: optionalText(item.description),
-                validFrom: optionalText(item.validFrom),
-                validTo: optionalText(item.validTo),
             }));
         const newVersions = uploadItems
             .filter((item) => Boolean(item.existingDocument && item.tempUploadId))
@@ -408,8 +387,6 @@ export default function DocumentManager({
                 documentId: item.existingDocument!.documentId,
                 expectedDocumentVersion: item.existingDocument!.documentVersion,
                 tempUploadId: item.tempUploadId as string,
-                validFrom: optionalText(item.validFrom),
-                validTo: optionalText(item.validTo),
             }));
         const stateDirty = uploadItems.length > 0 || metadataUpdates.length > 0;
         const invalid = invalidUpload || invalidMetadata;
@@ -422,7 +399,7 @@ export default function DocumentManager({
             newVersions,
             metadataUpdates,
         };
-    }, [metadataDrafts, metadataErrors, rows, typeDrafts, uploadItems]);
+    }, [activeDocumentTypes, metadataDrafts, metadataErrors, rows, typeDrafts, uploadItems]);
     const effectiveDirty = parentSaveMode ? parentSaveDraftState.dirty : dirty;
 
     useEffect(() => {
@@ -596,7 +573,7 @@ export default function DocumentManager({
 
     const updateStagedField = useCallback((
         rowId: string,
-        field: "documentTypeId" | "title" | "code" | "description" | "validFrom" | "validTo",
+        field: "documentTypeId" | "title",
         value: string,
     ) => {
         setUploadItems((current) =>
@@ -670,12 +647,6 @@ export default function DocumentManager({
                 }));
             }
 
-            if (item.validFrom && item.validTo && item.validFrom > item.validTo) {
-                throw new Error(t("document.validation.invalidValidityRange", {
-                    defaultValue: "Valid to must be on or after valid from.",
-                }));
-            }
-
             updateUploadItem(item.id, {
                 state: "FINALIZING",
                 failureState: undefined,
@@ -689,8 +660,6 @@ export default function DocumentManager({
                     expectedDocumentVersion: item.existingDocument.documentVersion,
                     targetType,
                     targetId,
-                    validFrom: optionalText(item.validFrom),
-                    validTo: optionalText(item.validTo),
                 });
                 return;
             }
@@ -702,20 +671,19 @@ export default function DocumentManager({
                 }));
             }
 
-            if (!item.documentTypeId) throw new Error(t("document.errors.typeRequired"));
+            if (!activeDocumentTypes.some((type) => type.id === item.documentTypeId)) {
+                throw new Error(t(item.documentTypeId ? "document.errors.typeUnavailable" : "document.errors.typeRequired"));
+            }
             await createDocument({
                 tempUploadId: item.tempUploadId,
-                code: optionalText(item.code),
                 title: titleValue,
                 documentTypeId: item.documentTypeId,
-                description: optionalText(item.description),
                 targetType,
                 targetId,
-                validFrom: optionalText(item.validFrom),
-                validTo: optionalText(item.validTo),
             });
         },
         [
+            activeDocumentTypes,
             addVersion,
             createDocument,
             saveFirstMessage,
@@ -733,19 +701,11 @@ export default function DocumentManager({
                 id: rowId,
                 file,
                 fileName: file.name,
-                mimeType: file.type,
-                fileSize: file.size,
                 progress: 1,
                 state: "SELECTED",
                 existingDocument,
                 title: existingDocument?.title ?? initialTitle(file.name),
                 documentTypeId: existingDocument?.documentTypeId ?? "",
-                code: existingDocument?.code ?? "",
-                description: existingDocument?.description ?? "",
-                validFrom: "",
-                validTo: "",
-                validFromDraftValid: true,
-                validToDraftValid: true,
             };
 
             setUploadItems((current) => [...current, initialItem]);
@@ -777,22 +737,12 @@ export default function DocumentManager({
                 uploadedTemp = upload;
                 clearUploadProgressFallback(rowId);
 
-                const uploadedItem: UploadFlowItem = {
-                    ...initialItem,
+                updateUploadItem(rowId, {
+                    fileName: upload.originalFileName,
                     tempUploadId: upload.tempUploadId,
                     expiresAt: upload.expiresAt,
                     progress: 100,
                     state: "UPLOADED",
-                    mimeType: upload.mimeType,
-                    fileSize: upload.fileSize,
-                };
-                updateUploadItem(rowId, uploadedItem);
-                setActionMessage({
-                    design: "Positive",
-                    text: t("document.upload.staged", {
-                        defaultValue: "File \"{{fileName}}\" is uploaded temporarily. Review metadata, then save the document.",
-                        fileName: file.name,
-                    }),
                 });
             } catch (error) {
                 clearUploadProgressFallback(rowId);
@@ -1052,7 +1002,7 @@ export default function DocumentManager({
     const renderDocumentTitleControl = (row: DocumentLinkSummary) => {
         const titleValue = getDraftTitle(row);
 
-        if (readOnly || !showActions) {
+        if (readOnly || !showActions || parentSaveMode) {
             return titleValue;
         }
 
@@ -1144,64 +1094,20 @@ export default function DocumentManager({
         );
     };
 
-    const renderUploadStatusText = (item: UploadFlowItem): string => {
+    const renderUploadFailureText = (item: UploadFlowItem): string | undefined => {
         if (item.failureState === "EXPIRED" || isExpired(item.expiresAt)) {
-            return t("document.upload.expired", {
-                defaultValue: "Temporary upload expired",
-            });
+            return t("document.upload.expired");
         }
-
-        if (item.failureState === "ACCESS_DENIED") {
-            return t("document.upload.accessDenied", {
-                defaultValue: "Access denied",
-            });
+        if (item.error) return item.error;
+        switch (item.failureState) {
+            case "ACCESS_DENIED": return t("document.upload.accessDenied");
+            case "REUPLOAD_REQUIRED": return t("document.upload.reuploadRequired");
+            case "VERSION_CONFLICT": return t("document.upload.versionConflict");
+            case "DUPLICATE_VERSION": return t("document.upload.duplicateVersion");
+            case "UPLOAD_FAILED": return t("document.upload.failed");
+            case "FINALIZATION_FAILED": return t("document.upload.finalizeFailed");
+            default: return undefined;
         }
-
-        if (item.failureState === "REUPLOAD_REQUIRED") {
-            return t("document.upload.reuploadRequired", { defaultValue: "Re-upload required" });
-        }
-
-        if (item.failureState === "VERSION_CONFLICT") {
-            return t("document.upload.versionConflict", { defaultValue: "Document refresh required" });
-        }
-
-        if (item.failureState === "DUPLICATE_VERSION") {
-            return t("document.upload.duplicateVersion", { defaultValue: "Duplicate version draft" });
-        }
-
-        if (item.failureState === "UPLOAD_FAILED") {
-            return t("document.upload.failed", { defaultValue: "Upload failed" });
-        }
-
-        if (item.failureState === "FINALIZATION_FAILED") {
-            return t("document.upload.finalizeFailed", {
-                defaultValue: "Finalization failed",
-            });
-        }
-
-        if (item.state === "FINALIZING") {
-            return t("document.upload.finalizing", {
-                defaultValue: "Saving document",
-            });
-        }
-
-        if (item.state === "UPLOADED") {
-            return t("document.upload.available", {
-                defaultValue: "Temporary upload is available",
-            });
-        }
-
-        const progress = normalizeProgress(item.progress);
-        if (progress > 0) {
-            return t("document.upload.fileProgress", {
-                defaultValue: "Uploading {{progress}}%",
-                progress,
-            });
-        }
-
-        return t("document.upload.fileInProgress", {
-            defaultValue: "Uploading",
-        });
     };
 
     const renderUploadProgressArea = () => {
@@ -1213,165 +1119,103 @@ export default function DocumentManager({
             <UploadCollection
                 accessibleName={t("document.title", { defaultValue: "Documents" })}
                 hideDragOverlay
-                noDataText={t("document.empty", { defaultValue: "No files found" })}
                 selectionMode="None"
-                style={UPLOAD_PROGRESS_AREA_STYLE}
             >
                 {uploadItems.map((item) => {
-                    const progress = normalizeVisibleProgress(item.progress);
-                    const progressValue = item.failureState ? 100 : progress;
-                    const statusText = renderUploadStatusText(item);
-                    const staged =
-                        item.state === "UPLOADED" &&
-                        Boolean(item.tempUploadId) &&
-                        !isExpired(item.expiresAt) &&
-                        !item.failureState;
-                    const titleMissing = !item.existingDocument && !item.title.trim();
-                    const invalidValidityRange = Boolean(
-                        item.validFrom && item.validTo && item.validFrom > item.validTo,
-                    );
-                    const canFinalize =
-                        staged &&
-                        Boolean(targetId) &&
-                        !parentSaveMode &&
-                        !busy &&
-                        !readOnly &&
-                        !titleMissing && (Boolean(item.existingDocument) || Boolean(item.documentTypeId)) &&
-                        !invalidValidityRange;
-                    const showMetadata =
-                        item.state === "UPLOADED" ||
-                        item.state === "FINALIZING" ||
-                        item.failureState === "FINALIZATION_FAILED";
-                    const finalizeText = item.failureState === "FINALIZATION_FAILED"
-                        ? t("document.upload.retryFinalize", { defaultValue: "Retry" })
-                        : t("document.actions.finalize", { defaultValue: "Save Document" });
-                    const uploadState = item.failureState
-                        ? "Error"
-                        : item.state === "UPLOADING" || item.state === "FINALIZING"
-                            ? "Uploading"
-                            : "Ready";
+                    const existing = item.existingDocument;
+                    const showMetadata = item.state === "UPLOADED" || item.state === "FINALIZING";
+                    const metadataDisabled = busy || readOnly || item.state === "FINALIZING";
+                    const activeType = activeDocumentTypes.find((type) => type.id === item.documentTypeId);
+                    const typeUnavailable = !existing && Boolean(item.documentTypeId) && !activeType
+                        && !documentTypes.loading && !documentTypes.error;
+                    const titleMissing = !existing && !item.title.trim();
+                    const issue = renderUploadFailureText(item);
+                    const showFinalize = showMetadata && !parentSaveMode;
+                    const canFinalize = item.state === "UPLOADED" && Boolean(item.tempUploadId) && !isExpired(item.expiresAt)
+                        && (!item.failureState || item.failureState === "FINALIZATION_FAILED")
+                        && Boolean(targetId) && !metadataDisabled && !titleMissing && (Boolean(existing) || Boolean(activeType));
+                    const showRemove = parentSaveMode || Boolean(issue);
+                    const uploadState = item.failureState ? "Error" : item.state === "UPLOADED" ? "Complete" : "Uploading";
 
                     return (
                         <UploadCollectionItem
                             key={item.id}
                             file={item.file ?? null}
-                            fileName={item.fileName}
-                            progress={progressValue}
+                            fileName={showMetadata ? "" : item.fileName}
+                            progress={item.failureState ? 100 : normalizeVisibleProgress(item.progress)}
                             uploadState={uploadState}
                             type="Inactive"
                             hideDeleteButton
                             hideRetryButton
                             hideTerminateButton
-                            highlight={item.failureState ? "Negative" : "None"}
+                            highlight={issue ? "Negative" : "None"}
                         >
                             <div style={UPLOAD_ITEM_STYLE}>
-                                <div style={UPLOAD_ITEM_HEADER_STYLE}>
-                                    <span style={META_TEXT_STYLE}>{formatFileSize(item.fileSize)}</span>
-                                    <div style={ACTIONS_STYLE}>
-                                        {showMetadata && !parentSaveMode ? (
+                                {showMetadata ? (
+                                    <CatalogFormGrid className="documentUploadFields" sizeDialog={false}>
+                                        <div>
+                                            <Label for={`${item.id}-file`}>{t("document.fields.fileName")}</Label>
+                                            <Input id={`${item.id}-file`} readonly value={item.fileName} title={item.fileName} />
+                                        </div>
+                                        <div>
+                                            <Label for={`${item.id}-title`} required={!existing}>{t("document.fields.title")}</Label>
+                                            <Input
+                                                id={`${item.id}-title`}
+                                                value={item.title}
+                                                maxlength={255}
+                                                readonly={Boolean(existing)}
+                                                disabled={metadataDisabled}
+                                                valueState={titleMissing ? "Negative" : "None"}
+                                                valueStateMessage={titleMissing ? <Text>{t("document.errors.titleRequired")}</Text> : undefined}
+                                                onInput={(event) => updateStagedField(item.id, "title", readInputValue(event))}
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label for={`${item.id}-type`} required={!existing}>{t("document.fields.documentType")}</Label>
+                                            {existing ? (
+                                                <Input id={`${item.id}-type`} readonly value={existing.documentTypeName ?? NONE_TEXT} />
+                                            ) : (
+                                                <Select
+                                                    id={`${item.id}-type`}
+                                                    required
+                                                    value={activeType?.id ?? ""}
+                                                    disabled={metadataDisabled || documentTypes.loading || Boolean(documentTypes.error)}
+                                                    valueState={typeUnavailable ? "Negative" : "None"}
+                                                    valueStateMessage={typeUnavailable ? <Text>{t("document.errors.typeUnavailable")}</Text> : undefined}
+                                                    onChange={(event) => updateStagedField(item.id, "documentTypeId", event.detail.selectedOption.value ?? "")}
+                                                >
+                                                    <Option value="" selected={!activeType}>{t("basicData.choose")}</Option>
+                                                    {activeDocumentTypes.map((type) => <Option key={type.id} value={type.id} selected={activeType?.id === type.id}>{type.name}</Option>)}
+                                                </Select>
+                                            )}
+                                        </div>
+                                    </CatalogFormGrid>
+                                ) : null}
+                                {issue || showFinalize || showRemove ? (
+                                    <div style={UPLOAD_ITEM_ACTIONS_STYLE}>
+                                        {issue ? <ObjectStatus state="Negative">{issue}</ObjectStatus> : null}
+                                        {showFinalize ? (
                                             <Button
                                                 design="Emphasized"
                                                 icon="save"
                                                 disabled={!canFinalize}
                                                 tooltip={targetId ? undefined : saveFirstText}
-                                                onClick={() => {
-                                                    void retryFinalization(item);
-                                                }}
+                                                onClick={() => void retryFinalization(item)}
                                             >
-                                                {finalizeText}
+                                                {t(item.failureState === "FINALIZATION_FAILED" ? "document.upload.retryFinalize" : "document.actions.finalize")}
                                             </Button>
                                         ) : null}
-                                        {item.failureState || parentSaveMode ? (
+                                        {showRemove ? (
                                             <Button
                                                 design="Transparent"
+                                                disabled={metadataDisabled}
                                                 onClick={() => removeUploadItem(item.id)}
                                             >
-                                                {t("document.upload.removeFailed", {
-                                                    defaultValue: "Delete",
-                                                })}
+                                                {t("document.upload.removeFailed")}
                                             </Button>
                                         ) : null}
                                     </div>
-                                </div>
-
-                                {showMetadata ? (
-                                    <CatalogFormGrid className="modalThreeColumnGrid">
-                                        {!item.existingDocument ? (
-                                            <>
-                                                <Input
-                                                    accessibleName={t("document.fields.title", {
-                                                        defaultValue: "Title",
-                                                    })}
-                                                    value={item.title}
-                                                    maxlength={255}
-                                                    disabled={busy || item.state === "FINALIZING"}
-                                                    valueState={titleMissing ? "Negative" : "None"}
-                                                    onInput={(event) =>
-                                                        updateStagedField(item.id, "title", readInputValue(event))
-                                                    }
-                                                />
-                                                <div>
-                                                    <Label required>{t("document.fields.documentType")}</Label>
-                                                    <Select value={item.documentTypeId} disabled={busy || item.state === "FINALIZING" || documentTypes.loading || Boolean(documentTypes.error)} accessibleName={t("document.fields.documentType")} valueState={!item.documentTypeId ? "Negative" : "None"} onChange={(event) => updateStagedField(item.id, "documentTypeId", event.detail.selectedOption.value ?? "")}>
-                                                        <Option value="" selected={!item.documentTypeId}>{t("basicData.choose")}</Option>
-                                                        {documentTypes.items.filter((type) => type.status === "ACTIVE").map((type) => <Option key={type.id} value={type.id} selected={item.documentTypeId === type.id}>{type.name}</Option>)}
-                                                    </Select>
-                                                </div>
-                                                <Input
-                                                    accessibleName={t("document.fields.code", {
-                                                        defaultValue: "Code",
-                                                    })}
-                                                    value={item.code}
-                                                    maxlength={64}
-                                                    disabled={busy || item.state === "FINALIZING"}
-                                                    onInput={(event) =>
-                                                        updateStagedField(item.id, "code", readInputValue(event))
-                                                    }
-                                                />
-                                                <Input
-                                                    accessibleName={t("document.fields.description", {
-                                                        defaultValue: "Description",
-                                                    })}
-                                                    value={item.description}
-                                                    maxlength={1000}
-                                                    disabled={busy || item.state === "FINALIZING"}
-                                                    onInput={(event) =>
-                                                        updateStagedField(item.id, "description", readInputValue(event))
-                                                    }
-                                                />
-                                            </>
-                                        ) : null}
-                                        <div className="modalDateRange"><PersianDatePicker
-                                            accessibleName={t("document.fields.validFrom", {
-                                                defaultValue: "Valid From",
-                                            })}
-                                            value={item.validFrom}
-                                            disabled={busy || item.state === "FINALIZING"}
-                                            invalidValueMessage={t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
-                                            onChange={(value) => updateStagedField(item.id, "validFrom", value)}
-                                            onDraftStateChange={(state) => updateUploadItem(item.id, { validFromDraftValid: state.valid })}
-                                        />
-                                        <PersianDatePicker
-                                            accessibleName={t("document.fields.validTo", {
-                                                defaultValue: "Valid To",
-                                            })}
-                                            value={item.validTo}
-                                            disabled={busy || item.state === "FINALIZING"}
-                                            valueState={invalidValidityRange ? "Negative" : "None"}
-                                            invalidValueMessage={invalidValidityRange
-                                                ? t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })
-                                                : t("common.invalidPersianDate", { defaultValue: "Invalid date" })}
-                                            onChange={(value) => updateStagedField(item.id, "validTo", value)}
-                                            onDraftStateChange={(state) => updateUploadItem(item.id, { validToDraftValid: state.valid })}
-                                        /></div>
-                                        {invalidValidityRange ? <MessageStrip design="Negative" hideCloseButton>{t("document.validation.invalidValidityRange", { defaultValue: "Valid to must be on or after valid from." })}</MessageStrip> : null}
-                                    </CatalogFormGrid>
                                 ) : null}
-
-                                <ObjectStatus state={item.failureState ? "Negative" : "None"}>
-                                    {statusText}
-                                    {item.error ? ` - ${item.error}` : ""}
-                                </ObjectStatus>
                             </div>
                         </UploadCollectionItem>
                     );
@@ -1381,11 +1225,6 @@ export default function DocumentManager({
     };
 
     const documentTitle = title ?? t("document.title", { defaultValue: "Documents" });
-    const documentHint = readOnly
-        ? viewHint
-        : editHint ?? t("document.editHint", {
-              defaultValue: "Select a file to add a document.",
-          });
     const saveFirstText = parentSaveMode
         ? t("document.parentSaveTemporaryInfo", {
               defaultValue: "Files are uploaded temporarily and finalized when the form is saved.",
@@ -1393,7 +1232,7 @@ export default function DocumentManager({
         : saveFirstMessage ?? t("document.saveFirst", {
               defaultValue: "Save the item first, then finalize uploaded documents.",
           });
-    const canUploadDocuments = showActions && !readOnly && !busy && !documentTypes.loading && !documentTypes.error && documentTypes.items.some((item) => item.status === "ACTIVE");
+    const canUploadDocuments = showActions && !readOnly && !busy && !documentTypes.loading && !documentTypes.error && activeDocumentTypes.length > 0;
     const activeBusy = busy || loading;
     const noDataText = t("document.empty", {
         defaultValue: "No document has been added.",
@@ -1404,7 +1243,6 @@ export default function DocumentManager({
             <div style={HEADER_STYLE}>
                 <div style={HEADER_TEXT_STYLE}>
                     <Title level="H5">{documentTitle}</Title>
-                    {documentHint ? <Text>{documentHint}</Text> : null}
                 </div>
 
                 {!readOnly && showActions ? (
@@ -1416,7 +1254,6 @@ export default function DocumentManager({
                     >
                         <Button
                             design="Emphasized"
-                            icon="upload"
                             disabled={!canUploadDocuments}
                         >
                             {t("document.actions.upload", { defaultValue: "Select File" })}
@@ -1432,7 +1269,7 @@ export default function DocumentManager({
             ) : null}
 
             {!readOnly && showActions && documentTypes.error ? <MessageStrip design="Negative" hideCloseButton>{documentTypes.error}</MessageStrip> : null}
-            {!readOnly && showActions && !documentTypes.loading && !documentTypes.error && documentTypes.items.every((type) => type.status !== "ACTIVE") ? <MessageStrip design="Information" hideCloseButton>{t("document.noTypes")}</MessageStrip> : null}
+            {!readOnly && showActions && !documentTypes.loading && !documentTypes.error && activeDocumentTypes.length === 0 ? <MessageStrip design="Information" hideCloseButton>{t("document.noTypes")}</MessageStrip> : null}
             {loadError ? (
                 <MessageStrip
                     design="Negative"
@@ -1484,7 +1321,7 @@ export default function DocumentManager({
             >
                 {rows.map((row) => (
                     <TableRow key={row.documentLinkId} rowKey={row.documentLinkId}>
-                        <TableCell>{readOnly || !showActions ? <Text>{row.documentTypeName || NONE_TEXT}</Text> : <Select value={typeDrafts[row.documentId] ?? row.documentTypeId ?? ""} disabled={busy || documentTypes.loading || Boolean(documentTypes.error) || savingMetadataIds.has(row.documentId)} accessibleName={t("document.fields.documentType")} onChange={(event) => updateTypeDraft(row.documentId, event.detail.selectedOption.value ?? "")}>
+                        <TableCell>{readOnly || !showActions || parentSaveMode ? <Text>{row.documentTypeName || NONE_TEXT}</Text> : <Select value={typeDrafts[row.documentId] ?? row.documentTypeId ?? ""} disabled={busy || documentTypes.loading || Boolean(documentTypes.error) || savingMetadataIds.has(row.documentId)} accessibleName={t("document.fields.documentType")} onChange={(event) => updateTypeDraft(row.documentId, event.detail.selectedOption.value ?? "")}>
                             {!row.documentTypeId ? <Option value="" selected={!typeDrafts[row.documentId]}>{t("basicData.choose")}</Option> : null}
                             {documentTypes.items.map((type) => <Option key={type.id} value={type.id} selected={(typeDrafts[row.documentId] ?? row.documentTypeId) === type.id}>{type.name}</Option>)}
                         </Select>}</TableCell>

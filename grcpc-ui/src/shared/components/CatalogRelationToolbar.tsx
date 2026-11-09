@@ -19,21 +19,27 @@ export function CatalogRelationToolbar({ title, search, onSearch, filter, onFilt
 }) {
   const { t } = useTranslation();
   return <FlexBox wrap="Wrap" alignItems="Center" className="catalogRelationToolbar">
-    {title ? <Title level="H5">{title}</Title> : null}
-    <Select accessibleName={t("catalogRelation.status")} value={filter} disabled={busy}
-      onChange={event => onFilter(event.target.value as CatalogRelationFilter)}>
-      <Option value="ALL">{t("catalogRelation.all")}</Option>
-      <Option value="ACTIVE">{t("catalogRelation.active")}</Option>
-      <Option value="INACTIVE">{t("catalogRelation.inactive")}</Option>
-    </Select>
-    <HeaderSearch value={search} onChange={onSearch} disabled={busy} accessibleName={t("catalogRelation.search")} />
-    {selectionAction !== undefined ? selectionAction : editable
-      ? <CatalogActionButton design="Emphasized" disabled={busy || !canSelect} onClick={onSelect}>{t("catalogRelation.select")}</CatalogActionButton>
-      : null}
-    {editable ? <>
-      <CatalogActionButton disabled={busy || !canActivate} onClick={onActivate}>{t("catalogRelation.activate")}</CatalogActionButton>
-      <CatalogActionButton disabled={busy || !canInactivate} onClick={onInactivate}>{t("catalogRelation.inactivate")}</CatalogActionButton>
-      <CatalogActionButton design="Negative" disabled={busy || !canDelete} onClick={onDelete}>{t("catalogRelation.delete")}</CatalogActionButton>
-    </> : null}
+    <FlexBox wrap="Wrap" alignItems="Center" className="catalogRelationFilters">
+      {title ? <Title level="H5">{title}</Title> : null}
+      <HeaderSearch value={search} onChange={onSearch} disabled={busy} accessibleName={t("catalogRelation.search")} />
+      <Select accessibleName={t("catalogRelation.status")} value={filter} disabled={busy}
+        onChange={event => onFilter(event.target.value as CatalogRelationFilter)}>
+        <Option value="ALL">{t("catalogRelation.all")}</Option>
+        <Option value="ACTIVE">{t("catalogRelation.active")}</Option>
+        <Option value="INACTIVE">{t("catalogRelation.inactive")}</Option>
+      </Select>
+    </FlexBox>
+    {editable || selectionAction ? (
+      <FlexBox wrap="Wrap" alignItems="Center" justifyContent="End" className="catalogRelationActions">
+        {selectionAction !== undefined ? selectionAction : (
+          <CatalogActionButton design="Emphasized" disabled={busy || !canSelect} onClick={onSelect}>{t("catalogRelation.select")}</CatalogActionButton>
+        )}
+        {editable ? <>
+          <CatalogActionButton disabled={busy || !canActivate} onClick={onActivate}>{t("catalogRelation.activate")}</CatalogActionButton>
+          <CatalogActionButton disabled={busy || !canInactivate} onClick={onInactivate}>{t("catalogRelation.inactivate")}</CatalogActionButton>
+          <CatalogActionButton design="Negative" disabled={busy || !canDelete} onClick={onDelete}>{t("catalogRelation.delete")}</CatalogActionButton>
+        </> : null}
+      </FlexBox>
+    ) : null}
   </FlexBox>;
 }

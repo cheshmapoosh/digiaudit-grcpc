@@ -142,6 +142,26 @@ public class CentralSubprocessControlObjectiveScopeAggregateService {
     return new ApplyResult(contents, canonicalRows(subprocess));
   }
 
+  public PreparedChanges prepareCreatedControlObjective(
+      RevisionExecutionContext context, CentralSubprocessEntity subprocess,
+      CentralControlObjectiveEntity objective, LocalDate from, LocalDate to) {
+    requireProcessGuard(context);
+    if (!context.hasHierarchyGuard(MasterDataHierarchyKey.CONTROL)) {
+      throw new IllegalStateException("Initial Control Objective scopes require the CONTROL hierarchy guard");
+    }
+    requireScopeAccess();
+    // The aggregate has already persisted or locked this objective.
+    UUID objectiveId = objective.getId();
+    var occupied = lockScopes(subprocess.getId(), List.of(objectiveId)).get(objectiveId);
+    var endpoint = new SubprocessEndpoint(subprocess.getId(), subprocess.getStatus(),
+        subprocess.getValidFrom(), subprocess.getValidTo());
+    var change = new CentralControlObjectiveScopeChangeRequest(
+        CentralControlObjectiveScopeChangeOperation.CREATE_OR_RESTORE, objectiveId,
+        null, null, from, to, null);
+    return new PreparedChanges(subprocess.getId(), List.of(prepare(endpoint, objective, occupied,
+        change, MasterDataStructuralDependencyChecker.CoverageDeletionExclusions.NONE)));
+  }
+
   public List<CentralSubprocessControlObjectiveScopeResponse> canonicalRows(
       CentralSubprocessEntity subprocess) {
     if (!authorization.canView("PROCESS") || !authorization.canView("CONTROL")) return List.of();

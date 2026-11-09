@@ -23,7 +23,6 @@
   "objective.strategy.organizations": "Strategies group objectives. Assign objectives to organization units.",
   "objective.selection.title": "Search and select objectives",
   "objective.selection.search": "Search by objective or strategy code and name",
-  "objective.selection.help": "Strategies show the grouping structure. Select the objectives to add.",
   "objective.selection.unavailable": "Unavailable",
   "objective.tabs.general": "General information",
   "objective.tabs.organizations": "Organization units",

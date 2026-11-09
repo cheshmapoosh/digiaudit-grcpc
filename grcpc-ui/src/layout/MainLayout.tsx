@@ -18,6 +18,7 @@ import {
     SideNavigation,
     SideNavigationItem,
     SideNavigationSubItem,
+    Title,
     type NavigationLayoutDomRef,
 } from "@ui5/webcomponents-react";
 
@@ -31,16 +32,6 @@ import UserProfileMenu from "./components/UserProfileMenu";
 import {useAuthState} from "@/features/auth";
 import { useInitialAppReady } from "@/shared/bootstrap/useInitialAppReady";
 
-type SelectionChangeDetail = {
-    item?: HTMLElement;
-    selectedItem?: HTMLElement;
-};
-
-type SelectionChangeEvent = {
-    detail?: SelectionChangeDetail;
-    preventDefault?: () => void;
-};
-
 type NavItem = {
     key: string;
     text: string;
@@ -48,14 +39,6 @@ type NavItem = {
     route: string;
     selected: boolean;
 };
-
-function getPathFromSelectionEvent(event: SelectionChangeEvent): string | null {
-    const item = event.detail?.item ?? event.detail?.selectedItem ?? null;
-    const route =
-        item?.dataset?.route ?? item?.getAttribute?.("data-route") ?? null;
-
-    return route || null;
-}
 
 const EMPTY_NOTIFICATIONS: NotificationItem[] = [];
 
@@ -113,15 +96,6 @@ export default function MainLayout() {
         }
     }
 
-    function onSelectionChange(event: SelectionChangeEvent) {
-        // Route state remains authoritative if an unsaved-changes guard blocks navigation.
-        event.preventDefault?.();
-        const path = getPathFromSelectionEvent(event);
-        if (path) {
-            navigateToPath(path);
-        }
-    }
-
     const fullName =
         me?.firstName && me?.lastName
             ? `${me.firstName} ${me.lastName}`
@@ -133,6 +107,8 @@ export default function MainLayout() {
     );
 
     const isRootAdmin = Boolean(me?.rootUser);
+    const canManageProfiles = isRootAdmin && me?.multiProfileEnabled !== false;
+    const isProfilesPath = canManageProfiles && isPathInPrefixes(selectedPath, ["/profiles"]);
     const canViewUsers = isRootAdmin || authoritySet.has("ROLE_PROFILE_ADMIN");
     const canViewRoles = isRootAdmin;
 
@@ -162,6 +138,7 @@ export default function MainLayout() {
     const currentSection = mainItems.find((item) => item.selected);
     const currentCatalog = MASTER_DATA_CATALOG_ROUTES.find((item) => isPathInPrefixes(selectedPath, [item.route]));
     const breadcrumbItems = [{ route: "/dashboard", text: t("nav.home") }];
+    const basicDataRoute = "/basic-data/organization-types";
     if (selectedPath !== "/dashboard") {
         if (currentSection) {
             breadcrumbItems.push({ route: currentSection.route, text: currentSection.text });
@@ -170,17 +147,21 @@ export default function MainLayout() {
             breadcrumbItems.push({ route: "/access-control/users", text: t("nav.userManagement") });
             const roles = isPathInPrefixes(selectedPath, ["/access-control/roles"]);
             breadcrumbItems.push({ route: roles ? "/access-control/roles" : "/access-control/users", text: t(roles ? "nav.roles" : "nav.users") });
-        } else if (isPathInPrefixes(selectedPath, ["/profiles"])) {
-            breadcrumbItems.push({ route: "/basic-data", text: t("basicData.management") });
+        } else if (isProfilesPath) {
+            breadcrumbItems.push({ route: basicDataRoute, text: t("basicData.management") });
             breadcrumbItems.push({ route: "/profiles", text: t("basicData.profiles") });
         } else if (selectedPath.startsWith("/basic-data")) {
-            breadcrumbItems.push({ route: "/basic-data", text: t("basicData.management") });
-            if (selectedPath.includes("/organization-types")) breadcrumbItems.push({ route: "/basic-data/organization-types", text: t("basicData.organization-types.title") });
+            breadcrumbItems.push({ route: basicDataRoute, text: t("basicData.management") });
+            if (selectedPath.includes("/organization-types")) breadcrumbItems.push({ route: basicDataRoute, text: t("basicData.organization-types.title") });
             if (selectedPath.includes("/document-types")) breadcrumbItems.push({ route: "/basic-data/document-types", text: t("basicData.document-types.title") });
         } else {
             breadcrumbItems.push({ route: selectedPath, text: t("app.platformTitle") });
         }
     }
+    const currentBreadcrumbRoute = breadcrumbItems.at(-1)?.route;
+    const backPath = currentBreadcrumbRoute && selectedPath.startsWith(`${currentBreadcrumbRoute}/`)
+        ? currentBreadcrumbRoute
+        : [...breadcrumbItems].reverse().find((item) => item.route !== currentBreadcrumbRoute)?.route;
 
     return (
         <NavigationLayout
@@ -190,9 +171,6 @@ export default function MainLayout() {
             dir={i18n.language.startsWith("fa") ? "rtl" : "ltr"}
             header={
                 <ShellBar
-                    primaryTitle={t("auth.login.hero.platform")}
-                    logo={<img src="/images/digi-grc-reference-login-logo.png" alt={t("brand.referenceLogoAlt")} />}
-                    onLogoClick={() => navigateToPath("/dashboard")}
                     profile={<Avatar initials={userInitials(fullName)} size="XS" />}
                     accessibilityAttributes={{ profile: { name: t("user.menu"), expanded: userMenuOpen, hasPopup: "dialog" } }}
                     onProfileClick={(event) => {
@@ -213,18 +191,20 @@ export default function MainLayout() {
             sideContent={
                 <SideNavigation
                     accessibleName={t("nav.mainNavigation")}
-                    onSelectionChange={onSelectionChange}
+                    // The route controls selection even if navigation is blocked by an unsaved draft.
+                    onSelectionChange={(event) => event.preventDefault()}
                     header={<FlexBox direction="Column" alignItems="Center" className="sideNavBrand">
                         <Link accessibleName={t("nav.home")} onClick={() => navigateToPath("/dashboard")}>
                             <img className="sideNavBrandImage" src="/images/digi-grc-reference-navigation-logo.png" alt={t("brand.referenceLogoAlt")} />
                         </Link>
+                        <Title level="H2" size="H6">{t("auth.login.hero.platform")}</Title>
                     </FlexBox>}
                     fixedItems={[
                         <SideNavigationItem
                             key="help"
                             text={t("nav.help")}
                             icon="sys-help"
-                            data-route="/help"
+                            onClick={() => navigateToPath("/help")}
                             selected={selectedPath.startsWith("/help")}
                         />,
                         <SideNavigationItem key="logout" text={t("user.logout")} icon="log" onClick={() => void handleLogout()} />,
@@ -236,47 +216,58 @@ export default function MainLayout() {
                             text={item.text}
                             icon={item.icon}
                             selected={item.selected}
-                            data-route={item.route}
+                            onClick={() => navigateToPath(item.route)}
                         />
                     ))}
                     {showAccessControl ? (
                         <SideNavigationItem
                             text={t("nav.userManagement")}
                             icon="key-user-settings"
-                            selected={selectedPath.startsWith("/access-control")}
+                            expanded={isPathInPrefixes(selectedPath, ["/access-control"])}
+                            unselectable
                         >
                             {canViewUsers ? <SideNavigationSubItem
                                 text={t("nav.users")}
                                 selected={selectedPath.startsWith("/access-control/users")}
-                                data-route="/access-control/users"
+                                onClick={() => navigateToPath("/access-control/users")}
                             /> : null}
                             {canViewRoles ? <SideNavigationSubItem
                                 text={t("nav.roles")}
                                 selected={selectedPath.startsWith("/access-control/roles")}
-                                data-route="/access-control/roles"
+                                onClick={() => navigateToPath("/access-control/roles")}
                             /> : null}
                         </SideNavigationItem>
                     ) : null}
-                    {canViewUsers ? <SideNavigationItem text={t("basicData.management")} icon="database" expanded={isPathInPrefixes(selectedPath, ["/profiles", "/basic-data"])}>
-                        {isRootAdmin ? <SideNavigationSubItem text={t("basicData.profiles")} data-route="/profiles" selected={isPathInPrefixes(selectedPath, ["/profiles"])} /> : null}
-                        <SideNavigationSubItem text={t("basicData.document-types.title")} data-route="/basic-data/document-types" selected={isPathInPrefixes(selectedPath, ["/basic-data/document-types"])} />
-                        <SideNavigationSubItem text={t("basicData.organization-types.title")} data-route="/basic-data/organization-types" selected={isPathInPrefixes(selectedPath, ["/basic-data/organization-types"])} />
+                    {canViewUsers ? <SideNavigationItem
+                        text={t("basicData.management")}
+                        icon="database"
+                        expanded={isProfilesPath || isPathInPrefixes(selectedPath, ["/basic-data"])}
+                        unselectable
+                    >
+                        {canManageProfiles ? <SideNavigationSubItem text={t("basicData.profiles")} onClick={() => navigateToPath("/profiles")} selected={isProfilesPath} /> : null}
+                        <SideNavigationSubItem text={t("basicData.document-types.title")} onClick={() => navigateToPath("/basic-data/document-types")} selected={isPathInPrefixes(selectedPath, ["/basic-data/document-types"])} />
+                        <SideNavigationSubItem text={t("basicData.organization-types.title")} onClick={() => navigateToPath(basicDataRoute)} selected={isPathInPrefixes(selectedPath, [basicDataRoute])} />
                     </SideNavigationItem> : null}
                 </SideNavigation>
             }
         >
             <main className="mainContent">
-                <Breadcrumbs className="pageBreadcrumbs" data-ui5-compact-size="" onItemClick={(event) => {
-                    event.preventDefault();
-                    const path = event.detail.item.href;
-                    if (path) navigateToPath(path);
-                }}>
-                    {breadcrumbItems.map((item, index) => (
-                        <BreadcrumbsItem key={`${item.route}-${index}`} href={index < breadcrumbItems.length - 1 ? item.route : undefined}>
-                            {item.text}
-                        </BreadcrumbsItem>
-                    ))}
-                </Breadcrumbs>
+                <FlexBox alignItems="Center" justifyContent="SpaceBetween" className="pageNavigation">
+                    <Breadcrumbs className="pageBreadcrumbs" data-ui5-compact-size="" onItemClick={(event) => {
+                        event.preventDefault();
+                        const path = event.detail.item.href;
+                        if (path) navigateToPath(path);
+                    }}>
+                        {breadcrumbItems.map((item, index) => (
+                            <BreadcrumbsItem key={`${item.route}-${index}`} href={index < breadcrumbItems.length - 1 ? item.route : undefined}>
+                                {item.text}
+                            </BreadcrumbsItem>
+                        ))}
+                    </Breadcrumbs>
+                    {backPath ? <Button design="Transparent" icon="nav-back" onClick={() => navigateToPath(backPath)}>
+                        {t("common.back")}
+                    </Button> : null}
+                </FlexBox>
                 <Outlet />
                 <UserProfileMenu
                     open={userMenuOpen}

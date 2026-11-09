@@ -69,11 +69,11 @@ export default function LocalOptionPicker({
     const selectedAvailable = items.some((item) => item.id === value);
     const selectedLabel = selectedAvailable ? null : currentLabel;
     return <div style={{ display: "grid", gap: "0.3rem", minWidth: 0 }}>
-        <FlexBox alignItems="Center" justifyContent="SpaceBetween">
-        <Label required={required}>{label}</Label>
-        {searchable ? <HeaderSearch value={search} disabled={disabled || !path}
-            accessibleName={t("local.options.search", { defaultValue: "جستجوی گزینه" })}
-            onChange={(value) => { setSearch(value.slice(0, 100)); setPage(0); }} /> : null}
+        <FlexBox alignItems="Center" gap="var(--sapContent_Space_Tiny)">
+            <Label required={required}>{label}</Label>
+            {searchable ? <HeaderSearch value={search} disabled={disabled || !path}
+                accessibleName={t("local.options.search", { defaultValue: "جستجوی گزینه" })}
+                onChange={(value) => { setSearch(value.slice(0, 100)); setPage(0); }} /> : null}
         </FlexBox>
         <Select value={value ?? ""} disabled={disabled || !path || loading}
             accessibleName={label}

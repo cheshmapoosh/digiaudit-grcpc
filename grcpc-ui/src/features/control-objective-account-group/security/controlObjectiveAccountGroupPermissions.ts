@@ -1,33 +1,22 @@
-import { canAccessMasterData } from "@/features/master-data/security/masterDataAccess";
-import { useMemo } from "react";
-import { useAuthState } from "@/features/auth/state/auth.state";
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import type { ControlObjectiveAccountGroupPermissions } from "../domain/controlObjectiveAccountGroup.model";
 
 export function useControlObjectiveAccountGroupPermissions(): ControlObjectiveAccountGroupPermissions {
-  const me = useAuthState((state) => state.me);
-  return useMemo(() => {
-
-
-    const has = (suffix: string) => canAccessMasterData(me, "CONTROL", suffix !== "VIEW") && canAccessMasterData(me, "REFERENCE");
-    return {
-      view: has("VIEW"),
-      create: has("CREATE"),
-      update: has("UPDATE"),
-      lifecycle: has("LIFECYCLE"),
-      delete: has("DELETE"),
-      restore: has("RESTORE"),
-    };
-  }, [me]);
+  const control = useMasterDataAccess("CONTROL");
+  const reference = useMasterDataAccess("REFERENCE");
+  const manage = control.manage && reference.view;
+  return {
+    view: control.view && reference.view,
+    create: manage,
+    update: manage,
+    lifecycle: manage,
+    delete: manage,
+    restore: manage,
+  };
 }
 
 export function useControlObjectiveClassificationDestinationPermissions() {
-  const me = useAuthState((state) => state.me);
-  return useMemo(() => {
-
-
-    return {
-      accountGroupView: canAccessMasterData(me, "REFERENCE"),
-      controlObjectiveView: canAccessMasterData(me, "CONTROL"),
-    };
-  }, [me]);
+  const reference = useMasterDataAccess("REFERENCE");
+  const control = useMasterDataAccess("CONTROL");
+  return { accountGroupView: reference.view, controlObjectiveView: control.view };
 }

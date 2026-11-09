@@ -2,9 +2,9 @@ import { DialogFooterBar } from "@/shared/components/DialogFooter";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
-import { ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
+import { Label, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { CentralPolicyAnyDetail, CentralPolicyType } from "../domain/centralPolicy.model";
 import type { CentralPolicyTreeNode } from "../utils/centralPolicy.tree";
 
@@ -21,7 +21,7 @@ interface Props {
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="policySummaryRow">
-      <strong>{label}</strong>
+      <Label showColon>{label}</Label>
       <div>{value}</div>
     </div>
   );
@@ -52,7 +52,7 @@ export default function CentralPolicySummaryPanel({
 
   return (
     <div className="policySummaryPanel">
-      <Title level="H4">{value.title}</Title>
+      <Title level="H4">{t("common.details")}</Title>
       <div className="policySummaryGrid">
         <Row label={t("policy.fields.identifier", { defaultValue: "شناسه" })} value={<Text>{value.code}</Text>} />
         <Row label={t("policy.fields.name", { defaultValue: "نام" })} value={<Text>{value.title}</Text>} />
@@ -79,8 +79,6 @@ export default function CentralPolicySummaryPanel({
         />
         <Row label={t("policy.fields.validFrom", { defaultValue: "تاریخ اعتبار از" })} value={<Text>{formatPersianDate(value.validFrom)}</Text>} />
         <Row label={t("policy.fields.validTo", { defaultValue: "تاریخ اعتبار تا" })} value={<Text>{formatPersianDate(value.validTo)}</Text>} />
-        <Row label={t("policy.fields.createdAt", { defaultValue: "تاریخ ایجاد" })} value={<Text>{formatPersianDateTime(value.createdAt)}</Text>} />
-        <Row label={t("policy.fields.updatedAt", { defaultValue: "تاریخ بروزرسانی" })} value={<Text>{formatPersianDateTime(value.updatedAt)}</Text>} />
       </div>
       <DialogFooterBar>
         <Button design="Emphasized" disabled={busy || !canEdit} onClick={onEdit}>

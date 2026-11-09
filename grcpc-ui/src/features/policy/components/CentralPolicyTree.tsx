@@ -1,6 +1,7 @@
 import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
 import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
 import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
+import { CatalogTreeHeader, CatalogTreeRow } from "@/shared/components/CatalogTreeColumns";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageStrip, Tree } from "@ui5/webcomponents-react";
@@ -60,16 +61,9 @@ function PolicyTreeItem({ node, selectedId, expandedIds }: {
       expanded={expandedIds.has(node.id)}
       selected={selected}
       content={<CatalogSelectableRow itemKey={node.id}>
-        <div className="policyTreeItemContent" title={node.title}>
-          <span className={selected ? "policyTreeTitle policyTreeTitleSelected" : "policyTreeTitle"}>
-            {node.title}
-          </span>
-          <span className="policyTreeType">
-            {node.type === "GROUP"
-              ? t("policy.nodeType.group", { defaultValue: "گروه سیاست" })
-              : t("policy.nodeType.policy", { defaultValue: "سیاست" })}
-          </span>
-        </div>
+        <CatalogTreeRow title={node.title} type={node.type === "GROUP"
+          ? t("policy.nodeType.group", { defaultValue: "گروه سیاست" })
+          : t("policy.nodeType.policy", { defaultValue: "سیاست" })} />
       </CatalogSelectableRow>}
     >
       {node.children.map((child) => (
@@ -159,7 +153,7 @@ export default function CentralPolicyTree({
   }
 
   return (
-    <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
+    <Tree header={<CatalogTreeHeader withType />} inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
       onDragEnd={(event) => displayOrder?.onDragEnd(event, selectItem)}
       accessibleName={t("policy.list.title", { defaultValue: "ساختار سیاست" })}
       onItemClick={(event) => selectItem(event.detail.item)}

@@ -7,7 +7,6 @@ import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/com
 import { CatalogRelationDate } from "@/shared/components/CatalogRelationDate";
 import { CatalogRelationStatus } from "@/shared/components/CatalogRelationStatus";
 import { HierarchyMultiSelectionDialog } from "@/shared/components/HierarchyMultiSelectionDialog";
-import type { PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate } from "@/shared/utils/date.utils";
 import type { ControlControlObjectiveAssignment, ControlControlObjectiveAssignmentChange, AssignmentDraftRow, AssignmentDraftState, ControlObjectiveOption } from "../domain/controlControlObjectiveAssignment.model";
 import { controlControlObjectiveAssignmentApi } from "../infra/controlControlObjectiveAssignment.api.repo";
@@ -42,7 +41,6 @@ export default function ControlControlObjectiveAssignmentsTab({ controlId, readO
   const [search, setSearch] = useState(""); const [filter, setFilter] = useState<CatalogRelationFilter>("ALL");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [dateDrafts, setDateDrafts] = useState<Record<string, PersianDateDraftState>>({});
   const generation = useRef(0);
   const load = useCallback(async (signal?: AbortSignal) => {
     const current = ++generation.current;
@@ -63,11 +61,9 @@ export default function ControlControlObjectiveAssignmentsTab({ controlId, readO
   useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, [load]);
 
   const pending = useMemo(() => changes(rows), [rows]);
-  const pendingDates = Object.values(dateDrafts).some(draft => draft.dirty);
-  const invalid = Object.values(dateDrafts).some(draft => !draft.valid) || rows.some(row => row.editState !== "FINAL" && row.editState !== "DRAFT_DELETE" && Boolean(row.validFrom && row.validTo && row.validFrom > row.validTo));
-  useEffect(() => onDraftStateChange?.({ changes: pending, dirty: pending.length > 0 || pickerOpen || pendingDates, ready: (loaded || !permissions.view) && !pickerOpen && !pendingDates && !invalid, invalid: Boolean(error) || invalid }), [pending, pickerOpen, pendingDates, invalid, loaded, error, permissions.view, onDraftStateChange]);
-  const hasPendingDate = (key: string) => Boolean(dateDrafts[key + ":validFrom"]?.dirty || dateDrafts[key + ":validTo"]?.dirty);
-  const visible = rows.filter(row => (hasPendingDate(row.key) || row.editState !== "FINAL" || row.status !== "DELETED" && (filter === "ALL" || row.status === filter)) && (hasPendingDate(row.key) || row.editState !== "FINAL" || (row.controlObjectiveCode + " " + row.controlObjectiveTitle).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())));
+  const invalid = rows.some(row => row.editState !== "FINAL" && row.editState !== "DRAFT_DELETE" && Boolean(row.validFrom && row.validTo && row.validFrom > row.validTo));
+  useEffect(() => onDraftStateChange?.({ changes: pending, dirty: pending.length > 0 || pickerOpen, ready: (loaded || !permissions.view) && !pickerOpen && !invalid, invalid: Boolean(error) || invalid }), [pending, pickerOpen, invalid, loaded, error, permissions.view, onDraftStateChange]);
+  const visible = rows.filter(row => (row.editState !== "FINAL" || row.status !== "DELETED" && (filter === "ALL" || row.status === filter)) && (row.editState !== "FINAL" || (row.controlObjectiveCode + " " + row.controlObjectiveTitle).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())));
   const allOptions = useMemo(() => options, [options]);
   const nodes = useMemo(() => {
     const occupied = new Set(rows.filter(row => row.status !== "DELETED" && row.editState !== "DRAFT_DELETE").map(row => row.controlObjectiveId));
@@ -97,25 +93,18 @@ export default function ControlControlObjectiveAssignmentsTab({ controlId, readO
     : Boolean(row.original && row.original.status !== "DELETED" && permissions.lifecycle && row.editState !== "DRAFT_DELETE" && row.status !== status)));
   const batch = (status: "ACTIVE" | "INACTIVE" | "DELETED") => {
     const keys = new Set(affected(status).map(row => row.key));
-    if (status === "DELETED") setDateDrafts(current => Object.fromEntries(Object.entries(current).filter(([key]) => ![...keys].some(rowKey => key === rowKey + ":validFrom" || key === rowKey + ":validTo"))));
     setRows(current => current.flatMap((row): AssignmentDraftRow[] => {
       if (!keys.has(row.key)) return [row];
       if (status === "DELETED") return !row.original ? [] : row.original.status === "DELETED" ? [persisted(row.original)] : [{ ...row, editState: "DRAFT_DELETE" }];
       return [normalize({ ...row, status })];
     }));
   };
-  const updateDate = (key: string, field: "validFrom" | "validTo", value: string | null) => setRows(current => current.map(row => row.key === key ? normalize({ ...row, [field]: value }) : row));
-  const reportDate = (key: string, draft: PersianDateDraftState) => setDateDrafts(current => {
-    const previous = current[key]; if (previous?.dirty === draft.dirty && previous.valid === draft.valid && previous.draftValue === draft.draftValue) return current;
-    return { ...current, [key]: draft };
-  });
   const columns: CatalogRelationColumn<AssignmentDraftRow>[] = [
     { key: "code", header: t("catalogRelation.code"), cell: row => row.controlObjectiveCode },
     { key: "name", header: t("catalogRelation.name"), cell: row => row.controlObjectiveTitle },
     { key: "endpointStatus", header: t("controlControlObjectiveAssignment.fields.endpointStatus"), cell: row => <ObjectStatus state={row.controlObjectiveStatus === "ACTIVE" ? "Positive" : "None"}>{t(`controlControlObjectiveAssignment.status.${row.controlObjectiveStatus}`)}</ObjectStatus> },
     { key: "endpointValidity", header: t("controlControlObjectiveAssignment.fields.endpointValidity"), cell: row => formatPersianDate(row.controlObjectiveValidFrom) + " – " + formatPersianDate(row.controlObjectiveValidTo) },
-    ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: AssignmentDraftRow) => <CatalogRelationDate value={row[field]} label={t(`catalogRelation.${field}`)} editable={!readOnly && permissions.update && row.editState !== "DRAFT_DELETE"} disabled={busy || loading}
-      onChange={value => updateDate(row.key, field, value)} onDraftStateChange={draft => reportDate(row.key + ":" + field, draft)} /> })),
+    ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: AssignmentDraftRow) => <CatalogRelationDate value={row[field]} /> })),
     { key: "status", header: t("catalogRelation.status"), cell: row => <CatalogRelationStatus status={row.status} draft={row.editState === "FINAL" ? null : row.editState === "DRAFT_DELETE" ? "delete" : !row.original || row.original.status === "DELETED" ? "new" : row.status !== row.original.status ? row.status === "ACTIVE" ? "active" : "inactive" : "edit"} /> },
   ];
   if (!permissions.view) return <MessageStrip design="Information">{t("controlControlObjectiveAssignment.errors.forbidden")}</MessageStrip>;

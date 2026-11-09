@@ -3,9 +3,6 @@
 .globalControlFclColumn { height: 100%; min-height: 0; padding: 0; box-sizing: border-box; }
 .globalControlListReport { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--sapContent_Space_Tiny); height: 100%; min-height: 0; }
 .globalControlTreeFrame { min-height: 0; overflow: auto; padding: 0; }
-.globalControlTreeHeader, .globalControlTreeRow { display: grid; grid-template-columns: minmax(0, 1fr) 10rem; gap: .75rem; align-items: center; width: 100%; min-width: 0; box-sizing: border-box; }
-.globalControlTreeHeader { padding: .5rem; }
-.globalControlTreeRow > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .globalControlSummary { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 1rem; height: 100%; }
 .globalControlSummaryDetails { display: grid; grid-template-columns: 9rem minmax(0, 1fr); align-content: start; gap: .75rem; padding: 1rem; overflow: auto; }
 .globalControlToolbar, .globalControlActions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
@@ -22,7 +19,7 @@
 .globalControlHidden { display: none; }
 .globalControlDialogActions { justify-content: center; padding: .75rem 1rem; }
 @media (max-width: 900px) { .globalControlValidityRow { grid-template-columns: 1fr; } }
-@media (max-width: 720px) { .globalControlFcl { min-height: 30rem; } .globalControlTreeHeader, .globalControlTreeRow { grid-template-columns: minmax(0, 1fr) 6rem; } .globalControlRegulationToolbar { flex-wrap: wrap; } .globalControlRegulationStatus { flex: 1 1 10rem; } }
+@media (max-width: 720px) { .globalControlFcl { min-height: 30rem; } .globalControlRegulationToolbar { flex-wrap: wrap; } .globalControlRegulationStatus { flex: 1 1 10rem; } }
 
 .globalControlDialogContent, .globalControlRelationTab { min-width: 0; }
 .globalControlRelationTab { max-height: none; overflow: visible; }

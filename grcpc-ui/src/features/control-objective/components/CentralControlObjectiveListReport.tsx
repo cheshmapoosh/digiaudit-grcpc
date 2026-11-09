@@ -6,6 +6,7 @@ import { CatalogActionButton as Button } from "@/shared/components/CatalogAction
 import {
   Bar,
   BusyIndicator,
+  Label,
   List,
   ListItemCustom,
   MessageStrip,
@@ -56,10 +57,12 @@ export default function CentralControlObjectiveListReport({
   return (
     <div className="controlObjectiveListReport">
       <Bar
-        startContent={<Title level="H4">{t("controlObjective.list.title")}</Title>}
+        startContent={<>
+            <Title level="H4">{t("controlObjective.list.title")}</Title>
+            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("controlObjective.list.search")} />
+        </>}
         endContent={
           <>
-            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("controlObjective.list.search")} />
             <Button
               design="Emphasized"
               disabled={busy || !canCreate}
@@ -101,6 +104,11 @@ export default function CentralControlObjectiveListReport({
           </MessageStrip>
         ) : (
           <List
+            header={
+              <div className="controlObjectiveListHeader">
+                <Label>{t("catalog.tree.title")}</Label>
+              </div>
+            }
             separators="Inner"
             selectionMode="Single"
             accessibleName={t("controlObjective.list.title")}
@@ -110,28 +118,18 @@ export default function CentralControlObjectiveListReport({
               if (id && id !== selectedId) onSelect(id);
             }}
           >
-            {visibleItems.map((item, index) => (
+            {visibleItems.map((item) => (
               <ListItemCustom
                 key={item.id}
                 type="Active"
                 selected={item.id === selectedId}
                 data-control-objective-id={item.id}
               >
-                <CatalogSelectableRow itemKey={item.id}><div
-                  dir="rtl"
-                  style={{
-                    width: "100%",
-                    display: "grid",
-                    gridTemplateColumns: "4rem minmax(0, 1fr)",
-                    alignItems: "center",
-                    columnGap: "1rem",
-                    boxSizing: "border-box",
-                    paddingInline: "0.5rem",
-                  }}
-                >
-                  <Text style={{ textAlign: "right" }}>{index + 1}</Text>
-                  <Text style={{ textAlign: "right" }}>{item.title}</Text>
-                </div></CatalogSelectableRow>
+                <CatalogSelectableRow itemKey={item.id}>
+                  <div className="controlObjectiveListTitle">
+                    <Text>{item.title}</Text>
+                  </div>
+                </CatalogSelectableRow>
               </ListItemCustom>
             ))}
           </List>

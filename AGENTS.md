@@ -30,7 +30,9 @@ These instructions apply to the whole repository. More specific `AGENTS.md` file
 ## Accepted Central reference Assignments (2026-10-27)
 
 - Follow `grcpc-docs/master-data/accepted-corrections/2026-10-27-central-reference-assignments.md`. It authorizes exactly four typed direct Central Assignment tables and supersedes older direct-relation/count prohibitions only for those families.
+- The 2026-11-09 Account Group–Risk Template approval adds a fifth typed family. Follow the Account Group Risk Template Assignment section in `grcpc-docs/master-data/implementation-contract.md`.
 - Control owns Risk/Control Objective/Requirement assignments; Control Objective owns Risk assignments. They share one aggregate Save and CENTRAL Revision with Documents/classifications.
+- The later Risk Template edit correction allows its Save to edit the same Control and Control Objective pairs with both manage permissions. Follow the Risk Template Edit section in the accepted Central Reference Assignments correction for locks, versions, and Revision contents.
 - Coverage UI is removed in this phase; its schema, APIs, data and dependency rules remain. OrganizationObjective, Policy Scope and existing Document/Global Control links are not reimplemented.
 - Guard unions are lexical; endpoint row locks are Control, Risk Template, Control Objective, Requirement, then ID. Control Objective gets no new Guard.
 - This delivery permits only backend compile with `-Dskip.ui=true -Dmaven.test.skip=true`, UI typecheck and lint. Do not create, edit or run tests, run the app/Flyway, or connect to a database/browser/external service.
@@ -49,6 +51,7 @@ These instructions apply to the whole repository. More specific `AGENTS.md` file
 - Follow `grcpc-docs/master-data/accepted-corrections/2026-10-28-governance-modal-relations.md`. The modal's main Save owns its typed editable relations; Local Organization L1–L9/B1 share one linked LOCAL Revision and O1 shares the Organization CENTRAL Revision, in one protected transaction. B1 is editable from both existing surfaces. O1/G1 support ACTIVE/INACTIVE/DELETED through forward V1202.
 - No independent relationship Edit/Save/Undo/Restore UI or immediate relationship writes mount in these modals. Deleted reads are internal occupied-pair lookup only. Inverses/projections/structural Requirements remain read-only; Documents and independent structural Import retain their explicit exceptions.
 - All structural parent updates use the existing Guard and one aggregate command. Shared table viewports divide the actual 70% modal budget; pending/invalid drafts join the main unsaved/readiness guard. Verification remains compile/typecheck/lint/static only.
+- The later Control Objective creation correction permits initial Subprocess selection in its Create modal. Optional `initialSubprocesses` joins the existing Create aggregate under CONTROL and PROCESS, plus existing Assignment/classification Guards. Follow the Control Objective creation section in the governance modal relations correction.
 
 ## Structural hierarchy concurrency rule
 

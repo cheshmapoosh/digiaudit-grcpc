@@ -53,7 +53,7 @@ The total physical Master Data table count after this correction was 48. The app
 
 The active business structures are the original catalog with Policy Version removed from active use and Central Policy–Organization Scope added.
 
-The Document business-table count remains 3. The [2026-10-28 Organization owner Assignment](accepted-corrections/2026-10-28-organization-owner-assignments.md) adds one typed business table; the current physical contract is `55 active business tables + 1 retained historical table + 2 technical tables = 58 physical tables`. The administrative Basic Data type dictionaries and dataset/User Management tables are outside this count.
+The Document business-table count remains 3. The [2026-10-28 Organization owner Assignment](accepted-corrections/2026-10-28-organization-owner-assignments.md) and the 2026-11-09 Account Group–Risk Template Assignment each add one typed business table. The current count is `56 active business tables + 1 retained historical table + 2 technical tables = 59 physical tables`. Administrative Basic Data dictionaries and dataset/User Management tables are outside this count.
 
 No additional Master Data table is authorized merely to simplify implementation.
 
@@ -251,6 +251,13 @@ the Control content plus one content per changed classification. Relation mutati
 query-only projection through Control Scope and this classification; no direct Subprocess
 classification table, command, or Save field exists.
 
+Account Group Create/Update also accepts additions of existing Controls through
+`controlsToAdd`. The coordinator takes the `ACCOUNT_GROUP` and `CONTROL` Guards in
+lexical order, locks and checks the selected Control versions in ID order, and
+records the Account Group, touched Controls and classifications in one CENTRAL
+Revision and transaction. A selected Control and its exact Account Group must be
+active. A deleted classification is restored with its original ID and validity.
+
 Prompt 7.6 implements `central_control_objective_account_group` as a typed Control
 Objective-owned aggregate classification. Control Objective Save accepts nullable
 `accountGroupChanges`; omission or an empty list makes no classification mutation. A non-empty
@@ -261,6 +268,20 @@ introduce a Guard key. The Subprocess Account Groups projection is the permissio
 of the Control Scope path and Control Objective Scope path, deduplicated by exact Account Group
 ID with separate contribution lists. It remains query-only and does not authorize direct
 Subprocess–Account Group persistence or mutation ownership.
+
+Account Group Create/Update also accepts additions of existing Control Objectives
+through `controlObjectivesToAdd`. This path reuses the `ACCOUNT_GROUP` Guard and
+locks selected Controls first, then Control Objectives, in ID order within
+each type. Both selections join the Account Group transaction and CENTRAL
+Revision. Restored classifications retain their original ID and validity.
+
+### Account Group–Risk Template Assignment (2026-11-09)
+
+An Account Group can reference many Risk Templates and a Risk Template can be assigned to many Account Groups. Each link belongs to the current dataset profile and connects two exact catalog records in that profile. The backend derives the profile from the request context. In single-profile mode the existing default profile applies.
+
+Account Group Create and Update own the assignment drafts, including link lifecycle changes in Update. Adding or activating a link requires both definitions to be active. Selecting a previously deleted pair restores its original link ID. Active and inactive links block deletion of either definition until the links are removed.
+
+Account Group Save acquires the lexical Guard union of `ACCOUNT_GROUP`, `CONTROL` when Control classifications change, and `RISK` when Risk Template assignments change. It locks Controls, then Risk Templates, then Control Objectives by ID within each type, followed by the Account Group and its assignment rows. The profile administration lock, owner change, assignment lifecycle, and one CENTRAL Revision are part of the same transaction. Deletion checks run under the existing Guard of the definition being deleted.
 
 ## 8. Typed Scope, Assignment, Classification, and Coverage rules
 
@@ -446,7 +467,7 @@ The approved model permits exactly two controlled polymorphic relations:
 
 Each relation has its own closed stored-code vocabulary. These vocabularies must not be conflated, even where both reuse the same stored code for the same logical table.
 
-`RevisionEntityType` contains 55 stored codes after the four Central reference Assignments and the Organization owner Assignment and is used only for Revision Content.
+`RevisionEntityType` contains 56 stored codes, including the Account Group–Risk Template Assignment, and is used only for Revision Content.
 
 Document Link Target Type contains 43 stored codes after the Global Control document extension and is used only for Document Link target validation.
 

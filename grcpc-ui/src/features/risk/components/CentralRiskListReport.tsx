@@ -61,10 +61,12 @@ export default function CentralRiskListReport({
   return (
     <div className="riskListReport">
       <Bar
-        startContent={<Title level="H4">{t("risk.list.title")}</Title>}
+        startContent={<>
+            <Title level="H4">{t("risk.list.title")}</Title>
+            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("risk.list.search")} />
+        </>}
         endContent={
           <>
-            <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("risk.list.search")} />
             <CentralRiskCreateMenu
               disabled={busy || !canCreate}
               templateEnabled={Boolean(contextCategoryId)}
@@ -100,6 +102,7 @@ export default function CentralRiskListReport({
         {busy ? <BusyIndicator active delay={0} /> : null}
         <CatalogTreeOrder catalog="RISK" refreshKey={JSON.stringify([categories, templates])} filtered={Boolean(searchText.trim())}>
           <CentralRiskTree
+            showColumnHeaders
             categories={categories}
             templates={templates}
             selectedKey={selectedKey}

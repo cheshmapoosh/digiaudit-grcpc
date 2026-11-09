@@ -228,21 +228,14 @@ function isOwnDialogCloseEvent(event: unknown): boolean {
 
 function resolveDialogTitle(
     routeMode: RouteMode,
+    nodeType: ProcessNodeType | undefined,
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
-    if (routeMode === "create") {
-        return t("process.create.title", { defaultValue: "ایجاد آیتم فرآیندی" });
-    }
+    if (routeMode === "list") return "";
+    if (!nodeType) return t("process.object.modalTitle");
 
-    if (routeMode === "edit") {
-        return t("process.edit.title", { defaultValue: "ویرایش آیتم فرآیندی" });
-    }
-
-    if (routeMode === "view") {
-        return t("process.view.title", { defaultValue: "نمایش آیتم فرآیندی" });
-    }
-
-    return "";
+    const type = t(nodeType === "SUBPROCESS" ? "process.nodeType.subProcess" : "process.nodeType.process");
+    return t(`process.${routeMode}.title`, { type });
 }
 
 function resolveCreateParentId(
@@ -765,7 +758,7 @@ export default function ProcessesFclShellPage() {
           )
         : null;
 
-    const dialogTitle = resolveDialogTitle(routeMode, t);
+    const dialogTitle = resolveDialogTitle(routeMode, objectValue?.nodeType, t);
 
     const bulkDeleteItems = processItems.map((row) => ({ key: row.id, parentKey: row.parentId, label: `${row.code} — ${row.title}`,
       remove: () => removeNode(row, { version: row.version }) }));

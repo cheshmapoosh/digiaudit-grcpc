@@ -20,21 +20,7 @@ export default function UiSettingsDialog({ onClose }: { onClose: () => void }) {
 
     return (
         <UserSettingsDialog open headerText={t("nav.settings")} onClose={onClose}>
-            <UserSettingsItem text={t("ui.appearance")} headerText={t("ui.appearance")} icon="palette" selected>
-                <UserSettingsView>
-                    <Form accessibleMode="Edit" accessibleName={t("ui.appearance")} layout="S1 M1 L1 XL1" labelSpan="S12 M12 L12 XL12" itemSpacing="Normal">
-                        <FormItem labelContent={<Label for={`${id}-dark-mode`}>{t("ui.darkMode")}</Label>}>
-                            <Switch
-                                id={`${id}-dark-mode`}
-                                accessibleName={t("ui.darkMode")}
-                                checked={settings.theme === "sap_horizon_dark"}
-                                onChange={(event) => commit({ ...settings, theme: event.target.checked ? "sap_horizon_dark" : "sap_horizon" })}
-                            />
-                        </FormItem>
-                    </Form>
-                </UserSettingsView>
-            </UserSettingsItem>
-            <UserSettingsItem text={t("ui.languageAndDirection")} headerText={t("ui.languageAndDirection")} icon="world">
+            <UserSettingsItem text={t("ui.languageAndDirection")} headerText={t("ui.languageAndDirection")} icon="world" selected>
                 <UserSettingsView>
                     <Form accessibleMode="Edit" accessibleName={t("ui.languageAndDirection")} layout="S1 M1 L1 XL1" labelSpan="S12 M12 L12 XL12" itemSpacing="Normal">
                         <FormItem labelContent={<Label for={`${id}-language`}>{t("ui.language")}</Label>}>

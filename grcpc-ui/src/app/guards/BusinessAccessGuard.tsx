@@ -1,5 +1,5 @@
 import { currentProfile, useProfileState } from "@/features/dataset-profile/state/profile.state";
-import { Outlet, useLocation } from "react-router-dom";
+import { matchPath, Navigate, Outlet, useLocation } from "react-router-dom";
 import { MessageStrip } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
 import { useAuthState } from "@/features/auth/state/auth.state";
@@ -10,6 +10,9 @@ export default function BusinessAccessGuard() {
   const me = useAuthState((state) => state.me);
   const { pathname } = useLocation();
   const { t } = useTranslation();
+  const profileManagement = matchPath("/profiles/*", pathname) || matchPath("/settings/profiles", pathname);
+  if (profileManagement && me?.multiProfileEnabled === false) return <Navigate to="/dashboard" replace />;
+
   const area = areaForPath(pathname);
   let allowed = true;
   if ((area || pathname === "/master-data") && !currentProfile()) return <MessageStrip design="Information" hideCloseButton>{t("profile.required")}</MessageStrip>;
@@ -20,7 +23,7 @@ export default function BusinessAccessGuard() {
     allowed = Boolean(me?.rootUser || me?.authorities.includes("ROLE_PROFILE_ADMIN"));
     if (allowed && !currentProfile()) return <MessageStrip design="Information" hideCloseButton>{t("profile.required")}</MessageStrip>;
   }
-  if (pathname.startsWith("/settings/") || pathname === "/profiles" || pathname.startsWith("/profiles/")
+  if (pathname.startsWith("/settings/") || profileManagement
     || pathname === "/access-control/roles" || pathname.startsWith("/access-control/roles/")) allowed = Boolean(me?.rootUser);
   return allowed ? <Outlet /> : <MessageStrip design="Negative" hideCloseButton>{t("security.accessDenied")}</MessageStrip>;
 }

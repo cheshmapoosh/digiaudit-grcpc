@@ -1,7 +1,12 @@
 # Stage environment with external Oracle
 
 Put `grcpc-app.stage.sh`, `compose.stage.yml`, `grcpc-app.jar`, and `stage.env`
-in the same deployment directory. Create `stage.env` with `--init-env` if needed;
+in the same deployment directory, with the proxy script at
+`docker/nginx/start.sh`. Load the Java, MinIO and Nginx images before starting.
+Set `PUBLIC_HOST` to the server's IP address or domain. For HTTPS, set
+`PUBLIC_SCHEME=https` and mount the certificate and key with `NGINX_TLS_DIR`.
+See the [Docker environments guide](README.md#stage-and-production-with-external-oracle).
+Create `stage.env` with `--init-env` if needed;
 the template is `docker/env/stage.env.example`. Keep the template in that path
 when copying the full repository, or copy it beside the runner as
 `stage.env.example` for a portable deployment bundle.

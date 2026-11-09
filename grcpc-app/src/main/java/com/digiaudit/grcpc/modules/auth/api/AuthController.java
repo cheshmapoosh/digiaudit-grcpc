@@ -15,6 +15,7 @@ import com.digiaudit.grcpc.modules.auth.api.dto.ChangeUsernameRequest;
 import com.digiaudit.grcpc.common.security.CurrentUser;
 import com.digiaudit.grcpc.modules.auth.api.dto.AuthMeResponse;
 import com.digiaudit.grcpc.modules.usermanagement.domain.repository.AppUserRepository;
+import com.digiaudit.grcpc.runtime.BuildEdition;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -59,7 +60,8 @@ public class AuthController {
     public ResponseEntity<AuthMeResponse> me(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof CurrentUser currentUser)) {
             return ResponseEntity.ok(
-                    new AuthMeResponse(false, null, null, null, null, false, false, Set.of())
+                    new AuthMeResponse(false, null, null, null, null, false, false, Set.of(),
+                            BuildEdition.multiProfileEnabled())
             );
         }
 
@@ -75,7 +77,8 @@ public class AuthController {
                         currentUser.getLastName(),
                         currentUser.isRootUser(),
                         users.findById(currentUser.getUserId()).orElseThrow().isPasswordChangeRequired(),
-                        authorities
+                        authorities,
+                        BuildEdition.multiProfileEnabled()
                 )
         );
     }

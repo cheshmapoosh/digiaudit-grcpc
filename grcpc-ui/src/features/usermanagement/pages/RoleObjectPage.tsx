@@ -4,17 +4,13 @@ import { Label, ObjectStatus, Text } from "@ui5/webcomponents-react";
 
 import type { RoleDetail } from "@/features/usermanagement";
 import PermissionCatalogList from "../components/PermissionCatalogList";
-import { formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 type RoleObjectPageProps = {
     value: RoleDetail;
     busy?: boolean;
     error?: string | null;
 };
-
-function formatDateTime(value?: string | null): string {
-    return formatPersianDateTime(value);
-}
 
 export default function RoleObjectPage({ value }: RoleObjectPageProps) {
     const { t, i18n } = useTranslation();
@@ -73,12 +69,12 @@ export default function RoleObjectPage({ value }: RoleObjectPageProps) {
 
                 <div style={{ display: "grid", gap: ".35rem" }}>
                     <Label>{t("usermanagement.roles.fields.createdAt", { defaultValue: "تاریخ ایجاد" })}</Label>
-                    <Text>{formatDateTime(value.createdAt)}</Text>
+                    <Text>{formatPersianDate(value.createdAt)}</Text>
                 </div>
 
                 <div style={{ display: "grid", gap: ".35rem" }}>
                     <Label>{t("usermanagement.roles.fields.updatedAt", { defaultValue: "آخرین بروزرسانی" })}</Label>
-                    <Text>{formatDateTime(value.updatedAt)}</Text>
+                    <Text>{formatPersianDate(value.updatedAt)}</Text>
                 </div>
             </div>
 

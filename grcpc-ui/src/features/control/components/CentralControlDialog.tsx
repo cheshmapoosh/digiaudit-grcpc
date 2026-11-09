@@ -76,6 +76,7 @@ export default function CentralControlDialog({ controlId, initialSubprocess, onC
   };
   const close = () => { if (!saving) onClose(); };
   const title = t(`control.${mode}.title`);
+  const creationGroupId = groups.length === 1 ? groups[0].id : null;
 
   return <Dialog open={open} accessibleName={title} className="controlObjectDialog catalogObjectDialog" onClose={event => {
     if (event.target === event.currentTarget) close();
@@ -83,8 +84,10 @@ export default function CentralControlDialog({ controlId, initialSubprocess, onC
     <ModalDialogHeader title={title} onClose={close} />
     <div data-catalog-dialog-content className="controlDialogContent">
       {loading ? <BusyIndicator active /> : !loaded ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> :
+        mode === "create" && !creationGroupId
+          ? <MessageStrip design="Information" hideCloseButton>{t("control.create.subprocessGroupContext")}</MessageStrip> :
         <CentralControlObjectPage key={`${mode}:${value?.id ?? "new"}`} mode={mode} value={value}
-          initialControlGroupId={null} groups={groups} activeTab={activeTab} busy={saving}
+          initialControlGroupId={creationGroupId} groups={groups} activeTab={activeTab} busy={saving}
           permissions={permissions} error={error} documentError={documentError}
           onErrorClose={() => setError(null)} onSubmit={submit} onCancel={close}
           onEdit={() => { onDirtyChange(false); setMode("edit"); }} onActiveTabChange={setActiveTab}

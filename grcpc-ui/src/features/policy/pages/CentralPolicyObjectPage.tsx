@@ -23,15 +23,13 @@ import {
   type PersianDateDraftState,
 } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate } from "@/shared/utils/date.utils";
-import PolicyParentValueHelpDialog, {
-  type PolicyParentCandidate,
-} from "../components/PolicyParentValueHelpDialog";
 import PolicyRelationTab, { type PolicyRelationDraft, type PolicyRelationKind } from "../components/PolicyRelationTab";
 import type {
   CentralPolicyAnyDetail,
   CentralPolicyCommunicationMethod,
   CentralPolicyDetail,
   CentralPolicyNodeType,
+  PolicyParentCandidate,
   CentralPolicyType,
 } from "../domain/centralPolicy.model";
 
@@ -165,7 +163,7 @@ export default function CentralPolicyObjectPage({
     nodeType === "POLICY" && value && "policyType" in value ? value : null;
   const [code, setCode] = useState(value?.code ?? "");
   const [title, setTitle] = useState(value?.title ?? "");
-  const [parentId, setParentId] = useState(initialParentId);
+  const parentId = initialParentId;
   const [status, setStatus] = useState<"ACTIVE" | "INACTIVE">(
     mode !== "create" && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
   );
@@ -196,7 +194,6 @@ export default function CentralPolicyObjectPage({
     validTo: EMPTY_DATE,
     nextReviewDate: EMPTY_DATE,
   });
-  const [parentDialogOpen, setParentDialogOpen] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [documentDraft, setDocumentDraft] = useState<ParentSaveDocumentDraftState>(
     EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE,
@@ -251,9 +248,8 @@ export default function CentralPolicyObjectPage({
   const relationsInvalid = Object.values(relationInvalid).some(Boolean);
   const relationsPending = Object.values(relationPending).some(Boolean);
   const dirty = !readOnly && (generalDirty || relationsDirty || relationsPending ||
-    documentDraft.dirty || documentDraft.uploading || parentDialogOpen);
+    documentDraft.dirty || documentDraft.uploading);
   const canChangeStatus = mode === "edit" && permissions.lifecycle;
-  const canChangeParent = !readOnly && (mode === "create" || permissions.move);
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
   const parent = parentId ? parentCandidates.find((item) => item.id === parentId) : null;
@@ -336,7 +332,7 @@ export default function CentralPolicyObjectPage({
           { key: "documents", label: t("policy.tabs.documents", { defaultValue: "مستندات" }) },
         ];
   const saveDisabled =
-    busy || parentDialogOpen ||
+    busy ||
     invalidDate ||
     documentsBusy ||
     documentsInvalid ||
@@ -346,9 +342,7 @@ export default function CentralPolicyObjectPage({
   return (
     <div className="policyObjectPage">
       <CatalogParentHeader objectTitle={title || t(nodeType === "GROUP" ? "policy.nodeType.group" : "policy.nodeType.policy")} label={t("policy.fields.parent")} parentId={parentId} required={nodeType === "POLICY"}
-        busy={busy} onClearParent={canChangeParent && nodeType === "GROUP" ? () => setParentId(null) : undefined}
-        parent={parent ? { code: parent.code, title: parent.title, type: t("policy.nodeType.group"), status: parent.status } : null}
-        selection={canChangeParent ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+        parent={parent ? { code: parent.code, title: parent.title, type: t("policy.nodeType.group"), status: parent.status } : null} />
 
       <DetailTabContainer
         onTabSelect={(event) => {
@@ -557,25 +551,25 @@ export default function CentralPolicyObjectPage({
           path={`central/policies/${value.id}/organization-policy-scopes`}
           section="organization-policies"
           titleKey="local.reverse.organizationPolicies"
-          titleFa="تصمیم‌های محلی سیاست برای سازمان"
+          titleFa="تصمیم‌های سیاست برای سازمان"
           areas={["GOVERNANCE"]} />
         <LocalReverseList parentId={value.id}
           path={`central/policies/${value.id}/subprocess-policy-scopes`}
           section="context-policies"
           titleKey="local.reverse.contextPolicies"
-          titleFa="تصمیم‌های محلی سیاست برای زمینه"
+          titleFa="تصمیم‌های سیاست برای زمینه"
           areas={["PROCESS", "GOVERNANCE"]} />
         <LocalReverseList parentId={value.id}
           path={`central/policies/${value.id}/control-policy-scopes`}
           section="control-policies"
           titleKey="local.reverse.controlPolicies"
-          titleFa="تصمیم‌های محلی سیاست برای کنترل"
+          titleFa="تصمیم‌های سیاست برای کنترل"
           areas={["PROCESS", "CONTROL", "GOVERNANCE"]} />
         <LocalReverseList parentId={value.id}
           path={`central/policies/${value.id}/requirement-policy-scopes`}
           section="requirement-policies"
           titleKey="local.reverse.requirementPolicies"
-          titleFa="تصمیم‌های محلی سیاست برای الزام"
+          titleFa="تصمیم‌های سیاست برای الزام"
           areas={["PROCESS", "GOVERNANCE"]} />
       </div> : null}
 
@@ -597,15 +591,6 @@ export default function CentralPolicyObjectPage({
         </Button>
       </DialogFooter>
 
-      <PolicyParentValueHelpDialog
-        open={parentDialogOpen}
-        candidates={parentCandidates}
-        selectedParentId={parentId}
-        allowNoParent={nodeType === "GROUP"}
-        busy={busy}
-        onClose={() => setParentDialogOpen(false)}
-        onSelect={setParentId}
-      />
     </div>
   );
 }

@@ -18,7 +18,9 @@ import { PersianDatePicker, type PersianDateDraftState } from "@/shared/componen
 export default function UserFormDialog({ user, onClose, onCreated }: { user?: UserDetail; onClose: () => void; onCreated: (id: string) => void }) {
   const { t, i18n } = useTranslation();
   const root = useAuthState((state) => Boolean(state.me?.rootUser));
+  const multiProfileEnabled = useAuthState((state) => state.me?.multiProfileEnabled !== false);
   const profiles = useProfileState((state) => state.profiles);
+  const currentProfileId = selectedProfileId();
   const [form, setForm] = useState(() => ({
     username: user?.username ?? "", firstName: user?.firstName ?? "", lastName: user?.lastName ?? "", password: "", confirmPassword: "",
     email: user?.email ?? "", mobile: user?.mobile ?? "",
@@ -119,18 +121,23 @@ export default function UserFormDialog({ user, onClose, onCreated }: { user?: Us
             </FormItem>)}
           </FormGroup> : null}
         </Form>
-        {root && !user?.rootUser ? <CheckBox text={t("profile.adminRole")} checked={form.profileAdmin} disabled={busy} onChange={(event) => setForm({ ...form, profileAdmin: event.target.checked, profileId: "" })} /> : null}
+        {root && !user?.rootUser ? <CheckBox text={t("profile.adminRole")} checked={form.profileAdmin} disabled={busy} onChange={(event) => {
+          const profileAdmin = event.target.checked;
+          const profileId = profileAdmin || multiProfileEnabled ? "" : selectedProfileId() ?? "";
+          setForm({ ...form, profileAdmin, profileId });
+        }} /> : null}
         {!user?.rootUser && !form.profileAdmin ? <>
-          <Label for="user-form-profile" required>{t("profile.userProfile")}</Label>
-          <Select id="user-form-profile" value={form.profileId} disabled={busy || !root} onChange={(event) => {
-            const id = event.detail.selectedOption?.value ?? "";
-            if (id !== form.profileId) setForm({ ...form, profileId: id, roleIds: [], rolePeriods: {} });
-          }}>
-            <Option value="" selected={!form.profileId}>{t("profile.select")}</Option>
-            {profiles.map((p) => <Option key={p.id} value={p.id} selected={form.profileId === p.id}>{p.name}</Option>)}
-          </Select>
+          {root && multiProfileEnabled ? <>
+            <Label for="user-form-profile" required>{t("profile.userProfile")}</Label>
+            <Select id="user-form-profile" value={form.profileId} disabled={busy} onChange={(event) => {
+              const id = event.detail.selectedOption?.value ?? "";
+              if (id !== form.profileId) setForm({ ...form, profileId: id, roleIds: [], rolePeriods: {} });
+            }}>
+              <Option value="" selected={!form.profileId}>{t("profile.select")}</Option>
+              {profiles.map((p) => <Option key={p.id} value={p.id} selected={form.profileId === p.id}>{p.name}</Option>)}
+            </Select>
+          </> : null}
           <Label>{t("profile.userRoles")}</Label>
-          <Text>{t("profile.rolesHint")}</Text>
           {roleChoices.map((role) => <div className="modalTwoColumnGrid" key={role.id}>
             <CheckBox text={role.title} checked={form.roleIds.includes(role.id)} disabled={busy || (!form.roleIds.includes(role.id) && !choices.some((r) => r.id === role.id))} onChange={(event) => toggleRole(role.id, event.target.checked)} />
             {form.roleIds.includes(role.id) ? <div className="modalDateRange"> {(["validFrom", "validTo"] as const).map((field) => <FlexBox direction="Column" key={field}>
@@ -151,7 +158,7 @@ export default function UserFormDialog({ user, onClose, onCreated }: { user?: Us
             {user.assignments.filter((a) => a.active && a.scopeType !== "GLOBAL").map((a) => <Text key={a.id}>{a.roleTitle}</Text>)}
           </> : null}
         </> : null}
-        {root && form.profileAdmin ? <Form accessibleMode="Edit" accessibleName={t("profile.adminAccess")} layout="S1 M1 L1 XL1" labelSpan="S12 M12 L12 XL12" itemSpacing="Normal">
+        {root && form.profileAdmin && multiProfileEnabled ? <Form accessibleMode="Edit" accessibleName={t("profile.adminAccess")} layout="S1 M1 L1 XL1" labelSpan="S12 M12 L12 XL12" itemSpacing="Normal">
           <FormItem labelContent={<Label for="user-form-profile-access">{t("profile.adminAccess")}</Label>}>
             <MultiComboBox id="user-form-profile-access" disabled={busy} showSelectAll onSelectionChange={(event) => {
               const ids = event.detail.items.map((item) => item.getAttribute("data-profile-id")).filter((id): id is string => Boolean(id));
@@ -161,7 +168,16 @@ export default function UserFormDialog({ user, onClose, onCreated }: { user?: Us
             </MultiComboBox>
           </FormItem>
         </Form> : null}
-        {!user ? <><Text>{t("usermanagement.security.usernameHint")}</Text><Text>{t("usermanagement.demo.passwordHint")}</Text><Text>{t("usermanagement.security.temporaryPasswordHint")}</Text></> : null}
+        {root && form.profileAdmin && !multiProfileEnabled ? <CheckBox
+          text={t("profile.dataAccess")}
+          checked={Boolean(currentProfileId && form.profileAccessIds.includes(currentProfileId))}
+          disabled={busy || !currentProfileId}
+          onChange={(event) => {
+            if (!currentProfileId) return;
+            const profileAccessIds = event.target.checked ? [currentProfileId] : [];
+            setForm((current) => ({ ...current, profileAccessIds }));
+          }}
+        /> : null}
       </FlexBox>
     </Dialog>
     <DeleteConfirmDialog open={closePending || blocker.state === "blocked"} title={t("common.unsavedChanges.title")} message={t("common.unsavedChanges.message")} confirmText={t("common.unsavedChanges.leave")} cancelText={t("common.unsavedChanges.stay")} loading={busy}

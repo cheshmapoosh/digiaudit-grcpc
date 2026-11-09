@@ -1,6 +1,7 @@
 import { CatalogOrderedTreeItem as TreeItemCustom } from "@/shared/components/CatalogTreeOrder";
 import { orderKey, useCatalogTreeOrder } from "@/shared/components/catalogOrder.context";
 import { CatalogSelectableRow } from "@/shared/components/CatalogSelection";
+import { CatalogTreeHeader, CatalogTreeRow } from "@/shared/components/CatalogTreeColumns";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageStrip, Tree } from "@ui5/webcomponents-react";
@@ -60,16 +61,9 @@ function ControlTreeItem({ node, selectedId, expandedIds }: {
       expanded={expandedIds.has(node.id)}
       selected={selected}
       content={<CatalogSelectableRow itemKey={node.id}>
-        <div className="controlTreeItemContent" title={node.title}>
-          <span className={selected ? "controlTreeTitle controlTreeTitleSelected" : "controlTreeTitle"}>
-            {node.title}
-          </span>
-          <span className="controlTreeType">
-            {node.type === "GROUP"
-              ? t("control.nodeType.group", { defaultValue: "گروه کنترل" })
-              : t("control.nodeType.control", { defaultValue: "کنترل" })}
-          </span>
-        </div>
+        <CatalogTreeRow title={node.title} type={node.type === "GROUP"
+          ? t("control.nodeType.group", { defaultValue: "گروه کنترل" })
+          : t("control.nodeType.control", { defaultValue: "کنترل" })} />
       </CatalogSelectableRow>}
     >
       {node.children.map((child) => (
@@ -155,7 +149,7 @@ export default function CentralControlTree({
   }
 
   return (
-    <Tree inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
+    <Tree header={<CatalogTreeHeader withType />} inert={displayOrder?.busy} onMove={(event) => displayOrder?.onMove(event, selectItem)} onMoveOver={displayOrder?.onMoveOver}
       onDragEnd={(event) => displayOrder?.onDragEnd(event, selectItem)}
       accessibleName={t("control.list.title")}
       onItemClick={(event) => selectItem(event.detail.item)}

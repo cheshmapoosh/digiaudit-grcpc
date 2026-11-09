@@ -75,15 +75,17 @@ export default function UsersListReport({
         <FlexBox direction="Column" className="managementListContent">
             <Bar
                 startContent={
-                    <Title level="H4">
-                        {t("usermanagement.users.listTitle", {
-                            defaultValue: "کاربران",
-                        })}
-                    </Title>
+                    <>
+                        <HeaderSearch value={searchText} onChange={onSearchTextChange} />
+                        <Title level="H4">
+                            {t("usermanagement.users.listTitle", {
+                                defaultValue: "کاربران",
+                            })}
+                        </Title>
+                    </>
                 }
                 endContent={
                     <>
-                    <HeaderSearch value={searchText} onChange={onSearchTextChange} />
                     {onCreate ? <Button design="Emphasized" disabled={busy} onClick={onCreate}>{t("usermanagement.demo.createUser")}</Button> : null}
                     <Button design="Emphasized" disabled={busy || !selectedId} onClick={() => selectedId && onShow(selectedId)}>{t("management.view")}</Button>
                     {actions}

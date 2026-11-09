@@ -1,0 +1,7 @@
+@media (min-width: 1101px) {
+    .processFormGrid[data-columns="3"] > .processFormName { grid-column: span 2; }
+}
+
+@media (min-width: 701px) and (max-width: 1100px) {
+    div.catalogAdaptiveFormGrid.processFormGrid > .modalDateRange { grid-column: auto; }
+}

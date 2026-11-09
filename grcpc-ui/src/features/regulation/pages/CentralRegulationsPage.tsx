@@ -12,7 +12,7 @@ import { ModalDialogHeader } from "@/shared/components/ModalDialogHeader";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import CentralRegulationListReport from "../components/CentralRegulationListReport";
 import CentralRegulationSummaryPanel from "../components/CentralRegulationSummaryPanel";
-import type { RegulationParentCandidate } from "../components/RegulationParentValueHelpDialog";
+import type { RegulationParentCandidate } from "../domain/centralRegulation.model";
 import type {
   CentralRegulationAnyDetail,
   CentralRegulationDetail,

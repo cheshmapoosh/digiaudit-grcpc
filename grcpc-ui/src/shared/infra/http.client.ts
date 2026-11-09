@@ -194,7 +194,7 @@ async function request<T>(
     const finalUrl = buildUrl(url);
     const profileId = selectedProfileId();
     const scoped = isDatasetUrl(url) || /\/api\/(usermanagement\/users|auth\/me)/.test(url);
-    if (isDatasetUrl(url) && !profileId) throw new HttpError(i18n.t("profile.required"), 403, "PROFILE_REQUIRED");
+    if (isDatasetUrl(url) && !profileId) throw new HttpError(i18n.t("common.dataAccessRequired"), 403, "PROFILE_REQUIRED");
     const hasBody = options.body !== undefined;
     const multipart = options.body instanceof FormData;
     let response: Response;

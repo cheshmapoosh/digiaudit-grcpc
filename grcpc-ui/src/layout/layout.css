@@ -1,8 +1,10 @@
 /* NavigationLayout owns the header, side navigation and responsive behavior. */
 .appNavigationLayout { height: 100dvh; }
-.pageBreadcrumbs { margin-block-end: var(--sapContent_Space_Tiny); }
+.pageNavigation { gap: var(--sapContent_Space_Small); margin-block-end: var(--sapContent_Space_Tiny); }
+.pageBreadcrumbs { flex: 1; min-width: 0; }
+.pageNavigation > ui5-button { flex-shrink: 0; }
 .mainContent { min-height: 100%; min-width: 0; box-sizing: border-box; padding: var(--sapContent_Space_Small); }
-.sideNavBrand { padding: 1.5rem 1rem; }
+.sideNavBrand { padding: 1.5rem 1rem; gap: var(--sapContent_Space_Tiny); text-align: center; }
 .sideNavBrandImage { display: block; width: min(8rem, 100%); height: auto; }
 
 /* Page container */

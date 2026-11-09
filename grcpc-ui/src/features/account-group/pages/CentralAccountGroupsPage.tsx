@@ -13,6 +13,7 @@ import CentralAccountGroupListReport from "../components/CentralAccountGroupList
 import CentralAccountGroupSummaryPanel from "../components/CentralAccountGroupSummaryPanel";
 import type {
   CentralAccountGroupDetail,
+  CentralAccountGroupMutationResponse,
   CentralAccountGroupSummary,
   CreateCentralAccountGroupCommand,
   EditCentralAccountGroupCommand,
@@ -96,6 +97,29 @@ export default function CentralAccountGroupsPage() {
         return t("accountGroup.errors.notFound");
       case "VERSION_CONFLICT":
         return t("accountGroup.errors.versionConflict");
+      case "DUPLICATE_RELATION":
+        return t("accountGroup.errors.duplicateClassification");
+      case "CONTROL_ACCOUNT_GROUP_ENDPOINT_NOT_ACTIVE":
+        return t("controlAccountGroup.errors.endpointInactive");
+      case "CONTROL_ACCOUNT_GROUP_CHANGE_INVALID":
+        return t("controlAccountGroup.errors.invalidChange");
+      case "CONTROL_ACCOUNT_GROUP_ENDPOINT_NOT_FOUND":
+      case "CENTRAL_CONTROL_ACCOUNT_GROUP_NOT_FOUND":
+        return t("controlAccountGroup.errors.notFound");
+      case "CONTROL_OBJECTIVE_ACCOUNT_GROUP_ENDPOINT_NOT_ACTIVE":
+        return t("controlObjectiveAccountGroup.errors.endpointInactive");
+      case "CONTROL_OBJECTIVE_ACCOUNT_GROUP_CHANGE_INVALID":
+        return t("controlObjectiveAccountGroup.errors.invalidChange");
+      case "CONTROL_OBJECTIVE_ACCOUNT_GROUP_ENDPOINT_NOT_FOUND":
+      case "CENTRAL_CONTROL_OBJECTIVE_ACCOUNT_GROUP_NOT_FOUND":
+        return t("controlObjectiveAccountGroup.errors.notFound");
+      case "ACCOUNT_GROUP_RISK_ASSIGNMENT_ENDPOINT_NOT_ACTIVE":
+        return t("accountGroup.riskAssignments.inactive");
+      case "ACCOUNT_GROUP_RISK_ASSIGNMENT_CHANGE_INVALID":
+        return t("accountGroup.riskAssignments.invalidChange");
+      case "ACCOUNT_GROUP_RISK_ASSIGNMENT_ENDPOINT_NOT_FOUND":
+      case "CENTRAL_ACCOUNT_GROUP_RISK_ASSIGNMENT_NOT_FOUND":
+        return t("accountGroup.riskAssignments.notFound");
       case "INVALID_PARENT":
       case "INVALID_HIERARCHY_MOVE":
       case "HIERARCHY_CYCLE":
@@ -103,6 +127,9 @@ export default function CentralAccountGroupsPage() {
         return t("accountGroup.errors.invalidParent");
       case "DEPENDENCY_EXISTS":
         return t("accountGroup.errors.dependencies");
+      case "MASTER_DATA_ACCESS_DENIED":
+      case "INVALID_LIFECYCLE_TRANSITION":
+        return candidate?.message || t(fallbackKey);
       default:
         return t(fallbackKey);
     }
@@ -241,17 +268,23 @@ export default function CentralAccountGroupsPage() {
     setObjectError(null);
     setDocumentError(null);
     try {
-      let detail: CentralAccountGroupDetail;
+      let result: CentralAccountGroupMutationResponse;
       if (modalMode === "create") {
-        detail = (await centralAccountGroupApi.create(payload as CreateCentralAccountGroupCommand)).entity;
+        result = await centralAccountGroupApi.create(payload as CreateCentralAccountGroupCommand);
       } else {
         const command = payload as EditCentralAccountGroupCommand;
-        detail = (await centralAccountGroupApi.update(modalValue!.id, {
+        result = await centralAccountGroupApi.update(modalValue!.id, {
           ...command, version: modalValue!.version,
           parentChange: { parentAccountGroupId: command.parentAccountGroupId },
           status: command.status, sortOrder: command.sortOrder,
-        })).entity;
+        });
       }
+      const detail = {
+        ...result.entity,
+        controlClassifications: result.controlClassifications,
+        controlObjectiveClassifications: result.controlObjectiveClassifications,
+        riskAssignments: result.riskAssignments,
+      };
       setDirty(false);
       void loadRows();
       const node: CentralAccountGroupTreeNode = { ...detail, children: [] };

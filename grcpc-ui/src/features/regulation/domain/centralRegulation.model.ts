@@ -7,6 +7,7 @@ import type {
 } from "@/features/central-catalog/components/catalogPresentation.model";
 
 export type CentralRegulationNodeType = "GROUP" | "REGULATION" | "REQUIREMENT";
+export type RegulationParentCandidate = Pick<DefinitionDetailFields, "id" | "code" | "title" | "status">;
 
 interface DefinitionAuditFields {
   createdAt: string;

@@ -7,6 +7,7 @@ import { CatalogActionButton as Button } from "@/shared/components/CatalogAction
 import { Text, ObjectStatus, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
 import type { CatalogActionPermissions } from "@/features/central-catalog/security/catalogPermissions";
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
 import {
   DocumentManager,
   EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE,
@@ -22,7 +23,8 @@ import {
 } from "@/features/control-objective-account-group";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate } from "@/shared/utils/date.utils";
-import AccountGroupParentValueHelpDialog from "../components/AccountGroupParentValueHelpDialog";
+import AccountGroupRisksTab from "../components/AccountGroupRisksTab";
+import type { CatalogRelationDraftOption, CatalogRelationLifecycleDraft } from "@/shared/components/CatalogRelationDraftTab";
 import {
   CENTRAL_ACCOUNT_GROUP_IMPORTANCE,
   type CentralAccountGroupDetail,
@@ -141,19 +143,43 @@ export default function CentralAccountGroupObjectPage({
   const { t } = useTranslation();
   const classificationPermissions = useControlAccountGroupPermissions();
   const objectiveClassificationPermissions = useControlObjectiveAccountGroupPermissions();
+  const riskAccess = useMasterDataAccess("RISK");
+  const referenceAccess = useMasterDataAccess("REFERENCE");
   const [form, setForm] = useState<FormState>(() => toForm(value, initialParentId, mode === "create"));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, initialParentId, mode === "create"))));
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [parentDialogOpen, setParentDialogOpen] = useState(false);
+  const [classificationPicker, setClassificationPicker] = useState<"controls" | "controlObjectives" | "risks" | null>(null);
+  const [controlDrafts, setControlDrafts] = useState<CatalogRelationDraftOption[]>([]);
+  const [controlObjectiveDrafts, setControlObjectiveDrafts] = useState<CatalogRelationDraftOption[]>([]);
+  const [riskDrafts, setRiskDrafts] = useState<CatalogRelationDraftOption[]>([]);
+  const [controlLifecycleChanges, setControlLifecycleChanges] = useState<CatalogRelationLifecycleDraft[]>([]);
+  const [controlObjectiveLifecycleChanges, setControlObjectiveLifecycleChanges] = useState<CatalogRelationLifecycleDraft[]>([]);
+  const [riskLifecycleChanges, setRiskLifecycleChanges] = useState<CatalogRelationLifecycleDraft[]>([]);
   const [documents, setDocuments] = useState<ParentSaveDocumentDraftState>(EMPTY_PARENT_SAVE_DOCUMENT_DRAFT_STATE);
   const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
   const scope = `${mode === "create" ? "CREATE" : value?.id ?? "EMPTY"}:${mode}`;
   const scopeRef = useRef(scope);
   const readOnly = mode === "view";
+  const canAddControls = !readOnly && classificationPermissions.create;
+  const canAddControlObjectives = !readOnly && objectiveClassificationPermissions.create;
+  const canChangeRiskAssignments = !readOnly && referenceAccess.manage && riskAccess.view;
+  const showControlsTab = classificationPermissions.view && (Boolean(value?.id) || canAddControls);
+  const showControlObjectivesTab = objectiveClassificationPermissions.view && (Boolean(value?.id) || canAddControlObjectives);
+  const showRisksTab = referenceAccess.view && riskAccess.view && (Boolean(value?.id) || canChangeRiskAssignments);
+  const controlsDirty = controlDrafts.length > 0 || controlLifecycleChanges.length > 0;
+  const controlObjectivesDirty = controlObjectiveDrafts.length > 0 || controlObjectiveLifecycleChanges.length > 0;
+  const risksDirty = riskDrafts.length > 0 || riskLifecycleChanges.length > 0;
+  const relationsDirty = controlsDirty || controlObjectivesDirty || risksDirty;
+  const relationsRequireActiveGroup = controlDrafts.length > 0 || controlObjectiveDrafts.length > 0 || riskDrafts.length > 0
+    || controlLifecycleChanges.some(change => change.operation === "ACTIVATE")
+    || controlObjectiveLifecycleChanges.some(change => change.operation === "ACTIVATE")
+    || riskLifecycleChanges.some(change => change.operation === "ACTIVATE");
+  const relationsInvalid = (relationsRequireActiveGroup && form.status !== "ACTIVE")
+    || (controlsDirty && !canAddControls) || (controlObjectivesDirty && !canAddControlObjectives)
+    || (risksDirty && !canChangeRiskAssignments);
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const generalDirty = JSON.stringify(normalized(form)) !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
-  const dirty = generalDirty || documents.dirty || documents.uploading || parentDialogOpen;
-  const canChangeParent = !readOnly && (mode === "create" || permissions.move);
+  const dirty = generalDirty || relationsDirty || Boolean(classificationPicker) || documents.dirty || documents.uploading;
   const canChangeStatus = mode === "edit" && permissions.lifecycle;
 
   useEffect(() => {
@@ -209,7 +235,7 @@ export default function CentralAccountGroupObjectPage({
   };
 
   const submit = async () => {
-    if (readOnly || !validate()) return;
+    if (readOnly || classificationPicker || relationsInvalid || !validate()) return;
     const common = {
       title: form.title.trim(),
       importance: form.importance,
@@ -218,6 +244,15 @@ export default function CentralAccountGroupObjectPage({
       validFrom: form.validFrom || null,
       validTo: form.validTo || null,
       documents: toDocumentAggregateRequest(documents),
+      controlsToAdd: controlDrafts.length
+        ? controlDrafts.map(({ id, version }) => ({ controlId: id, version }))
+        : undefined,
+      controlObjectivesToAdd: controlObjectiveDrafts.length
+        ? controlObjectiveDrafts.map(({ id, version }) => ({ controlObjectiveId: id, version }))
+        : undefined,
+      riskTemplatesToAdd: riskDrafts.length
+        ? riskDrafts.map(({ id, version }) => ({ riskTemplateId: id, version }))
+        : undefined,
     };
     const payload: AccountGroupCommand = mode === "create"
       ? {
@@ -232,6 +267,16 @@ export default function CentralAccountGroupObjectPage({
           parentAccountGroupId: form.parentAccountGroupId,
           sortOrder: value?.sortOrder ?? 0,
           status: form.status,
+          controlLifecycleChanges: controlLifecycleChanges.length
+            ? controlLifecycleChanges.map(({ targetId, relationId, ...change }) => ({ controlId: targetId, classificationId: relationId, ...change }))
+            : undefined,
+          controlObjectiveLifecycleChanges: controlObjectiveLifecycleChanges.length
+            ? controlObjectiveLifecycleChanges.map(({ targetId, relationId, ...change }) => ({ controlObjectiveId: targetId, classificationId: relationId, ...change }))
+            : undefined,
+          riskAssignmentLifecycleChanges: riskLifecycleChanges.length
+            ? riskLifecycleChanges.map(({ targetId, relationId, ...change }) =>
+                ({ riskTemplateId: targetId, assignmentId: relationId, ...change }))
+            : undefined,
         };
     if (await onSubmit(payload)) {
       setBaseline(JSON.stringify(normalized(form)));
@@ -239,34 +284,33 @@ export default function CentralAccountGroupObjectPage({
     }
   };
 
-  const saveDisabled = busy || parentDialogOpen || invalidDate || documents.uploading || documents.invalid || !documents.ready || (!generalDirty && !documents.dirty);
+  const saveDisabled = busy || Boolean(classificationPicker) || relationsInvalid || invalidDate
+    || documents.uploading || documents.invalid || !documents.ready || (!generalDirty && !relationsDirty && !documents.dirty);
 
   return (
     <>
       <div className="accountGroupObjectPage">
         <CatalogParentHeader objectTitle={form.title || t("accountGroup.object.title")} label={t("accountGroup.fields.parent")} parentId={form.parentAccountGroupId}
-          busy={busy} onClearParent={canChangeParent ? () => change("parentAccountGroupId", null) : undefined}
-          parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t("accountGroup.object.title"), status: selectedParent.status } : null}
-          selection={canChangeParent ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+          parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t("accountGroup.object.title"), status: selectedParent.status } : null} />
 
         <DetailTabContainer
           onTabSelect={(event) => {
             const key = event.detail.tab.getAttribute("data-tab-key") as CentralAccountGroupTabKey | null;
             if (key === "general" || key === "documents"
-              || (key === "controls" && value?.id && classificationPermissions.view)
-              || (key === "controlObjectives" && value?.id
-                && objectiveClassificationPermissions.view)) onActiveTabChange(key);
+              || (key === "controls" && showControlsTab)
+              || (key === "controlObjectives" && showControlObjectivesTab)
+              || (key === "risks" && showRisksTab)) onActiveTabChange(key);
           }}
         >
           <Tab text={t("accountGroup.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
-          <Tab text={t("accountGroup.tabs.controls", { defaultValue: "Controls" })} selected={activeTab === "controls"} disabled={!value?.id || !classificationPermissions.view} data-tab-key="controls" />
+          <Tab text={t("accountGroup.tabs.controls")} selected={activeTab === "controls"} disabled={!showControlsTab} data-tab-key="controls" />
           <Tab
             text={t("accountGroup.tabs.controlObjectives")}
             selected={activeTab === "controlObjectives"}
-            disabled={!value?.id || !objectiveClassificationPermissions.view}
+            disabled={!showControlObjectivesTab}
             data-tab-key="controlObjectives"
           />
-          <Tab text={t("accountGroup.tabs.risks")} disabled data-tab-key="risks" />
+          <Tab text={t("accountGroup.tabs.risks")} selected={activeTab === "risks"} disabled={!showRisksTab} data-tab-key="risks" />
           <Tab text={t("accountGroup.tabs.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
         </DetailTabContainer>
 
@@ -378,15 +422,32 @@ export default function CentralAccountGroupObjectPage({
           </div>
 
           <div className={activeTab === "controls" ? "accountGroupTabPanel" : "accountGroupTabPanel accountGroupTabPanelHidden"}>
-            {value?.id && classificationPermissions.view ? <AccountGroupControlsTab accountGroupId={value.id} /> : null}
+            {showControlsTab ? <AccountGroupControlsTab ownerId={value?.id ?? null}
+              canonicalRows={readOnly ? value?.controlClassifications : undefined} busy={busy} editable={canAddControls}
+              active={form.status === "ACTIVE"} drafts={controlDrafts} onDraftsChange={setControlDrafts}
+              lifecycleChanges={controlLifecycleChanges} onLifecycleChangesChange={setControlLifecycleChanges}
+              pickerOpen={classificationPicker === "controls"}
+              onPickerOpenChange={open => setClassificationPicker(open ? "controls" : null)} /> : null}
           </div>
 
           <div className={activeTab === "controlObjectives" ? "accountGroupTabPanel" : "accountGroupTabPanel accountGroupTabPanelHidden"}>
-            {value?.id && objectiveClassificationPermissions.view ? (
-              <AccountGroupControlObjectivesTab
-                accountGroupId={value.id}
-              />
-            ) : null}
+            {showControlObjectivesTab ? <AccountGroupControlObjectivesTab ownerId={value?.id ?? null}
+              canonicalRows={readOnly ? value?.controlObjectiveClassifications : undefined}
+              busy={busy} editable={canAddControlObjectives} active={form.status === "ACTIVE"}
+              drafts={controlObjectiveDrafts} onDraftsChange={setControlObjectiveDrafts}
+              lifecycleChanges={controlObjectiveLifecycleChanges} onLifecycleChangesChange={setControlObjectiveLifecycleChanges}
+              pickerOpen={classificationPicker === "controlObjectives"}
+              onPickerOpenChange={open => setClassificationPicker(open ? "controlObjectives" : null)} /> : null}
+          </div>
+
+          <div className={activeTab === "risks" ? "accountGroupTabPanel" : "accountGroupTabPanel accountGroupTabPanelHidden"}>
+            {showRisksTab ? <AccountGroupRisksTab ownerId={value?.id ?? null}
+              canonicalRows={readOnly ? value?.riskAssignments : undefined}
+              busy={busy} editable={canChangeRiskAssignments} active={form.status === "ACTIVE"}
+              drafts={riskDrafts} onDraftsChange={setRiskDrafts}
+              lifecycleChanges={riskLifecycleChanges} onLifecycleChangesChange={setRiskLifecycleChanges}
+              pickerOpen={classificationPicker === "risks"}
+              onPickerOpenChange={open => setClassificationPicker(open ? "risks" : null)} /> : null}
           </div>
         </div>
 
@@ -413,18 +474,6 @@ export default function CentralAccountGroupObjectPage({
         </DialogFooter>
       </div>
 
-      <AccountGroupParentValueHelpDialog
-        open={parentDialogOpen}
-        rows={rows}
-        currentId={mode === "edit" ? value?.id ?? null : null}
-        selectedParentId={form.parentAccountGroupId}
-        busy={busy}
-        onClose={() => setParentDialogOpen(false)}
-        onSelect={(parentId) => {
-          change("parentAccountGroupId", parentId);
-          setParentDialogOpen(false);
-        }}
-      />
     </>
   );
 }

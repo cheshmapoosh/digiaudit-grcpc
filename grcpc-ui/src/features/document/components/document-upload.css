@@ -1,0 +1,11 @@
+.documentUploadFields > div {
+    display: grid;
+    align-content: start;
+    gap: var(--sapContent_Space_Tiny);
+}
+
+@media (min-width: 701px) {
+    div.catalogAdaptiveFormGrid.documentUploadFields {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}

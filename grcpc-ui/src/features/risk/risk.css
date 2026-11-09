@@ -33,27 +33,6 @@
   box-sizing: border-box;
 }
 
-.riskTreeItemContent {
-  width: 100%;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 1rem;
-  box-sizing: border-box;
-}
-
-.riskTreeItemTitle {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.riskTreeItemType {
-  white-space: nowrap;
-}
-
 .riskSummaryPanel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -171,11 +150,6 @@
   .riskDateRange,
   .riskSummaryRow {
     grid-template-columns: 1fr;
-  }
-
-  .riskTreeItemContent {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.25rem;
   }
 
 }

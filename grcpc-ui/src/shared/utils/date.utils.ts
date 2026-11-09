@@ -11,16 +11,6 @@ function normalizeDateText(value: string): string {
     return toEnglishDigits(value).trim();
 }
 
-function isLikelyPersianCalendarText(value: string): boolean {
-    return /^(13|14)\d{2}[/\-.]\d{1,2}[/\-.]\d{1,2}(?:[ T]\d{1,2}:\d{1,2}(?::\d{1,2})?)?$/.test(
-        value,
-    );
-}
-
-function hasTimePart(value: string): boolean {
-    return /[T ]\d{1,2}:\d{1,2}/.test(value);
-}
-
 function toDate(value: string): Date | null {
     const parsed = new Date(value);
 
@@ -29,11 +19,6 @@ function toDate(value: string): Date | null {
     }
 
     return parsed;
-}
-
-function normalizePersianCalendarText(value: string): string {
-    const normalized = normalizeDateText(value).replace(/[.-]/g, "/");
-    return toPersianDigits(normalized);
 }
 
 export function toPersianDigits(value: string): string {
@@ -52,9 +37,9 @@ export function formatPersianDate(value?: string | null): string {
     }
 
     const normalized = normalizeDateText(value);
-
-    if (isLikelyPersianCalendarText(normalized)) {
-        return normalizePersianCalendarText(normalized);
+    const persianDate = /^((?:13|14)\d{2}[/\-.]\d{1,2}[/\-.]\d{1,2})(?:[ T]\d{1,2}:\d{1,2}(?::\d{1,2})?)?$/.exec(normalized)?.[1];
+    if (persianDate) {
+        return toPersianDigits(persianDate.replace(/[.-]/g, "/"));
     }
 
     const parsed = toDate(normalized);
@@ -67,37 +52,5 @@ export function formatPersianDate(value?: string | null): string {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
-    }).format(parsed);
-}
-
-export function formatPersianDateTime(value?: string | null): string {
-    if (!isNonEmpty(value)) {
-        return "-";
-    }
-
-    const normalized = normalizeDateText(value);
-
-    if (isLikelyPersianCalendarText(normalized)) {
-        return normalizePersianCalendarText(normalized);
-    }
-
-    const parsed = toDate(normalized);
-
-    if (!parsed) {
-        return toPersianDigits(value.trim());
-    }
-
-    return new Intl.DateTimeFormat(PERSIAN_DATE_LOCALE, {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        ...(hasTimePart(normalized)
-            ? {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                  hour12: false,
-              }
-            : {}),
     }).format(parsed);
 }

@@ -1,7 +1,5 @@
-import { canAccessMasterData, type MasterDataArea } from "@/features/master-data/security/masterDataAccess";
+import { useMasterDataAccess, type MasterDataArea } from "@/features/master-data/security/masterDataAccess";
 import { useMemo } from "react";
-
-import { useAuthState } from "@/features/auth";
 
 export type CatalogPermissionPrefix =
   | "CENTRAL_CONTROL"
@@ -25,24 +23,19 @@ export interface CatalogActionPermissions {
 export function useCatalogActionPermissions(
   prefix: CatalogPermissionPrefix,
 ): CatalogActionPermissions {
-  const me = useAuthState((state) => state.me);
-
-  return useMemo(() => {
-    const areas: Record<CatalogPermissionPrefix, MasterDataArea> = {
-      CENTRAL_CONTROL: "CONTROL", CENTRAL_CONTROL_OBJECTIVE: "CONTROL", CENTRAL_RISK: "RISK",
-      CENTRAL_ACCOUNT_GROUP: "REFERENCE", CENTRAL_REGULATION: "GOVERNANCE", CENTRAL_POLICY: "GOVERNANCE",
-    };
-    const manage = canAccessMasterData(me, areas[prefix], true);
-
-    return {
-      create: manage,
-      update: manage,
-      move: manage,
-      lifecycle: manage,
-      delete: manage,
-      restore: manage,
-      publish: manage,
-      documentUpload: manage,
-    };
-  }, [me, prefix]);
+  const areas: Record<CatalogPermissionPrefix, MasterDataArea> = {
+    CENTRAL_CONTROL: "CONTROL", CENTRAL_CONTROL_OBJECTIVE: "CONTROL", CENTRAL_RISK: "RISK",
+    CENTRAL_ACCOUNT_GROUP: "REFERENCE", CENTRAL_REGULATION: "GOVERNANCE", CENTRAL_POLICY: "GOVERNANCE",
+  };
+  const { manage } = useMasterDataAccess(areas[prefix]);
+  return useMemo(() => ({
+    create: manage,
+    update: manage,
+    move: manage,
+    lifecycle: manage,
+    delete: manage,
+    restore: manage,
+    publish: manage,
+    documentUpload: manage,
+  }), [manage]);
 }

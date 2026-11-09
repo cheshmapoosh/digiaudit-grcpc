@@ -1,5 +1,6 @@
 import type { RiskControlObjectiveAssignment, RiskControlObjectiveAssignmentChange } from "@/features/risk-control-objective-assignment";
 import type { DocumentAggregateRequest } from "@/features/document";
+import type { CentralSubprocessControlObjectiveScope } from "@/features/control-objective-scope";
 import type {
   ControlObjectiveAccountGroupChange,
   ControlObjectiveAccountGroupClassification,
@@ -20,7 +21,7 @@ export interface CentralControlObjectiveSummary {
 }
 
 export interface CentralControlObjectiveDetail extends CentralControlObjectiveSummary {
-  relations?: Pick<CentralControlObjectiveMutationResponse, "accountGroupClassifications" | "riskAssignments">;
+  relations?: Pick<CentralControlObjectiveMutationResponse, "accountGroupClassifications" | "riskAssignments" | "subprocessScopes">;
   description: string | null;
   createdAt: string;
   createdBy: string;
@@ -40,6 +41,7 @@ export interface CreateCentralControlObjectiveCommand {
   documents: DocumentAggregateRequest;
   accountGroupChanges: ControlObjectiveAccountGroupChange[];
   riskAssignments: RiskControlObjectiveAssignmentChange[];
+  initialSubprocesses?: { subprocessId: string; version: number }[];
 }
 
 export interface UpdateCentralControlObjectiveCommand {
@@ -63,6 +65,7 @@ export interface CentralControlObjectiveMutationResponse {
   finalizedDocuments: unknown[];
   accountGroupClassifications: ControlObjectiveAccountGroupClassification[];
   riskAssignments: RiskControlObjectiveAssignment[];
+  subprocessScopes?: CentralSubprocessControlObjectiveScope[];
 }
 
 export interface CentralControlObjectiveRevisionResponse {

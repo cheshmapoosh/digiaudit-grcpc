@@ -20,14 +20,12 @@ import {
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
 import { PersianDatePicker, type PersianDateDraftState } from "@/shared/components/PersianDatePicker";
 import { formatPersianDate } from "@/shared/utils/date.utils";
-import RegulationParentValueHelpDialog, {
-  type RegulationParentCandidate,
-} from "../components/RegulationParentValueHelpDialog";
 import RegulationRequirementsTab from "../components/RegulationRequirementsTab";
 import { toRegulationRequirementChanges, type RegulationRequirementChange, type RegulationRequirementDraft } from "../domain/regulationRequirementDrafts.model";
 import type {
   CentralRegulationAnyDetail,
   CentralRegulationNodeType,
+  RegulationParentCandidate,
   CentralRegulationRequirementSummary,
 } from "../domain/centralRegulation.model";
 
@@ -170,7 +168,6 @@ export default function CentralRegulationObjectPage({
     JSON.stringify(normalized(toForm(value, initialParentId, mode === "create"))),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [parentDialogOpen, setParentDialogOpen] = useState(false);
   const [requirementsPending, setRequirementsPending] = useState(false);
   const [requirementsReady, setRequirementsReady] = useState(true);
   const [requirementsDirty, setRequirementsDirty] = useState(false);
@@ -190,10 +187,9 @@ export default function CentralRegulationObjectPage({
     JSON.stringify(normalized(form)) !== baseline ||
     dateDrafts.validFrom.dirty ||
     dateDrafts.validTo.dirty;
-  const dirty = definitionDirty || documents.dirty || documents.uploading || parentDialogOpen
+  const dirty = definitionDirty || documents.dirty || documents.uploading
     || requirementsPending || requirementsDirty || requirementChanges.length > 0;
   const canChangeStatus = mode === "edit" && permissions.lifecycle;
-  const canChangeParent = !readOnly && (mode === "create" || permissions.move);
 
   useEffect(() => {
     if (scopeRef.current === scope && dirty) return;
@@ -295,7 +291,7 @@ export default function CentralRegulationObjectPage({
         ? "regulation"
         : "requirement";
   const saveDisabled =
-    busy || parentDialogOpen || requirementsPending || !requirementsReady ||
+    busy || requirementsPending || !requirementsReady ||
     invalidDate ||
     documents.uploading ||
     documents.invalid ||
@@ -307,9 +303,7 @@ export default function CentralRegulationObjectPage({
     <>
       <div className="regulationObjectPage">
         <CatalogParentHeader objectTitle={form.title || t(`regulation.nodeType.${typeKey}`)} label={t("regulation.fields.parent")} parentId={form.parentId} required={nodeType !== "GROUP"}
-          busy={busy} onClearParent={canChangeParent && nodeType === "GROUP" ? () => change("parentId", null) : undefined}
-          parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t(nodeType === "REQUIREMENT" ? "regulation.nodeType.regulation" : "regulation.nodeType.group"), status: selectedParent.status } : null}
-          selection={canChangeParent ? <Button design="Emphasized" disabled={busy} onClick={() => setParentDialogOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+          parent={selectedParent ? { code: selectedParent.code, title: selectedParent.title, type: t(nodeType === "REQUIREMENT" ? "regulation.nodeType.regulation" : "regulation.nodeType.group"), status: selectedParent.status } : null} />
 
         <DetailTabContainer
           onTabSelect={(event) => {
@@ -501,15 +495,6 @@ export default function CentralRegulationObjectPage({
         </DialogFooter>
       </div>
 
-      <RegulationParentValueHelpDialog
-        open={parentDialogOpen}
-        candidates={parentCandidates}
-        selectedParentId={form.parentId}
-        allowNoParent={nodeType === "GROUP"}
-        busy={busy}
-        onClose={() => setParentDialogOpen(false)}
-        onSelect={(parentId) => change("parentId", parentId)}
-      />
     </>
   );
 }

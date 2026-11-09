@@ -6,6 +6,7 @@ import com.digiaudit.grcpc.common.exception.UnprocessableEntityException;
 import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.digiaudit.grcpc.common.security.CurrentUserProvider;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.api.dto.CentralAccountGroupDtos.ControlObjectiveLifecycleChange;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.repository.CentralAccountGroupRepository;
 import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.domain.entity.CentralControlObjectiveEntity;
 import com.digiaudit.grcpc.modules.masterdata.classification.controlobjectiveaccountgroup.api.dto.CentralControlObjectiveAccountGroupChangeOperation;
@@ -128,6 +129,32 @@ public class CentralControlObjectiveAccountGroupAggregateService {
     List<CentralControlObjectiveAccountGroupResponse> canonical =
         canView() ? canonicalRows(controlObjective) : List.of();
     return new ApplyResult(contents, canonical);
+  }
+
+  public RevisionContentResult changeFromAccountGroup(RevisionExecutionContext context,
+      CentralControlObjectiveEntity objective, CentralAccountGroupEntity group, ControlObjectiveLifecycleChange change) {
+    requireScopeAccess();
+    guard.requireHierarchyGuard(context, MasterDataHierarchyKey.ACCOUNT_GROUP);
+    CentralControlObjectiveAccountGroupEntity existing = classifications
+        .lockByBusinessKeys(objective.getId(), List.of(group.getId())).stream().findFirst().orElse(null);
+    var endpoint = new ControlObjectiveEndpoint(objective.getId(), objective.getStatus());
+    PreparedMutation mutation;
+    if (change == null) {
+      if (existing != null && existing.getStatus() != DELETED) {
+        throw duplicate(objective.getId(), group.getId());
+      }
+      mutation = createOrRestore(endpoint, group, existing,
+          existing == null ? null : existing.getValidFrom(), existing == null ? null : existing.getValidTo());
+    } else {
+      var request = new CentralControlObjectiveAccountGroupChangeRequest(
+          CentralControlObjectiveAccountGroupChangeOperation.valueOf(change.operation().name()),
+          group.getId(), change.classificationId(), change.version(), null, null, null);
+      validateShape(request, existing);
+      mutation = prepare(endpoint, group, existing, request);
+    }
+    apply(mutation, users.getCurrentPrincipal().getUserId(), Instant.now(clock));
+    classifications.saveAndFlush(mutation.entity());
+    return revisionContent(mutation);
   }
 
   public List<CentralControlObjectiveAccountGroupResponse> canonicalRows(

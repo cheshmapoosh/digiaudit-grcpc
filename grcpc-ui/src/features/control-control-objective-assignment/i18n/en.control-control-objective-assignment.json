@@ -63,9 +63,6 @@
       "notFound": "Assignment or related definition not found.",
       "forbidden": "You do not have permission to view or change these assignments."
     },
-    "title": "Control objectives",
-    "inverse": {
-      "title": "Controls"
-    }
+    "title": "Control objectives"
   }
 }

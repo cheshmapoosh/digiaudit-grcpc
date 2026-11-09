@@ -58,15 +58,17 @@ export default function OrganizationsListReport({
         >
             <Bar
                 startContent={
-                    <Title level="H4">
-                        {t("organization.list.title", { defaultValue: "ساختار سازمانی" })}
-                    </Title>
+                    <>
+                        <Title level="H4">
+                            {t("organization.list.title", { defaultValue: "ساختار سازمانی" })}
+                        </Title>
+                        <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("organization.list.search", {
+                            defaultValue: "جستجو بر اساس کد",
+                        })} />
+                    </>
                 }
                 endContent={
                     <>
-                        <HeaderSearch value={searchText} onChange={(value) => onSearchTextChange(value)} disabled={busy} accessibleName={t("organization.list.search", {
-                    defaultValue: "جستجو بر اساس کد",
-                })} />
                         <Button
                             design="Emphasized"
                             disabled={busy}

@@ -178,7 +178,7 @@ export default function LocalOrganizationWorkspace({
                 setValidatedTargetId(null);
                 setTargetLabel(null);
                 setContextError(t("local.errors.invalidSelection", {
-                    defaultValue: "هدف محلی انتخاب‌شده یافت نشد.",
+                    defaultValue: "هدف انتخاب‌شده یافت نشد.",
                 }));
             });
         return () => { current = false; };
@@ -220,12 +220,12 @@ export default function LocalOrganizationWorkspace({
     ];
     if (!organizationId) return <MessageStrip design="Information" hideCloseButton>
         {t("local.saveOrganizationFirst", {
-            defaultValue: "ابتدا اطلاعات سازمان را ذخیره کنید؛ سپس روابط محلی را ثبت کنید.",
+            defaultValue: "ابتدا اطلاعات سازمان را ذخیره کنید؛ سپس روابط را ثبت کنید.",
         })}
     </MessageStrip>;
     if (malformed || (rawSection && !hiddenSection && !isSection(rawSection))) {
         return <MessageStrip design="Negative" hideCloseButton>
-            {t("local.errors.invalidSelection", { defaultValue: "انتخاب یا پیوند محلی نامعتبر است." })}
+            {t("local.errors.invalidSelection", { defaultValue: "انتخاب یا پیوند نامعتبر است." })}
         </MessageStrip>;
     }
     if (!referenceView) {
@@ -293,7 +293,7 @@ export default function LocalOrganizationWorkspace({
             label={t(activeSpec?.key === "control-policies"
                 ? "local.fields.localControlScope" : "local.fields.localRequirementScope", {
                 defaultValue: activeSpec?.key === "control-policies"
-                    ? "کنترل محلی" : "الزام محلی",
+                    ? "کنترل" : "الزام",
             })}
             path={`organization-subprocess-scopes/${contextId}/${activeSpec?.key === "control-policies"
                 ? "control-scopes" : "requirement-scopes"}`}

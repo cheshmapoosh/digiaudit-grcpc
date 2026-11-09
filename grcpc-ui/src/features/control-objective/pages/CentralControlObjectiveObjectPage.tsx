@@ -2,9 +2,10 @@ import { CatalogFormGrid } from "@/shared/components/CatalogFormGrid";
 import { CatalogParentHeader } from "@/shared/components/CatalogParentHeader";
 import { DialogFooter } from "@/shared/components/DialogFooter";
 import { ControlObjectiveRiskTemplateAssignmentsTab, EMPTY_RISK_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE, useRiskControlObjectiveAssignmentPermissions, type RiskControlObjectiveAssignmentDraftState } from "@/features/risk-control-objective-assignment";
-import { ControlObjectiveControlAssignmentsTab, useControlControlObjectiveAssignmentPermissions } from "@/features/control-control-objective-assignment";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { useMasterDataAccess } from "@/features/master-data/security/masterDataAccess";
+import type { ProcessNode } from "@/features/process/domain/process.model";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { Text, ObjectStatus, Input, Label, MessageStrip, Option, Select, Tab, TextArea } from "@ui5/webcomponents-react";
 
@@ -25,6 +26,7 @@ import {
 } from "@/features/control-objective-account-group";
 import {
   ControlObjectiveSubprocessScopesTab,
+  InitialControlObjectiveSubprocessesTab,
   useControlObjectiveScopePermissions,
 } from "@/features/control-objective-scope";
 import { DetailTabContainer } from "@/shared/components/DetailTabContainer";
@@ -43,7 +45,6 @@ export type CentralControlObjectiveTabKey =
   | "general"
   | "subprocesses"
   | "risks"
-  | "controls"
   | "accountGroups"
   | "documents";
 
@@ -137,7 +138,11 @@ export default function CentralControlObjectiveObjectPage({
   const classificationPermissions = useControlObjectiveAccountGroupPermissions();
   const scopePermissions = useControlObjectiveScopePermissions();
   const riskAssignmentPermissions = useRiskControlObjectiveAssignmentPermissions();
-  const controlAssignmentPermissions = useControlControlObjectiveAssignmentPermissions();
+  const controlAccess = useMasterDataAccess("CONTROL");
+  const canSelectInitialSubprocesses = scopePermissions.create && controlAccess.manage;
+  const selectedTab = (activeTab === "subprocesses" && !scopePermissions.view)
+    || (activeTab === "risks" && !riskAssignmentPermissions.view)
+    || (activeTab === "accountGroups" && !classificationPermissions.view) ? "general" : activeTab;
   const [form, setForm] = useState<FormState>(() => toForm(value, mode === "create"));
   const [baseline, setBaseline] = useState(() => JSON.stringify(normalized(toForm(value, mode === "create"))));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -149,12 +154,18 @@ export default function CentralControlObjectiveObjectPage({
   ControlObjectiveAccountGroupClassification[] | null>(null);
   const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
   const [riskAssignmentDraft, setRiskAssignmentDraft] = useState<RiskControlObjectiveAssignmentDraftState>(EMPTY_RISK_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE);
+  const [initialSubprocesses, setInitialSubprocesses] = useState<ProcessNode[]>([]);
+  const [subprocessPickerOpen, setSubprocessPickerOpen] = useState(false);
   const scopeRef = useRef(mode === "create" ? "CREATE" : value?.id ?? "EMPTY");
 
   const readOnly = mode === "view";
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
   const generalDirty = JSON.stringify(normalized(form)) !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
-  const dirty = generalDirty || documents.dirty || documents.uploading || classifications.dirty || riskAssignmentDraft.dirty;
+  const relationsBlocked = (classifications.dirty && !classificationPermissions.create)
+    || (riskAssignmentDraft.dirty && !riskAssignmentPermissions.create)
+    || (initialSubprocesses.length > 0 && !canSelectInitialSubprocesses);
+  const dirty = generalDirty || documents.dirty || documents.uploading || classifications.dirty || riskAssignmentDraft.dirty
+    || initialSubprocesses.length > 0 || subprocessPickerOpen;
   const scope = mode === "create" ? "CREATE" : value?.id ?? "EMPTY";
 
   useEffect(() => {
@@ -167,6 +178,8 @@ export default function CentralControlObjectiveObjectPage({
       setClassifications(EMPTY_CONTROL_OBJECTIVE_CLASSIFICATION_DRAFT_STATE);
       setRiskAssignmentDraft(EMPTY_RISK_CONTROL_OBJECTIVE_ASSIGNMENT_DRAFT_STATE);
       setAdoptedClassifications(null);
+      setInitialSubprocesses([]);
+      setSubprocessPickerOpen(false);
       setDateDrafts({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
       scopeRef.current = scope;
     }, 0);
@@ -219,7 +232,7 @@ export default function CentralControlObjectiveObjectPage({
   };
 
   const submit = async () => {
-    if (readOnly || !validate()) return;
+    if (readOnly || subprocessPickerOpen || relationsBlocked || !validate()) return;
     const common = {
       title: form.title.trim(),
       description: form.description.trim() || null,
@@ -232,7 +245,11 @@ export default function CentralControlObjectiveObjectPage({
     };
     const payload: CreateCentralControlObjectiveCommand | UpdateCentralControlObjectiveCommand =
       mode === "create"
-        ? { ...common, code: form.code.trim().toUpperCase() }
+        ? {
+            ...common,
+            code: form.code.trim().toUpperCase(),
+            initialSubprocesses: initialSubprocesses.map(row => ({ subprocessId: row.id, version: row.version })),
+          }
         : { ...common, status: form.status, version: value?.version ?? 0 };
     const result = await onSubmit(payload);
     if (result) {
@@ -245,6 +262,8 @@ export default function CentralControlObjectiveObjectPage({
 
   const saveDisabled =
     busy
+    || subprocessPickerOpen
+    || relationsBlocked
     || invalidDate
     || documents.uploading
     || documents.invalid
@@ -253,41 +272,40 @@ export default function CentralControlObjectiveObjectPage({
     || !classifications.ready
     || riskAssignmentDraft.invalid
     || !riskAssignmentDraft.ready
-    || (!generalDirty && !documents.dirty && !classifications.dirty && !riskAssignmentDraft.dirty);
+    || (!generalDirty && !documents.dirty && !classifications.dirty && !riskAssignmentDraft.dirty && !initialSubprocesses.length);
 
   return (
     <div className="controlObjectiveObjectPage">
       <CatalogParentHeader objectTitle={form.title || t("controlObjective.object.title")} standalone />
       <DetailTabContainer
         onTabSelect={(event) => {
-          const key = event.detail.tab.getAttribute("data-tab-key") as CentralControlObjectiveTabKey | null;
+          const key = event.detail.tab.getAttribute("data-tab-key");
           if (key === "general" || key === "documents"
-            || (key === "subprocesses" && mode !== "create" && scopePermissions.view)
+            || (key === "subprocesses" && scopePermissions.view)
             || (key === "risks" && riskAssignmentPermissions.view)
-            || (key === "controls" && mode !== "create" && controlAssignmentPermissions.view)
             || (key === "accountGroups" && classificationPermissions.view)) {
             onActiveTabChange(key);
           }
         }}
       >
-        <Tab text={t("controlObjective.tabs.general")} selected={activeTab === "general"} data-tab-key="general" />
-        <Tab text={t("controlObjective.tabs.subprocesses")} selected={activeTab === "subprocesses"} disabled={mode === "create" || !scopePermissions.view} data-tab-key="subprocesses" />
-        <Tab text={t("controlObjective.tabs.risks")} selected={activeTab === "risks"} disabled={!riskAssignmentPermissions.view} data-tab-key="risks" />
-        <Tab text={t("controlObjective.tabs.controls")} selected={activeTab === "controls"} disabled={mode === "create" || !controlAssignmentPermissions.view} data-tab-key="controls" />
+        <Tab text={t("controlObjective.tabs.general")} selected={selectedTab === "general"} data-tab-key="general" />
+        <Tab text={t("controlObjective.tabs.subprocesses")} selected={selectedTab === "subprocesses"} disabled={!scopePermissions.view} data-tab-key="subprocesses" />
+        <Tab text={t("controlObjective.tabs.risks")} selected={selectedTab === "risks"} disabled={!riskAssignmentPermissions.view} data-tab-key="risks" />
         <Tab
           text={t("controlObjective.tabs.accountGroups")}
-          selected={activeTab === "accountGroups"}
+          selected={selectedTab === "accountGroups"}
           disabled={!classificationPermissions.view}
           data-tab-key="accountGroups"
         />
-        <Tab text={t("controlObjective.tabs.documents")} selected={activeTab === "documents"} data-tab-key="documents" />
+        <Tab text={t("controlObjective.tabs.documents")} selected={selectedTab === "documents"} data-tab-key="documents" />
       </DetailTabContainer>
 
       {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
+      {relationsBlocked ? <MessageStrip design="Negative" hideCloseButton>{t("common.dataAccessRequired")}</MessageStrip> : null}
       {validationError ? <MessageStrip design="Negative" onClose={() => setValidationError(null)}>{validationError}</MessageStrip> : null}
 
       <div className="controlObjectiveObjectBody">
-        <div className={activeTab === "general" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
+        <div className={selectedTab === "general" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
           <CatalogFormGrid className="controlObjectiveFormGrid modalTwoColumnGrid">
             <Field label={t("controlObjective.fields.code")} required>
               {readOnly ? <Text className="objectPageValue">{(form.code) || "—"}</Text> : <Input value={form.code} readonly={mode !== "create"} disabled={busy} maxlength={64} onInput={(event) => change("code", readValue(event))} />}
@@ -337,19 +355,22 @@ export default function CentralControlObjectiveObjectPage({
           </CatalogFormGrid>
         </div>
 
-        <div className={activeTab === "subprocesses" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
-          {value?.id && scopePermissions.view ? <ControlObjectiveSubprocessScopesTab controlObjectiveId={value.id} /> : null}
+        <div className={selectedTab === "subprocesses" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
+          {scopePermissions.view && mode === "create" ? (
+            <InitialControlObjectiveSubprocessesTab drafts={initialSubprocesses}
+              editable={canSelectInitialSubprocesses} busy={busy} pickerOpen={subprocessPickerOpen}
+              onDraftsChange={setInitialSubprocesses} onPickerOpenChange={setSubprocessPickerOpen} />
+          ) : null}
+          {scopePermissions.view && mode !== "create" && value?.id ? (
+            <ControlObjectiveSubprocessScopesTab controlObjectiveId={value.id} canonicalRows={value.relations?.subprocessScopes} />
+          ) : null}
         </div>
 
-        <div className={activeTab === "risks" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
+        <div className={selectedTab === "risks" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
           {riskAssignmentPermissions.view ? <ControlObjectiveRiskTemplateAssignmentsTab canonicalRows={value?.relations?.riskAssignments} controlObjectiveId={value?.id ?? null} readOnly={readOnly} busy={busy} onDraftStateChange={setRiskAssignmentDraft} /> : null}
         </div>
 
-        <div className={activeTab === "controls" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
-          {value?.id && controlAssignmentPermissions.view ? <ControlObjectiveControlAssignmentsTab controlObjectiveId={value.id} /> : null}
-        </div>
-
-        <div className={activeTab === "accountGroups" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
+        <div className={selectedTab === "accountGroups" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
           {classificationPermissions.view ? (
             <ControlObjectiveAccountGroupsTab
               controlObjectiveId={value?.id ?? null}
@@ -361,7 +382,7 @@ export default function CentralControlObjectiveObjectPage({
           ) : null}
         </div>
 
-        <div className={activeTab === "documents" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
+        <div className={selectedTab === "documents" ? "controlObjectiveTabPanel" : "controlObjectiveTabPanel controlObjectiveTabPanelHidden"}>
           <DocumentManager
             targetType="CENTRAL_CONTROL_OBJECTIVE_DEF"
             targetId={value?.id ?? null}

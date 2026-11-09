@@ -1,5 +1,7 @@
 export type ControlObjectiveClassificationStatus = "ACTIVE" | "INACTIVE" | "DELETED";
 export type ControlObjectiveClassificationEditableStatus = Exclude<ControlObjectiveClassificationStatus, "DELETED">;
+
+export interface AccountGroupControlObjectiveSelection { controlObjectiveId: string; version: number; }
 export type ControlObjectiveClassificationEditState =
   | "FINAL"
   | "DRAFT_NEW"

@@ -64,7 +64,6 @@ export default function LocalReverseList<K extends LocalSectionKey>({ parentId, 
   ];
   if (!allowed) return null;
   return <section><CatalogRelationToolbar title={t(titleKey, { defaultValue: titleFa })} search={search} onSearch={setSearch} filter={filter} onFilter={setFilter} />
-    <MessageStrip design="Information" hideCloseButton>{t("local.reverse.readOnly")}</MessageStrip>
     {error ? <MessageStrip design="Negative" hideCloseButton>{t("local.errors.list")}<CatalogActionButton onClick={() => setReload(value => value + 1)}>{t("catalogRelation.retry")}</CatalogActionButton></MessageStrip> : null}
     <CatalogRelationTable rows={visible} columns={columns} rowKey={row => row.id} accessibleName={t(titleKey, { defaultValue: titleFa })} loading={loading} emptyText={t("catalogRelation.empty")} />
   </section>;

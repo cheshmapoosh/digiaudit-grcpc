@@ -1,10 +1,11 @@
 package com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.api;
 
+import com.digiaudit.grcpc.modules.masterdata.assignment.accountgrouprisk.api.dto.AccountGroupRiskAssignmentDtos;
+import com.digiaudit.grcpc.modules.masterdata.assignment.accountgrouprisk.application.CentralAccountGroupRiskAssignmentService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.api.dto.CentralAccountGroupDtos;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.application.CentralAccountGroupCommandService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.application.CentralAccountGroupQueryService;
 import com.digiaudit.grcpc.modules.masterdata.catalog.shared.api.dto.CatalogLifecycleCommandRequest;
-import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataAggregateMutationResponse;
 import com.digiaudit.grcpc.modules.masterdata.shared.api.dto.MasterDataRevisionMutationResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -17,11 +18,14 @@ import org.springframework.web.bind.annotation.*;
 public class CentralAccountGroupController {
   private final CentralAccountGroupCommandService commands;
   private final CentralAccountGroupQueryService queries;
+  private final CentralAccountGroupRiskAssignmentService riskAssignments;
 
   public CentralAccountGroupController(
-      CentralAccountGroupCommandService commands, CentralAccountGroupQueryService queries) {
+      CentralAccountGroupCommandService commands, CentralAccountGroupQueryService queries,
+      CentralAccountGroupRiskAssignmentService riskAssignments) {
     this.commands = commands;
     this.queries = queries;
+    this.riskAssignments = riskAssignments;
   }
 
   @GetMapping
@@ -46,6 +50,12 @@ public class CentralAccountGroupController {
   @PreAuthorize("@masterDataAuthorization.canView('REFERENCE')")
   public CentralAccountGroupDtos.Detail detail(@PathVariable UUID id) {
     return queries.detail(id);
+  }
+
+  @GetMapping("/{id}/risk-assignments")
+  @PreAuthorize("@masterDataAuthorization.canView('REFERENCE') and @masterDataAuthorization.canView('RISK')")
+  public List<AccountGroupRiskAssignmentDtos.Response> riskAssignments(@PathVariable UUID id) {
+    return riskAssignments.forAccountGroup(id);
   }
 
   @PostMapping

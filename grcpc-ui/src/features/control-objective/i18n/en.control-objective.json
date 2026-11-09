@@ -20,11 +20,11 @@
       "title": "Delete Control Objective",
       "confirm": "Are you sure you want to delete control objective “{{title}}”?"
     },
+    "subprocessSelection": "Select Subprocesses",
     "tabs": {
       "general": "General Information",
       "subprocesses": "Subprocess",
       "risks": "Risks",
-      "controls": "Controls",
       "accountGroups": "Account Groups",
       "documents": "Documents"
     },

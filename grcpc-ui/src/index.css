@@ -24,6 +24,13 @@
   font-display: swap;
 }
 
+/* UI5 titles use a normal CSS weight and take their appearance from the heading font family. */
+@font-face {
+  font-family: "Vazirmatn Heading";
+  src: url("./assets/fonts/Vazirmatn-Bold.woff2") format("woff2");
+  font-display: swap;
+}
+
 html,
 body,
 #root {
@@ -35,4 +42,26 @@ body {
   font-family: var(--sapFontFamily);
   background: var(--sapBackgroundColor);
   color: var(--sapTextColor);
+}
+
+ui5-dialog,
+ui5-user-settings-dialog,
+ui5-flexible-column-layout > [slot="midColumn"],
+ui5-tree-item::part(title),
+ui5-tree-item-custom > [slot="content"],
+ui5-table-cell,
+ui5-table-header-cell {
+  --sapFontSize: var(--sapFontSmallSize);
+  font-size: var(--sapFontSmallSize);
+}
+
+ui5-shellbar {
+  --sapFontSemiboldDuplexFamily: var(--sapFontHeaderFamily);
+}
+
+ui5-table-header-cell,
+ui5-card-header::part(title),
+ui5-card-header::part(subtitle),
+.catalogParentHeader ui5-label {
+  font-weight: 700;
 }

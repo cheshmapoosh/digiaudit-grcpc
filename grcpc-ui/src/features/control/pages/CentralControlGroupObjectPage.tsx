@@ -15,7 +15,6 @@ import type {
   CreateCentralControlGroupCommand,
   UpdateCentralControlGroupCommand,
 } from "../domain/centralControl.model";
-import ControlGroupValueHelpDialog from "../components/ControlGroupValueHelpDialog";
 
 export type ControlGroupObjectMode = "create" | "view" | "edit";
 
@@ -52,13 +51,12 @@ export default function CentralControlGroupObjectPage({
   const [code, setCode] = useState(value?.code ?? "");
   const [title, setTitle] = useState(value?.title ?? "");
   const [description, setDescription] = useState(value?.description ?? "");
-  const [parentGroupId, setParentGroupId] = useState<string | null>(value?.parentGroupId ?? initialParentId);
+  const parentGroupId = value ? value.parentGroupId : initialParentId;
   const [status, setStatus] = useState<CentralControlEditableStatus>(mode !== "create" && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE");
   const [validFrom, setValidFrom] = useState(value?.validFrom ?? "");
   const [validTo, setValidTo] = useState(value?.validTo ?? "");
   const [dateDrafts, setDateDrafts] = useState({ validFrom: EMPTY_DATE_DRAFT, validTo: EMPTY_DATE_DRAFT });
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [valueHelpOpen, setValueHelpOpen] = useState(false);
   const readOnly = mode === "view";
 
   const normalized = useMemo(() => JSON.stringify({
@@ -74,12 +72,12 @@ export default function CentralControlGroupObjectPage({
     code: value?.code ?? "",
     title: value?.title ?? "",
     description: value?.description ?? "",
-    parentGroupId: value?.parentGroupId ?? initialParentId,
+    parentGroupId,
     status: mode !== "create" && value?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     validFrom: value?.validFrom ?? "",
     validTo: value?.validTo ?? "",
-  }), [initialParentId, mode, value]);
-  const dirty = normalized !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty || valueHelpOpen;
+  }), [mode, parentGroupId, value]);
+  const dirty = normalized !== baseline || dateDrafts.validFrom.dirty || dateDrafts.validTo.dirty;
   const invalidDate = !dateDrafts.validFrom.valid || !dateDrafts.validTo.valid;
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
@@ -113,9 +111,7 @@ export default function CentralControlGroupObjectPage({
   return (
     <div className="controlGroupObjectPage">
       <CatalogParentHeader objectTitle={title || t("control.nodeType.group")} label={t("control.fields.parentGroup")} parentId={parentGroupId}
-        busy={busy} onClearParent={!readOnly ? () => setParentGroupId(null) : undefined}
-        parent={parent ? { code: parent.code, title: parent.title, type: t("control.nodeType.group"), status: parent.status } : null}
-        selection={!readOnly ? <Button design="Emphasized" disabled={busy} onClick={() => setValueHelpOpen(true)}>{t("catalog.parentHeader.select")}</Button> : null} />
+        parent={parent ? { code: parent.code, title: parent.title, type: t("control.nodeType.group"), status: parent.status } : null} />
 
       {error ? <MessageStrip design="Negative" onClose={onErrorClose}>{error}</MessageStrip> : null}
       {validationError ? <MessageStrip design="Negative" onClose={() => setValidationError(null)}>{validationError}</MessageStrip> : null}
@@ -134,18 +130,9 @@ export default function CentralControlGroupObjectPage({
         {mode === "view" ? (
           <><Button design="Emphasized" disabled={busy} onClick={onEdit}>{t("common.edit", { defaultValue: "ویرایش" })}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.close", { defaultValue: "بستن" })}</Button></>
         ) : (
-          <><Button design="Emphasized" disabled={busy || valueHelpOpen || invalidDate || !dirty} onClick={submit}>{t("control.actions.submit")}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.cancel", { defaultValue: "انصراف" })}</Button></>
+          <><Button design="Emphasized" disabled={busy || invalidDate || !dirty} onClick={submit}>{t("control.actions.submit")}</Button><Button design="Transparent" disabled={busy} onClick={onCancel}>{t("common.cancel", { defaultValue: "انصراف" })}</Button></>
         )}
       </DialogFooter>
-      <ControlGroupValueHelpDialog
-        open={valueHelpOpen}
-        groups={groups}
-        currentGroupId={value?.id ?? null}
-        selectedId={parentGroupId}
-        busy={busy}
-        onClose={() => setValueHelpOpen(false)}
-        onSelect={(id) => { setParentGroupId(id); setValueHelpOpen(false); }}
-      />
     </div>
   );
 }

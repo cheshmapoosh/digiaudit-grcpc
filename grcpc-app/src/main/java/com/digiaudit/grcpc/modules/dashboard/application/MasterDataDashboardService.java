@@ -1,15 +1,28 @@
 package com.digiaudit.grcpc.modules.dashboard.application;
 
 import com.digiaudit.grcpc.modules.dashboard.api.MasterDataDashboardResponse;
+import com.digiaudit.grcpc.modules.masterdata.catalog.accountgroup.domain.entity.CentralAccountGroupEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.control.domain.entity.CentralControlEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.controlobjective.domain.entity.CentralControlObjectiveEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.policy.domain.entity.CentralPolicyEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.regulation.domain.entity.CentralRegulationEntity;
+import com.digiaudit.grcpc.modules.masterdata.catalog.risk.domain.entity.CentralRiskTemplateEntity;
 import com.digiaudit.grcpc.modules.masterdata.catalog.risk.domain.enums.CentralRiskType;
+import com.digiaudit.grcpc.modules.masterdata.globalcontrol.domain.GlobalControlEntity;
+import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveEntity;
+import com.digiaudit.grcpc.modules.masterdata.objective.domain.ObjectiveKind;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralProcessEntity;
+import com.digiaudit.grcpc.modules.masterdata.process.domain.entity.CentralSubprocessEntity;
 import com.digiaudit.grcpc.modules.masterdata.security.MasterDataAuthorizationService;
 import com.digiaudit.grcpc.modules.masterdata.shared.domain.MasterDataLifecycleStatus;
+import com.digiaudit.grcpc.modules.organization.domain.entity.OrganizationEntity;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,9 +43,40 @@ public class MasterDataDashboardService {
             new Source("RISK_TEMPLATE", "CentralRiskTemplateEntity", "title", "RISK"),
             new Source("CONTROL", "CentralControlEntity", "title", "CONTROL")
     );
+    private static final List<CatalogSource> CATALOG_SOURCES = List.of(
+            new CatalogSource("organizations", OrganizationEntity.class, "ORGANIZATION"),
+            new CatalogSource("processes", CentralProcessEntity.class, "PROCESS"),
+            new CatalogSource("processes", CentralSubprocessEntity.class, "PROCESS"),
+            new CatalogSource("controls", CentralControlEntity.class, "CONTROL"),
+            new CatalogSource("risks", CentralRiskTemplateEntity.class, "RISK"),
+            new CatalogSource("regulations", CentralRegulationEntity.class, "GOVERNANCE"),
+            new CatalogSource("globalControls", GlobalControlEntity.class, "CONTROL"),
+            new CatalogSource("businessObjectives", ObjectiveEntity.class, "REFERENCE"),
+            new CatalogSource("objectives", CentralControlObjectiveEntity.class, "CONTROL"),
+            new CatalogSource("accountGroups", CentralAccountGroupEntity.class, "REFERENCE"),
+            new CatalogSource("policies", CentralPolicyEntity.class, "GOVERNANCE")
+    );
 
     private final EntityManager entityManager;
     private final MasterDataAuthorizationService authorization;
+
+    @Transactional(readOnly = true)
+    public Map<String, Long> catalogCounts() {
+        Map<String, Boolean> visibleAreas = new HashMap<>();
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (CatalogSource source : CATALOG_SOURCES) {
+            if (!visibleAreas.computeIfAbsent(source.area(), authorization::canView)) continue;
+
+            boolean businessObjectives = source.entity() == ObjectiveEntity.class;
+            var query = entityManager.createQuery(
+                            "select count(e) from " + source.entity().getSimpleName() + " e where e.status in :statuses"
+                                    + (businessObjectives ? " and e.kind = :kind" : ""), Long.class)
+                    .setParameter("statuses", List.of(ACTIVE, INACTIVE));
+            if (businessObjectives) query.setParameter("kind", ObjectiveKind.OBJECTIVE);
+            counts.merge(source.key(), query.getSingleResult(), Long::sum);
+        }
+        return counts;
+    }
 
     @Transactional(readOnly = true)
     public MasterDataDashboardResponse get() {
@@ -159,4 +203,5 @@ public class MasterDataDashboardService {
     }
 
     private record Source(String key, String entity, String titleField, String area) {}
+    private record CatalogSource(String key, Class<?> entity, String area) {}
 }

@@ -27,6 +27,23 @@
   box-sizing: border-box;
 }
 
+.controlObjectiveListTitle {
+  --sapFontSize: var(--sapFontSmallSize);
+  font-size: var(--sapFontSmallSize);
+  padding-inline: var(--sapContent_Space_Tiny);
+}
+
+.controlObjectiveListHeader {
+  padding-block: var(--sapContent_Space_Tiny);
+  /* Match the compact list padding and bulk-selection checkbox space. */
+  padding-inline-start: calc(2rem + var(--sapContent_Space_Small) + 2 * var(--sapContent_Space_Tiny));
+  padding-inline-end: calc(var(--sapContent_Space_Small) + var(--sapContent_Space_Tiny));
+  background: var(--sapList_HeaderBackground);
+  border-block-end: 1px solid var(--sapList_BorderColor);
+}
+
+.controlObjectiveListHeader > ui5-label { font-weight: 700; }
+
 .controlObjectiveSummaryPanel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;

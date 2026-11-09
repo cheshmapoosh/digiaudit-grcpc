@@ -16,7 +16,7 @@ Applies to `src/features/process`.
 - Use `/api/master-data/central/processes`, `/api/master-data/central/subprocesses`, and `/api/master-data/central/process-tree` only for structural data.
 - Keep one combined visual tree, but persist Process and Subprocess through separate typed command models.
 - Create does not send status. Edit sends `ACTIVE` or `INACTIVE`, typed parent/owner, General Information, and Document drafts; it never sends code or node type.
-- Process parent and Subprocess owner are selectable on both Create and Edit and are submitted by the same Save command. Exclude the current Process and descendants; Subprocess always selects an eligible Process owner.
+- Create resolves the Process parent or Subprocess owner from the tree selection. Edit retains the stored parent or owner. The same aggregate Save submits that context.
 - Process modal shows only General Information and Documents.
 - Subprocess modal tab order is General Information, Controls, Regulations, Objectives, Account Groups, Risks, Documents. Prompt 7.1–7.4 enable their typed Scope tabs, Prompt 7.5 derives Account Groups through Control Scope and Control classification, and Prompt 7.6 extends that read-only projection with the independently authorized Control Objective Scope and Control Objective classification path. The union is exact-node and deduplicated, preserves separate contribution lists, and contributes no drafts or Save fields.
 - The accepted 2026-10-27 correction removes all four Coverage sections from this UI phase. Neither Create nor Edit mounts Coverage components or includes Coverage state, validation, dirty/readiness checks or outgoing change sets. Four Scopes and derived Account Groups remain. Existing Coverage APIs and dependencies remain intact.

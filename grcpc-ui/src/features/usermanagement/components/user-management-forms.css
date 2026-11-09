@@ -11,4 +11,4 @@
 }
 .userManagementActions { gap: var(--sapContent_Space_Tiny); }
 
-.userManagementWideForm { width: 86vw; max-width: 86vw; }
+.userManagementWideForm { width: 100%; min-width: 0; }

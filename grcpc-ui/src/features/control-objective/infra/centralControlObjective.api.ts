@@ -11,7 +11,7 @@ import type {
 const BASE = "/api/master-data/central/control-objectives";
 
 export const centralControlObjectiveApi = {
-  list: () => httpClient.get<CentralControlObjectiveSummary[]>(BASE),
+  list: (signal?: AbortSignal) => httpClient.get<CentralControlObjectiveSummary[]>(BASE, { signal }),
   detail: (id: string) => httpClient.get<CentralControlObjectiveDetail>(`${BASE}/${id}`),
   create: (body: CreateCentralControlObjectiveCommand) =>
     httpClient.post<CentralControlObjectiveMutationResponse>(BASE, body),

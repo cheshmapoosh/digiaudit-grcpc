@@ -3,10 +3,10 @@ import { useMasterDataAccess } from "@/features/master-data/security/masterDataA
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
-import { Bar, Label, MessageStrip, ObjectStatus, Title } from "@ui5/webcomponents-react";
+import { Bar, Label, MessageStrip, ObjectStatus, Text, Title } from "@ui5/webcomponents-react";
 
 import type { OrganizationNode } from "../domain/organization.model";
-import { formatPersianDate, formatPersianDateTime } from "@/shared/utils/date.utils";
+import { formatPersianDate } from "@/shared/utils/date.utils";
 
 export interface OrganizationSummaryPanelProps {
     value?: OrganizationNode | null;
@@ -94,18 +94,6 @@ export default function OrganizationSummaryPanel({
                 label: t("organization.fields.validTo", { defaultValue: "تا تاریخ" }),
                 value: formatPersianDate(value.validTo),
             },
-            {
-                label: t("organization.fields.version", { defaultValue: "نسخه" }),
-                value: String(value.version),
-            },
-            {
-                label: t("organization.fields.createdAt", { defaultValue: "تاریخ ایجاد" }),
-                value: formatPersianDateTime(value.createdAt),
-            },
-            {
-                label: t("organization.fields.updatedAt", { defaultValue: "تاریخ بروزرسانی" }),
-                value: formatPersianDateTime(value.updatedAt),
-            },
         ];
     }, [allItems, t, value]);
 
@@ -118,7 +106,7 @@ export default function OrganizationSummaryPanel({
                 gap: "1rem",
             }}
         >
-            <Bar startContent={<Title level="H4">{value?.name ?? ""}</Title>} />
+            <Bar startContent={<Title level="H4">{t("common.details")}</Title>} />
 
             <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
                 {error ? (
@@ -142,11 +130,9 @@ export default function OrganizationSummaryPanel({
                                 }}
                             >
                                 <Label showColon>{row.label}</Label>
-                                <span
-                                    style={{ minWidth: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-                                >
-                                    {row.value}
-                                </span>
+                                {typeof row.value === "string"
+                                    ? <Text className="objectPageValue">{row.value}</Text>
+                                    : row.value}
                             </div>
                         ))}
                     </div>

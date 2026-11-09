@@ -24,6 +24,13 @@
       "risks": "Risks",
       "documents": "Documents"
     },
+    "riskAssignments": {
+      "select": "Select Risk Templates",
+      "inactive": "The account group and risk template must be active to add or activate an assignment.",
+      "loadError": "Risk template assignment data could not be loaded.",
+      "invalidChange": "Each risk template can appear only once in the changes for this save.",
+      "notFound": "The risk template or assignment was not found in this account group."
+    },
     "fields": {
       "code": "Code",
       "name": "Name",
@@ -80,12 +87,13 @@
       "update": "Failed to update the account group.",
       "delete": "Failed to delete the account group.",
       "duplicateCode": "This code is already in use.",
+      "duplicateClassification": "This classification already exists for the account group.",
       "notFound": "The requested account group was not found.",
       "versionConflict": "The record was changed by another user. Reload and try again.",
       "invalidParent": "The selected parent hierarchy is invalid.",
       "dependencies": "The account group has approved dependencies and cannot be deleted.",
-      "profileBusy": "Profile administration is busy. Save again shortly.",
-      "profileReadOnly": "Write access to this profile has changed. Your draft is retained.",
+      "profileBusy": "Another request is being processed. Try saving again shortly.",
+      "profileReadOnly": "These changes cannot be saved right now. Your draft is retained.",
       "hierarchyBusy": "The catalog structure is busy. Save again shortly."
     }
   }

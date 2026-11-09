@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Dialog, MessageStrip, ObjectStatus, Text } from "@ui5/webcomponents-react";
+import { Dialog, MessageStrip, ObjectStatus } from "@ui5/webcomponents-react";
 import { CatalogActionButton as Button } from "@/shared/components/CatalogActionButton";
 import { CatalogRelationTable, type CatalogRelationColumn } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -113,14 +113,12 @@ export default function OrganizationOwnersTab({ organizationId, rows, changes, o
     <CatalogRelationToolbar title={t("organization.owners.title")} search={search} onSearch={setSearch} filter={filter} onFilter={setFilter} editable={editable} busy={busy || loading}
       canSelect={!error} onSelect={() => { setOpen(true); setPicked(new Set()); setPickerSearch(""); setReload(value => value + 1); }}
       canActivate={affected("ACTIVE").length > 0} onActivate={() => batch("ACTIVE")} canInactivate={affected("INACTIVE").length > 0} onInactivate={() => batch("INACTIVE")} canDelete={affected("DELETED").length > 0} onDelete={() => batch("DELETED")} />
-    <Text>{t("basicData.profile")}: {profile?.name ?? "—"}</Text>
     {error ? <MessageStrip design="Negative" hideCloseButton>{error}<Button onClick={() => setReload(value => value + 1)}>{t("catalogRelation.retry")}</Button></MessageStrip> : null}
     <CatalogRelationTable rows={visible} columns={columns} rowKey={row => row.userId} accessibleName={t("organization.owners.title")} selectable={editable} selectedKeys={selected} onSelectionChange={setSelected} loading={loading} busy={busy} emptyText={t("organization.owners.empty")} />
     <Dialog open={open} accessibleName={t("organization.owners.select")} className="organizationOwnersDialog catalogObjectDialog" onClose={close}
       footer={<DialogFooterBar><Button design="Emphasized" disabled={busy || loading || Boolean(error) || !picked.size} onClick={stageSelection}>{t("catalogRelation.select")}</Button><Button design="Transparent" disabled={busy} onClick={close}>{t("common.cancel")}</Button></DialogFooterBar>}>
       <ModalDialogHeader title={t("organization.owners.select")} onClose={close} actions={<HeaderSearch value={pickerSearch} onChange={setPickerSearch} disabled={busy} accessibleName={t("organization.owners.search")} />} />
       <div data-catalog-dialog-content>
-      <Text>{t("organization.owners.eligibilityHint")}</Text>
       {error ? <MessageStrip design="Negative" hideCloseButton>{error}</MessageStrip> : null}
       <CatalogRelationTable rows={choices} columns={pickerColumns} rowKey={row => row.id} accessibleName={t("organization.owners.select")} selectable selectedKeys={picked} onSelectionChange={setPicked} loading={loading} busy={busy} emptyText={t("organization.owners.noOptions")} />
       </div>

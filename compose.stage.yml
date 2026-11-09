@@ -11,9 +11,6 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in stage.env}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in stage.env}
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - type: bind
         source: ./data/minio
@@ -37,7 +34,7 @@ services:
         condition: service_healthy
     volumes:
       - type: bind
-        source: ./grcpc-app.jar
+        source: ${APP_JAR_PATH:-./grcpc-app.jar}
         target: /opt/grcpc/grcpc-app.jar
         read_only: true
         bind:
@@ -49,6 +46,7 @@ services:
           create_host_path: true
     environment:
       SERVER_PORT: 8080
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
       DB_URL: ${DB_URL:?Set DB_URL for external Oracle in stage.env}
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in stage.env}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in stage.env}
@@ -58,7 +56,8 @@ services:
 
       GRCPC_MINIO_ENABLED: "true"
       GRCPC_MINIO_ENDPOINT: http://minio:9000
-      GRCPC_MINIO_PUBLIC_ENDPOINT: ${GRCPC_MINIO_PUBLIC_ENDPOINT:?Set the browser-reachable MinIO URL in stage.env}
+      GRCPC_MINIO_PUBLIC_ENDPOINT: ${GRCPC_MINIO_PUBLIC_ENDPOINT:-${PUBLIC_SCHEME:-http}://${PUBLIC_HOST:-localhost}:${APP_PORT:-8080}}
+      GRCPC_MINIO_PRESIGN_REGION: ${GRCPC_MINIO_PRESIGN_REGION:-us-east-1}
       GRCPC_MINIO_ACCESS_KEY: ${GRCPC_MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in stage.env}}
       GRCPC_MINIO_SECRET_KEY: ${GRCPC_MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in stage.env}}
       GRCPC_MINIO_BUCKET: ${GRCPC_MINIO_BUCKET:-grc-documents}
@@ -76,6 +75,29 @@ services:
       ROOT_LOG_LEVEL: ${ROOT_LOG_LEVEL:-INFO}
       APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
       JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+    command: ["sh", "-c", "exec java $${JAVA_OPTS:-} -jar /opt/grcpc/grcpc-app.jar"]
+
+  nginx:
+    image: ${NGINX_IMAGE:-nginx:1.28-alpine}
+    pull_policy: never
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:-localhost}
+      PUBLIC_SCHEME: ${PUBLIC_SCHEME:-http}
+      GRCPC_MINIO_BUCKET: ${GRCPC_MINIO_BUCKET:-grc-documents}
     ports:
       - "${APP_PORT:-8080}:8080"
-    command: ["sh", "-c", "exec java $${JAVA_OPTS:-} -jar /opt/grcpc/grcpc-app.jar"]
+    volumes:
+      - type: bind
+        source: ./docker/nginx/start.sh
+        target: /opt/grcpc/start-nginx.sh
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${NGINX_TLS_DIR:-./tls}
+        target: /etc/nginx/tls
+        read_only: true
+    entrypoint: ["sh", "/opt/grcpc/start-nginx.sh"]

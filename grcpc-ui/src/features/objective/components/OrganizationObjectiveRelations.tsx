@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Input, Link, MessageStrip, ObjectStatus, Text, TextArea } from "@ui5/webcomponents-react";
+import { Link, MessageStrip, ObjectStatus, Text } from "@ui5/webcomponents-react";
 import { useTranslation } from "react-i18next";
 import { CatalogRelationTable } from "@/shared/components/CatalogRelationTable";
 import { CatalogRelationToolbar, type CatalogRelationFilter } from "@/shared/components/CatalogRelationToolbar";
@@ -19,7 +19,6 @@ export interface OrganizationObjectiveRelationsProps {
   changes: OrganizationObjectiveChange[]; onChangesChange: (changes: OrganizationObjectiveChange[]) => void;
   onDirtyChange?: (dirty: boolean) => void; onReadinessChange?: (ready: boolean) => void;
   canonicalRows?: OrganizationObjective[] | ObjectiveOrganizationLink[];
-  onRowsChange?: (rows: ObjectiveOrganizationLink[]) => void;
 }
 
 const metadata = (row: Pick<Canonical, "name" | "description" | "owner" | "validFrom" | "validTo">) => ({
@@ -30,7 +29,7 @@ function sameMetadata(a: ReturnType<typeof metadata>, b: ReturnType<typeof metad
 }
 
 export function OrganizationObjectiveRelations({ side, ownerId, ownerName = "", manage, busy = false,
-  resetKey, changes, onChangesChange, onDirtyChange, onReadinessChange, canonicalRows, onRowsChange }: OrganizationObjectiveRelationsProps) {
+  resetKey, changes, onChangesChange, onDirtyChange, onReadinessChange, canonicalRows }: OrganizationObjectiveRelationsProps) {
   const { t } = useTranslation();
   const [baseline, setBaseline] = useState<Canonical[]>([]);
   const [baselineOwner, setBaselineOwner] = useState<string | null>(ownerId);
@@ -42,7 +41,6 @@ export function OrganizationObjectiveRelations({ side, ownerId, ownerName = "", 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<CatalogRelationFilter>("ALL");
-  const [invalid, setInvalid] = useState<Record<string, boolean>>({});
   const beforeDelete = useRef(new Map<string, OrganizationObjectiveChange | undefined>());
   const identity = (id: string) => side === "organization" ? { objectiveId: id } : { organizationId: id };
   const targetId = (change: OrganizationObjectiveChange) => side === "organization" ? change.objectiveId! : change.organizationId!;
@@ -56,7 +54,7 @@ export function OrganizationObjectiveRelations({ side, ownerId, ownerName = "", 
     const read = async () => {
       const options = side === "organization" ? await objectiveApi.list() : await objectiveApi.organizationOptions();
       const currentRows = ownerId ? side === "organization"
-        ? await objectiveApi.listForOrganization(ownerId) : await objectiveApi.organizations(ownerId) : canonicalRows ?? [];
+        ? await objectiveApi.listForOrganization(ownerId) : await objectiveApi.organizations(ownerId) : [];
       const deleted = ownerId ? side === "organization" ? await objectiveApi.listForOrganization(ownerId, true)
         : await objectiveApi.organizations(ownerId, true) : [];
       if (!current) return;
@@ -65,7 +63,6 @@ export function OrganizationObjectiveRelations({ side, ownerId, ownerName = "", 
         : { ...row, targetId: row.organizationId, code: row.organizationCode, targetName: row.organizationName };
       setBaseline([...currentRows, ...deleted].map(canonical));
       setBaselineOwner(ownerId);
-      if (side === "objective") onRowsChange?.(currentRows as ObjectiveOrganizationLink[]);
       setNodes(side === "organization" ? (options as Awaited<ReturnType<typeof objectiveApi.list>>).map(item => ({
         id: item.id, parentId: item.parentObjectiveId, code: item.code, name: item.name,
         selectable: item.kind === "OBJECTIVE" && item.status === "ACTIVE"
@@ -79,10 +76,10 @@ export function OrganizationObjectiveRelations({ side, ownerId, ownerName = "", 
     void read().catch((cause: unknown) => { if (current) setError(cause instanceof Error ? cause.message : String(cause)); })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
-  }, [side, ownerId, resetKey, canonicalRows, onRowsChange, retry]);
+  }, [side, ownerId, resetKey, retry]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => { setInvalid({}); setSelected(new Set()); beforeDelete.current.clear(); }, 0);
+    const timer = window.setTimeout(() => { setSelected(new Set()); beforeDelete.current.clear(); }, 0);
     return () => window.clearTimeout(timer);
   }, [ownerId, resetKey]);
 
@@ -112,30 +109,12 @@ export function OrganizationObjectiveRelations({ side, ownerId, ownerName = "", 
       owner: change.owner ?? null, validFrom: change.validFrom ?? null, validTo: change.validTo ?? null,
       status: "ACTIVE", version: 0, draft: change });
   }
-  const invalidDraft = Object.entries(invalid).some(([key, value]) => value
-    && rows.some(row => key.startsWith(`${row.targetId}:`) && row.draft?.operation !== "DELETE")) || rows.some(row => row.draft?.operation !== "DELETE" && (!row.name.trim()
+  const invalidDraft = rows.some(row => row.draft?.operation !== "DELETE" && (!row.name.trim()
     || Boolean(row.validFrom && row.validTo && row.validFrom > row.validTo)));
   const dirty = changes.length > 0 || picker || invalidDraft;
   useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   useEffect(() => { onReadinessChange?.(!picker && !invalidDraft && !loading && !error); }, [picker, invalidDraft, loading, error, onReadinessChange]);
 
-  const commit = (id: string, change: OrganizationObjectiveChange | null) => {
-    onChangesChange([...changes.filter(item => targetId(item) !== id), ...(change ? [change] : [])]);
-  };
-  const edit = (row: Row, patch: Partial<ReturnType<typeof metadata>>, status = row.status) => {
-    const original = effectiveBaseline.find(item => item.targetId === row.targetId);
-    const fields = { ...metadata(row), ...patch };
-    if (!original || original.status === "DELETED") {
-      commit(row.targetId, { ...identity(row.targetId), operation: "CREATE_OR_RESTORE", ...fields,
-        ...(original ? { assignmentId: original.id, version: original.version } : {}) });
-      return;
-    }
-    const metadataChanged = !sameMetadata(metadata(original), fields);
-    if (!metadataChanged && status === original.status) { commit(row.targetId, null); return; }
-    commit(row.targetId, { ...identity(row.targetId), assignmentId: original.id, version: original.version,
-      operation: metadataChanged ? "UPDATE" : status === "ACTIVE" ? "ACTIVATE" : "INACTIVATE",
-      ...(metadataChanged ? { ...fields, requestedStatus: status as "ACTIVE" | "INACTIVE" } : {}) });
-  };
   const eligible = rows.filter(row => selected.has(row.targetId));
   const lifecycleEligible = (row: Row, status: "ACTIVE" | "INACTIVE") => row.status !== status
     && !["CREATE_OR_RESTORE", "RESTORE"].includes(row.draft?.operation ?? "")
@@ -163,10 +142,9 @@ export function OrganizationObjectiveRelations({ side, ownerId, ownerName = "", 
   const needle = query.trim().toLocaleLowerCase();
   const visible = rows.filter(row => (row.draft || filter === "ALL" || row.status === filter)
     && (!needle || `${row.code} ${row.targetName} ${row.name} ${row.owner ?? ""}`.toLocaleLowerCase().includes(needle)));
-  const selectionNodes = useMemo(() => nodes.map(node => ({ ...node, selectable: node.selectable
-    && !rows.some(row => row.targetId === node.id && row.draft?.operation !== "DELETE") })), [nodes, rows]);
+  const selectionNodes = nodes.map(node => ({ ...node, selectable: node.selectable
+    && !rows.some(row => row.targetId === node.id && row.draft?.operation !== "DELETE") }));
   const pickerSelection = useMemo(() => new Set<string>(), []);
-  const editable = manage && !busy;
   const title = t(side === "organization" ? "objective.organization.title" : "objective.tabs.organizations");
   const confirmSelection = (ids: Set<string>) => {
     const next = new Map(changes.map(change => [targetId(change), change]));
@@ -201,15 +179,11 @@ export function OrganizationObjectiveRelations({ side, ownerId, ownerName = "", 
             : row.draft.operation === "UPDATE" && row.status === effectiveBaseline.find(item => item.targetId === row.targetId)?.status ? "catalogRelation.draftEdit"
               : row.status === "ACTIVE" ? "catalogRelation.draftActive" : "catalogRelation.draftInactive"
             : row.status === "ACTIVE" ? "catalogRelation.active" : "catalogRelation.inactive")}</ObjectStatus> },
-        { key: "assignmentName", header: t("objective.organizations.assignment"), cell: row => editable && row.draft?.operation !== "DELETE"
-          ? <Input value={row.name} accessibleName={t("objective.name")} onInput={event => edit(row, { name: event.target.value })} /> : row.name },
-        { key: "owner", header: t("objective.owner"), cell: row => editable && row.draft?.operation !== "DELETE"
-          ? <Input value={row.owner ?? ""} accessibleName={t("objective.owner")} onInput={event => edit(row, { owner: event.target.value || null })} /> : row.owner ?? "—" },
+        { key: "assignmentName", header: t("objective.organizations.assignment"), cell: row => row.name },
+        { key: "owner", header: t("objective.owner"), cell: row => row.owner ?? "—" },
         ...(["validFrom", "validTo"] as const).map(field => ({ key: field, header: t(`catalogRelation.${field}`), cell: (row: Row) =>
-          <CatalogRelationDate key={`${resetKey}:${row.targetId}:${field}`} value={row[field]} editable={editable && row.draft?.operation !== "DELETE"} label={t(`catalogRelation.${field}`)}
-            onChange={value => edit(row, { [field]: value })} onDraftStateChange={state => setInvalid(old => old[`${row.targetId}:${field}`] === !state.valid ? old : { ...old, [`${row.targetId}:${field}`]: !state.valid })} /> })),
-        { key: "description", header: t("objective.description"), cell: row => editable && row.draft?.operation !== "DELETE"
-          ? <TextArea value={row.description ?? ""} accessibleName={t("objective.description")} onInput={event => edit(row, { description: event.target.value || null })} /> : row.description ?? "—" },
+          <CatalogRelationDate value={row[field]} /> })),
+        { key: "description", header: t("objective.description"), cell: row => row.description ?? "—" },
       ]} />
     {side === "organization" ? <ObjectiveSelectionDialog open={picker} nodes={selectionNodes} selectedIds={pickerSelection}
       busy={busy} loading={loading} error={error} onConfirm={confirmSelection} onClose={() => setPicker(false)} />

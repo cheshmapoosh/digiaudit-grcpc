@@ -135,10 +135,10 @@ function endpointForNode(node: ProcessNode): string {
 }
 
 export class ProcessApiRepo implements ProcessRepo {
-    async list(): Promise<ProcessNode[]> {
+    async list(signal?: AbortSignal): Promise<ProcessNode[]> {
         const [processes, subprocesses] = await Promise.all([
-            httpClient.get<CentralProcessResponse[]>(PROCESS_URL),
-            httpClient.get<CentralSubprocessResponse[]>(SUBPROCESS_URL),
+            httpClient.get<CentralProcessResponse[]>(PROCESS_URL, { signal }),
+            httpClient.get<CentralSubprocessResponse[]>(SUBPROCESS_URL, { signal }),
         ]);
 
         return [...processes.map(mapProcess), ...subprocesses.map(mapSubprocess)];

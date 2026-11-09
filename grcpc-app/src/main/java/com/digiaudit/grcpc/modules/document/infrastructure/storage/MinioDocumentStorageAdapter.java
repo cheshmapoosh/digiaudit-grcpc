@@ -265,10 +265,13 @@ public class MinioDocumentStorageAdapter implements DocumentStoragePort {
         String endpoint = properties.publicEndpoint() == null || properties.publicEndpoint().isBlank()
                 ? properties.endpoint()
                 : properties.publicEndpoint();
-        return MinioClient.builder()
+        var builder = MinioClient.builder()
                 .endpoint(endpoint)
-                .credentials(properties.accessKey(), properties.secretKey())
-                .build();
+                .credentials(properties.accessKey(), properties.secretKey());
+        if (properties.presignRegion() != null && !properties.presignRegion().isBlank()) {
+            builder.region(properties.presignRegion().trim());
+        }
+        return builder.build();
     }
 
     private void ensureBucket(MinioClient client) throws Exception {
