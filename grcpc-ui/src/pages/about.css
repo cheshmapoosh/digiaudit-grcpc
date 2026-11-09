@@ -1,0 +1,65 @@
+.aboutPage {
+  width: 100%;
+  max-width: 78rem;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-inline: auto;
+  padding: var(--sapContent_Space_Small);
+  gap: var(--sapContent_Space_Small);
+}
+
+.aboutHero {
+  padding: var(--sapContent_Space_Small);
+  gap: var(--sapContent_Space_Small);
+}
+
+.aboutHeroCopy {
+  flex: 1 1 22rem;
+  min-width: 0;
+  padding: var(--sapContent_Space_Small);
+  gap: var(--sapContent_Space_Small);
+}
+
+.aboutBrandImage {
+  width: 7rem;
+  height: auto;
+  max-width: 100%;
+}
+
+.aboutHeroImage {
+  flex: 1 1 22rem;
+  width: 100%;
+  max-width: 32rem;
+  min-width: 0;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.aboutVersion {
+  gap: var(--sapContent_Space_Tiny);
+}
+
+.aboutSections,
+.aboutSectionCard {
+  min-width: 0;
+}
+
+.aboutSectionCard {
+  height: 100%;
+}
+
+.aboutSectionBody {
+  padding: var(--sapContent_Space_Small);
+}
+
+@media (max-width: 48rem) {
+  .aboutHeroCopy {
+    flex-basis: 100%;
+  }
+
+  .aboutHeroImage {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}

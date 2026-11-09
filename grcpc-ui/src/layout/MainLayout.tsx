@@ -154,6 +154,8 @@ export default function MainLayout() {
             breadcrumbItems.push({ route: basicDataRoute, text: t("basicData.management") });
             if (selectedPath.includes("/organization-types")) breadcrumbItems.push({ route: basicDataRoute, text: t("basicData.organization-types.title") });
             if (selectedPath.includes("/document-types")) breadcrumbItems.push({ route: "/basic-data/document-types", text: t("basicData.document-types.title") });
+        } else if (selectedPath === "/about") {
+            breadcrumbItems.push({ route: "/about", text: t("nav.about") });
         } else {
             breadcrumbItems.push({ route: selectedPath, text: t("app.platformTitle") });
         }
@@ -201,11 +203,11 @@ export default function MainLayout() {
                     </FlexBox>}
                     fixedItems={[
                         <SideNavigationItem
-                            key="help"
-                            text={t("nav.help")}
-                            icon="sys-help"
-                            onClick={() => navigateToPath("/help")}
-                            selected={selectedPath.startsWith("/help")}
+                            key="about"
+                            text={t("nav.about")}
+                            icon="hint"
+                            onClick={() => navigateToPath("/about")}
+                            selected={selectedPath === "/about"}
                         />,
                         <SideNavigationItem key="logout" text={t("user.logout")} icon="log" onClick={() => void handleLogout()} />,
                     ]}

@@ -13,6 +13,7 @@ import AuthGuard from "../guards/AuthGuard";
 
 import NotFoundPage from "@/pages/NotFoundPage";
 import ComingSoonPage from "@/pages/ComingSoonPage";
+import AboutPage from "@/pages/AboutPage";
 import AppRouterRoot from "./AppRouterRoot";
 
 import {
@@ -49,6 +50,8 @@ export const appRouter = createBrowserRouter(
                     </SetupGuard>
                 }
             >
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/help" element={<Navigate to="/about" replace />} />
                 <Route element={<BusinessAccessGuard />}>
                 {dashboardRoutes}
                 {masterDataRoutes}
